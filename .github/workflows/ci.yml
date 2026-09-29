@@ -14,6 +14,10 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Least-privilege GITHUB_TOKEN: the job only checks out and restores caches (RT-84).
+permissions:
+  contents: read
+
 jobs:
   build-test:
     runs-on: ubuntu-latest
