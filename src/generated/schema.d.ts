@@ -3,7 +3,7 @@
  * Do not make direct changes to the file.
  */
 
-// Source: Data-Pulse-2 @ 9874d44
+// Source: Data-Pulse-2 @ 7597a8741d754ce61d28977cc634633d4ed12f80
 // Sources:
 // - packages/contracts/openapi/auth.openapi.yaml
 // - packages/contracts/openapi/context.openapi.yaml
@@ -13,6 +13,7 @@
 // - packages/contracts/openapi/audit.openapi.yaml
 // - packages/contracts/openapi/catalog/unknown-items.yaml
 // - packages/contracts/openapi/settlement/settlement.yaml
+// - packages/contracts/openapi/erpnext-reconciliation/reconciliation.yaml
 //
 // The upstream OpenAPI files are separate documents with overlapping component
 // names, so this file namespaces each generated source and composes their path
@@ -146,6 +147,7 @@ export namespace AuthSchema {
             SignInRequest: {
                 /** Format: email */
                 email: string;
+                /** @description At most 1024 Unicode code points (RT-153), the same maximum as `new_password`. Verified as sent: no trimming and no Unicode normalization. */
                 password: string;
             };
             SignInResponse: {
@@ -319,6 +321,7 @@ export namespace AuthSchema {
                 content: {
                     "application/json": {
                         token: string;
+                        /** @description At most 1024 Unicode code points (RT-153). Hashed as sent: no trimming and no Unicode normalization. */
                         new_password: string;
                     };
                 };
@@ -989,6 +992,7 @@ export namespace StoresSchema {
                 code: string;
                 name: string;
             };
+            /** @description At least one of `name` or `is_active`; an empty body is a 400. */
             StoreUpdate: {
                 name?: string;
                 is_active?: boolean;
@@ -1511,6 +1515,7 @@ export namespace AuditSchema {
                     store_id?: string;
                     from?: string;
                     to?: string;
+                    /** @description Opaque pagination cursor from a prior page's `next_cursor`. Do not construct or decode it; a malformed value is a 400 `validation_error`. */
                     cursor?: string;
                     limit?: number;
                 };
@@ -1566,7 +1571,7 @@ export namespace UnknownItemsSchema {
              * POS captures (or resolves) a catalog item reference.
              * @description Look up the submitted identifier against the tenant's active alias set. On a hit, return the resolved product reference; on a miss, create a `pending` `unknown_items` row scoped to (tenant, store) and return its stable id. The submitting POS device's authenticated principal supplies both `tenant_id` and `store_id` (per spec 002); body-supplied tenant / store fields are NOT accepted (Constitution §III).
              *     Idempotency: the `Idempotency-Key` header is REQUIRED. The existing `IdempotencyInterceptor` keys on `(method, route, clientId = POS device principal id, key)` per FR-021a and honors a default 72-hour TTL (≥ FR-021b's 24h minimum). Identical retry replays the stored response with `Idempotent-Replayed: true`; key-reuse with a different logical payload returns 409 `idempotency_key_conflict` per FR-021c.
-             *     Failure-response error codes follow research.md §R2 taxonomy: `validation_failure`, `store_context_required`, `idempotency_key_required`, `idempotency_key_malformed`, `idempotency_key_conflict`.
+             *     Failure-response error codes follow research.md §R2 taxonomy: `validation_error`, `store_context_required`, `idempotency_key_required`, `idempotency_key_malformed`, `idempotency_key_conflict`.
              */
             post: operations["posCaptureItem"];
             delete?: never;
@@ -1629,7 +1634,7 @@ export namespace UnknownItemsSchema {
             /**
              * Link a pending unknown item to an existing tenant product.
              * @description Atomically: (1) verify the target product is active in the same tenant; (2) create or reactivate a `product_aliases` row binding the unknown item's identifier to the target product; (3) transition the unknown item from `pending` to `resolved` with `resolution_action = linked`. All three effects commit together or none do (FR-053).
-             *     Failure-response error codes follow research.md §R2 taxonomy: `alias_conflict` (FR-052 — identifier already bound to a different product), `target_unavailable` (FR-051 — product is retired or deleted), `already_reconciled` (race-loser per US3 #3 — item was concurrently resolved before this request committed), `validation_failure` (malformed request body).
+             *     Failure-response error codes follow research.md §R2 taxonomy: `alias_conflict` (FR-052 — identifier already bound to a different product), `target_unavailable` (FR-051 — product is retired or deleted), `already_reconciled` (race-loser per US3 #3 — item was concurrently resolved before this request committed), `validation_error` (malformed request body).
              *     Cross-tenant or out-of-scope addresses receive a non-disclosing 404 (SI-001 / SI-004 / FR-013 / FR-092). The conflict response MUST NOT disclose the conflicting product to an actor without authority to see it (FR-042).
              */
             post: operations["tenantAdminLinkUnknownItem"];
@@ -1651,7 +1656,7 @@ export namespace UnknownItemsSchema {
             /**
              * Create a new tenant product from a pending unknown item.
              * @description Atomically: (1) INSERT a new `tenant_products` row in the authenticated tenant (body-supplied `tenant_id` is discarded per Constitution §III — backend authority); (2) INSERT a `product_aliases` row binding the unknown item's identifier to the new product; (3) transition the unknown item from `pending` to `resolved` with `resolution_action = created`. All three effects commit together or none do (FR-063).
-             *     Failure-response error codes follow research.md §R2 taxonomy: `alias_conflict` (FR-062 — identifier already bound to a different product; neither the product nor the alias is created), `already_reconciled` (race-loser — item was concurrently resolved), `validation_failure` (missing or malformed required fields).
+             *     Failure-response error codes follow research.md §R2 taxonomy: `alias_conflict` (FR-062 — identifier already bound to a different product; neither the product nor the alias is created), `already_reconciled` (race-loser — item was concurrently resolved), `validation_error` (missing or malformed required fields).
              *     Cross-tenant or out-of-scope addresses receive a non-disclosing 404 (SI-001 / SI-004 / FR-013 / FR-092).
              */
             post: operations["tenantAdminCreateProductFromUnknownItem"];
@@ -1917,7 +1922,7 @@ export namespace UnknownItemsSchema {
             /** @description Canonical error envelope shared with `auth.openapi.yaml`, `outbox.openapi.yaml`, and others. The `error.code` enum is documented in `research.md` §R2 (FR-091 taxonomy). */
             Error: {
                 error: {
-                    /** @description Stable machine-readable error code (FR-091 / 007 FR-100 taxonomy). The closed 8-category review-queue BUSINESS-FAILURE vocabulary is: `validation`, `target_unavailable`, `alias_conflict`, `idempotency_key_conflict`, `already_reconciled`, `not_found`, `forbidden` (007's 8th category — in-scope insufficient authority, distinct from `not_found`), and `system_failure`. NOTE: the `425 Too Early` idempotency in-progress signal is a TRANSPORT-level retry indicator, NOT a business-failure category — it is outside this closed set (the runtime interceptor emits a diagnostic `idempotency_in_progress` marker on 425; see the per-op 425 response and the recorded contract/runtime body-shape finding). Some shipped-005 operation prose uses the legacy spelling `validation_failure`; the canonical 007 wire code is `validation` (research §R4). Shipped ops are not retrofitted (ISOLATE, T003); the runtime already emits `validation` (the prose is documented drift, not a live second code). */
+                    /** @description Stable machine-readable error code (FR-091 / 007 FR-100 taxonomy). The closed 8-category review-queue BUSINESS-FAILURE vocabulary is: `validation`, `target_unavailable`, `alias_conflict`, `idempotency_key_conflict`, `already_reconciled`, `not_found`, `forbidden` (007's 8th category — in-scope insufficient authority, distinct from `not_found`), and `system_failure`. NOTE: the `425 Too Early` idempotency in-progress signal is a TRANSPORT-level retry indicator, NOT a business-failure category — it is outside this closed set (the runtime interceptor emits a diagnostic `idempotency_in_progress` marker on 425; see the per-op 425 response and the recorded contract/runtime body-shape finding). Request-shape failures use the platform-wide runtime code `validation_error` (`ErrorCodes.VALIDATION`). */
                     code: string;
                     /** @description Human-readable summary; no sensitive data. */
                     message: string;
@@ -1975,7 +1980,7 @@ export namespace UnknownItemsSchema {
                         "application/json": components["schemas"]["PosCaptureUnknownResponse"];
                     };
                 };
-                /** @description Bad request. Possible `error.code` values: `validation_failure` (FR-070 / FR-071 — missing or malformed field), `store_context_required` (FR-011 — POS principal lacks resolved store), `idempotency_key_required`, `idempotency_key_malformed`. */
+                /** @description Bad request. Possible `error.code` values: `validation_error` (FR-070 / FR-071 — missing or malformed field), `store_context_required` (FR-011 — POS principal lacks resolved store), `idempotency_key_required`, `idempotency_key_malformed`. */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -2169,7 +2174,7 @@ export namespace UnknownItemsSchema {
                         "application/json": components["schemas"]["ReviewQueueItem"];
                     };
                 };
-                /** @description Bad request. `error.code = "validation_failure"` (malformed path UUID or invalid request body). */
+                /** @description Bad request. `error.code = "validation_error"` (malformed path UUID or invalid request body). */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -2241,7 +2246,7 @@ export namespace UnknownItemsSchema {
                         "application/json": components["schemas"]["ReviewQueueItem"];
                     };
                 };
-                /** @description Bad request. `error.code = "validation_failure"` (malformed path UUID, missing `name`, or missing `tax_category`). */
+                /** @description Bad request. `error.code = "validation_error"` (malformed path UUID, missing `name`, or missing `tax_category`). */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -2667,8 +2672,12 @@ export namespace SettlementSchema {
              * @enum {string}
              */
             ReceivableState: "open" | "partially_applied" | "settled" | "claimed" | "flagged";
-            /** @description Exact-decimal money as a string (no floats, §III). E.g. "120.00". Tax is NOT apportioned into this value in v1 (tax-pending, §OQ-2). */
+            /** @description Signed exact-decimal money as a string (no floats, §III), stored as `numeric(19,4)` — at most 15 integer digits and 4 fractional digits. A leading `-` is allowed: `variance` is legitimately negative. Tax is NOT apportioned into this value in v1 (tax-pending, §OQ-2). */
             Money: string;
+            /** @description Non-negative exact-decimal money (`numeric(19,4)`). Zero is valid: a 0 `remittedAmount` is a full rejection, and `cashTendered`, `outstandingBalance`, and `claimedAmount` may be zero. No leading `-`. */
+            NonNegativeMoney: string;
+            /** @description Strictly positive exact-decimal money (`numeric(19,4)`). Zero and negatives are rejected, matching apply-payment `amount` and settlement-intent `owedAmount` (`> 0`). A zero apply would trip `payment_application_amount_positive`. */
+            PositiveMoney: string;
             /** @description Create-a-payer-account request. `tenant_id` + actor are server-resolved (§XII) and MUST NOT appear here. */
             PayerAccountCreate: {
                 category: components["schemas"]["PayerCategory"];
@@ -2715,7 +2724,7 @@ export namespace SettlementSchema {
                 saleRef: string;
                 /** Format: uuid */
                 payerRef: string;
-                outstandingBalance: components["schemas"]["Money"];
+                outstandingBalance: components["schemas"]["NonNegativeMoney"];
                 state: components["schemas"]["ReceivableState"];
                 /** @description 7-C external reference to the ERPNext accounting Payment Entry (the VALUATION projection ERPNext owns). DP-2 owns the operational record; this is a non-authoritative pointer, populated only once the connector posting gate (011-DR-POSTING-R1) clears — null until then. */
                 erpnextPaymentEntryRef?: string | null;
@@ -2732,7 +2741,7 @@ export namespace SettlementSchema {
             };
             /** @description Apply a payment/cash against the path receivable (7-C operational truth). */
             PaymentApplicationCreate: {
-                amount: components["schemas"]["Money"];
+                amount: components["schemas"]["PositiveMoney"];
                 /** @description The version the caller last observed on the receivable. The update is guarded `WHERE ... AND version = :version`; a mismatch is 409. */
                 version: number;
                 /** @description Optional human note; redacted in audit per §XIII/§XIV. */
@@ -2745,8 +2754,8 @@ export namespace SettlementSchema {
                  * @description The already-captured sale (pos-sales/sales.yaml captureSale). Not mutated.
                  */
                 saleRef: string;
-                /** @description The cash portion settled at the till (part of the immutable sale); the owed remainder opens the receivable(s). Exact-decimal string. */
-                cashTendered?: string | null;
+                /** @description The cash portion settled at the till (part of the immutable sale); the owed remainder opens the receivable(s). Non-negative exact-decimal string; zero is valid. Null when no cash was tendered. */
+                cashTendered?: components["schemas"]["NonNegativeMoney"] | null;
                 /** @description Split settlement responsibility — one entry per payer (e.g. patient co-pay + insurer-covered). Each opens/contributes to a receivable. */
                 payers: components["schemas"]["SettlementIntentPayer"][];
             };
@@ -2756,7 +2765,7 @@ export namespace SettlementSchema {
                  * @description In-scope payer account; unknown/cross-tenant → 409 unknown-payer (safe).
                  */
                 payerRef: string;
-                owedAmount: components["schemas"]["Money"];
+                owedAmount: components["schemas"]["PositiveMoney"];
                 /** @description Optional payer claim metadata (e.g. policy ref); opaque in v1. */
                 claimMetadata?: {
                     [key: string]: unknown;
@@ -2785,7 +2794,7 @@ export namespace SettlementSchema {
             };
             /** @description Reconcile a remittance against the path claim; records variance. */
             RemittanceReconcile: {
-                remittedAmount: components["schemas"]["Money"];
+                remittedAmount: components["schemas"]["NonNegativeMoney"];
                 /** @description Optional payer-side remittance advice reference; opaque. */
                 remittanceRef?: string | null;
             };
@@ -2793,8 +2802,8 @@ export namespace SettlementSchema {
             ReconciliationResult: {
                 /** Format: uuid */
                 claimRef: string;
-                claimedAmount: components["schemas"]["Money"];
-                remittedAmount: components["schemas"]["Money"];
+                claimedAmount: components["schemas"]["NonNegativeMoney"];
+                remittedAmount: components["schemas"]["NonNegativeMoney"];
                 variance: components["schemas"]["Money"];
                 /**
                  * @description settled (variance zero) | partial (remaining balance + recorded variance) | flagged (net-zero-or-below / anomaly, §4 edge cases).
@@ -2818,7 +2827,7 @@ export namespace SettlementSchema {
             };
         };
         responses: {
-            /** @description validation_failure (400) — malformed body/query/path, unknown key (strict), bad cursor. */
+            /** @description validation_error (400) — malformed body/query/path, unknown key (strict), bad cursor. */
             ValidationFailure: {
                 headers: {
                     [name: string]: unknown;
@@ -2839,6 +2848,17 @@ export namespace SettlementSchema {
             /** @description Insufficient role (403) — authenticated but lacks the required role. 028 (G10). */
             Forbidden: {
                 headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description too_many_requests (429) — per-device write rate limit exceeded on the POS settlement-intent route (ADR 0009 / audit M-2). Keyed PER DEVICE, not per IP or operator token. Non-disclosing `Error` body; `Retry-After` carries the back-off (seconds, [1, 300]). A POS client MUST treat this as TRANSIENT/retryable, never a permanent dead-letter. The limiter FAILS OPEN on a rate-limiter datastore outage (ADR 0009 D3), so a 429 is always a real budget breach. */
+            TooManyRequests: {
+                headers: {
+                    /** @description Seconds to wait before retry; clamped [1, 300]. */
+                    "Retry-After"?: number;
                     [name: string]: unknown;
                 };
                 content: {
@@ -2884,6 +2904,8 @@ export namespace SettlementSchema {
             StoreIdQuery: string;
             /** @description Opaque keyset cursor from a prior page's `nextCursor`. Omit for the first page. */
             Cursor: string;
+            /** @description Opaque keyset cursor from a prior page's `nextCursor`. Omit for the first page. The value is a receivable reference (a UUID); anything else is a 400 `validation_error`. */
+            ReceivableCursor: string;
             /** @description Maximum items per page (bounded). The server MAY return fewer. */
             PageSize: number;
             /** @description Stable server-issued receivable reference. Resolves only within the operator's (tenant, store) scope — out-of-scope refs are non-disclosing 404s (§II/§XII). */
@@ -2971,8 +2993,8 @@ export namespace SettlementSchema {
                     state?: components["parameters"]["ReceivableStateQuery"];
                     /** @description Optional in-scope payer-account filter; out-of-scope id → non-disclosing 404. */
                     payer_ref?: components["parameters"]["PayerRefQuery"];
-                    /** @description Opaque keyset cursor from a prior page's `nextCursor`. Omit for the first page. */
-                    cursor?: components["parameters"]["Cursor"];
+                    /** @description Opaque keyset cursor from a prior page's `nextCursor`. Omit for the first page. The value is a receivable reference (a UUID); anything else is a 400 `validation_error`. */
+                    cursor?: components["parameters"]["ReceivableCursor"];
                     /** @description Maximum items per page (bounded). The server MAY return fewer. */
                     page_size?: components["parameters"]["PageSize"];
                 };
@@ -3159,12 +3181,752 @@ export namespace SettlementSchema {
                 400: components["responses"]["ValidationFailure"];
                 401: components["responses"]["Unauthorized"];
                 409: components["responses"]["Conflict"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
     }
 }
 
-export type paths = AuthSchema.paths & ContextSchema.paths & TenantsSchema.paths & StoresSchema.paths & MembershipsSchema.paths & AuditSchema.paths & UnknownItemsSchema.paths & SettlementSchema.paths;
-export type components = AuthSchema.components & ContextSchema.components & TenantsSchema.components & StoresSchema.components & MembershipsSchema.components & AuditSchema.components & UnknownItemsSchema.components & SettlementSchema.components;
-export type operations = AuthSchema.operations & ContextSchema.operations & TenantsSchema.operations & StoresSchema.operations & MembershipsSchema.operations & AuditSchema.operations & UnknownItemsSchema.operations & SettlementSchema.operations;
+export namespace ErpnextReconciliationSchema {
+    export interface paths {
+        "/api/v1/catalog/erpnext-reconciliation/postings/backlog": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * List the tenant's ERPNext posting dead-letter backlog.
+             * @description A LIVE read-projection over the 015 `erpnext_posting_status` rows with `status = 'permanently_rejected'` for the session tenant (READ, never mirrored). Each item carries its rejection class, originating sale/terminal-event reference, provenance, structured reason, and dead-letter time. Cursor-paginated; filter by store + class. Scoped to the session tenant (RLS); cross-tenant rows are never disclosed.
+             */
+            get: operations["listPostingBacklog"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/catalog/erpnext-reconciliation/postings/{workItemRef}/repair": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            get?: never;
+            put?: never;
+            /**
+             * Repair (re-offer) a posting dead-letter.
+             * @description Re-evaluate 015-RESOLVE for the addressed `permanently_rejected` posting and, if it now resolves, re-make it eligible (`pending`, re-headed) so the connector re-posts it via the EXISTING 012 feed/ack — DP2 makes no outbound ERPNext HTTP. Idempotent (O-3): a repair of an already-`posted` row is a `no_op_echo` returning the stored document reference (never a 2nd document, never a rewrite). A still-unresolved cause leaves the row dead-lettered (`still_failing`) — it returns to the backlog with its class intact. The 008 sale fact is NEVER mutated. `Idempotency-Key` REQUIRED.
+             */
+            post: operations["repairPosting"];
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/catalog/erpnext-reconciliation/runs": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            get?: never;
+            put?: never;
+            /**
+             * Trigger an on-demand stock reconciliation run.
+             * @description Trigger a STOCK reconciliation run for a `(tenant, store)` — compares DP2 operational on-hand (009) against the connector's ERPNext-Bin view for the 014-mapped warehouse, classifying each item in 014's vocabulary. The run is async worker work; this returns the created run id. The 009 ledger + the 008 sale fact are NEVER mutated by the run. `Idempotency-Key` REQUIRED.
+             */
+            post: operations["triggerReconciliationRun"];
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/catalog/erpnext-reconciliation/runs/{runId}": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * Get a reconciliation run's status + summary.
+             * @description The run's status (`running` / `completed` / `failed`) + summary counts by mismatch class. Cross-tenant / out-of-scope `runId` is a non-disclosing 404.
+             */
+            get: operations["getReconciliationRun"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/catalog/erpnext-reconciliation/runs/{runId}/results": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * List a run's classified mismatch results.
+             * @description The run's persisted mismatch report — one classified result per item, in 014's vocabulary. Cursor-paginated; filter by class. Cross-tenant `runId` is a non-disclosing 404.
+             */
+            get: operations["listReconciliationResults"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/catalog/erpnext-reconciliation/runs/{runId}/results/{resultId}/repair": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            get?: never;
+            put?: never;
+            /**
+             * Repair an actionable stock mismatch (re-map / re-sync).
+             * @description Record an idempotent repair for an actionable stock-mismatch result (e.g. `unmapped_store` → re-map drives the 014 admin flow; `quantity_divergence` → re-sync). Transitions the result `open → repaired`. NEVER mutates the 009 ledger — a divergence is surfaced + repaired through the proper owning flow, never a silent overwrite (FR-016). `Idempotency-Key` REQUIRED.
+             */
+            post: operations["repairStockMismatch"];
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/catalog/erpnext-reconciliation/negative-on-hand/stores": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * List per-store ERPNext negative on-hand summaries.
+             * @description RT-177. One summary per store the caller may read. `owner` / `tenant_admin` see every store within their membership's store scope: every store of the session tenant for the default `all` membership, or only the granted stores for a `specific` membership. The session's active store never narrows them. A `store_manager` sees its standard store scope (the active store when one is selected, otherwise its granted stores). Each summary carries the store's snapshot freshness block and the number of ERPNext items whose latest recorded snapshot quantity is strictly below zero. `negativeItemCount` is `0` when `snapshot.status` is `no_warehouse_mapping` or `no_snapshot`; consumers must render those states as "unknown", never as "no issues". Computed on read from the latest recorded Connector Bin snapshot; never reads the 009 ledger; no write. Ordered by `storeId`; cursor-paginated. Other roles get the default non-disclosing 404.
+             */
+            get: operations["listErpnextNegativeOnHandStores"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/catalog/erpnext-reconciliation/stores/{storeId}/negative-on-hand": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * List one store's ERPNext items with negative on-hand.
+             * @description RT-177. The ERPNext items whose quantity in the store's latest recorded Connector Bin snapshot is strictly below zero (`-0.000000` is not negative), including items not mapped to a Retail Tower product. Items are ordered by `quantity` ascending (most negative first), then by `erpnextItemRef.name`; cursor-paginated. `items` is empty when `snapshot.status` is `no_warehouse_mapping` or `no_snapshot`. A `stale` snapshot still returns its items. Computed on read; never reads the 009 ledger; no write. Readable stores are the same as for `listErpnextNegativeOnHandStores` (membership store scope; the active store never narrows `owner` / `tenant_admin`). A foreign-tenant, out-of-scope, deleted or nonexistent store, or a role that may not read this surface, is a non-disclosing 404.
+             */
+            get: operations["listErpnextNegativeOnHand"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+    }
+    export type webhooks = Record<string, never>;
+    export interface components {
+        schemas: {
+            /** @description One 015 `permanently_rejected` posting dead-letter, projected (§IV) — NOT a raw DB row, NOT a stored 017 row (read in place over `erpnext_posting_status`). NO money field (the sale's amounts live on the 008 fact, not surfaced here). */
+            PostingBacklogItem: {
+                /**
+                 * Format: uuid
+                 * @description The 015 `erpnext_posting_status.id` — pass to `repairPosting`.
+                 */
+                workItemRef: string;
+                /** @enum {string} */
+                kind: "sale_post" | "reversal";
+                /** @description The 015 rejection category (`unmapped_item` / `unmapped_store` / `unmapped_account` / `validation` / `closed_period` / `retry_budget_exhausted`). 015's vocabulary, read in place. */
+                rejectionCategory: string;
+                /**
+                 * Format: uuid
+                 * @description The parent 008 sale id (lineage).
+                 */
+                saleRef?: string | null;
+                sourceSystem: string;
+                externalId: string;
+                /** @description Structured rejection detail (no credentials / sensitive ERPNext internals). */
+                reason?: string | null;
+                /**
+                 * Format: date-time
+                 * @description When the posting became `permanently_rejected` (the 015 row's updated_at).
+                 */
+                deadLetteredAt: string;
+            };
+            PostingBacklogPage: {
+                items: components["schemas"]["PostingBacklogItem"][];
+                /** @description Opaque continuation token; null on the last page. */
+                nextCursor: string | null;
+            };
+            /** @description Posting-repair command. Strict (§XII): tenant + actor are server-resolved from the session and MUST NOT appear here. `note` is an optional operator annotation (no PII). */
+            RepairPostingRequest: {
+                note?: string | null;
+            };
+            /** @description Stock-mismatch repair command. Strict (§XII). `repairKind` selects the action for the result's class; `note` is an optional operator annotation. */
+            RepairStockRequest: {
+                /**
+                 * @description `re_map` (drive the 014 mapping admin flow for `unmapped_store`) / `re_sync` (for `quantity_divergence` / `dp2_only` / `erpnext_only`).
+                 * @enum {string}
+                 */
+                repairKind: "re_map" | "re_sync";
+                note?: string | null;
+            };
+            /** @description Stock-run trigger. Strict (§XII): tenant + actor are server-resolved; `kind`/`trigger` are server-set (`stock` / `on_demand`). Only the target store is supplied. */
+            TriggerRunRequest: {
+                /**
+                 * Format: uuid
+                 * @description The store to reconcile (within the session tenant scope).
+                 */
+                storeId: string;
+            };
+            /** @description The recorded outcome of a repair. Confirms what DP2 stored; the operator treats it as the authoritative repair acknowledgement. */
+            RecordedRepair: {
+                /** @enum {string} */
+                targetKind: "posting" | "stock";
+                /**
+                 * Format: uuid
+                 * @description The 015 work-item ref (posting) or the result id (stock).
+                 */
+                targetRef: string;
+                /** @enum {string} */
+                repairKind: "re_post" | "re_map" | "re_sync" | "drain";
+                /** @enum {string} */
+                outcome: "eligible_again" | "still_failing" | "no_op_echo";
+                /** @description The ERPNext document reference echoed when a posting repair targets an already-`posted` row (O-3 — the stored document, never a new one). Null otherwise. */
+                resolvedDocumentRef?: string | null;
+                /** Format: date-time */
+                recordedAt: string;
+            };
+            /** @description A reconciliation run projection (§IV). NO money/valuation field. */
+            ReconciliationRun: {
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                storeId: string;
+                /**
+                 * @description STOCK-only in v1 (the posting backlog is a read-projection, not a run).
+                 * @enum {string}
+                 */
+                kind: "stock";
+                /** @enum {string} */
+                trigger: "on_demand" | "scheduled";
+                /** @enum {string} */
+                status: "running" | "completed" | "failed";
+                /** Format: date-time */
+                startedAt: string;
+                /** Format: date-time */
+                finishedAt?: string | null;
+                /** @description Run-scoped evidence, not only counts. When the Connector has reported a Bin snapshot for the run, `summary.bin_view_report` carries it: the warehouse ref, `readAt` (Connector clock), `recordedAt` (Backend-Core clock) and every reported entry with its ERPNext item ref, resolved tenant product ref (or null), exact-decimal `quantity` string (which may be negative) and stock UOM. No PII and no money/valuation values. For a store-level view of negative ERPNext quantities use `listErpnextNegativeOnHand`. */
+                summary?: Record<string, never> | null;
+            };
+            /** @description One classified mismatch result projection (§IV), in 014's vocabulary. `detail` carries operator-facing qty values (NEVER PII/money). */
+            ReconciliationResult: {
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                runId: string;
+                /**
+                 * @description 014's mismatch-class vocabulary (014 data-model §6.2). 017 owns no class. `negative_balance_flagged` is derived from the 009 `stock_movements` ledger (a negative Retail Tower on-hand balance); it is NOT an ERPNext Bin signal and must not be presented as "negative ERPNext stock". Negative ERPNext Bin quantities are surfaced by `listErpnextNegativeOnHand` / `listErpnextNegativeOnHandStores`.
+                 * @enum {string}
+                 */
+                mismatchClass: "match" | "quantity_divergence" | "unmapped_store" | "unmapped_item" | "dp2_only" | "erpnext_only" | "negative_balance_flagged";
+                /**
+                 * Format: uuid
+                 * @description The originating product ref for a stock line; null for an aggregate line.
+                 */
+                sourceRef?: string | null;
+                /**
+                 * @description 017's OWN orthogonal workflow status (distinct from the mismatch class).
+                 * @enum {string}
+                 */
+                resultState: "open" | "repaired" | "accepted";
+                /** @description Operator-facing values (DP2 vs ERPNext qty etc.). No PII/money. */
+                detail?: Record<string, never> | null;
+            };
+            ReconciliationResultPage: {
+                items: components["schemas"]["ReconciliationResult"][];
+                nextCursor: string | null;
+            };
+            /** @description How current the store's ERPNext evidence is. `no_warehouse_mapping`: the store has no active `stock` warehouse map. `no_snapshot`: mapped, but no Connector Bin snapshot has been recorded. `fresh` / `stale`: a snapshot exists and its `recordedAt` is within / older than `staleAfterSeconds`. A snapshot is a point-in-time ERPNext read, never live stock. */
+            StockSnapshotStatus: {
+                /** @enum {string} */
+                status: "no_warehouse_mapping" | "no_snapshot" | "fresh" | "stale";
+                /** @description The snapshot's ERPNext Warehouse; without a snapshot, the active `stock` map's Warehouse. Null for `no_warehouse_mapping`. */
+                erpnextWarehouseRef: string | null;
+                /**
+                 * Format: uuid
+                 * @description The reconciliation run that carries the snapshot.
+                 */
+                runId: string | null;
+                /**
+                 * Format: date-time
+                 * @description When the Connector read ERPNext (Connector clock) — the "as of" time.
+                 */
+                readAt: string | null;
+                /**
+                 * Format: date-time
+                 * @description When Backend-Core recorded the snapshot; drives `fresh` / `stale`.
+                 */
+                recordedAt: string | null;
+                /** @description Age of `recordedAt` after which the snapshot is `stale` (v1 is 86400). */
+                staleAfterSeconds: number;
+                /** @description Number of Bin entries in the snapshot. */
+                reportedEntryCount: number | null;
+                /** @description The newest `running` stock run, newer than the snapshot's run, that has no snapshot yet. The previous snapshot (if any) is still served. Null for `no_warehouse_mapping`. */
+                pendingRequest: components["schemas"]["PendingSnapshotRequest"] | null;
+            };
+            PendingSnapshotRequest: {
+                /** Format: uuid */
+                runId: string;
+                /**
+                 * Format: date-time
+                 * @description When the run was started.
+                 */
+                requestedAt: string;
+            };
+            ErpnextItemRef: {
+                /** @constant */
+                doctype: "Item";
+                name: string;
+            };
+            /** @description One ERPNext item whose quantity in the store's latest recorded snapshot is strictly below zero. No valuation, no 009 ledger value. */
+            NegativeOnHandItem: {
+                /** @constant */
+                discrepancyKind: "erpnext_negative_on_hand";
+                erpnextItemRef: components["schemas"]["ErpnextItemRef"];
+                /**
+                 * @description `mapped` when the snapshot resolved the ERPNext Item to a Retail Tower product through a confirmed item map; otherwise `unmapped`.
+                 * @enum {string}
+                 */
+                mappingStatus: "mapped" | "unmapped";
+                /** @description The Retail Tower product; null if and only if `unmapped`. */
+                tenantProduct: components["schemas"]["NegativeOnHandTenantProduct"] | null;
+                erpnextWarehouseRef: string;
+                /** @description Signed exact-decimal string, strictly below zero, exactly as the Connector reported it. */
+                quantity: string;
+                stockUom: string;
+            };
+            NegativeOnHandTenantProduct: {
+                /** Format: uuid */
+                id: string;
+                name: string;
+            };
+            StoreNegativeOnHandSummary: {
+                /** Format: uuid */
+                storeId: string;
+                storeName: string;
+                snapshot: components["schemas"]["StockSnapshotStatus"];
+                /** @description Items strictly below zero in the snapshot. `0` for `no_warehouse_mapping` / `no_snapshot`, which means unknown, not "no issues". */
+                negativeItemCount: number;
+            };
+            StoreNegativeOnHandSummaryPage: {
+                items: components["schemas"]["StoreNegativeOnHandSummary"][];
+                /** @description Opaque continuation token; null on the last page. */
+                nextCursor: string | null;
+            };
+            StoreNegativeOnHandPage: {
+                /** Format: uuid */
+                storeId: string;
+                snapshot: components["schemas"]["StockSnapshotStatus"];
+                items: components["schemas"]["NegativeOnHandItem"][];
+                /** @description Opaque continuation token; null on the last page. */
+                nextCursor: string | null;
+            };
+            /** @description Canonical error envelope, identical to the shared shape in `auth.openapi.yaml` / `catalog/erpnext-warehouse-map.yaml` (used verbatim). Cross-tenant / out-of-scope refusals are non-disclosing (§II/§XII). */
+            Error: {
+                error: {
+                    /** @description Stable machine-readable error code. Closed set on this surface: validation_error | not_found | idempotency_key_conflict | system_failure (plus the generic 401 refusal). */
+                    code: string;
+                    /** @description Human-readable summary. No sensitive data, no cause enumeration. */
+                    message: string;
+                    /**
+                     * Format: uuid
+                     * @description Server-side correlation id; the actual cause is recorded server-side.
+                     */
+                    request_id?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description `validation_error` — malformed query / body, unknown key (strict boundary), or a body-supplied server-owned field. Deterministic; no record. */
+            ValidationFailure: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Generic 401 refusal — missing / invalid dashboard session. Non-disclosing. */
+            Unauthorized: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `not_found` — a cross-tenant / out-of-scope / absent `workItemRef`, `runId`, `resultId`, or `storeId`, or a role that may not use the operation. Identical shape in every case (no existence leak, §II/§XII). */
+            NotFound: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `idempotency_key_conflict` (409) — the same `Idempotency-Key` reused with a DIFFERENT body. (A duplicate repair of an already-resolved target with the same outcome is an idempotent 200 echo, not a conflict.) */
+            Conflict: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+        parameters: {
+            /** @description Opaque pagination cursor from a prior page's `nextCursor`. Omit to start. The posting backlog's cursor is a numeric token (1–18 digits); anything else is a 400 `validation_error`. */
+            Cursor: string;
+            /** @description Opaque pagination cursor from a prior page's `nextCursor`. Omit to start. A run-results cursor is a UUID; anything else is a 400 `validation_error`. */
+            ResultsCursor: string;
+            /** @description Maximum items per page (the 009 500/req ceiling). */
+            Limit: number;
+            /** @description Opaque pagination cursor from a prior page's `nextCursor` on the same operation. Omit to start. A cursor that was not issued by that operation is a 400 `validation_error`. */
+            NegativeOnHandCursor: string;
+            /** @description The store whose negative on-hand to list. Resolves only within the session tenant and the caller's store scope; anything else is a non-disclosing 404. */
+            StoreId: string;
+            /** @description Optional store filter (within the session tenant scope). */
+            StoreFilter: string;
+            /** @description Optional mismatch-class / rejection-category filter. */
+            ClassFilter: string;
+            /** @description The 015 `erpnext_posting_status` row id (the dead-letter to repair). Resolves only within the session tenant; out-of-scope ids are non-disclosing 404s (§II/§XII). */
+            WorkItemRef: string;
+            /** @description The reconciliation run id. Out-of-scope ids are non-disclosing 404s. */
+            RunId: string;
+            /** @description The mismatch-result id (within the addressed run). */
+            ResultId: string;
+            /** @description REQUIRED on repair + run-trigger. Reuses the existing `IdempotencyInterceptor` — identical retry replays the stored response; key-reuse with a different body is 409 `idempotency_key_conflict`. No new primitive. */
+            IdempotencyKey: string;
+        };
+        requestBodies: never;
+        headers: {
+            /** @description Present and `true` on a 200 idempotent-replay response. */
+            IdempotentReplayed: boolean;
+        };
+        pathItems: never;
+    }
+    export type $defs = Record<string, never>;
+    export interface operations {
+        listPostingBacklog: {
+            parameters: {
+                query?: {
+                    /** @description Opaque pagination cursor from a prior page's `nextCursor`. Omit to start. The posting backlog's cursor is a numeric token (1–18 digits); anything else is a 400 `validation_error`. */
+                    cursor?: components["parameters"]["Cursor"];
+                    /** @description Maximum items per page (the 009 500/req ceiling). */
+                    limit?: components["parameters"]["Limit"];
+                    /** @description Optional store filter (within the session tenant scope). */
+                    storeId?: components["parameters"]["StoreFilter"];
+                    /** @description Optional mismatch-class / rejection-category filter. */
+                    class?: components["parameters"]["ClassFilter"];
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description A page of posting dead-letters. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PostingBacklogPage"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+            };
+        };
+        repairPosting: {
+            parameters: {
+                query?: never;
+                header: {
+                    /** @description REQUIRED on repair + run-trigger. Reuses the existing `IdempotencyInterceptor` — identical retry replays the stored response; key-reuse with a different body is 409 `idempotency_key_conflict`. No new primitive. */
+                    "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                };
+                path: {
+                    /** @description The 015 `erpnext_posting_status` row id (the dead-letter to repair). Resolves only within the session tenant; out-of-scope ids are non-disclosing 404s (§II/§XII). */
+                    workItemRef: components["parameters"]["WorkItemRef"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RepairPostingRequest"];
+                };
+            };
+            responses: {
+                /** @description Idempotent replay — this repair was already recorded (same `Idempotency-Key`) OR the target was already terminal under the same logical outcome. Echoes the recorded outcome; `Idempotent-Replayed: true`. */
+                200: {
+                    headers: {
+                        "Idempotent-Replayed": components["headers"]["IdempotentReplayed"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RecordedRepair"];
+                    };
+                };
+                /** @description Repair recorded for the first time. */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RecordedRepair"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                404: components["responses"]["NotFound"];
+                409: components["responses"]["Conflict"];
+            };
+        };
+        triggerReconciliationRun: {
+            parameters: {
+                query?: never;
+                header: {
+                    /** @description REQUIRED on repair + run-trigger. Reuses the existing `IdempotencyInterceptor` — identical retry replays the stored response; key-reuse with a different body is 409 `idempotency_key_conflict`. No new primitive. */
+                    "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["TriggerRunRequest"];
+                };
+            };
+            responses: {
+                /** @description Idempotent replay — a run was already triggered with this key. */
+                200: {
+                    headers: {
+                        "Idempotent-Replayed": components["headers"]["IdempotentReplayed"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReconciliationRun"];
+                    };
+                };
+                /** @description Run created (status `running`). */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReconciliationRun"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                404: components["responses"]["NotFound"];
+                409: components["responses"]["Conflict"];
+            };
+        };
+        getReconciliationRun: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The reconciliation run id. Out-of-scope ids are non-disclosing 404s. */
+                    runId: components["parameters"]["RunId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The run. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReconciliationRun"];
+                    };
+                };
+                401: components["responses"]["Unauthorized"];
+                404: components["responses"]["NotFound"];
+            };
+        };
+        listReconciliationResults: {
+            parameters: {
+                query?: {
+                    /** @description Opaque pagination cursor from a prior page's `nextCursor`. Omit to start. A run-results cursor is a UUID; anything else is a 400 `validation_error`. */
+                    cursor?: components["parameters"]["ResultsCursor"];
+                    /** @description Maximum items per page (the 009 500/req ceiling). */
+                    limit?: components["parameters"]["Limit"];
+                    /** @description Optional mismatch-class / rejection-category filter. */
+                    class?: components["parameters"]["ClassFilter"];
+                };
+                header?: never;
+                path: {
+                    /** @description The reconciliation run id. Out-of-scope ids are non-disclosing 404s. */
+                    runId: components["parameters"]["RunId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description A page of classified results. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReconciliationResultPage"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                404: components["responses"]["NotFound"];
+            };
+        };
+        repairStockMismatch: {
+            parameters: {
+                query?: never;
+                header: {
+                    /** @description REQUIRED on repair + run-trigger. Reuses the existing `IdempotencyInterceptor` — identical retry replays the stored response; key-reuse with a different body is 409 `idempotency_key_conflict`. No new primitive. */
+                    "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                };
+                path: {
+                    /** @description The reconciliation run id. Out-of-scope ids are non-disclosing 404s. */
+                    runId: components["parameters"]["RunId"];
+                    /** @description The mismatch-result id (within the addressed run). */
+                    resultId: components["parameters"]["ResultId"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RepairStockRequest"];
+                };
+            };
+            responses: {
+                /** @description Idempotent replay — this repair was already recorded. */
+                200: {
+                    headers: {
+                        "Idempotent-Replayed": components["headers"]["IdempotentReplayed"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RecordedRepair"];
+                    };
+                };
+                /** @description Repair recorded for the first time. */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RecordedRepair"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                404: components["responses"]["NotFound"];
+                409: components["responses"]["Conflict"];
+            };
+        };
+        listErpnextNegativeOnHandStores: {
+            parameters: {
+                query?: {
+                    /** @description Opaque pagination cursor from a prior page's `nextCursor` on the same operation. Omit to start. A cursor that was not issued by that operation is a 400 `validation_error`. */
+                    cursor?: components["parameters"]["NegativeOnHandCursor"];
+                    /** @description Maximum items per page (the 009 500/req ceiling). */
+                    limit?: components["parameters"]["Limit"];
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description A page of per-store negative on-hand summaries. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StoreNegativeOnHandSummaryPage"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                404: components["responses"]["NotFound"];
+            };
+        };
+        listErpnextNegativeOnHand: {
+            parameters: {
+                query?: {
+                    /** @description Opaque pagination cursor from a prior page's `nextCursor` on the same operation. Omit to start. A cursor that was not issued by that operation is a 400 `validation_error`. */
+                    cursor?: components["parameters"]["NegativeOnHandCursor"];
+                    /** @description Maximum items per page (the 009 500/req ceiling). */
+                    limit?: components["parameters"]["Limit"];
+                };
+                header?: never;
+                path: {
+                    /** @description The store whose negative on-hand to list. Resolves only within the session tenant and the caller's store scope; anything else is a non-disclosing 404. */
+                    storeId: components["parameters"]["StoreId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The store's snapshot block and a page of negative items. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StoreNegativeOnHandPage"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                404: components["responses"]["NotFound"];
+            };
+        };
+    }
+}
+
+export type paths = AuthSchema.paths & ContextSchema.paths & TenantsSchema.paths & StoresSchema.paths & MembershipsSchema.paths & AuditSchema.paths & UnknownItemsSchema.paths & SettlementSchema.paths & ErpnextReconciliationSchema.paths;
+export type components = AuthSchema.components & ContextSchema.components & TenantsSchema.components & StoresSchema.components & MembershipsSchema.components & AuditSchema.components & UnknownItemsSchema.components & SettlementSchema.components & ErpnextReconciliationSchema.components;
+export type operations = AuthSchema.operations & ContextSchema.operations & TenantsSchema.operations & StoresSchema.operations & MembershipsSchema.operations & AuditSchema.operations & UnknownItemsSchema.operations & SettlementSchema.operations & ErpnextReconciliationSchema.operations;
