@@ -26,6 +26,9 @@ import openapiTS, { astToString, COMMENT_HEADER } from "openapi-typescript";
  *       tenantAdminInspectUnknownItem, tenantAdminDismissUnknownItem are the
  *       three RF-4a runtime-merged ops; posCapture/link/create-product/reopen/
  *       bulk-dismiss are also in the document but are out of RF-4a scope) — RF-4a
+ *   - settlement/settlement.yaml (payer accounts, receivables, claims) — 017/018/019
+ *   - erpnext-reconciliation/reconciliation.yaml (ERPNext negative on-hand
+ *       read + `triggerReconciliationRun` refresh) — RT-178
  *
  * The pin is UNCHANGED across slices; new slices add their contract source and
  * regenerate at the same SHA (regeneration, not a re-pin).
@@ -40,8 +43,17 @@ import openapiTS, { astToString, COMMENT_HEADER } from "openapi-typescript";
  * namespace). `9874d44` matches the pin recorded in
  * specs/017-.../api-readiness.md (settlement.yaml authority @ cb4a7e5; 9874d44
  * is a later no-op LOC-badge chore with identical contracts).
+ *
+ * SECOND deliberate re-pin (RT-178, 2026-10-04): bumped 9874d44 -> 7597a87
+ * (Backend-Core PR #687 / RT-177 merge) to add the ERPNext reconciliation source
+ * (`listErpnextNegativeOnHandStores`, `listErpnextNegativeOnHand`, and the
+ * existing `triggerReconciliationRun`). `erpnext-reconciliation/reconciliation.yaml`
+ * carries the RT-177 operations only from 7597a87. Unlike the first re-pin, the
+ * 8 existing sources DID drift between the two SHAs (validation constraints,
+ * `additionalProperties: false`, `x-runtime-*` annotations, settlement money
+ * patterns + a 429 response); the regenerated client absorbs them.
  */
-export const DATA_PULSE_2_PIN = "9874d44" as const;
+export const DATA_PULSE_2_PIN = "7597a8741d754ce61d28977cc634633d4ed12f80" as const;
 
 /**
  * The OpenAPI sources composed into the generated client, one entry per
@@ -69,6 +81,12 @@ export const OPENAPI_SOURCE_SPECS = [
   // Settlement boundary (017/018/019): payer accounts, receivables, claims,
   // apply-payment, reconciliation. Consume-only; specs author no YAML.
   { name: "Settlement", path: "packages/contracts/openapi/settlement/settlement.yaml" },
+  // ERPNext reconciliation (RT-178): the negative on-hand read pair plus the
+  // `triggerReconciliationRun` refresh. Consume-only; no YAML authored here.
+  {
+    name: "ErpnextReconciliation",
+    path: "packages/contracts/openapi/erpnext-reconciliation/reconciliation.yaml",
+  },
 ] as const;
 
 /** Upstream source paths (kept for back-compat / documentation references). */
