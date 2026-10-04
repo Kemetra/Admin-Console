@@ -1,6 +1,6 @@
 import { Banner } from "@/components/Banner";
 import { ListState } from "@/components/ListState";
-import { useActiveContextValue } from "@/context/ActiveContextProvider";
+import type { NegativeOnHandItem, StockSnapshotStatus } from "@/lib/stock-discrepancy-queries";
 /**
  * RT-178 — one store's ERPNext negative on-hand items. Header: the API's
  * snapshot block ("ERPNext snapshot as of {readAt}", stale / no_snapshot /
@@ -14,10 +14,22 @@ import { useActiveContextValue } from "@/context/ActiveContextProvider";
 import { useState } from "react";
 import { Link, useParams } from "react-router";
 import { SnapshotStatusPanel } from "./SnapshotStatusPanel";
-import { type TriggerOutcome, canRequestSnapshot, hasSnapshot } from "./stockDiscrepancyLogic";
-import { useRequestSnapshot, useStoreNegativeOnHand } from "./useStockDiscrepancies";
+import { LoadMoreButton, TenantScopePrompt, useDiscrepancyScope } from "./shared";
+import {
+  type TriggerOutcome,
+  canRequestSnapshot,
+  outcomeBannerView,
+  statusView,
+} from "./stockDiscrepancyLogic";
+import {
+  type StockDiscrepancyError,
+  useRequestSnapshot,
+  useStoreNegativeOnHand,
+} from "./useStockDiscrepancies";
 import "../shell/surface.css";
 import "./stock-discrepancies.css";
+
+type StoreData = ReturnType<typeof useStoreNegativeOnHand>;
 
 function BackLink(): React.JSX.Element {
   return (
@@ -47,93 +59,15 @@ function DeskGuidance(): React.JSX.Element {
   );
 }
 
-function outcomeBanner(outcome: TriggerOutcome): React.JSX.Element | null {
-  switch (outcome.kind) {
-    case "requested":
-      return null;
-    case "not-found":
-      return (
-        <Banner
-          variant="danger"
-          message="Not found. A snapshot cannot be requested for this store."
-          requestId={outcome.requestId}
-        />
-      );
-    case "key-conflict":
-      return (
-        <Banner
-          variant="warning"
-          message="That snapshot request conflicted with an earlier one. Try again."
-          requestId={outcome.requestId}
-        />
-      );
-    case "error":
-      return (
-        <Banner
-          variant="danger"
-          message="The snapshot request could not be sent. Try again."
-          requestId={outcome.requestId}
-        />
-      );
-  }
-}
-
-export function StockDiscrepancyStore(): React.JSX.Element {
-  const { storeId } = useParams();
-  const { context } = useActiveContextValue();
-  const tenantId = context?.active_tenant?.id ?? null;
-  const scope = { tenantId, activeStoreId: context?.active_store?.id ?? null };
-  const { snapshot, items, isLoading, error, hasMore, isFetchingNextPage, loadMore } =
-    useStoreNegativeOnHand(scope, storeId);
+/**
+ * Refresh state: one `triggerReconciliationRun` per click, with its outcome
+ * kept for the banner. A thrown request maps to the generic error outcome.
+ */
+function useSnapshotRequest(storeId: string | undefined) {
   const request = useRequestSnapshot(storeId);
   const [outcome, setOutcome] = useState<TriggerOutcome | null>(null);
-  const showRefresh = canRequestSnapshot(context?.active_role_code);
 
-  if (!tenantId) {
-    return (
-      <div className="surface">
-        <p className="content__sub">Select a tenant to view ERPNext stock discrepancies.</p>
-      </div>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <div className="surface">
-        <ListState state="loading" label="ERPNext snapshot" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="surface">
-        <BackLink />
-        {error.kind === "not-found" ? (
-          <>
-            <h1 className="content__title">Store not found</h1>
-            <Banner
-              variant="danger"
-              message="Not found. This store does not exist or is not available to you."
-              requestId={error.requestId}
-            />
-          </>
-        ) : (
-          <Banner
-            variant="danger"
-            message="ERPNext stock discrepancies could not be loaded."
-            requestId={error.requestId}
-          />
-        )}
-      </div>
-    );
-  }
-
-  if (!snapshot) {
-    return <div className="surface" />;
-  }
-
-  async function onRequest(): Promise<void> {
+  async function requestSnapshot(): Promise<void> {
     setOutcome(null);
     try {
       setOutcome(await request.mutateAsync());
@@ -142,8 +76,152 @@ export function StockDiscrepancyStore(): React.JSX.Element {
     }
   }
 
-  const mapped = snapshot.status !== "no_warehouse_mapping";
+  return { isPending: request.isPending, outcome, requestSnapshot };
+}
 
+interface RefreshButtonProps {
+  isPending: boolean;
+  canRefresh: boolean;
+  onRequest: () => void;
+}
+
+/** "Request fresh snapshot" (owner / tenant_admin only; disabled without a mapping). */
+function RefreshButton({
+  isPending,
+  canRefresh,
+  onRequest,
+}: RefreshButtonProps): React.JSX.Element {
+  return (
+    <div className="refresh-action">
+      <button
+        type="button"
+        className="btn-primary"
+        onClick={onRequest}
+        disabled={isPending || !canRefresh}
+      >
+        {isPending ? "Requesting…" : "Request fresh snapshot"}
+      </button>
+      {canRefresh ? null : (
+        <small className="muted">Map an ERPNext stock warehouse for this store first.</small>
+      )}
+    </div>
+  );
+}
+
+function OutcomeBanner({ outcome }: { outcome: TriggerOutcome | null }): React.JSX.Element | null {
+  const view = outcome ? outcomeBannerView(outcome) : null;
+  if (!outcome || !view) return null;
+  const requestId = "requestId" in outcome ? outcome.requestId : undefined;
+  return <Banner variant={view.variant} message={view.message} requestId={requestId} />;
+}
+
+function ProductCell({ item }: { item: NegativeOnHandItem }): React.JSX.Element {
+  if (item.tenantProduct && item.mappingStatus === "mapped") {
+    return <td>{item.tenantProduct.name}</td>;
+  }
+  return (
+    <td>
+      <span className="badge badge--suspended" title="Not mapped to a Retail Tower product">
+        Not mapped
+      </span>
+    </td>
+  );
+}
+
+function ItemRow({ item }: { item: NegativeOnHandItem }): React.JSX.Element {
+  return (
+    <tr className="data-table__row">
+      <ProductCell item={item} />
+      <td>
+        <code className="mono">{item.erpnextItemRef.name}</code>
+      </td>
+      <td className="mono">{item.erpnextWarehouseRef}</td>
+      {/* Exact-decimal string from the API — rendered verbatim, sign included. */}
+      <td className="num mono" data-testid="negative-quantity">
+        {item.quantity}
+      </td>
+      <td>{item.stockUom}</td>
+    </tr>
+  );
+}
+
+function ItemsTable({ items }: { items: NegativeOnHandItem[] }): React.JSX.Element | null {
+  if (items.length === 0) return null;
+  return (
+    <div className="table-scroll">
+      <table className="data-table stock-table">
+        <caption className="data-table__caption">Items below zero in ERPNext</caption>
+        <thead>
+          <tr>
+            <th scope="col">Product</th>
+            <th scope="col">ERPNext Item</th>
+            <th scope="col">Warehouse</th>
+            <th scope="col" className="num">
+              Quantity
+            </th>
+            <th scope="col">Stock UOM</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((item) => (
+            <ItemRow key={`${item.erpnextWarehouseRef}/${item.erpnextItemRef.name}`} item={item} />
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/** "No items below zero" only when a snapshot exists — never for no-snapshot states (AC2). */
+function NoNegativeItems({
+  snapshot,
+  itemCount,
+}: { snapshot: StockSnapshotStatus; itemCount: number }): React.JSX.Element | null {
+  if (!statusView(snapshot.status).hasSnapshot || itemCount > 0) return null;
+  return <ListState state="empty" emptyMessage="No items below zero in this ERPNext snapshot." />;
+}
+
+function StoreErrorView({ error }: { error: StockDiscrepancyError }): React.JSX.Element {
+  return (
+    <div className="surface">
+      <BackLink />
+      {error.kind === "not-found" ? (
+        <>
+          <h1 className="content__title">Store not found</h1>
+          <Banner
+            variant="danger"
+            message="Not found. This store does not exist or is not available to you."
+            requestId={error.requestId}
+          />
+        </>
+      ) : (
+        <Banner
+          variant="danger"
+          message="ERPNext stock discrepancies could not be loaded."
+          requestId={error.requestId}
+        />
+      )}
+    </div>
+  );
+}
+
+function LoadingView(): React.JSX.Element {
+  return (
+    <div className="surface">
+      <ListState state="loading" label="ERPNext snapshot" />
+    </div>
+  );
+}
+
+interface StoreViewProps {
+  storeId: string | undefined;
+  snapshot: StockSnapshotStatus;
+  data: StoreData;
+  showRefresh: boolean;
+}
+
+function StoreView({ storeId, snapshot, data, showRefresh }: StoreViewProps): React.JSX.Element {
+  const refresh = useSnapshotRequest(storeId);
   return (
     <div className="surface">
       <BackLink />
@@ -155,93 +233,43 @@ export function StockDiscrepancyStore(): React.JSX.Element {
           </p>
         </div>
         {showRefresh ? (
-          <div className="refresh-action">
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={() => void onRequest()}
-              disabled={request.isPending || !mapped}
-            >
-              {request.isPending ? "Requesting…" : "Request fresh snapshot"}
-            </button>
-            {!mapped ? (
-              <small className="muted">Map an ERPNext stock warehouse for this store first.</small>
-            ) : null}
-          </div>
+          <RefreshButton
+            isPending={refresh.isPending}
+            canRefresh={statusView(snapshot.status).canRefresh}
+            onRequest={() => void refresh.requestSnapshot()}
+          />
         ) : null}
       </header>
-
-      {outcome ? outcomeBanner(outcome) : null}
-
+      <OutcomeBanner outcome={refresh.outcome} />
       <SnapshotStatusPanel snapshot={snapshot} />
-
-      {hasSnapshot(snapshot.status) && items.length === 0 ? (
-        <ListState state="empty" emptyMessage="No items below zero in this ERPNext snapshot." />
-      ) : null}
-
-      {items.length > 0 ? (
-        <div className="table-scroll">
-          <table className="data-table stock-table">
-            <caption className="data-table__caption">Items below zero in ERPNext</caption>
-            <thead>
-              <tr>
-                <th scope="col">Product</th>
-                <th scope="col">ERPNext Item</th>
-                <th scope="col">Warehouse</th>
-                <th scope="col" className="num">
-                  Quantity
-                </th>
-                <th scope="col">Stock UOM</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item) => (
-                <tr
-                  key={`${item.erpnextWarehouseRef}/${item.erpnextItemRef.name}`}
-                  className="data-table__row"
-                >
-                  <td>
-                    {item.mappingStatus === "mapped" && item.tenantProduct ? (
-                      item.tenantProduct.name
-                    ) : (
-                      <span
-                        className="badge badge--suspended"
-                        title="Not mapped to a Retail Tower product"
-                      >
-                        Not mapped
-                      </span>
-                    )}
-                  </td>
-                  <td>
-                    <code className="mono">{item.erpnextItemRef.name}</code>
-                  </td>
-                  <td className="mono">{item.erpnextWarehouseRef}</td>
-                  {/* Exact-decimal string from the API — rendered verbatim, sign included. */}
-                  <td className="num mono" data-testid="negative-quantity">
-                    {item.quantity}
-                  </td>
-                  <td>{item.stockUom}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : null}
-
-      {hasMore ? (
-        <div>
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={loadMore}
-            disabled={isFetchingNextPage}
-          >
-            {isFetchingNextPage ? "Loading…" : "Load more items"}
-          </button>
-        </div>
-      ) : null}
-
+      <NoNegativeItems snapshot={snapshot} itemCount={data.items.length} />
+      <ItemsTable items={data.items} />
+      <LoadMoreButton
+        hasMore={data.hasMore}
+        isFetching={data.isFetchingNextPage}
+        label="Load more items"
+        onLoadMore={data.loadMore}
+      />
       <DeskGuidance />
     </div>
+  );
+}
+
+export function StockDiscrepancyStore(): React.JSX.Element {
+  const { storeId } = useParams();
+  const { scope, role } = useDiscrepancyScope();
+  const data = useStoreNegativeOnHand(scope, storeId);
+
+  if (!scope.tenantId) return <TenantScopePrompt />;
+  if (data.isLoading) return <LoadingView />;
+  if (data.error) return <StoreErrorView error={data.error} />;
+  if (!data.snapshot) return <div className="surface" />;
+  return (
+    <StoreView
+      storeId={storeId}
+      snapshot={data.snapshot}
+      data={data}
+      showRefresh={canRequestSnapshot(role)}
+    />
   );
 }

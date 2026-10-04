@@ -55,60 +55,115 @@ function errorOf(error: unknown): StockDiscrepancyError | undefined {
 
 const FIRST_PAGE: string | undefined = undefined;
 
+interface PagedPage<T> {
+  items: T[];
+  nextCursor: string | null;
+}
+
+interface ApiResult<P> {
+  status: number;
+  data?: P;
+  error?: unknown;
+}
+
+/** Unwrap one wrapper result: a page, or the typed not-found/generic error. */
+function pageOrThrow<P>(res: ApiResult<P>): P {
+  if (res.status >= 400 || !res.data) throw toError(res.status, res.error);
+  return res.data;
+}
+
+/** getNextPageParam: a null cursor stops paging (undefined in TanStack v5). */
+function nextCursorOf(last: PagedPage<unknown>): string | undefined {
+  return last.nextCursor ?? undefined;
+}
+
+function flattenItems<T>(pages: readonly PagedPage<T>[]): T[] {
+  return pages.flatMap((p) => p.items);
+}
+
+interface InfiniteLike {
+  isLoading: boolean;
+  error: unknown;
+  hasNextPage: boolean;
+  isFetchingNextPage: boolean;
+  fetchNextPage: () => Promise<unknown>;
+}
+
+export interface PagerState {
+  isLoading: boolean;
+  error?: StockDiscrepancyError;
+  hasMore: boolean;
+  isFetchingNextPage: boolean;
+  loadMore: () => void;
+}
+
+/** The loading / error / paging view shared by both reads. */
+function pagerState(query: InfiniteLike, enabled: boolean): PagerState {
+  return {
+    isLoading: query.isLoading && enabled,
+    error: errorOf(query.error),
+    hasMore: query.hasNextPage,
+    isFetchingNextPage: query.isFetchingNextPage,
+    loadMore: () => loadNextPage(query),
+  };
+}
+
+function loadNextPage(query: InfiniteLike): void {
+  if (query.hasNextPage && !query.isFetchingNextPage) void query.fetchNextPage();
+}
+
+function fetchStoresPage({
+  pageParam,
+}: { pageParam: string | undefined }): Promise<StoreNegativeOnHandSummaryPage> {
+  return listErpnextNegativeOnHandStores({ cursor: pageParam }).then(pageOrThrow);
+}
+
 export function useNegativeOnHandStores(scope: ScopeKey) {
+  const enabled = Boolean(scope.tenantId);
   const query = useInfiniteQuery({
     queryKey: stockDiscrepancyQueryKeys.stores(scope),
-    enabled: Boolean(scope.tenantId),
+    enabled,
     initialPageParam: FIRST_PAGE,
-    queryFn: async ({ pageParam }): Promise<StoreNegativeOnHandSummaryPage> => {
-      const res = await listErpnextNegativeOnHandStores({ cursor: pageParam });
-      if (res.status >= 400 || !res.data) throw toError(res.status, res.error);
-      return res.data;
-    },
-    getNextPageParam: (last) => last.nextCursor ?? undefined,
+    queryFn: fetchStoresPage,
+    getNextPageParam: nextCursorOf,
     retry: false,
   });
 
   return {
-    stores: (query.data?.pages ?? []).flatMap((p) => p.items),
-    isLoading: query.isLoading && Boolean(scope.tenantId),
-    error: errorOf(query.error),
-    hasMore: Boolean(query.hasNextPage),
-    isFetchingNextPage: query.isFetchingNextPage,
-    loadMore: () => {
-      if (query.hasNextPage && !query.isFetchingNextPage) void query.fetchNextPage();
-    },
+    ...pagerState(query, enabled),
+    stores: flattenItems(query.data?.pages ?? []),
     refetch: () => void query.refetch(),
   };
 }
 
+/** Both a tenant and a route store id are needed before the store read runs. */
+function storeReadEnabled(scope: ScopeKey, storeId: string | undefined): boolean {
+  return Boolean(scope.tenantId) && Boolean(storeId);
+}
+
+function storePageFetcher(storeId: string | undefined) {
+  return ({ pageParam }: { pageParam: string | undefined }): Promise<StoreNegativeOnHandPage> =>
+    listErpnextNegativeOnHand(String(storeId), { cursor: pageParam }).then(pageOrThrow);
+}
+
 export function useStoreNegativeOnHand(scope: ScopeKey, storeId: string | undefined) {
+  const enabled = storeReadEnabled(scope, storeId);
   const query = useInfiniteQuery({
     queryKey: stockDiscrepancyQueryKeys.store(scope, storeId),
-    enabled: Boolean(scope.tenantId && storeId),
+    enabled,
     initialPageParam: FIRST_PAGE,
-    queryFn: async ({ pageParam }): Promise<StoreNegativeOnHandPage> => {
-      const res = await listErpnextNegativeOnHand(storeId ?? "", { cursor: pageParam });
-      if (res.status >= 400 || !res.data) throw toError(res.status, res.error);
-      return res.data;
-    },
-    getNextPageParam: (last) => last.nextCursor ?? undefined,
+    queryFn: storePageFetcher(storeId),
+    getNextPageParam: nextCursorOf,
     retry: false,
   });
 
   const pages = query.data?.pages ?? [];
   return {
+    ...pagerState(query, enabled),
     // The snapshot block is per store; the first page's block is the one the
     // operator saw first, so later pages do not silently swap the "as of" time.
     snapshot: pages[0]?.snapshot,
-    items: pages.flatMap((p) => p.items),
-    isLoading: query.isLoading && Boolean(scope.tenantId && storeId),
-    error: errorOf(query.error),
-    hasMore: Boolean(query.hasNextPage),
-    isFetchingNextPage: query.isFetchingNextPage,
-    loadMore: () => {
-      if (query.hasNextPage && !query.isFetchingNextPage) void query.fetchNextPage();
-    },
+    items: flattenItems(pages),
   };
 }
 
