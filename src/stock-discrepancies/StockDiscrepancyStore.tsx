@@ -14,11 +14,13 @@ import type { NegativeOnHandItem, StockSnapshotStatus } from "@/lib/stock-discre
 import { useState } from "react";
 import { Link, useParams } from "react-router";
 import { SnapshotStatusPanel } from "./SnapshotStatusPanel";
-import { LoadMoreButton, TenantScopePrompt, useDiscrepancyScope } from "./shared";
+import { InlineLoadError, LoadMoreButton, TenantScopePrompt, useDiscrepancyScope } from "./shared";
 import {
   type TriggerOutcome,
   canRequestSnapshot,
+  newSnapshotRequestKey,
   outcomeBannerView,
+  refreshBlockReason,
   statusView,
 } from "./stockDiscrepancyLogic";
 import {
@@ -61,7 +63,8 @@ function DeskGuidance(): React.JSX.Element {
 
 /**
  * Refresh state: one `triggerReconciliationRun` per click, with its outcome
- * kept for the banner. A thrown request maps to the generic error outcome.
+ * kept for the banner. The Idempotency-Key is minted here, once per click, and
+ * passed to the mutation. A thrown request maps to the generic error outcome.
  */
 function useSnapshotRequest(storeId: string | undefined) {
   const request = useRequestSnapshot(storeId);
@@ -70,7 +73,7 @@ function useSnapshotRequest(storeId: string | undefined) {
   async function requestSnapshot(): Promise<void> {
     setOutcome(null);
     try {
-      setOutcome(await request.mutateAsync());
+      setOutcome(await request.mutateAsync(newSnapshotRequestKey()));
     } catch {
       setOutcome({ kind: "error" });
     }
@@ -81,14 +84,15 @@ function useSnapshotRequest(storeId: string | undefined) {
 
 interface RefreshButtonProps {
   isPending: boolean;
-  canRefresh: boolean;
+  /** Why the button is disabled (no mapping / request pending), or null. */
+  blockReason: string | null;
   onRequest: () => void;
 }
 
-/** "Request fresh snapshot" (owner / tenant_admin only; disabled without a mapping). */
+/** "Request fresh snapshot" (owner / tenant_admin only). */
 function RefreshButton({
   isPending,
-  canRefresh,
+  blockReason,
   onRequest,
 }: RefreshButtonProps): React.JSX.Element {
   return (
@@ -97,14 +101,23 @@ function RefreshButton({
         type="button"
         className="btn-primary"
         onClick={onRequest}
-        disabled={isPending || !canRefresh}
+        disabled={isPending || blockReason !== null}
       >
         {isPending ? "Requesting…" : "Request fresh snapshot"}
       </button>
-      {canRefresh ? null : (
-        <small className="muted">Map an ERPNext stock warehouse for this store first.</small>
-      )}
+      {blockReason ? <small className="muted">{blockReason}</small> : null}
     </div>
+  );
+}
+
+/** Shown after a later page came from a newer snapshot and the list reloaded. */
+function SnapshotChangedNotice({ show }: { show: boolean }): React.JSX.Element | null {
+  if (!show) return null;
+  return (
+    <Banner
+      variant="info"
+      message="Snapshot changed — reloaded. A newer ERPNext snapshot was recorded while paging, so the list was reloaded from its first page."
+    />
   );
 }
 
@@ -235,15 +248,17 @@ function StoreView({ storeId, snapshot, data, showRefresh }: StoreViewProps): Re
         {showRefresh ? (
           <RefreshButton
             isPending={refresh.isPending}
-            canRefresh={statusView(snapshot.status).canRefresh}
+            blockReason={refreshBlockReason(snapshot)}
             onRequest={() => void refresh.requestSnapshot()}
           />
         ) : null}
       </header>
       <OutcomeBanner outcome={refresh.outcome} />
+      <SnapshotChangedNotice show={data.snapshotChanged} />
       <SnapshotStatusPanel snapshot={snapshot} />
       <NoNegativeItems snapshot={snapshot} itemCount={data.items.length} />
       <ItemsTable items={data.items} />
+      <InlineLoadError error={data.inlineError} onRetry={data.retryInline} />
       <LoadMoreButton
         hasMore={data.hasMore}
         isFetching={data.isFetchingNextPage}

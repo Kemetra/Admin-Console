@@ -64,11 +64,11 @@ function page(snap: Record<string, unknown>, items: unknown[] = [], nextCursor =
   return { status: 200, data: { storeId: STORE, snapshot: snap, items, nextCursor } };
 }
 
-function renderStore(): void {
+function renderStore(storeId: string = STORE): void {
   const qc = createQueryClient();
   render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={[`/stock-discrepancies/${STORE}`]}>
+      <MemoryRouter initialEntries={[`/stock-discrepancies/${storeId}`]}>
         <Routes>
           <Route path="/stock-discrepancies/:storeId" element={<StockDiscrepancyStore />} />
         </Routes>
@@ -368,5 +368,109 @@ describe("StockDiscrepancyStore (RT-178)", () => {
     expect(await screen.findByText("ITM-0009")).toBeDefined();
     expect(listErpnextNegativeOnHand).toHaveBeenLastCalledWith(STORE, { cursor: "abc_DEF-1" });
     expect(screen.getByText("ITM-0001")).toBeDefined();
+  });
+
+  test("P3-1: a later page from a different snapshot resets to page 1 with a notice", async () => {
+    activeContext.mockReturnValue(ctx("tenant_admin"));
+    const newer = snapshot({
+      runId: "0190f000-0000-7000-8000-0000000000b2",
+      readAt: "2026-10-04T09:30:00.000Z",
+      recordedAt: "2026-10-04T09:31:00.000Z",
+    });
+    listErpnextNegativeOnHand
+      .mockResolvedValueOnce({
+        status: 200,
+        data: { storeId: STORE, snapshot: snapshot(), items: [item()], nextCursor: "abc_DEF-1" },
+      })
+      .mockResolvedValueOnce(
+        page(newer, [item({ erpnextItemRef: { doctype: "Item", name: "ITM-0009" } })]),
+      )
+      .mockResolvedValueOnce(
+        page(newer, [item({ erpnextItemRef: { doctype: "Item", name: "ITM-0042" } })]),
+      );
+    renderStore();
+    fireEvent.click(await screen.findByRole("button", { name: /load more items/i }));
+    expect(await screen.findByText(/snapshot changed — reloaded/i)).toBeDefined();
+    expect(await screen.findByText("ITM-0042")).toBeDefined();
+    // Reloaded from page 1 (no cursor); the rows and header come from ONE snapshot.
+    expect(listErpnextNegativeOnHand).toHaveBeenCalledTimes(3);
+    expect(listErpnextNegativeOnHand).toHaveBeenLastCalledWith(STORE, { cursor: undefined });
+    expect(screen.queryByText("ITM-0001")).toBeNull();
+    expect(screen.queryByText("ITM-0009")).toBeNull();
+    const heading = screen.getByRole("heading", { name: /erpnext snapshot as of/i });
+    expect(heading.textContent).toBe("ERPNext snapshot as of 2026-10-04T09:30:00.000Z");
+  });
+
+  test("same snapshot across pages: no reset, no notice", async () => {
+    activeContext.mockReturnValue(ctx("tenant_admin"));
+    listErpnextNegativeOnHand
+      .mockResolvedValueOnce({
+        status: 200,
+        // `status` may differ (fresh -> stale) for the same snapshot.
+        data: { storeId: STORE, snapshot: snapshot(), items: [item()], nextCursor: "abc_DEF-1" },
+      })
+      .mockResolvedValueOnce(
+        page(snapshot({ status: "stale" }), [
+          item({ erpnextItemRef: { doctype: "Item", name: "ITM-0009" } }),
+        ]),
+      );
+    renderStore();
+    fireEvent.click(await screen.findByRole("button", { name: /load more items/i }));
+    expect(await screen.findByText("ITM-0009")).toBeDefined();
+    expect(screen.getByText("ITM-0001")).toBeDefined();
+    expect(screen.queryByText(/snapshot changed/i)).toBeNull();
+    expect(listErpnextNegativeOnHand).toHaveBeenCalledTimes(2);
+  });
+
+  test("P3-2: a failed 'Load more' keeps the rows and offers Retry inline", async () => {
+    activeContext.mockReturnValue(ctx("tenant_admin"));
+    listErpnextNegativeOnHand
+      .mockResolvedValueOnce({
+        status: 200,
+        data: { storeId: STORE, snapshot: snapshot(), items: [item()], nextCursor: "abc_DEF-1" },
+      })
+      .mockResolvedValueOnce({ status: 500, error: { error: { request_id: "req-500" } } })
+      .mockResolvedValueOnce(
+        page(snapshot(), [item({ erpnextItemRef: { doctype: "Item", name: "ITM-0009" } })]),
+      );
+    renderStore();
+    fireEvent.click(await screen.findByRole("button", { name: /load more items/i }));
+    expect(await screen.findByText(/some rows could not be loaded/i)).toBeDefined();
+    expect(screen.getByText(/req-500/)).toBeDefined();
+    expect(screen.getByText("ITM-0001")).toBeDefined();
+    expect(screen.getByRole("table")).toBeDefined();
+    expect(screen.queryByRole("heading", { name: /store not found/i })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /retry/i }));
+    expect(await screen.findByText("ITM-0009")).toBeDefined();
+    expect(listErpnextNegativeOnHand).toHaveBeenLastCalledWith(STORE, { cursor: "abc_DEF-1" });
+    expect(screen.queryByText(/some rows could not be loaded/i)).toBeNull();
+  });
+
+  test("P3-3: refresh is disabled while a snapshot request is pending", async () => {
+    activeContext.mockReturnValue(ctx("owner"));
+    listErpnextNegativeOnHand.mockResolvedValue(
+      page(
+        snapshot({
+          pendingRequest: {
+            runId: "0190f000-0000-7000-8000-0000000000b9",
+            requestedAt: new Date().toISOString(),
+          },
+        }),
+        [item()],
+      ),
+    );
+    renderStore();
+    const button = await screen.findByRole("button", { name: /request fresh snapshot/i });
+    expect((button as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText("A snapshot request is already pending.")).toBeDefined();
+    fireEvent.click(button);
+    expect(triggerReconciliationRun).not.toHaveBeenCalled();
+  });
+
+  test("P3-5: a malformed :storeId renders not-found without calling the API", async () => {
+    activeContext.mockReturnValue(ctx("tenant_admin"));
+    renderStore("not-a-uuid");
+    expect(await screen.findByRole("heading", { name: /store not found/i })).toBeDefined();
+    expect(listErpnextNegativeOnHand).not.toHaveBeenCalled();
   });
 });

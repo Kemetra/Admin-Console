@@ -13,10 +13,12 @@ import {
   triggerReconciliationRun,
 } from "@/lib/stock-discrepancy-queries";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import {
   type TriggerOutcome,
   classifyTriggerOutcome,
-  newSnapshotRequestKey,
+  isStoreId,
+  pagesShareSnapshot,
   requestIdOf,
 } from "./stockDiscrepancyLogic";
 
@@ -84,24 +86,37 @@ function flattenItems<T>(pages: readonly PagedPage<T>[]): T[] {
 interface InfiniteLike {
   isLoading: boolean;
   error: unknown;
+  isFetchNextPageError: boolean;
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
   fetchNextPage: () => Promise<unknown>;
+  refetch: () => Promise<unknown>;
 }
 
 export interface PagerState {
   isLoading: boolean;
+  /** A failure with nothing loaded yet: the surface shows its error view. */
   error?: StockDiscrepancyError;
+  /**
+   * A failure after rows were loaded (a failed "Load more" or re-read): the
+   * loaded rows stay and the pager shows this error with a Retry.
+   */
+  inlineError?: StockDiscrepancyError;
+  /** Retries whatever failed inline: the next page, or the re-read. */
+  retryInline: () => void;
   hasMore: boolean;
   isFetchingNextPage: boolean;
   loadMore: () => void;
 }
 
 /** The loading / error / paging view shared by both reads. */
-function pagerState(query: InfiniteLike, enabled: boolean): PagerState {
+function pagerState(query: InfiniteLike, enabled: boolean, hasData: boolean): PagerState {
+  const error = errorOf(query.error);
   return {
     isLoading: query.isLoading && enabled,
-    error: errorOf(query.error),
+    error: hasData ? undefined : error,
+    inlineError: hasData ? error : undefined,
+    retryInline: () => retryFailed(query),
     hasMore: query.hasNextPage,
     isFetchingNextPage: query.isFetchingNextPage,
     loadMore: () => loadNextPage(query),
@@ -110,6 +125,11 @@ function pagerState(query: InfiniteLike, enabled: boolean): PagerState {
 
 function loadNextPage(query: InfiniteLike): void {
   if (query.hasNextPage && !query.isFetchingNextPage) void query.fetchNextPage();
+}
+
+function retryFailed(query: InfiniteLike): void {
+  if (query.isFetchNextPageError) loadNextPage(query);
+  else void query.refetch();
 }
 
 function fetchStoresPage({
@@ -129,16 +149,12 @@ export function useNegativeOnHandStores(scope: ScopeKey) {
     retry: false,
   });
 
+  const pages = query.data?.pages ?? [];
   return {
-    ...pagerState(query, enabled),
-    stores: flattenItems(query.data?.pages ?? []),
+    ...pagerState(query, enabled, pages.length > 0),
+    stores: flattenItems(pages),
     refetch: () => void query.refetch(),
   };
-}
-
-/** Both a tenant and a route store id are needed before the store read runs. */
-function storeReadEnabled(scope: ScopeKey, storeId: string | undefined): boolean {
-  return Boolean(scope.tenantId) && Boolean(storeId);
 }
 
 function storePageFetcher(storeId: string | undefined) {
@@ -146,37 +162,76 @@ function storePageFetcher(storeId: string | undefined) {
     listErpnextNegativeOnHand(String(storeId), { cursor: pageParam }).then(pageOrThrow);
 }
 
+/**
+ * Guards against mixing snapshots while paging. If a later page was computed
+ * from a different snapshot than page 1, the query is reset (it reloads from
+ * page 1) and `snapshotChanged` stays true for this store so the view can say
+ * so. Until the reset lands, only page 1's rows are exposed.
+ */
+function useSnapshotConsistency(
+  pages: readonly StoreNegativeOnHandPage[],
+  queryKey: readonly unknown[],
+  storeId: string | undefined,
+) {
+  const qc = useQueryClient();
+  const [changedFor, setChangedFor] = useState<string | undefined>(undefined);
+  const consistent = pagesShareSnapshot(pages);
+
+  useEffect(() => {
+    if (consistent) return;
+    setChangedFor(storeId);
+    void qc.resetQueries({ queryKey, exact: true });
+  }, [consistent, qc, queryKey, storeId]);
+
+  return {
+    visiblePages: consistent ? pages : pages.slice(0, 1),
+    snapshotChanged: changedFor !== undefined && changedFor === storeId,
+  };
+}
+
+const INVALID_STORE: StockDiscrepancyError = { kind: "not-found" };
+
 export function useStoreNegativeOnHand(scope: ScopeKey, storeId: string | undefined) {
-  const enabled = storeReadEnabled(scope, storeId);
+  const validStore = isStoreId(storeId);
+  const enabled = Boolean(scope.tenantId) && validStore;
+  const queryKey = stockDiscrepancyQueryKeys.store(scope, storeId);
   const query = useInfiniteQuery({
-    queryKey: stockDiscrepancyQueryKeys.store(scope, storeId),
+    queryKey,
     enabled,
     initialPageParam: FIRST_PAGE,
     queryFn: storePageFetcher(storeId),
     getNextPageParam: nextCursorOf,
     retry: false,
   });
+  const { visiblePages, snapshotChanged } = useSnapshotConsistency(
+    query.data?.pages ?? [],
+    queryKey,
+    storeId,
+  );
+  const pager = pagerState(query, enabled, visiblePages.length > 0);
 
-  const pages = query.data?.pages ?? [];
   return {
-    ...pagerState(query, enabled),
-    // The snapshot block is per store; the first page's block is the one the
-    // operator saw first, so later pages do not silently swap the "as of" time.
-    snapshot: pages[0]?.snapshot,
-    items: flattenItems(pages),
+    ...pager,
+    // A malformed route id would be a contract 400: render it as not-found.
+    error: validStore ? pager.error : INVALID_STORE,
+    // Every visible page shares page 1's snapshot (see useSnapshotConsistency).
+    snapshot: visiblePages[0]?.snapshot,
+    items: flattenItems(visiblePages),
+    snapshotChanged,
   };
 }
 
 /**
- * "Request fresh snapshot". Each click is a new logical request, so each gets a
- * new Idempotency-Key. On success the store's queries are invalidated so the
- * API's `pendingRequest` shows up.
+ * "Request fresh snapshot". The caller mints the Idempotency-Key per click and
+ * passes it as the mutation variable, so a retry of the same mutation reuses
+ * the same key. On success the store's queries are invalidated so the API's
+ * `pendingRequest` shows up.
  */
 export function useRequestSnapshot(storeId: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (): Promise<TriggerOutcome> => {
-      const res = await triggerReconciliationRun(storeId ?? "", newSnapshotRequestKey());
+    mutationFn: async (idempotencyKey: string): Promise<TriggerOutcome> => {
+      const res = await triggerReconciliationRun(storeId ?? "", idempotencyKey);
       return classifyTriggerOutcome(res);
     },
     onSuccess: (outcome) => {

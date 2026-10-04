@@ -1,5 +1,5 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -193,5 +193,26 @@ describe("StockDiscrepancyStores (RT-178)", () => {
     renderStores();
     expect(await screen.findByText(/select a tenant/i)).toBeDefined();
     expect(listErpnextNegativeOnHandStores).not.toHaveBeenCalled();
+  });
+
+  test("P3-2: a failed 'Load more stores' keeps the rows and offers Retry inline", async () => {
+    activeContext.mockReturnValue(ctx("owner"));
+    listErpnextNegativeOnHandStores
+      .mockResolvedValueOnce({
+        status: 200,
+        data: { items: [summary(S1, "Cairo Festival City", snapshot(), 1)], nextCursor: "c2" },
+      })
+      .mockResolvedValueOnce({ status: 500, error: { error: { request_id: "req-500" } } })
+      .mockResolvedValueOnce({
+        status: 200,
+        data: { items: [summary(S2, "Maadi", snapshot(), 2)], nextCursor: null },
+      });
+    renderStores();
+    fireEvent.click(await screen.findByRole("button", { name: /load more stores/i }));
+    expect(await screen.findByText(/some rows could not be loaded/i)).toBeDefined();
+    expect(screen.getByRole("link", { name: "Cairo Festival City" })).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: /retry/i }));
+    expect(await screen.findByRole("link", { name: "Maadi" })).toBeDefined();
+    expect(listErpnextNegativeOnHandStores).toHaveBeenLastCalledWith({ cursor: "c2" });
   });
 });

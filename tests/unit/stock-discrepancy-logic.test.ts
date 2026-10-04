@@ -6,9 +6,12 @@ import {
   formatStaleAfter,
   hasSnapshot,
   isPendingOverdue,
+  isStoreId,
   negativeCountLabel,
   newSnapshotRequestKey,
   noSnapshotReason,
+  pagesShareSnapshot,
+  refreshBlockReason,
   snapshotStatusLabel,
 } from "@/stock-discrepancies/stockDiscrepancyLogic";
 import { describe, expect, test } from "vitest";
@@ -104,5 +107,62 @@ describe("refresh (triggerReconciliationRun)", () => {
       kind: "error",
       requestId: undefined,
     });
+  });
+});
+
+describe("paging consistency, store id, refresh block (P3 fixes)", () => {
+  const base = {
+    status: "fresh" as const,
+    erpnextWarehouseRef: "Stores - NSR",
+    runId: "0190f000-0000-7000-8000-0000000000b1",
+    readAt: "2026-10-04T07:58:12.000Z",
+    recordedAt: "2026-10-04T08:00:03.000Z",
+    staleAfterSeconds: 86400,
+    reportedEntryCount: 42,
+    pendingRequest: null,
+  };
+
+  test("pagesShareSnapshot: same run + recordedAt is one snapshot, status ignored", () => {
+    expect(pagesShareSnapshot([])).toBe(true);
+    expect(pagesShareSnapshot([{ snapshot: base }])).toBe(true);
+    expect(
+      pagesShareSnapshot([{ snapshot: base }, { snapshot: { ...base, status: "stale" } }]),
+    ).toBe(true);
+    expect(
+      pagesShareSnapshot([
+        { snapshot: base },
+        { snapshot: { ...base, runId: "0190f000-0000-7000-8000-0000000000b2" } },
+      ]),
+    ).toBe(false);
+    expect(
+      pagesShareSnapshot([
+        { snapshot: base },
+        { snapshot: { ...base, recordedAt: "2026-10-04T09:00:00.000Z" } },
+      ]),
+    ).toBe(false);
+  });
+
+  test("isStoreId accepts UUIDs only", () => {
+    expect(isStoreId("0190f000-0000-7000-8000-0000000000a1")).toBe(true);
+    expect(isStoreId("0190F000-0000-7000-8000-0000000000A1")).toBe(true);
+    expect(isStoreId("not-a-uuid")).toBe(false);
+    expect(isStoreId("")).toBe(false);
+    expect(isStoreId(undefined)).toBe(false);
+  });
+
+  test("refreshBlockReason: no mapping, pending request, or enabled", () => {
+    expect(refreshBlockReason(base)).toBeNull();
+    expect(
+      refreshBlockReason({
+        ...base,
+        pendingRequest: {
+          runId: "0190f000-0000-7000-8000-0000000000b9",
+          requestedAt: "2026-10-04T08:05:00.000Z",
+        },
+      }),
+    ).toBe("A snapshot request is already pending.");
+    expect(refreshBlockReason({ ...base, status: "no_warehouse_mapping" })).toMatch(
+      /map an erpnext stock warehouse/i,
+    );
   });
 });

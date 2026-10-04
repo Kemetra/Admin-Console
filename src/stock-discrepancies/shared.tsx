@@ -1,9 +1,10 @@
-import { useActiveContextValue } from "@/context/ActiveContextProvider";
 /**
  * RT-178 shared pieces for the two stock discrepancy surfaces: the scope read
  * from RF-1's active context, the no-tenant prompt, and the "Load more" pager.
  */
-import type { ScopeKey } from "./useStockDiscrepancies";
+import { Banner } from "@/components/Banner";
+import { useActiveContextValue } from "@/context/ActiveContextProvider";
+import type { ScopeKey, StockDiscrepancyError } from "./useStockDiscrepancies";
 
 export interface DiscrepancyScope {
   scope: ScopeKey;
@@ -57,5 +58,27 @@ export function LoadMoreButton({
         {isFetching ? "Loading…" : label}
       </button>
     </div>
+  );
+}
+
+export interface InlineErrorProps {
+  error: StockDiscrepancyError | undefined;
+  onRetry: () => void;
+}
+
+/** A failed "Load more" or re-read, under rows that stay on screen. */
+export function InlineLoadError({ error, onRetry }: InlineErrorProps): React.JSX.Element | null {
+  if (!error) return null;
+  return (
+    <Banner
+      variant="danger"
+      message="Some rows could not be loaded. The rows shown are from the last successful load."
+      requestId={error.requestId}
+      action={
+        <button type="button" className="btn-secondary" onClick={onRetry}>
+          Retry
+        </button>
+      }
+    />
   );
 }

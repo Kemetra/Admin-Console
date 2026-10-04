@@ -155,6 +155,40 @@ export function isPendingOverdue(
   return nowMs - requestedMs >= PENDING_OVERDUE_MS;
 }
 
+// --- Paging consistency ----------------------------------------------------------
+
+/**
+ * Which recorded snapshot a page was computed from: the run carrying it plus
+ * its Backend-Core receipt time (a merge-write on the same run bumps
+ * `recordedAt`). `status` is deliberately excluded: fresh → stale is the same
+ * snapshot ageing, not a different one.
+ */
+export function snapshotIdentity(snapshot: StockSnapshotStatus): string {
+  return `${snapshot.runId ?? ""}|${snapshot.recordedAt ?? ""}`;
+}
+
+/**
+ * The item cursor is a keyset that is not bound to a snapshot run, so a later
+ * page can come from a newer snapshot than page 1. True when every loaded page
+ * shares page 1's snapshot.
+ */
+export function pagesShareSnapshot(pages: readonly { snapshot: StockSnapshotStatus }[]): boolean {
+  const first = pages[0];
+  if (!first) return true;
+  const identity = snapshotIdentity(first.snapshot);
+  return pages.every((page) => snapshotIdentity(page.snapshot) === identity);
+}
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Route `:storeId` shape check. The contract's `storeId` is a UUID; anything
+ * else would be a 400, which the view treats as the store not being found.
+ */
+export function isStoreId(value: string | undefined): value is string {
+  return value !== undefined && UUID_PATTERN.test(value);
+}
+
 // --- Refresh (triggerReconciliationRun) ----------------------------------------
 
 /**
@@ -191,6 +225,18 @@ export function classifyTriggerOutcome(result: TriggerResult): TriggerOutcome {
   if (result.status === 404) return { kind: "not-found", requestId };
   if (result.status === 409) return { kind: "key-conflict", requestId };
   return { kind: "error", requestId };
+}
+
+/**
+ * Why "Request fresh snapshot" is disabled, or null when it is enabled. A store
+ * without a warehouse mapping cannot produce a snapshot; a request already
+ * pending (the API's `pendingRequest`) should not be duplicated.
+ */
+export function refreshBlockReason(snapshot: StockSnapshotStatus): string | null {
+  if (!STATUS_VIEW[snapshot.status].canRefresh) {
+    return "Map an ERPNext stock warehouse for this store first.";
+  }
+  return snapshot.pendingRequest ? "A snapshot request is already pending." : null;
 }
 
 /** Banner for a refresh outcome; `requested` shows none (the pending note does). */

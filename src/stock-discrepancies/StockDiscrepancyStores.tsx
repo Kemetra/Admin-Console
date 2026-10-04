@@ -11,7 +11,7 @@ import type { StoreNegativeOnHandSummary } from "@/lib/stock-discrepancy-queries
  * A 404 (role not allowed) renders as not-found.
  */
 import { Link } from "react-router";
-import { LoadMoreButton, TenantScopePrompt, useDiscrepancyScope } from "./shared";
+import { InlineLoadError, LoadMoreButton, TenantScopePrompt, useDiscrepancyScope } from "./shared";
 import { asOfTime, negativeCountLabel, statusView } from "./stockDiscrepancyLogic";
 import { type StockDiscrepancyError, useNegativeOnHandStores } from "./useStockDiscrepancies";
 import "../shell/surface.css";
@@ -147,6 +147,7 @@ export function StockDiscrepancyStores(): React.JSX.Element {
     <div className="surface">
       <StoresHeader />
       <StoresBody data={data} />
+      <InlineLoadError error={data.inlineError} onRetry={data.retryInline} />
       <LoadMoreButton
         hasMore={data.hasMore}
         isFetching={data.isFetchingNextPage}
