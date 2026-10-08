@@ -1,99 +1,74 @@
 <div align="center">
 
-<img src="docs/assets/brand/console-logo.svg" alt="Retail Tower Console logo" width="120" height="120"/>
-
-# Retail Tower Console
-
-**One product, four development tracks, and AI native to its architecture and design. Retail Tower Console is the browser admin/operator track of Retail Tower OS.**
+<img src="docs/assets/readme/hero.svg" alt="Retail Tower OS, Admin-Console track: one product, four development tracks, with AI woven through all of them" width="100%"/>
 
 <p align="center">
-  <a href="docs/product/retail-tower-console-charter.md"><img alt="Product: Retail Tower Console" src="https://img.shields.io/badge/product-Retail%20Tower%20Console-0f766e?style=flat-square"></a>
-  <a href="https://github.com/Kemetra/Admin-Console"><img alt="Repo: Admin-Console" src="https://img.shields.io/badge/repo-Admin--Console-181717?style=flat-square&logo=github&logoColor=white"></a>
-  <a href=".specify/memory/constitution.md"><img alt="Platform: frontend-only" src="https://img.shields.io/badge/platform-frontend--only-334155?style=flat-square"></a>
-  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-059669?style=flat-square"></a>
+  <a href="docs/product/retail-tower-console-charter.md"><img alt="Retail Tower OS" src="https://img.shields.io/badge/Retail%20Tower-OS-0f766e?labelColor=0a0f24&style=flat-square"></a>
+  <a href="#-ai-is-native-to-the-architecture-and-the-design"><img alt="AI embedded by design" src="https://img.shields.io/badge/AI-embedded%20by%20design-a78bfa?labelColor=0a0f24&style=flat-square"></a>
+  <a href=".specify/memory/constitution.md"><img alt="Platform: frontend-only" src="https://img.shields.io/badge/platform-frontend--only-14b8a6?labelColor=0a0f24&style=flat-square"></a>
+  <a href="src/generated"><img alt="API: generated client only" src="https://img.shields.io/badge/API-generated%20client%20only-60a5fa?labelColor=0a0f24&style=flat-square"></a>
+  <a href="specs/001-console-foundation/api-readiness.md"><img alt="Contracts: Backend-Core authority" src="https://img.shields.io/badge/contracts-Backend--Core%20authority-f87171?labelColor=0a0f24&style=flat-square"></a>
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-34d399?labelColor=0a0f24&style=flat-square"></a>
 </p>
 
 <p align="center">
-  <a href="package.json"><img alt="Node.js >=22" src="https://img.shields.io/badge/node-%3E%3D22-339933?style=flat-square&logo=nodedotjs&logoColor=white"></a>
-  <a href="package.json"><img alt="pnpm 9.15.0" src="https://img.shields.io/badge/pnpm-9.15.0-f69220?style=flat-square&logo=pnpm&logoColor=white"></a>
-  <a href="package.json"><img alt="React 19" src="https://img.shields.io/badge/React-19-61dafb?style=flat-square&logo=react&logoColor=black"></a>
-  <a href="vite.config.ts"><img alt="Vite" src="https://img.shields.io/badge/Vite-6-646cff?style=flat-square&logo=vite&logoColor=white"></a>
-  <a href="tsconfig.json"><img alt="TypeScript strict" src="https://img.shields.io/badge/TypeScript-strict-3178c6?style=flat-square&logo=typescript&logoColor=white"></a>
+  <a href="package.json"><img alt="Node.js 22+" src="https://img.shields.io/badge/node-%E2%89%A522-339933?logo=nodedotjs&logoColor=white&labelColor=0a0f24&style=flat-square"></a>
+  <a href="package.json"><img alt="pnpm 9.15" src="https://img.shields.io/badge/pnpm-9.15-f69220?logo=pnpm&logoColor=white&labelColor=0a0f24&style=flat-square"></a>
+  <a href="tsconfig.json"><img alt="TypeScript strict" src="https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white&labelColor=0a0f24&style=flat-square"></a>
+  <a href="package.json"><img alt="React 19" src="https://img.shields.io/badge/React-19-61dafb?logo=react&logoColor=black&labelColor=0a0f24&style=flat-square"></a>
+  <a href="vite.config.ts"><img alt="Vite 6" src="https://img.shields.io/badge/Vite-6-646cff?logo=vite&logoColor=white&labelColor=0a0f24&style=flat-square"></a>
 </p>
 
 <p align="center">
-  <a href="#current-implementation-status"><img alt="Status: see implementation status" src="https://img.shields.io/badge/status-see%20implementation%20status-059669?style=flat-square"></a>
-  <a href="src/generated"><img alt="API: generated client only" src="https://img.shields.io/badge/API-generated%20client%20only-2563eb?style=flat-square"></a>
-  <a href="#-ai-is-native-to-the-architecture-and-the-design"><img alt="AI: embedded by design" src="https://img.shields.io/badge/AI-embedded%20by%20design-8b5cf6?style=flat-square"></a>
-  <a href="CLAUDE.md"><img alt="Work: Jira governed, GitHub main is truth" src="https://img.shields.io/badge/work-Jira%20governed-111827?style=flat-square"></a>
-</p>
-
-<p align="center">
-  <a href=".specify/memory/constitution.md"><img alt="Boundary: no backend" src="https://img.shields.io/badge/boundary-no%20backend-dc2626?style=flat-square"></a>
-  <a href="specs/001-console-foundation/api-readiness.md"><img alt="Contracts: Backend-Core authority" src="https://img.shields.io/badge/contracts-Backend--Core%20authority-0f766e?style=flat-square"></a>
-  <a href=".specify/memory/constitution.md"><img alt="POS: indirect only" src="https://img.shields.io/badge/POS-indirect%20only-334155?style=flat-square"></a>
-  <a href=".specify/memory/constitution.md"><img alt="Secrets: none" src="https://img.shields.io/badge/secrets-none-991b1b?style=flat-square"></a>
+  <a href="#-one-project-four-tracks"><b>Tracks</b></a> &nbsp;·&nbsp;
+  <a href="#-ai-is-native-to-the-architecture-and-the-design"><b>AI</b></a> &nbsp;·&nbsp;
+  <a href="#current-implementation-status"><b>Status</b></a> &nbsp;·&nbsp;
+  <a href="#-synchronization-with-retail-tower-os"><b>Contracts</b></a> &nbsp;·&nbsp;
+  <a href="#getting-started"><b>Get started</b></a> &nbsp;·&nbsp;
+  <a href="docs/README.md"><b>Docs</b></a>
 </p>
 
 </div>
 
-**Retail Tower OS** is one product. This repository, [`Kemetra/Admin-Console`](https://github.com/Kemetra/Admin-Console), is its **admin/operator development track**: the browser frontend, which keeps its own surface name, **Retail Tower Console**. The Console consumes Backend-Core OpenAPI contracts through a generated client and must not own backend business logic, database schema, SQL migrations, POS terminal code, worker jobs, secrets, or deployment infrastructure. It never calls ERPNext/Frappe directly.
+> **Retail Tower OS** is the product; this repository, [`Kemetra/Admin-Console`](https://github.com/Kemetra/Admin-Console), is its admin/operator track, the browser frontend that keeps its own surface name, **Retail Tower Console**. It consumes Backend-Core OpenAPI contracts through a generated client and must not own backend business logic, database schema, SQL migrations, POS terminal code, worker jobs, secrets, or deployment infrastructure. It never calls ERPNext/Frappe directly.
 
 > **Naming.** Backend-Core is [`Kemetra/Backend-Core`](https://github.com/Kemetra/Backend-Core). Older specs, code comments and config in this repo still say "Data-Pulse-2" / "DP2" (for example the `dp2_session` cookie and the `DATA_PULSE_2_PIN` constant); that is the same backend. Likewise POS-Pulse is [`Kemetra/POS`](https://github.com/Kemetra/POS) and the ERPNext adapter is [`Kemetra/ERPNext-Connector`](https://github.com/Kemetra/ERPNext-Connector).
 
 ---
 
-## 🧩 One project, four development tracks
+## 🧩 One project, four tracks
 
-**Retail Tower OS is one product.** The repositories below are its development divisions, split by responsibility so each can be built, tested and released independently. They are not separate products: they share one architecture, one set of contracts and one AI-embedded design.
+<p align="center">
+  <img src="docs/assets/readme/tracks.svg" alt="Data flow: POS and Admin-Console talk to Backend-Core, which feeds the ERPNext-Connector, the only path to ERPNext. An AI layer runs through all four tracks." width="100%"/>
+</p>
 
-| Track | Repository | Responsibility |
+| Track | Repository | Owns |
 | --- | --- | --- |
-| **Backend-Core** | [`Kemetra/Backend-Core`](https://github.com/Kemetra/Backend-Core) | The contract and orchestration boundary: APIs, data, workers, tenant/store context, sync operations |
-| **POS** | [`Kemetra/POS`](https://github.com/Kemetra/POS) | Windows cashier terminal: Electron app, offline state, receipts, POS ↔ Backend-Core sync |
-| **Admin-Console** ◀ you are here | [`Kemetra/Admin-Console`](https://github.com/Kemetra/Admin-Console) | Admin/operator web frontend: tenant/store operations, catalog, inventory views, sync operations |
-| **ERPNext-Connector** | [`Kemetra/ERPNext-Connector`](https://github.com/Kemetra/ERPNext-Connector) | The only ERPNext/Frappe adapter: DocType mapping and posting |
+| **Backend-Core** | [`Kemetra/Backend-Core`](https://github.com/Kemetra/Backend-Core) | APIs · data · workers · tenant/store context · sync operations |
+| **POS** | [`Kemetra/POS`](https://github.com/Kemetra/POS) | Windows cashier terminal · offline state · receipts |
+| **Admin-Console** ◀ you are here | [`Kemetra/Admin-Console`](https://github.com/Kemetra/Admin-Console) | Operator web UI · catalog · inventory views · sync ops |
+| **ERPNext-Connector** | [`Kemetra/ERPNext-Connector`](https://github.com/Kemetra/ERPNext-Connector) | The only ERPNext/Frappe adapter · DocType mapping · posting |
 
-```text
-POS / Admin-Console  ─▶  Backend-Core  ─▶  ERPNext-Connector  ─▶  ERPNext / Frappe
-```
-
-[`Kemetra/Orchestrator`](https://github.com/Kemetra/Orchestrator) is the technical handbook (architecture, ADRs, runbooks). It is not a development track and holds no application code.
+<sub>One architecture, one set of contracts, one AI-embedded design. <a href="https://github.com/Kemetra/Orchestrator"><code>Kemetra/Orchestrator</code></a> is the technical handbook, not a track.</sub>
 
 ---
 
 ## 🧠 AI is native to the architecture and the design
 
-Retail Tower OS is **AI-embedded**, not AI-integrated. Intelligence is a founding part of the platform's **architecture and design**, built in from the inside. It is not a layer added to a finished product, a chatbot, or a third-party API attached afterwards.
+<p align="center">
+  <img src="docs/assets/readme/ai-embedded.svg" alt="AI-integrated: the AI sits outside the boundary and reaches the system through a side channel. AI-embedded: the AI runs through every layer inside the boundary, under the same rules." width="100%"/>
+</p>
 
-This holds on two levels. In the **architecture**, contracts, events, audit, tenant isolation, and the data model are built so intelligent components can understand and act on them through the same boundaries as every other actor. In the **design**, workflows and surfaces are designed with intelligence as a native participant, while people keep authority.
+<table>
+<tr>
+<td width="25%" valign="top"><b>🔒 Same boundary</b><br/><sub>Same generated client over Backend-Core contracts and the same server-enforced role and scope checks as every operator. No side door, no direct database or ERPNext path.</sub></td>
+<td width="25%" valign="top"><b>🧾 Auditable</b><br/><sub>Actions are audited in Backend-Core and keep their provenance, so AI-driven decisions can be traced and reviewed in the Console.</sub></td>
+<td width="25%" valign="top"><b>🏢 Tenant-safe</b><br/><sub>Scope stays per tenant and store, enforced by the backend (<a href=".specify/memory/constitution.md">constitution</a>). Intelligence never crosses it.</sub></td>
+<td width="25%" valign="top"><b>🧑‍⚖️ Human-governed</b><br/><sub>Operators keep authority. Suggestions are acted on only through the same authenticated operator actions.</sub></td>
+</tr>
+</table>
 
-| AI-integrated (what Retail Tower OS is **not**) | AI-embedded (what Retail Tower OS **is**) |
-| --- | --- |
-| AI is a feature bolted on top of an existing system | AI is a native participant in the system itself |
-| Reads data through side channels or exports | Works on the same tenant-scoped data model, contracts, and events as every other component |
-| Sits outside the security and audit model | Runs inside it: tenant isolation, default-deny authorization, and audit provenance apply to AI-driven actions like any other actor |
-| Can be removed without changing the architecture | Shapes the architecture: contract-first APIs, structured and auditable data are built so intelligent components can understand and act on them |
-| Added to the UX at the end | Part of the product design: workflows and surfaces are designed with intelligence as a native participant, with people keeping authority |
-
-It runs through all four tracks of the one project:
-
-| Track | What "embedded" means there |
-| --- | --- |
-| **Backend-Core** | Contracts, events, and audit provenance are the substrate every intelligent component works through |
-| **POS** | Cashier workflow and offline-first local state designed to accept intelligent assistance without breaking the sale |
-| **Admin-Console** (this repo) | Operator surfaces designed around intelligent assistance, over the same contracts and permissions |
-| **ERPNext-Connector** | ERP mapping and posting behind the same boundary, so intelligent behavior never reaches ERPNext directly |
-
-What this means for this repository (the admin/operator track):
-
-- **Operator surfaces with intelligence as a native participant (direction).** Console screens, such as review queues, reconciliation, audit, and stock views, are where an intelligent component's output would reach people. The design intent is that AI-assisted behavior appears in these same surfaces, under the same workflows, rather than in a separate side surface. This is direction, not a shipped capability.
-- **Same contracts, same permissions.** The Console stays a frontend that consumes Backend-Core OpenAPI contracts through the generated client. Any AI-driven behavior surfaced here goes through those same contracts and the same server-enforced role and scope checks. It gets no privileged side door, no direct database access, and no direct ERPNext/Frappe path.
-- **No backend logic in the browser.** AI-embedded does not move business logic into this repo. Decisions and data stay behind Backend-Core; the Console renders them and submits operator intent.
-- **Human-governed.** Operators keep authority. AI-assisted suggestions are presented for review and acted on only through the same authenticated, audited operator actions.
-- **Auditable and tenant-safe.** Actions keep their provenance in the audit trail, and intelligence never crosses tenant boundaries. Tenant and store safety is backend-enforced ([Constitution](.specify/memory/constitution.md), principle 7).
-
-> AI-embedded describes the platform's architectural and design direction. **No AI feature is implemented in this repository today**: there is no model, assistant, or AI-driven code under `src`. The only AI-related material in the repo is design intent, an "AI Studio" concept screen in the [vision set](docs/design/_vision/README.md) that is explicitly marked as having no slice yet. What is shipped is tracked in [Current implementation status](#current-implementation-status).
+> AI-embedded describes the architectural and design direction. **No AI feature is implemented in this repository today**: there is no model, assistant, or AI-driven code under `src`. The only AI-related material is design intent, an "AI Studio" concept screen in the [vision set](docs/design/_vision/README.md) that is explicitly marked as having no slice yet. What is shipped is tracked in [Current implementation status](#current-implementation-status).
 
 ---
 
