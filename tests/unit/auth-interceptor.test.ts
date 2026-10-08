@@ -1,5 +1,5 @@
 import { createAuthRetry } from "@/lib/auth-interceptor";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { type Mock, beforeEach, describe, expect, test, vi } from "vitest";
 
 /**
  * The 401 reactive-refresh interceptor (T009, OQ-2, Scenario S5).
@@ -13,8 +13,8 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
  *  - Only one refresh happens even if several 401s arrive concurrently.
  */
 describe("createAuthRetry", () => {
-  let refreshSession: ReturnType<typeof vi.fn>;
-  let onSessionLost: ReturnType<typeof vi.fn>;
+  let refreshSession: Mock<() => Promise<{ ok: boolean }>>;
+  let onSessionLost: Mock<() => void>;
 
   beforeEach(() => {
     refreshSession = vi.fn();
