@@ -16,6 +16,7 @@ import { TowerMark } from "@/components/TowerMark";
  * announce it explicitly with a gate badge (RF-3 / RF-4).
  */
 import { useActiveContextValue } from "@/context/ActiveContextProvider";
+import { canReadStockDiscrepancies } from "@/stock-discrepancies/stockDiscrepancyLogic";
 import { NavLink } from "react-router";
 import { ScopeHeader } from "./ScopeHeader";
 import "./app-shell.css";
@@ -100,6 +101,21 @@ export function AppShell({ onSignOut, children }: AppShellProps): React.JSX.Elem
             <span className="nav-entry__label">{item.label}</span>
           </NavLink>
         ))}
+        {canReadStockDiscrepancies(context?.active_role_code) ? (
+          <>
+            {/* RT-178: shown only for the roles the API lets read this surface. */}
+            <div className="nav-section">Inventory</div>
+            <NavLink
+              to="/stock-discrepancies"
+              className={({ isActive }) =>
+                isActive ? "nav-entry nav-entry--active" : "nav-entry nav-entry--link"
+              }
+            >
+              <Icon name="stock" className="nav-entry__icon" />
+              <span className="nav-entry__label">Stock discrepancies</span>
+            </NavLink>
+          </>
+        ) : null}
         {GATED_NAV.map((item) => (
           <span key={item.gate} className="nav-entry nav-entry--disabled" aria-disabled="true">
             <Icon name={item.icon} className="nav-entry__icon" />
