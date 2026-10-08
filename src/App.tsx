@@ -10,6 +10,7 @@ import { rf2Routes } from "@/shell/rf2Routes";
 import { rf4aRoutes } from "@/shell/rf4aRoutes";
 import { rf5Routes } from "@/shell/rf5Routes";
 import { rf6Routes } from "@/shell/rf6Routes";
+import { stockDiscrepancyRoutes } from "@/shell/stockDiscrepancyRoutes";
 /**
  * RF-1 application root, extended by RF-2 (T009). Composes the providers and the
  * public/protected boundary (R3-1): `/signin` is public (SF-1); everything else
@@ -47,6 +48,7 @@ export function App(): React.JSX.Element {
               {rf6Routes}
               {payerRoutes}
               {receivableRoutes}
+              {stockDiscrepancyRoutes}
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

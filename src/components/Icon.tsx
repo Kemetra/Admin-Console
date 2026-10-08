@@ -21,6 +21,7 @@ export type IconName =
   | "audit"
   | "catalog"
   | "unknown"
+  | "stock"
   | "search"
   | "bell"
   | "help"
@@ -85,6 +86,14 @@ const PATHS: Record<IconName, React.ReactNode> = {
       <path d="M12 3.2 20.8 12 12 20.8 3.2 12 12 3.2Z" />
       <path d="M9.6 9.6a2.4 2.4 0 0 1 4.7.6c0 1.6-2.3 1.9-2.3 3.4" />
       <path d="M12 17h0" />
+    </>
+  ),
+  // Box with a down arrow — ERPNext stock discrepancies (RT-178).
+  stock: (
+    <>
+      <path d="M3.5 8 12 3.5 20.5 8v8L12 20.5 3.5 16V8Z" />
+      <path d="M3.5 8 12 12.5 20.5 8" />
+      <path d="M12 12.5v8" />
     </>
   ),
   // Magnifier — global search.
