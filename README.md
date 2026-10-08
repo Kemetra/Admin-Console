@@ -4,7 +4,7 @@
 
 # Retail Tower Console
 
-**The browser admin command center for Retail Tower OS, with AI embedded in its architecture.**
+**Retail Tower OS: one product, built with AI embedded in its architecture and design. This repo is its admin/operator track, the browser command center.**
 
 <p align="center">
   <a href="docs/product/retail-tower-console-charter.md"><img alt="Product: Retail Tower Console" src="https://img.shields.io/badge/product-Retail%20Tower%20Console-0f766e?style=flat-square"></a>
@@ -37,31 +37,63 @@
 
 </div>
 
-Retail Tower Console is the admin web frontend for Retail Tower OS (repo [`Kemetra/Admin-Console`](https://github.com/Kemetra/Admin-Console)). It consumes Backend-Core OpenAPI contracts through a generated client and must not own backend business logic, database schema, SQL migrations, POS terminal code, worker jobs, secrets, or deployment infrastructure. It never calls ERPNext/Frappe directly.
+**Retail Tower OS** is one product. This repository, [`Kemetra/Admin-Console`](https://github.com/Kemetra/Admin-Console), is its **admin/operator development track**: the browser frontend, which keeps its own surface name, **Retail Tower Console**. The Console consumes Backend-Core OpenAPI contracts through a generated client and must not own backend business logic, database schema, SQL migrations, POS terminal code, worker jobs, secrets, or deployment infrastructure. It never calls ERPNext/Frappe directly.
 
 > **Naming.** Backend-Core is [`Kemetra/Backend-Core`](https://github.com/Kemetra/Backend-Core). Older specs, code comments and config in this repo still say "Data-Pulse-2" / "DP2" (for example the `dp2_session` cookie and the `DATA_PULSE_2_PIN` constant); that is the same backend. Likewise POS-Pulse is [`Kemetra/POS`](https://github.com/Kemetra/POS) and the ERPNext adapter is [`Kemetra/ERPNext-Connector`](https://github.com/Kemetra/ERPNext-Connector).
 
 ---
 
+## 🧩 One project, four development tracks
+
+Retail Tower OS is **one product**. The four repositories below are its development divisions, split by responsibility so that each can be built, tested and released independently. They are not separate products: there is one architecture, one set of contracts, and one AI-embedded design.
+
+| Track | Repository | Responsibility |
+| --- | --- | --- |
+| **Backend-Core** | [`Kemetra/Backend-Core`](https://github.com/Kemetra/Backend-Core) | Contract and orchestration boundary: APIs, data, workers, tenant/store context, sync operations |
+| **POS** | [`Kemetra/POS`](https://github.com/Kemetra/POS) | Windows cashier terminal: Electron app, offline state, receipts, POS to Backend-Core sync |
+| **Admin-Console** ◀ you are here | [`Kemetra/Admin-Console`](https://github.com/Kemetra/Admin-Console) | Admin/operator web frontend: tenant/store operations, catalog, inventory views, sync operations |
+| **ERPNext-Connector** | [`Kemetra/ERPNext-Connector`](https://github.com/Kemetra/ERPNext-Connector) | The only ERPNext/Frappe adapter: DocType mapping, posting |
+
+```text
+POS / Admin-Console -> Backend-Core -> ERPNext-Connector -> ERPNext / Frappe
+```
+
+[`Kemetra/Orchestrator`](https://github.com/Kemetra/Orchestrator) is the technical handbook (architecture, ADRs, runbooks). It is not a track and holds no application code.
+
+---
+
 ## 🧠 AI-embedded by design
 
-Retail Tower OS is **AI-embedded**, not AI-integrated. Intelligence is part of the platform's architecture from the inside. It is not an add-on module, a chatbot, or a third-party API attached to a finished product afterwards.
+AI is a **founding part of Retail Tower OS's architecture and design**, native from the inside. It is not a layer added on top, and it is not merely an integration. Retail Tower OS is **AI-embedded**, not AI-integrated: it is not an add-on module, a chatbot, or a third-party API attached to a finished product afterwards.
+
+This holds on two levels:
+
+- **Architecture.** Contracts, events, audit, tenant isolation, and the data model are built so that intelligent components can understand and act on them through the same boundaries as every other actor.
+- **Design.** Product and UX design: workflows and surfaces are designed with intelligence as a native participant, while humans keep authority.
 
 | AI-integrated (what Retail Tower OS is **not**) | AI-embedded (what Retail Tower OS **is**) |
 | --- | --- |
-| AI is a feature bolted on top of an existing console | AI is a native layer of the platform the console operates |
+| AI is a feature bolted on top of an existing system | AI is a native layer of the system itself |
 | Reads data through side channels, scraping, or exports | Works on the same tenant-scoped data model, contracts, and events as every other component |
 | Sits outside the security and audit model | Runs inside it: tenant isolation, default-deny authorization, and audit provenance apply to AI-driven actions like any other actor |
-| Can be removed without changing the architecture | Shapes the architecture: contract-first APIs and structured, auditable data are built to be understood and acted on by intelligent components |
+| Can be removed without changing the architecture or the product design | Shapes both: contract-first APIs, structured and auditable data, and workflows designed to be understood and acted on by intelligent components |
 
-What this means for the Console:
+Across the four tracks:
 
+- **Backend-Core:** contracts, events, and audit as the substrate.
+- **POS:** the cashier workflow and offline-first local state.
+- **Admin-Console:** operator surfaces.
+- **ERPNext-Connector:** ERP mapping and posting.
+
+What this means for this repository (the admin/operator track):
+
+- **Operator surfaces with intelligence as a native participant (direction).** Console screens, such as review queues, reconciliation, audit, and stock views, are where an intelligent component's output would reach people. The design intent is that AI-assisted behavior appears in these same surfaces, under the same workflows, rather than in a separate side surface. This is direction, not a shipped capability.
 - **Same contracts, same permissions.** The Console stays a frontend that consumes Backend-Core OpenAPI contracts through the generated client. Any AI-driven behavior surfaced here goes through those same contracts and the same server-enforced role and scope checks. It gets no privileged side door, no direct database access, and no direct ERPNext/Frappe path.
 - **No backend logic in the browser.** AI-embedded does not move business logic into this repo. Decisions and data stay behind Backend-Core; the Console renders them and submits operator intent.
 - **Human-governed.** Operators keep authority. AI-assisted suggestions are presented for review and acted on only through the same authenticated, audited operator actions.
 - **Auditable and tenant-safe.** Actions keep their provenance in the audit trail, and intelligence never crosses tenant boundaries. Tenant and store safety is backend-enforced ([Constitution](.specify/memory/constitution.md), principle 7).
 
-> AI-embedded describes the platform's architectural direction. **No AI feature is implemented in this repository today**: there is no model, assistant, or AI-driven code under `src`. The only AI-related material in the repo is design intent, an "AI Studio" concept screen in the [vision set](docs/design/_vision/README.md) that is explicitly marked as having no slice yet. What is shipped is tracked in [Current implementation status](#current-implementation-status).
+> AI-embedded describes the platform's architectural and design direction. **No AI feature is implemented in this repository today**: there is no model, assistant, or AI-driven code under `src`. The only AI-related material in the repo is design intent, an "AI Studio" concept screen in the [vision set](docs/design/_vision/README.md) that is explicitly marked as having no slice yet. What is shipped is tracked in [Current implementation status](#current-implementation-status).
 
 ---
 
