@@ -32,6 +32,7 @@
     "vite.config.ts",
     "vitest.config.ts",
     "playwright.config.ts",
-    "openapi-ts.config.ts"
+    "openapi-ts.config.ts",
+    "release-artifact.ts"
   ]
 }

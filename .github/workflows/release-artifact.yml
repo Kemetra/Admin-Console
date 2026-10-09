@@ -1,0 +1,139 @@
+# RT-337: pinned Admin Console release artifact.
+#
+# Manually dispatched from protected main only. A commit is released only after
+# CI (ci.yml) has succeeded for that exact SHA on a push to main; this workflow
+# then builds dist/, writes dist/version.json (release-artifact.ts) and
+# publishes an immutable GitHub Release: admin-console-<sha12>.tar.gz + .sha256.
+# Serving the artifact (Caddy, same origin with the API) is Backend-Core's job
+# (RT-336). Contract and verification steps: docs/release/admin-console-artifact.md.
+# Separate from ci.yml so the PR/push gates stay unchanged.
+name: Release artifact
+
+on:
+  workflow_dispatch:
+
+# No token scopes by default; each job requests only what it needs.
+permissions: {}
+
+concurrency:
+  group: release-artifact-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      artifact: ${{ steps.version.outputs.artifact }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - name: Require a successful CI run for this commit on main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          runs=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml \
+            --commit "$GITHUB_SHA" --event push --branch main --status success \
+            --limit 1 --json databaseId --jq 'length')
+          if [ "$runs" -lt 1 ]; then
+            echo "::error::No successful CI run on main for $GITHUB_SHA; release refused."
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node 22 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # No env and no secrets: VITE_* values are inlined into the bundle. The
+      # guard runs in this step because Vite reads the variable here;
+      # release-artifact.ts repeats the check and also covers root .env* files.
+      - name: Build
+        run: |
+          if [ -n "${VITE_API_BASE_URL+set}" ]; then
+            echo "::error::VITE_API_BASE_URL must not be set for a release build (same-origin hosting, RT-315)."
+            exit 1
+          fi
+          pnpm build
+
+      - name: Write version.json
+        id: version
+        run: node --experimental-strip-types release-artifact.ts
+
+      - name: Package
+        env:
+          ARTIFACT: ${{ steps.version.outputs.artifact }}
+        run: |
+          tar -czf "$ARTIFACT" -C dist .
+          sha256sum "$ARTIFACT" > "$ARTIFACT.sha256"
+          tar -tzf "$ARTIFACT"
+          cat "$ARTIFACT.sha256"
+
+      - name: Hand off to publish job
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-files
+          path: |
+            ${{ steps.version.outputs.artifact }}
+            ${{ steps.version.outputs.artifact }}.sha256
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ARTIFACT: ${{ needs.build.outputs.artifact }}
+      TAG: ${{ needs.build.outputs.tag }}
+    steps:
+      - name: Receive release files
+        uses: actions/download-artifact@v4
+        with:
+          name: release-files
+
+      - name: Verify checksum
+        run: sha256sum -c "$ARTIFACT.sha256"
+
+      # gh release create would silently reuse an existing tag, so refuse first.
+      - name: Refuse to overwrite an existing tag or release
+        run: |
+          tags=$(gh api "repos/$GITHUB_REPOSITORY/git/matching-refs/tags/$TAG" \
+            --jq "[.[] | select(.ref == \"refs/tags/$TAG\")] | length")
+          releases=$(gh release list --repo "$GITHUB_REPOSITORY" --limit 1000 \
+            --json tagName --jq "[.[] | select(.tagName == \"$TAG\")] | length")
+          if [ "$tags" -ne 0 ] || [ "$releases" -ne 0 ]; then
+            echo "::error::$TAG already exists; published artifacts are immutable."
+            exit 1
+          fi
+
+      - name: Publish release
+        run: |
+          gh release create "$TAG" "$ARTIFACT" "$ARTIFACT.sha256" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "Admin Console $TAG" \
+            --notes "Pinned Admin Console build of $GITHUB_SHA (RT-337). Verify with sha256sum -c before deploying."
+
+      - name: Confirm published assets
+        run: |
+          names=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name')
+          echo "$names"
+          grep -qx "$ARTIFACT" <<< "$names"
+          grep -qx "$ARTIFACT.sha256" <<< "$names"
