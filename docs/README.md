@@ -20,6 +20,7 @@ point; this page is the deep-dive map.
 | [Topology JSON](architecture/retail-tower-console-live-map.json) | Reviewable node and edge source for the live map. |
 | [Console charter](product/retail-tower-console-charter.md) | Product purpose, ownership boundary, and initial console posture. |
 | [Repo boundaries](product/repo-boundaries.md) | Cross-repo ownership lines between console, backend, and POS terminal. |
+| [Release artifact](release/admin-console-artifact.md) | Pinned static bundle, `version.json` and checksum contract consumed by the same-origin host (RT-337). |
 | [Foundation plan](../specs/001-console-foundation/plan.md) | Route-family sequencing, gates, constraints, and implementation posture. |
 
 ## Documentation rules
