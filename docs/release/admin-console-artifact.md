@@ -19,8 +19,9 @@ The workflow refuses to release when:
 - CI has no successful `push` run on `main` for that exact commit. CI cancels
   superseded runs, so a commit that was quickly replaced on `main` never gets a
   successful run and cannot be released; release the newer commit;
-- `VITE_API_BASE_URL` is set. Vite inlines it into the bundle and would replace
-  the same-origin API default;
+- `VITE_API_BASE_URL` is set, either in the build environment or in a root
+  `.env*` file that `vite build` loads. Vite inlines it into the bundle and would
+  replace the same-origin API default;
 - `dist/` lacks `index.html` or `assets/`, or contains source maps or `.env*` files;
 - a tag or release named `admin-console-<sha12>` already exists. Published
   artifacts are never overwritten.

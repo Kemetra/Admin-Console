@@ -1,9 +1,16 @@
+// @vitest-environment node
+// Release tooling runs in Node (it imports Vite's loadEnv, whose esbuild
+// dependency refuses to load under jsdom).
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   SHORT_SHA_LENGTH,
   artifactName,
   buildVersionInfo,
   checkDistLayout,
+  releaseBuildEnv,
   releaseTag,
   sameOriginProblems,
 } from "../../release-artifact";
@@ -109,5 +116,33 @@ describe("sameOriginProblems", () => {
         "VITE_API_BASE_URL must not be set for a release build (same-origin hosting, RT-315)",
       ]);
     }
+  });
+});
+
+describe("releaseBuildEnv", () => {
+  function withRoot(files: Record<string, string>, run: (root: string) => void): void {
+    const root = mkdtempSync(join(tmpdir(), "rt337-env-"));
+    try {
+      for (const [name, content] of Object.entries(files)) {
+        writeFileSync(join(root, name), content, "utf8");
+      }
+      run(root);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }
+
+  it("sees VITE_API_BASE_URL from a root .env.production that vite build would inline", () => {
+    withRoot({ ".env.production": "VITE_API_BASE_URL=https://api.example.test\n" }, (root) => {
+      expect(sameOriginProblems(releaseBuildEnv(root))).toEqual([
+        "VITE_API_BASE_URL must not be set for a release build (same-origin hosting, RT-315)",
+      ]);
+    });
+  });
+
+  it("passes when no root env file sets VITE_API_BASE_URL", () => {
+    withRoot({ ".env": "VITE_UNRELATED=1\n" }, (root) => {
+      expect(sameOriginProblems(releaseBuildEnv(root))).toEqual([]);
+    });
   });
 });

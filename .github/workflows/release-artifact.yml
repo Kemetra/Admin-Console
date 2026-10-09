@@ -61,7 +61,7 @@ jobs:
 
       # No env and no secrets: VITE_* values are inlined into the bundle. The
       # guard runs in this step because Vite reads the variable here;
-      # release-artifact.ts repeats the check as a second layer.
+      # release-artifact.ts repeats the check and also covers root .env* files.
       - name: Build
         run: |
           if [ -n "${VITE_API_BASE_URL+set}" ]; then

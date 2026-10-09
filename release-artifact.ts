@@ -10,6 +10,7 @@ import { execFileSync } from "node:child_process";
 import { appendFileSync, existsSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { loadEnv } from "vite";
 
 /** Short-SHA length used in artifact names and release tags. */
 export const SHORT_SHA_LENGTH = 12;
@@ -92,6 +93,15 @@ export function sameOriginProblems(env: Readonly<Record<string, string | undefin
     : ["VITE_API_BASE_URL must not be set for a release build (same-origin hosting, RT-315)"];
 }
 
+/**
+ * The `VITE_*` values `vite build` (mode production) inlines: root `.env`,
+ * `.env.local`, `.env.production` and `.env.production.local` plus
+ * `process.env`. Checking `process.env` alone would miss a committed env file.
+ */
+export function releaseBuildEnv(root: string): Record<string, string> {
+  return loadEnv("production", root, "VITE_");
+}
+
 function listFiles(dir: string): string[] {
   return (readdirSync(dir, { recursive: true }) as string[])
     .filter((entry) => statSync(join(dir, entry)).isFile())
@@ -104,10 +114,14 @@ function fail(problems: readonly string[]): never {
 }
 
 async function main(): Promise<void> {
-  const distDir = resolve(dirname(fileURLToPath(import.meta.url)), "dist");
+  const repoRoot = dirname(fileURLToPath(import.meta.url));
+  const distDir = resolve(repoRoot, "dist");
   if (!existsSync(distDir)) fail(["dist/ not found; run `pnpm build` first"]);
 
-  const problems = [...sameOriginProblems(process.env), ...checkDistLayout(listFiles(distDir))];
+  const problems = [
+    ...sameOriginProblems(releaseBuildEnv(repoRoot)),
+    ...checkDistLayout(listFiles(distDir)),
+  ];
   if (problems.length > 0) fail(problems);
 
   // Imported here, not at module top, so the pure helpers above stay free of
