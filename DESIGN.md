@@ -1,82 +1,53 @@
 ---
 name: Retail Tower Console
-description: Dark-default command console for Retail Tower OS, with an AA-compliant light alternate. Gold is the sole authority signal; navy drives every action; tables are the surface.
+description: >-
+  Admin Console design baseline, rebaselined to the Retail Tower UX/UI Constitution
+  (UX-01…UX-13, Final Audit 2026-10-07). Target: light-first Mineral Daylight + Tower Teal,
+  one shared semantic color system with POS, Arabic-first (Dubai) type voice, RTL by structure.
+  The token block below records the CURRENT SHIPPED tokens (src/styles/tokens.css), which stay
+  technical truth until a bounded Jira slice migrates them. They are not the target.
+status: current-shipped-tokens
+# CURRENT SHIPPED TOKENS — a SUBSET of src/styles/tokens.css on main (colors, type, radius,
+# spacing); tokens.css is authoritative and also holds the surface, shadow (incl. the gold
+# ring), motion and shell tokens. A single dark token set:
+# there is no light theme, no [data-theme] switch and no theme toggle in production.
+# Gold / navy / Inter below are migration debt (see "Migration debts"), not design intent.
 colors:
-  # Theme-agnostic brand + interactive primitives (identical hex in both themes)
-  primary: "#1f4e7a"
+  bg: "#0d1520"
+  surface: "#131e2e"
+  surface-raised: "#1a2840"
+  surface-sunken: "#0a1018"
+  surface-overlay: "#1e2d42"
+  border: "#2a3d55"
+  border-strong: "#3a5270"
+  text: "#e8eef5"
+  text-muted: "#8a9db5"
+  text-disabled: "#4a5e78"
+  primary: "#1f4e7a" # navy action fill — retired as a target (UX-02: teal = intent)
   primary-hover: "#163d61"
-  accent: "#2e7da3"
-  gold: "#c8a24a"
-  gold-strong: "#6f5320"
-  # Dark theme surfaces (default)
-  dark-bg: "#0d1520"
-  dark-surface: "#131e2e"
-  dark-surface-raised: "#1a2840"
-  dark-surface-sunken: "#0a1018"
-  dark-border: "#2a3d55"
-  dark-text: "#e8eef5"
-  dark-text-muted: "#8a9db5"
-  dark-gold-soft: "#2a2010"
-  # Light theme surfaces (alternate)
-  light-bg: "#f4f7fa"
-  light-surface: "#ffffff"
-  light-surface-raised: "#eef2f7"
-  light-surface-sunken: "#e7edf3"
-  light-border: "#d4dde7"
-  light-text: "#16202e"
-  light-text-muted: "#566578"
-  light-gold-soft: "#f4ecd6"
-  # Semantic (state) — fills are theme-agnostic; on-surface text shifts per theme
+  primary-subtle: "#0e1e30"
+  accent: "#2e7da3" # interactive accent; most (not all) current focus rings
+  gold: "#c8a24a" # Tower Gold — retired as a target (UX-02: no secondary brand accent)
+  gold-soft: "#2a2010"
+  gold-muted: "#8a6a2a"
   success: "#1f8a5b"
   warning: "#b87600"
   danger: "#b32e36"
   info: "#1e6f8c"
-  # Semantic ROLE aliases — what components consume. Values shown are the DARK
-  # default (the static snapshot); at runtime each role resolves to its light
-  # primitive under [data-theme="light"] / prefers-color-scheme. See tokens.css.
-  bg: "#0d1520"
-  surface: "#131e2e"
-  surface-sunken: "#0a1018"
-  text: "#e8eef5"
-  text-muted: "#8a9db5"
-  gold-soft: "#2a2010"
+  success-on-dark: "#52b986"
+  warning-on-dark: "#d49030"
+  danger-on-dark: "#c84d55"
+  info-on-dark: "#50a2c0"
 typography:
-  display:
-    fontFamily: "Inter Variable, Inter, Segoe UI, system-ui, -apple-system, sans-serif"
-    fontSize: "1.875rem"
-    fontWeight: 700
-    lineHeight: 1.25
-    letterSpacing: "-0.015em"
-  headline:
-    fontFamily: "Inter Variable, Inter, Segoe UI, system-ui, sans-serif"
-    fontSize: "1.25rem"
-    fontWeight: 600
-    lineHeight: 1.3
-    letterSpacing: "-0.01em"
-  title:
-    fontFamily: "Inter Variable, Inter, Segoe UI, system-ui, sans-serif"
-    fontSize: "1rem"
-    fontWeight: 600
-    lineHeight: 1.375
-    letterSpacing: "-0.005em"
-  body:
-    fontFamily: "Inter Variable, Inter, Segoe UI, system-ui, sans-serif"
-    fontSize: "0.875rem"
-    fontWeight: 400
-    lineHeight: 1.5
-    letterSpacing: "normal"
-  label:
-    fontFamily: "Inter Variable, Inter, Segoe UI, system-ui, sans-serif"
-    fontSize: "0.8125rem"
-    fontWeight: 600
-    lineHeight: 1.25
-    letterSpacing: "normal"
-  mono:
-    fontFamily: "ui-monospace, Cascadia Code, JetBrains Mono, Consolas, monospace"
-    fontSize: "0.8125rem"
-    fontWeight: 400
-    lineHeight: 1.5
-    letterSpacing: "normal"
+  fontFamily: "Inter Variable, Inter, Segoe UI, system-ui, -apple-system, sans-serif" # retired as a target (UX-03: Dubai)
+  monoFamily: "ui-monospace, Cascadia Code, JetBrains Mono, Consolas, monospace"
+  display: "1.875rem"
+  headline: "1.25rem"
+  title: "1rem"
+  body: "0.875rem"
+  label: "0.8125rem"
+  caption: "0.75rem"
+  mono: "0.8125rem"
 rounded:
   sm: "4px"
   md: "6px"
@@ -94,330 +65,305 @@ spacing:
   s7: "48px"
   s8: "64px"
   s9: "96px"
-components:
-  button-primary:
-    backgroundColor: "{colors.primary}"
-    textColor: "#ffffff"
-    rounded: "{rounded.control}"
-    padding: "0 14px"
-    height: "36px"
-    typography: "{typography.label}"
-  button-primary-hover:
-    backgroundColor: "{colors.primary-hover}"
-    textColor: "#ffffff"
-  button-secondary:
-    backgroundColor: "transparent"
-    textColor: "{colors.text}"
-    rounded: "{rounded.control}"
-    padding: "0 14px"
-    height: "36px"
-  button-destructive:
-    backgroundColor: "{colors.danger}"
-    textColor: "#ffffff"
-    rounded: "{rounded.control}"
-    height: "36px"
-  input:
-    backgroundColor: "{colors.surface-sunken}"
-    textColor: "{colors.text}"
-    rounded: "{rounded.control}"
-    padding: "6px 12px"
-    height: "36px"
-  card:
-    backgroundColor: "{colors.surface}"
-    rounded: "{rounded.card}"
-    padding: "{spacing.s5}"
-  badge:
-    rounded: "{rounded.pill}"
-    height: "22px"
-    padding: "0 8px"
-    typography: "{typography.label}"
-  nav-entry:
-    textColor: "{colors.text-muted}"
-    rounded: "{rounded.md}"
-    height: "40px"
-    padding: "0 12px"
-  scope-header:
-    backgroundColor: "{colors.gold-soft}"
-    textColor: "{colors.gold-strong}"
-    height: "40px"
-    padding: "0 32px"
 ---
 
 # Design System: Retail Tower Console
 
-## 1. Overview
+> **Version 2.0 — Constitution rebaseline (RT-265, 2026-10-10).** Supersedes v1.0 ("The Lit
+> Command Desk": dark default, navy action, Tower Gold authority, Inter). v1.0 is retired as
+> design intent and kept only in git history. Authority for future Admin UI is the
+> Retail Tower UX/UI Constitution in Confluence (RETAIL space). This file explains how that
+> authority applies to this repository. It does not restate every rule, and it does not claim
+> that any target below is shipped.
 
-**Creative North Star: "The Lit Command Desk"**
+## 1. Precedence
 
-The Console is the seat from which one operator governs an entire retail platform: tenants,
-stores, catalog, audit, money. It is not a marketing surface and not a retail counter. The
-design answers a single question on every screen, *"where am I acting, and is the system
-healthy,"* before it answers anything else. Authority reads as a quiet gold signal against a
-deep navy field; every action reads as navy; the data itself, dense and legible, is the
-content. Nothing decorates. If a pixel does not help an operator act correctly under time
-pressure, it is removed.
+1. **The Constitution governs future Admin UI.** UX-01…UX-13 plus the
+   [Final Audit & Implementation Gap Map](https://rahmaqanater.atlassian.net/wiki/spaces/RETAIL/pages/24510466)
+   (2026-10-07) are the design authority. The most specific module owns its jurisdiction
+   (UX-02 color, UX-03 type/icons, UX-04 layout, UX-09 navigation, UX-10 tables, UX-11
+   accessibility/RTL, UX-12 copy/localization, UX-13 data visualization).
+2. **Shipped tokens remain technical truth until a bounded slice changes them.** GitHub `main`
+   (`src/styles/tokens.css` and component CSS) is what production renders today. A new surface
+   consumes the existing role tokens (`--color-*`, `--space-*`, `--radius-*`, `--text-*`) and
+   must not hardcode hex. It must not deepen deprecated identity either: no new gold usage,
+   no new navy-as-brand usage, no new dark-only assumptions.
+3. **Migration happens per bounded Jira slice**, never as one "implement the Constitution"
+   change. Each slice re-verifies `main`, names the Constitution rules it implements, and
+   supplies visual, accessibility and runtime evidence for the surface it touches.
+4. **Brand yields to accessibility.** UX-02 brand and semantic colors yield to UX-11
+   forced-colors and high-contrast requirements. Meaning never depends on a branded color.
 
-This system is **dark by default and light by preference.** The default scene is concrete:
-a platform admin reviewing tenant health on a multi-monitor desk, mid-evening, ambient light
-low, gold accents projecting authority and reducing strain over a long session. That scene
-sets the brand. But operators work in real rooms, including bright ones, and accessibility is
-not optional, so a fully specified light alternate ships alongside the dark one and the
-operator chooses. The toggle is a setting, not a theme war: the two themes are the same system
-expressed on two grounds, sharing every token role, component, and rule. Only surface and text
-primitives change.
+### Superseded / reference-only in this repository
 
-It explicitly rejects the **Bootstrap-era CRUD admin** (dark navbar, blue primary buttons, a
-flat wall of tables, 2015 Rails aesthetic) and the **bloated SaaS dashboard** (gradient hero
-metrics, identical stat-card grids, glassmorphism, generic indigo, decorative motion). The
-dark navbar is the trap nearest to us: we use a dark ground, so we must out-execute the cliche
-with disciplined gold-as-authority, real density, and zero chrome, never coast on "dark looks
-serious."
+| Artifact | Status |
+| --- | --- |
+| `DESIGN.md` v1.0 (dark default, Tower Gold authority, navy action, Inter, English/LTR shell) | **Superseded** by this version. |
+| `PRODUCT.md` — Design Principle 6 ("dark by default … light alternate") and the dark-*default* note under Anti-references | **Superseded** by UX-02 light-first. The rest of PRODUCT.md (users, purpose, principles 1–5) stands. Reconciling PRODUCT.md is a separate docs change. |
+| `design_handoff_retail_tower_console/` — screens, charts, theme, KPI coloring, dual-axis patterns, route map, chart palette | **Reference/prototype only** (Final Audit; UX-13 prototype disposition). Nothing in it is production authority unless a Constitution-backed issue adopts it. |
+| `docs/design/_vision/`, `docs/design/rf1-auth-shell/`, `docs/design/rf6-audit-search/` mockups and their `tokens.css` | Historical slice references. They are not the target identity. |
 
-**Key Characteristics:**
-- Dark default, AA-compliant light alternate, one shared system across both.
-- Gold is authority only. Navy drives every action. The two never swap jobs.
-- Density earns its place: tables over cards, information over whitespace, never clutter.
-- Scope before action: the active tenant/store context is always legible.
-- Flat by default; depth is structural, never decorative.
+## 2. Product character (UX-01, UX-09)
 
-## 2. Colors
+The Console is an **adaptive operational workbench**. It is not a scaled-up POS, a card
+dashboard or a marketing surface. POS navigates tasks; the Admin Console navigates the system.
+Every screen answers *where am I acting, and what is true* before anything else. Identity
+comes through behavior: state handling, selection grammar, data geometry and surface
+hierarchy. It does not come from ornament, logos or a second accent color.
 
-A deep navy field on dark, a faintly navy-tinted paper on light, both carrying a single gold
-authority hue (72 deg) and a navy/teal interactive family (236 deg / 218 deg). The palette is
-**Committed** on dark (the navy surface carries the identity) and **Restrained** on light (tinted
-neutrals plus the same accents). No pure black, no pure white: every neutral is tinted toward
-the 236 deg hue.
+Admin may use more **Responsive** motion than POS (UX-06). Expressive motion is rare and
+never on operational truth. `prefers-reduced-motion` collapses durations to instant, but
+focus, copy, status and border/icon feedback stay intact.
 
-Tokens are theme-agnostic *roles* (`--color-bg`, `--color-text`, `--color-gold-strong`); each
-role resolves to a dark or light primitive at runtime via `[data-theme]` or
-`prefers-color-scheme`. The hex values below are the primitives behind each role.
+## 3. Color (UX-02, UX-13)
 
-### Primary
-- **Command Navy** (`#1f4e7a`, oklch(36% 0.085 236)): the single action color. Primary button
-  fills, active links, the focus family. Identical in both themes. White text on it scores 8.6:1.
-- **Deep Command** (`#163d61`): primary hover.
-- **Teal Marker** (`#2e7da3`, accent): focus rings and the active interactive stripe. Shared with
-  POS-Pulse. Never an action fill on its own.
+**Target direction: Mineral Daylight + Tower Teal, light-first.**
 
-### Secondary
-- **Tower Gold** (`#c8a24a`, oklch(70% 0.110 72)): the brand authority signal. On **dark** it
-  carries the logo mark and the active-nav marker against the page field (7.6:1 on `#0d1520`), and
-  the scope-header text against the gilded `--color-gold-soft` surface (`#2a2010`, 6.65:1). On
-  **light** it is restricted to non-text use only (the nav marker stripe, the logo), because at 70%
-  lightness it scores 2.4:1 on a light ground and fails text contrast.
-- **Deep Gold / Gold-Strong** (`#6f5320`, oklch(44% 0.090 72)): the **light-theme** authority
-  signal for anything that carries text or meaning (scope-header text, active breadcrumb). It must
-  read on the gilded scope-header surface (`--color-gold-soft` `#f4ecd6`), not just on neutral
-  surfaces, so it is set deep: 6.07:1 on the gold-soft ground and 6.07 to 7.16:1 on neutral light
-  surfaces, AA pass. The mid-tone `#8a6a2a` was rejected, it scores only 4.27:1 on gold-soft and fails the
-  4.5:1 text threshold (the scope label is 13px/600, not WCAG "large"). On dark it stays subdued.
+- **Theme.** The Admin Console defaults to **light**. A dark theme is **deferred**: no forced
+  dark sidebar or dark shell to create personality. Components consume semantic role tokens
+  so a future dark or high-contrast theme can remap roles without changing what a component
+  means.
+- **Brand anchor.** Tower Teal `#0F766E` (the current POS teal) is the working primary anchor,
+  shared with POS. POS and Admin use **one semantic color system and the same token
+  families**, differing in expression density, not palette.
+- **No secondary brand accent.** Tower Gold is retired, along with navy as the action and brand
+  color. Do not introduce purple, coral, orange or another permanent accent; a future need
+  must be demonstrated by Admin or data-visualization work.
+- **Neutrals.** Low-chroma mineral neutrals with a subtle blue-green relationship to Tower
+  Teal. Avoid both clinical cold gray and warm beige. *Exact mineral-neutral values are a
+  later token-implementation decision (UX-02); this file does not invent them.*
 
-### Tertiary (semantic state)
-Fills are theme-agnostic; the text/icon tone shifts per theme to hold AA on the ground.
-- **Confirmation Green** (`#1f8a5b`): success. On dark, text uses `#52b986`; on light, `#147a4d`.
-- **Caution Amber** (`#b87600`): warning. Dark text `#d49030`; light text `#8a5a00`.
-- **Alert Red** (`#b32e36`): danger. Dark text `#d16168` (lightened to 5.08:1 on the dark danger
-  surface; the deeper `#c84d55` scored only 4.20:1 and failed); light text `#b32e36`.
-- **Info Teal** (`#1e6f8c`): info. Dark text `#50a2c0`; light text `#1a6079`.
+### Color jurisdiction
 
-### Neutral
+| Role | Meaning | Notes |
+| --- | --- | --- |
+| Teal (intent) | Primary action, selection, focus/interaction language, active brand identity | Not decoration. Brand teal is **not** success green. |
+| Blue | Information / pending | |
+| Green | Proven success | Only for outcomes that are proven. |
+| Amber | Caution / degraded | |
+| Red | Danger / consequence / **UNKNOWN** | UNKNOWN is never softened into neutral. |
 
-Dark theme:
-- **Command Room** (`#0d1520`): page floor. **Deep Panel** (`#131e2e`): cards, panes.
-- **Lifted Panel** (`#1a2840`): hover, elevation. **Recessed** (`#0a1018`): input wells, sidebar.
-- **Quiet Edge** (`#2a3d55`): borders. **Star White** (`#e8eef5`): primary text (14:1+).
-- **Mist** (`#8a9db5`): muted text (5:1+).
+- **Priority:** critical truth → primary action → current context/selection → brand identity
+  → decoration. When an important operational state exists, its semantic color beats brand
+  color ("Brand Yields to Truth").
+- **Meaning redundancy:** color never carries operational meaning alone. Text, an icon, a
+  shape/border or another cue is always present (UX-02, UX-11).
+- **Low saturation budget:** most pixels stay neutral, so saturated brand and status color
+  keeps its meaning. No gradients on tables, forms, operational buttons or status surfaces.
+- **Data color ≠ status color (UX-13):** chart categorical, sequential and diverging palettes
+  are a separate token family, never reused success/warning/danger/info. Up/down is never
+  automatically green/red. No production data-viz token family exists yet.
 
-Light theme:
-- **Paper** (`#f4f7fa`): page floor. **Card White** (`#ffffff`): cards, panes.
-- **Soft Raise** (`#eef2f7`): hover, elevation. **Well** (`#e7edf3`): input wells, sidebar.
-- **Hairline** (`#d4dde7`): borders. **Ink** (`#16202e`): primary text (15:1+).
-- **Slate** (`#566578`): muted text (5.5:1+).
+### Visual signatures (grammar, not wallpaper)
 
-### Named Rules
-**The Gold Authority Rule.** Gold is brand authority, never decoration and never an action. It
-appears on exactly three things: the logo mark, the scope-header, and the active-nav marker.
-Nowhere else, in either theme. On light, gold that carries text becomes `--color-gold-strong`
-(`#6f5320`); the bright gold is reserved for the non-text marker and logo.
+- **Mineral Layering:** depth comes from canvas → surface → recessed → overlay tonal layers.
+- **Signal Line:** a restrained **inline-start** indicator marking current context/selection in
+  navigation, rows or workflow context. It uses logical positioning so it flips in RTL.
+- **Pulse Dot:** a small state primitive for genuinely live states. It is static unless real
+  activity is occurring, and motion respects reduced-motion.
+- **Precision Ledger:** label/value alignment, tabular numerals, separators and anchored totals
+  for money and operational relationships, instead of one card per value.
 
-**The Two-Ground Rule.** Light is not a recolor of dark; it is the same role system resolved on
-a light ground. A token role (`--color-text`) means the same thing in both themes; only its
-primitive value differs. Never hardcode a hex where a role token exists, or the toggle breaks.
+## 4. Typography and icons (UX-03)
 
-**The No-Extremes Rule.** Never `#000` or `#fff` as a surface. The darkest surface is `#0d1520`;
-the lightest is `#ffffff` reserved for cards only, with the page floor a tinted `#f4f7fa`. Every
-neutral carries chroma toward the 236 deg hue.
+- **One Arabic-first UI voice shared with POS: Dubai** (the incumbent). IBM Plex Sans Arabic is
+  the long-term challenger and Noto Sans Arabic UI the density benchmark. **No speculative
+  font migration:** a change of primary font needs rendered same-screen A/B evidence. Moving
+  the Admin Console off Inter onto Dubai is a bounded implementation slice; it is not done.
+- **Type has jurisdiction.** UI sans owns language. Tabular numerals own money, quantities and
+  KPI values. **Monospace is only for machine data**: IDs, request refs, SKUs, codes and
+  evidence strings. It is never used as a "technical" aesthetic.
+- **Semantic type roles (target vocabulary):** `display` (rare), `screen-title`,
+  `section-title`, `body`, `body-strong`, `control`, `meta`, `money-hero`, `money-total`,
+  `numeric-row`, `machine`, `kbd`. Exact values are token decisions for the migration slice.
+- **Readability floor: 12px.** No operator-readable text below 12px, which rules out the
+  current 10px `.nav-gate` badge in new work. Arabic body keeps generous line-height.
+  Hierarchy comes from placement, spacing, weight and alignment before size.
+- **Icons: Fluent System Icons** is the leading family, via a **semantic icon registry**
+  (`icon.store`, `icon.inventory`, `icon.sync`, `icon.posting`, …) instead of raw vendor
+  names in product code. This is **pending the icon fit/licensing/bundle PoC (RT-263)**; until
+  then the existing stroke icon set in `src/components/Icon.tsx` stays.
+  - One icon grammar; never mix families.
+  - Regular forms by default; filled only for persistent selected states.
+  - Icons reinforce and text decides. Destructive, financial and recovery actions stay
+    text-visible.
+  - Icons inherit `currentColor`.
+  - Mirror directional icons in RTL (back, forward, undo). Never mirror object icons (printer,
+    store, trash).
 
-## 3. Typography
+## 5. Layout, density and shape (UX-04, UX-10)
 
-**Display / Body / Label Font:** Inter Variable (with Inter, Segoe UI, system-ui, -apple-system, sans-serif fallback)
-**Mono Font:** ui-monospace (with Cascadia Code, JetBrains Mono, Consolas fallback)
+- **Spacing:** the existing 4px-derived scale (4/8/12/16/24/32/48/64/96, `--space-1…9`) with
+  semantic use for micro, component, region and page rhythm. No arbitrary values.
+- **Density:** Comfortable / Operational / Compact, chosen by context and not a user setting
+  yet. Dense inside a region, breathing room between regions. Under pressure, compress space
+  before meaning and reflow before shrinking.
+- **Data stretches; reading constrains.** Tables, grids and timelines take the available width.
+  Reading and form surfaces use a constrained measure (about 60–65ch).
+- **Tables are full-bleed work surfaces, never inside cards.** Surface grammar:
+  - **Work Surface:** flat, minimal radius, no shadow.
+  - **Section:** heading, spacing and an optional divider; not automatically a container.
+  - **Panel:** tone or divider is enough.
+  - **Card:** only for a genuine independent, selectable or actionable object.
+  - **Drawer:** attached, with real elevation.
+  - **Dialog:** the strongest elevation.
+- **Shape (target):** 8px controls, 12px genuine contained objects, 16px independent overlays.
+  Round the object, not the page. Pills only for true status, counts or tags, never ordinary
+  buttons. *Current shipped radii (10px control) stay until the token slice changes them.*
+- **Borders and tone before shadows.** Work surfaces, sections, cards and panels are shadowless.
+  Popovers, drawers and dialogs may use restrained elevation.
+- **One primary scroll owner** per workspace. A drawer may own its own scroll. Overflow belongs
+  to the data surface, not the app shell.
+- **Table grammar (UX-10):**
+  - Semantic `<table>` by default. A grid model only when real cell navigation exists.
+  - Rows hold data and controls hold actions. Selection is not navigation.
+  - Column tiers (must-survive / contextual / metadata). Remove low-priority columns before
+    meaning.
+  - Numbers tabular, consistently precise and direction-isolated.
+  - Sort and filter the **dataset**, never just the loaded viewport.
+  - Scope changes reset filters that are no longer valid.
+  - Filtered-empty and dataset-empty are different states.
+  - Deliberate continuation (cursor/load-more). **Keep proven rows when a continuation fails**,
+    with inline retry at the boundary.
+  - Never stitch different snapshots together. Count only what the contract knows.
+  - Bulk scope is explicit and countable.
+  - Inspect in a drawer without losing place.
+  - Virtualize only on measured evidence.
 
-**Character:** One sans family, full stop. Weight contrast alone carries hierarchy, no display
-face, no Inter Tight. Mono is reserved for the things that must be unambiguous under audit: IDs,
-request refs, UUIDs, scope context values. The voice is matter-of-fact, like the product: a
-label says what it is in the fewest accurate words.
+## 6. Navigation and scope (UX-09)
 
-### Hierarchy
-- **Display** (700, 1.875rem/30px, 1.25, -0.015em): the screen title. One per view, never more.
-- **Headline** (600, 1.25rem/20px, 1.3, -0.01em): section header, panel title.
-- **Title** (600, 1rem/16px, 1.375, -0.005em): card title, group label.
-- **Body** (400, 0.875rem/14px, 1.5): paragraph and description text. Prose capped at 65ch; data
-  tables run denser, up to 120ch+, which is correct for the surface.
-- **Label** (600, 0.8125rem/13px, 1.25): badge, chip, table header. No all-caps, ever.
-- **Caption** (400, 0.75rem/12px, 1.4): timestamps, secondary metadata.
-- **Mono** (400, 0.8125rem/13px, 1.5): IDs, refs, audit strings. **Mono-lg** (500, 0.875rem/14px,
-  0.04em): scope-header context values.
+- **Location ≠ Scope ≠ State.** Product location, Tenant/Store scope and workflow state are
+  separate axes. The shell owns persistent identity, scope and primary navigation; the
+  screen owns the task.
+- **Scope change is a context transition, not a filter click.** It must never silently discard
+  unsaved form work; the user gets an explicit save / discard / stay path. Deep links never
+  silently mutate scope.
+- **Navigation has a capacity budget.** Actions and utilities are not destinations, and
+  production navigation never advertises dead destinations. The current RF-* dev-gated
+  entries are engineering affordances, not approved production UX.
+- **Role-aware navigation:** destinations that don't belong to a role are normally hidden.
 
-### Named Rules
-**The Single-Voice Rule.** One typeface for the entire product UI. A heading is a heavier weight
-and tighter tracking of the same family, never a different font. Display faces in labels, buttons,
-or data are prohibited.
+## 7. Accessibility, RTL and focus (UX-11)
 
-## 4. Elevation
+- **Accessibility is operational reliability.** Every essential action is keyboard-operable.
+  Use native HTML before ARIA.
+- **Focus is a first-class state:** obvious, distinguishable from hover, selection and location,
+  and never obscured by sticky regions or drawers. **The primary focus signal is an outline,
+  not a box-shadow**, so it survives forced-colors. Focus returns to the invoker, or to the
+  next meaningful owner when the invoker vanished.
+- **Modal semantics require modal behavior:** `aria-modal="true"` means a Tab/Shift+Tab trap,
+  a safe Escape, intentional initial focus, and focus restore on close.
+- **Forced colors are an operating environment, not a brand theme.** Focus, selected, blocked,
+  danger and status meaning must survive Windows contrast themes independently of brand color
+  and shadow.
+- **RTL is structure, not styling.** Declare `lang`/`dir` at the document, app or surface
+  boundary. Use **logical properties by default** (`margin-inline-start`, `inset-inline-end`,
+  `border-inline-start`, `text-align: start`). Isolate machine data (amounts, SKUs, emails,
+  request IDs) with `dir="ltr"` or `<bdi>`. Visual order and Tab order tell the same story.
+- **Targets:** the Admin Console may be denser than the POS 44px floor while staying above the
+  accessibility floor. The current controls use 36px.
+- **Evidence follows the touched surface:** static checks, component tests, a keyboard-only
+  walk, axe where applicable, forced-colors captures and reduced-motion validation.
 
-**Flat by default.** Surfaces sit flat at rest; shadow is a response to layering structure, not to
-hover. The workspace floor carries no shadow. Cards carry `--shadow-card`; dialogs and drawers
-carry `--shadow-pane`; nothing else lifts. On dark, shadows flood toward the background hue
-(`#0d1520`) so they never read as generic gray; on light, shadows are softer and cooler, tuned so
-a card reads as raised paper, not a drop-shadow sticker.
+## 8. Content and localization (UX-12)
 
-### Shadow Vocabulary
-- **sm** (`0 1px 2px rgba(0,0,0,0.3)` dark / `0 1px 2px rgba(22,32,46,0.08)` light): inline chips.
-- **card** (`0 2px 4px / 0 8px 24px` flooded to `#0d1520` at 0.4/0.3 dark; softer cool on light):
-  the standard resting card and pane.
-- **raised** (`0 4px 12px / 0 1px 3px`): hover lift, used sparingly.
-- **pane** (`0 20px 60px` at 0.7 dark / lighter on light): dialogs, drawers, overlays.
-- **inset** (`inset 0 1px 0 rgba(255,255,255,0.04)` dark): recessed input wells on dark only.
-- **gold-ring** (`0 0 0 3px rgba(200,162,74,0.25)`): the gold-tinted focus ring for scope elements.
+- **Arabic is the primary authored product language. One locale at a time**: never duplicate
+  "Arabic (English)" on controls. English may exist as a separate locale and as
+  machine/proper terminology (ERPNext, EGP, SKU, API, IDs).
+- **Terminology (UI ← internal):**
 
-### Named Rules
-**The Flat-By-Default Rule.** If a surface has a shadow, it must be because it sits structurally
-above another surface (card over floor, dialog over card). Shadow as hover decoration is forbidden.
-A 2014-app smell test: if a flat list row gains a drop shadow on hover, the shadow is wrong, use a
-background tint (`--color-surface-raised`) instead.
+  | UI term | Internal / evidence term | Note |
+  | --- | --- | --- |
+  | «المؤسسة» | Tenant | |
+  | «الكيان القانوني» | Legal Entity | |
+  | «المتجر» | Store | Never «الفرع». Business-authored names like «فرع المعادي» are kept as authored. |
+  | «الصنف» | Retail Item / `tenant_product` | |
+  | «الكتالوج» | Catalog | |
+  | «المستخدم» | operator (generic identity) | Unless a specific role is known. |
 
-## 5. Components
+  Code names (`operator`, `tenant_product`, `projection`) never leak into normal copy. ERPNext
+  Item is never presented as the product authority.
+- **Copy grammar.**
+  - Name the action, not the button type. Verbs keep a stable meaning: حفظ / إضافة / تأكيد /
+    إلغاء / حذف / إزالة / تحديث.
+  - Errors read What → Safety → Action → Evidence.
+  - Never recommend a retry that can't resolve the state.
+  - **Machine codes drive copy; they are not copy.** A missing translation never shows a raw
+    key or backend English.
+- **Numbers and money.** Western digits in Arabic UI (`ar-EG-u-nu-latn`). Money is
+  `1,250.00 EGP`: grouped, two decimals, LTR-isolated. Arithmetic is unchanged. Use
+  noun-first counters («الأصناف: 11»). Pluralize whole phrases via CLDR categories, never
+  `{n} + noun`.
+- **Time.** Human Arabic dates with Western digits and 24-hour time for operations, in the
+  **Store's** business timezone. Audit and evidence keep exact timezone-explicit (UTC)
+  timestamps. Relative time orients; absolute time proves.
 
-Every interactive component ships all of its states: default, hover, focus-visible, active,
-disabled, and where relevant loading, error, selected. Half a component is not shippable.
-Affordances are consistent across every screen: the same button shape, the same form-control
-vocabulary, the same icon style, screen to screen.
+## 9. Components — current shipped vocabulary
 
-### Buttons
-- **Shape:** gently rounded (`--radius-control`, 10px), 36px tall, 0 14px padding.
-- **Primary:** Command Navy fill (`#1f4e7a`), white text, one per context. Hover deepens to
-  `#163d61`; focus shows a 3px navy ring. Disabled drops to 0.4 opacity.
-- **Secondary:** transparent fill, `--color-border-strong` border, surface text. Hover borrows the
-  primary border and a faint navy-tint background.
-- **Ghost:** no border, no background, muted text, 32px tall. For toolbar icon buttons and inline
-  table actions. Hover gains a `--color-surface-raised` background.
-- **Destructive:** Alert Red fill, white text, red focus ring. For irreversible actions only.
+These classes exist on `main` and new work reuses them until a migration slice replaces them.
+**Bold** items are the deprecated identity each slice must not extend.
 
-### Chips / Badges
-- **Style:** pill (`--radius-pill`), 22px tall, label type, a 6px leading status dot in `currentColor`.
-- **State:** success / warning / danger / info / neutral, each a tinted `*-surface` background with
-  mid-ramp text tuned for AA on the active ground. Selected table rows tint to `--color-gold-soft`.
+- **Buttons:** `.btn-primary` (**navy fill**), `.btn-secondary`, `.btn-ghost`,
+  `.btn-destructive`. Keep one primary per context. In the target, primary becomes Tower Teal.
+- **Badge** `.badge` (`--active` / `--suspended` / `--pending` / **`--gold`**). Status badges
+  always carry text, so status is never color alone.
+- **Banner** `.rtc-alert--{danger,warning,success,info}`: persistent operational state, not a
+  toast.
+- **Inputs** `.input` and `.field`. Errors use `aria-invalid` plus inline text.
+- **DataTable** (`src/components/DataTable.tsx`), **Drawer** (focus-trapped dialog), and
+  **ListState** (loading / empty).
+- **Shell** (`src/shell/`): topbar, a **gold scope header** and a sidebar with a **gold active
+  marker**. In the target, the scope bar is a neutral mineral surface with the teal Signal Line
+  for current context. Gold is removed.
 
-### Cards / Containers
-- **Corner Style:** `--radius-card` (12px).
-- **Background:** `--color-surface` (Deep Panel dark / Card White light), 1px `--color-border`.
-- **Shadow Strategy:** `--shadow-card` at rest (see Elevation). No hover shadow.
-- **Internal Padding:** `--space-5` (24px). Group internally with a `--color-surface-raised`
-  section and a top divider rule, never a child card.
+**Known debt in these components. Do not copy it.**
+- **Focus:** `.btn-*` and `.input` focus is `outline: none` plus a box-shadow ring, and
+  the DataTable row focus is a **gold** inset box-shadow. That is box-shadow-only focus, which
+  §7 and §11 forbid. It is being replaced by an outline baseline in **RT-267**; new work uses
+  an outline.
+- **Gold sites beyond the scope header and nav marker:**
+  - the active nav icon;
+  - the sign-in brand mark and `TowerMark`;
+  - the scope-button focus ring;
+  - the DataTable row focus;
+  - `.badge--gold`;
+  - `--shadow-gold-ring`.
 
-### Inputs / Fields
-- **Style:** recessed well (`--color-surface-sunken`), 1px `--color-border`, `--radius-control`,
-  36px min height.
-- **Focus:** border shifts to Teal Marker with a 3px teal glow. No layout shift.
-- **Error:** `aria-invalid="true"` shifts border to danger with a red glow. **Disabled:** muted
-  placeholder; low-contrast disabled text is intentional (WCAG 1.4.3 exempts inactive controls).
+  All are retired by the light-first token migration (§10).
 
-### Navigation
-- **Style:** left sidebar, 40px entries, `--radius-md`, 18px stroke icons in `currentColor`, muted
-  text at rest. Hover gains `--color-surface-raised` + full-strength text.
-- **Active:** a 3px **gold** marker stripe on the leading edge plus a faint navy-tint background.
-  The gold marker is the Console's primary visual differentiator from POS-Pulse and the only
-  persistent gold in navigation.
-- **Mobile:** sidebar hides under 768px, top bar gains a hamburger; 1024px collapses to 60px
-  icon-only; 1280px expands to 240px with labels.
+## 10. Migration debts
 
-### Scope Header (signature component)
-A persistent bar directly below the 56px top bar whenever inside a tenant/store context. 40px tall,
-`--color-gold-soft` background, gold text (bright on dark, `--color-gold-strong` on light). Always
-shows `Tenant > Store` (or `All Stores` / `Platform`). This is the literal answer to "Scope before
-action" and is never hidden to reclaim vertical space.
+Each debt is tracked separately. Do not fold them into feature work.
 
-### Theme Toggle (signature component)
-A ghost-button control in the top bar (sun/moon stroke icon) that switches `[data-theme]` between
-`dark` and `light` and persists the choice. On first load, with no stored choice, the system
-follows `prefers-color-scheme`, defaulting to dark when the OS expresses no preference. The control
-is keyboard-reachable and announces the active theme. *(Implementation note for slice 003+: set
-`[data-theme]` on the document element from a synchronous pre-hydration script to avoid a
-flash-of-wrong-theme; persist to `localStorage`. The mockups demonstrate both themes statically.)*
+| Debt | Constitution rule | Ticket |
+| --- | --- | --- |
+| Arabic-first locale + RTL: `lang`/`dir`, logical CSS, message catalog, UX-12 terminology, formatters | UX-11, UX-12 | **RT-266** (planning), then sliced implementation |
+| Forced-colors support and outline-based focus baseline | UX-11 | **RT-267** |
+| Complete Store scope switcher (All Stores → authorized Store) + dirty-context guard | UX-09 | **RT-268** (with RT-354 — scope menu cannot switch store) |
+| Audit search keeps loaded rows when a later page fails + inline continuation retry | UX-10 | **RT-269** |
+| Remove RF-* dev-gated entries from production navigation | UX-09 | **RT-270** |
+| Semantic icon registry + Fluent System Icons fit / licensing / bundle PoC | UX-03 | **RT-263** |
+| Light-first token migration: Mineral Daylight neutrals + Tower Teal roles; retire Tower Gold, navy action and the dark default | UX-02, UX-04 (radius 8/12/16) | **No ticket — owner to create** |
+| Admin type migration Inter → Dubai (with Arabic line-height and the 12px floor) | UX-03 | **No ticket — owner to create** |
+| Reconcile `PRODUCT.md` Principle 6 and the anti-reference note with light-first | UX-02 | **No ticket — owner to decide** (docs-only) |
 
-### App Shell
-Top bar (56px: gold logo lockup, scope selector, theme toggle, notifications, user menu) plus the
-collapsible left sidebar plus a `flex: 1` scrolling content area on `--color-bg`. Content workspace:
-no max-width (tables need room), `--space-7` (48px) block padding, `--space-6` (32px) inline padding
-growing to 48px at 1440px+. Page headers are a display title plus optional subtitle plus a
-right-aligned action cluster. Never a hero metric above a table: the data is the content.
+## 11. Do's and Don'ts
 
-### Icons
-Shared Data-Pulse-2 brand icon system, 10 approved glyphs (`branch-ops`, `access-control`,
-`catalog`, `inventory`, `pos-core`, `store-network`, `integrations`, `audit-compliance`,
-`dashboard`, `security`). Contract: 24x24 viewBox, stroke-only (`fill: none`), 1.75 stroke primary
-/ 1.5 accent, round caps and joins, `currentColor`. Nav renders at 18x18; page headers and empty
-states at 24x24. The gradient-filled brand variants are marketing-only and prohibited in app UI.
+**Do**
+- Use role tokens, never raw hex, so the light-first token slice can remap roles in one place.
+- Put tables directly on the work surface; reserve cards for genuine objects.
+- Give every state a non-color cue (text, icon, shape) and verify it in forced-colors.
+- Use logical CSS properties in any line you write or rewrite.
+- Isolate machine data (`dir="ltr"` / `<bdi>`) and keep it monospace.
+- Keep operational state in persistent banners; respect `prefers-reduced-motion`.
 
-## 6. Do's and Don'ts
-
-### Do:
-- **Do** keep gold to the three authority surfaces only (logo, scope header, active-nav marker),
-  and on light swap text-bearing gold to `--color-gold-strong` (`#6f5320`) to hold AA.
-- **Do** drive every action with the Command Navy family, and show exactly **one** `.btn-primary`
-  per context: no screen or dialog has more than a single primary button visible at once.
-- **Do** reach for a token *role* (`--color-bg`, `--color-text`), never a raw hex, so the
-  dark/light toggle resolves correctly.
-- **Do** contain status colors. Success/warning/danger/info appear only on badges, banners, and
-  alert callouts, never as a button variant, a hover tint, or a brand fill.
-- **Do** keep every interactive element to a **36x36px minimum touch target**. The Console is
-  desktop-first, but keyboard navigation and mouse precision both require adequate target size.
-- **Do** prefer a dense, well-organized table to a grid of cards for list data.
-- **Do** keep operational state in a persistent banner, not a toast: permission errors, degraded
-  API, session-expiry warnings stay until resolved.
-- **Do** meet WCAG AA in both themes. Every text/surface pair in this spec is contrast-verified
-  on its *actual* ground, including text on tinted surfaces (gold text on the gilded scope header,
-  semantic text on its badge/alert surface), not just text on the neutral surfaces.
-- **Do** respect `prefers-reduced-motion`: collapse all durations to 0ms, transitions to instant.
-
-### Don't:
-- **Don't** build the **Bootstrap-era CRUD admin**: dark navbar with blue primary buttons and a
-  flat wall of tables. We share its dark ground, so we must out-execute it, never resemble it.
-- **Don't** build the **bloated SaaS dashboard**: gradient hero metrics, identical stat-card grids,
-  glassmorphism panels, generic purple/indigo, decorative animation.
-- **Don't** use gold as a button fill, a badge color, or any decorative flourish, in either theme.
-- **Don't** use a `border-left`/`border-right` greater than 1px as a colored accent stripe on cards,
-  rows, callouts, or alerts. Use full borders, background tints, or leading icons.
-- **Don't** nest cards. Group inside a card with a raised-surface section and a divider rule.
-- **Don't** animate layout properties, add bounce/elastic easing, or run page-load choreography.
-  Motion confirms state change; it does not entertain.
-- **Don't** let any pattern look like a default component library with the theme left unchanged.
-- **Don't** claim or duplicate POS-Pulse's palette. POS-Pulse owns its own light token set (see
-  the sibling-system note below); Console-light harmonizes with it but is defined here independently.
-
----
-
-> **Sibling system (boundary note):** POS-Pulse is the retail-counter app and owns its own
-> light-theme token set; per the project constitution this repo must not reproduce or take
-> ownership of POS-Pulse concerns. Both systems share the same semantic color roles, the same
-> motion tokens, and the same single-sans / component conventions, and they are deliberately
-> compatible. The Console now ships both a dark default and a light alternate; its light theme is
-> designed to harmonize with POS-Pulse light, not to mirror or override it. POS-Pulse tokens are
-> not reachable from this repo, so any cross-system value here is an intentional independent choice,
-> stated, not silently copied.
-
-> **Version 1.0** — supersedes v0.1. Engages the converged "Vision 4" mockups
-> (`docs/design/_vision/`), introduces the dark-default + light-alternate theming model, and
-> migrates to the Stitch DESIGN.md format. Re-run `/impeccable document` after the first themed
-> component slice ships to capture real rendered tokens.
+**Don't**
+- Add new gold, new navy-as-brand or dark-only surfaces; that deepens retired identity.
+- Use a box-shadow as the only focus indicator, or `outline: none` without an outline
+  replacement.
+- Use success/warning/danger/info as a chart palette, or color alone for meaning.
+- Put a table inside a rounded card, or nest cards.
+- Animate truth values (count-ups, rolling money), add bounce easing or page-load choreography.
+- Copy design-handoff prototype themes, KPI coloring or dual-axis charts into production.
+- Introduce a new package (including Tailwind or an icon or i18n library) without an
+  authorizing Jira issue.
