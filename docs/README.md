@@ -21,6 +21,7 @@ point; this page is the deep-dive map.
 | [Console charter](product/retail-tower-console-charter.md) | Product purpose, ownership boundary, and initial console posture. |
 | [Repo boundaries](product/repo-boundaries.md) | Cross-repo ownership lines between console, backend, and POS terminal. |
 | [Release artifact](release/admin-console-artifact.md) | Pinned static bundle, `version.json` and checksum contract consumed by the same-origin host (RT-337). |
+| [Arabic-first / RTL migration plan](design/arabic-first-rtl-migration-plan.md) | RT-266 planning: RTL/locale inventory, message catalog, formatters, UX-12 terms, bounded slice plan. Not implementation. |
 | [Foundation plan](../specs/001-console-foundation/plan.md) | Route-family sequencing, gates, constraints, and implementation posture. |
 
 ## Documentation rules
