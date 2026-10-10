@@ -49,71 +49,116 @@ interface FocusStop {
   clippedBy: string | null;
 }
 
+interface Box {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
+interface ClipBox extends Box {
+  name: string;
+}
+
+interface FocusedOutline {
+  label: string;
+  outlineStyle: string;
+  outlineWidth: number;
+  /** The painted ring: border box grown by outline offset + width. */
+  ring: Box;
+}
+
+/** Marks each visited stop so the walk ends when Tab wraps back to one. */
+const VISITED_ATTR = "data-focus-walk";
+
+/**
+ * Browser-side. Reads the focused element's outline and painted ring box, or
+ * null once focus leaves the page or returns to an already-visited stop.
+ * Serialized by Playwright, so it must not reference module scope.
+ */
+function readFocusedOutline(el: Element, attr: string): FocusedOutline | null {
+  if (el === document.body || el.hasAttribute(attr)) return null;
+  el.setAttribute(attr, "");
+  const cs = getComputedStyle(el);
+  const outlineWidth = Number.parseFloat(cs.outlineWidth);
+  const grow = Number.parseFloat(cs.outlineOffset) + outlineWidth;
+  const r = el.getBoundingClientRect();
+  const name = (el.getAttribute("aria-label") ?? el.textContent ?? "").trim().slice(0, 40);
+  return {
+    label: `${el.tagName.toLowerCase()}.${el.className} "${name}"`,
+    outlineStyle: cs.outlineStyle,
+    outlineWidth,
+    ring: {
+      left: r.left - grow,
+      top: r.top - grow,
+      right: r.right + grow,
+      bottom: r.bottom + grow,
+    },
+  };
+}
+
+/**
+ * Browser-side. The padding box of every ancestor whose overflow is not
+ * `visible`: computed style alone can't see such an ancestor clipping the ring.
+ */
+function readClipBoxes(el: Element): ClipBox[] {
+  const boxes: ClipBox[] = [];
+  for (let a = el.parentElement; a && a !== document.documentElement; a = a.parentElement) {
+    const acs = getComputedStyle(a);
+    if (`${acs.overflowX}/${acs.overflowY}` === "visible/visible") continue;
+    const ar = a.getBoundingClientRect();
+    const left = ar.left + a.clientLeft;
+    const top = ar.top + a.clientTop;
+    boxes.push({
+      name: `${a.tagName.toLowerCase()}.${a.className}`,
+      left,
+      top,
+      right: left + a.clientWidth,
+      bottom: top + a.clientHeight,
+    });
+  }
+  return boxes;
+}
+
+/** Whether `inner` fits inside `outer`, with sub-pixel tolerance. */
+function fitsInside(inner: Box, outer: Box, tol = 0.5): boolean {
+  const fitsX = inner.left >= outer.left - tol && inner.right <= outer.right + tol;
+  const fitsY = inner.top >= outer.top - tol && inner.bottom <= outer.bottom + tol;
+  return fitsX && fitsY;
+}
+
+/** Press Tab and describe the stop it lands on; null ends the walk. */
+async function nextFocusStop(page: Page): Promise<FocusStop | null> {
+  await page.keyboard.press("Tab");
+  const handle = await page.evaluateHandle(() => document.activeElement);
+  const el = handle.asElement();
+  const outline = el ? await el.evaluate(readFocusedOutline, VISITED_ATTR) : null;
+  const clipBoxes = el && outline ? await el.evaluate(readClipBoxes) : [];
+  await handle.dispose();
+  if (!outline) return null;
+  const clipper = clipBoxes.find((box) => !fitsInside(outline.ring, box));
+  return {
+    label: outline.label,
+    outlineStyle: outline.outlineStyle,
+    outlineWidth: outline.outlineWidth,
+    clippedBy: clipper?.name ?? null,
+  };
+}
+
 /**
  * Tab through the page until focus wraps (or a cap), recording each stop's
- * outline. Computed style alone can't see an ancestor with overflow != visible
- * clipping the ring, so each stop also checks the painted ring box (border box
- * grown by offset + width) against every clipping ancestor's padding box.
+ * outline and whether an overflow ancestor clips its painted ring.
  */
 async function walkFocus(page: Page, maxStops = 40): Promise<FocusStop[]> {
   const stops: FocusStop[] = [];
-  const seen = new Set<string>();
   for (let i = 0; i < maxStops; i++) {
-    await page.keyboard.press("Tab");
-    const stop = await page.evaluate(() => {
-      const el = document.activeElement as HTMLElement | null;
-      if (!el || el === document.body) return null;
-      const cs = getComputedStyle(el);
-      const path: string[] = [];
-      for (let n: Element | null = el; n && n !== document.body; n = n.parentElement) {
-        path.unshift(
-          `${n.tagName}:${Array.prototype.indexOf.call(n.parentElement?.children ?? [], n)}`,
-        );
-      }
-      const name = (el.getAttribute("aria-label") ?? el.textContent ?? "").trim().slice(0, 40);
-      const grow = Number.parseFloat(cs.outlineOffset) + Number.parseFloat(cs.outlineWidth);
-      const r = el.getBoundingClientRect();
-      const ring = {
-        left: r.left - grow,
-        top: r.top - grow,
-        right: r.right + grow,
-        bottom: r.bottom + grow,
-      };
-      let clippedBy: string | null = null;
-      for (let a = el.parentElement; a && a !== document.documentElement; a = a.parentElement) {
-        const acs = getComputedStyle(a);
-        if (acs.overflowX === "visible" && acs.overflowY === "visible") continue;
-        const ar = a.getBoundingClientRect();
-        const left = ar.left + a.clientLeft;
-        const top = ar.top + a.clientTop;
-        const tol = 0.5;
-        if (
-          ring.left < left - tol ||
-          ring.top < top - tol ||
-          ring.right > left + a.clientWidth + tol ||
-          ring.bottom > top + a.clientHeight + tol
-        ) {
-          clippedBy = `${a.tagName.toLowerCase()}.${a.className}`;
-          break;
-        }
-      }
-      return {
-        key: path.join("/"),
-        label: `${el.tagName.toLowerCase()}.${el.className} "${name}"`,
-        outlineStyle: cs.outlineStyle,
-        outlineWidth: Number.parseFloat(cs.outlineWidth),
-        clippedBy,
-      };
-    });
-    if (!stop || seen.has(stop.key)) break;
-    seen.add(stop.key);
-    stops.push({
-      label: stop.label,
-      outlineStyle: stop.outlineStyle,
-      outlineWidth: stop.outlineWidth,
-      clippedBy: stop.clippedBy,
-    });
+    const stop = await nextFocusStop(page);
+    if (!stop) break;
+    stops.push(stop);
   }
+  await page.evaluate((attr) => {
+    for (const el of document.querySelectorAll(`[${attr}]`)) el.removeAttribute(attr);
+  }, VISITED_ATTR);
   return stops;
 }
 
