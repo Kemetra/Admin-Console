@@ -7,7 +7,9 @@ description: >-
   The token block below records the CURRENT SHIPPED tokens (src/styles/tokens.css), which stay
   technical truth until a bounded Jira slice migrates them. They are not the target.
 status: current-shipped-tokens
-# CURRENT SHIPPED TOKENS — mirror of src/styles/tokens.css on main. A single dark token set:
+# CURRENT SHIPPED TOKENS — a SUBSET of src/styles/tokens.css on main (colors, type, radius,
+# spacing); tokens.css is authoritative and also holds the surface, shadow (incl. the gold
+# ring), motion and shell tokens. A single dark token set:
 # there is no light theme, no [data-theme] switch and no theme toggle in production.
 # Gold / navy / Inter below are migration debt (see "Migration debts"), not design intent.
 colors:
@@ -24,7 +26,7 @@ colors:
   primary: "#1f4e7a" # navy action fill — retired as a target (UX-02: teal = intent)
   primary-hover: "#163d61"
   primary-subtle: "#0e1e30"
-  accent: "#2e7da3" # current focus/interactive accent
+  accent: "#2e7da3" # interactive accent; most (not all) current focus rings
   gold: "#c8a24a" # Tower Gold — retired as a target (UX-02: no secondary brand accent)
   gold-soft: "#2a2010"
   gold-muted: "#8a6a2a"
@@ -313,6 +315,21 @@ These classes exist on `main` and new work reuses them until a migration slice r
 - **Shell** (`src/shell/`): topbar, a **gold scope header** and a sidebar with a **gold active
   marker**. In the target, the scope bar is a neutral mineral surface with the teal Signal Line
   for current context. Gold is removed.
+
+**Known debt in these components. Do not copy it.**
+- **Focus:** `.btn-*` and `.input` focus is `outline: none` plus a box-shadow ring, and
+  the DataTable row focus is a **gold** inset box-shadow. That is box-shadow-only focus, which
+  §7 and §11 forbid. It is being replaced by an outline baseline in **RT-267**; new work uses
+  an outline.
+- **Gold sites beyond the scope header and nav marker:**
+  - the active nav icon;
+  - the sign-in brand mark and `TowerMark`;
+  - the scope-button focus ring;
+  - the DataTable row focus;
+  - `.badge--gold`;
+  - `--shadow-gold-ring`.
+
+  All are retired by the light-first token migration (§10).
 
 ## 10. Migration debts
 
