@@ -21,7 +21,8 @@ import { SignInRoute } from "@/shell/SignInRoute";
  * block navigation (useBlocker). The route tree is unchanged; the root layout
  * hosts the providers the routes read.
  */
-import { DirtyGuardProvider, NavigationBlocker } from "@/shell/dirty-guard";
+import { DirtyGuardProvider } from "@/shell/dirty-guard";
+import { NavigationBlocker } from "@/shell/navigation-blocker";
 import { payerRoutes } from "@/shell/payerRoutes";
 import { receivableRoutes } from "@/shell/receivableRoutes";
 import { rf2Routes } from "@/shell/rf2Routes";

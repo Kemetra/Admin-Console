@@ -3,7 +3,8 @@ import { useState } from "react";
 import { Link, Outlet, RouterProvider, createMemoryRouter, useNavigate } from "react-router";
 import { describe, expect, test } from "vitest";
 
-import { DirtyGuardProvider, NavigationBlocker, SAVED_NAVIGATION } from "@/shell/dirty-guard";
+import { DirtyGuardProvider, SAVED_NAVIGATION } from "@/shell/dirty-guard";
+import { NavigationBlocker } from "@/shell/navigation-blocker";
 
 /**
  * RT-268 (UX-09): navigating away from a form with unsaved edits asks

@@ -18,6 +18,8 @@
  *
  * Without a provider (unit tests rendering a surface on its own) the hook falls
  * back to "never dirty", so nothing outside the app root has to know about it.
+ * The dialog lives in leave-dialog.tsx and the route guard in
+ * navigation-blocker.tsx.
  */
 import {
   createContext,
@@ -28,8 +30,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { useBlocker } from "react-router";
-import "./dirty-guard.css";
+import { LeaveDialog } from "./leave-dialog";
 
 export interface DirtyGuardValue {
   /** True when a tracked form in the content area holds unsaved edits. */
@@ -52,20 +53,40 @@ export function useDirtyGuard(): DirtyGuardValue {
   return useContext(DirtyGuardContext) ?? fallback;
 }
 
-function formOf(target: EventTarget | null): HTMLFormElement | null {
-  if (!(target instanceof HTMLElement) || !target.closest("[data-dirty-scope]")) return null;
-  const form = (target as HTMLInputElement).form ?? target.closest("form");
-  return form && form.dataset.dirtyGuard !== "off" ? form : null;
+function inContentArea(target: EventTarget | null): target is HTMLElement {
+  return target instanceof HTMLElement && target.closest("[data-dirty-scope]") !== null;
+}
+
+function ownerForm(el: HTMLElement): HTMLFormElement | null {
+  return (el as HTMLInputElement).form ?? el.closest("form");
+}
+
+function isTracked(form: HTMLFormElement | null): form is HTMLFormElement {
+  return form !== null && form.dataset.dirtyGuard !== "off";
+}
+
+/** The form an edit belongs to, when that form counts as unsaved work. */
+function editedForm(target: EventTarget | null): HTMLFormElement | null {
+  if (!inContentArea(target)) return null;
+  const form = ownerForm(target);
+  return isTracked(form) ? form : null;
+}
+
+/** Drop forms that left the page (page left, drawer closed after a save). */
+function pruneDetached(forms: Set<HTMLFormElement>): void {
+  for (const form of forms) {
+    if (!form.isConnected) forms.delete(form);
+  }
 }
 
 /** Tracks edited forms in the content area, plus the tab-close prompt. */
 function useFormTracking(
   forms: React.MutableRefObject<Set<HTMLFormElement>>,
   isDirty: () => boolean,
-) {
+): void {
   useEffect(() => {
     const track = (e: Event) => {
-      const form = formOf(e.target);
+      const form = editedForm(e.target);
       if (form) forms.current.add(form);
     };
     // Closing or reloading the tab with unsaved work gets the browser's prompt.
@@ -102,9 +123,7 @@ export function DirtyGuardProvider({ children }: { children: React.ReactNode }):
   const [asking, setAsking] = useState(false);
 
   const isDirty = useCallback(() => {
-    for (const form of forms.current) {
-      if (!form.isConnected) forms.current.delete(form);
-    }
+    pruneDetached(forms.current);
     return forms.current.size > 0;
   }, []);
   useFormTracking(forms, isDirty);
@@ -112,10 +131,8 @@ export function DirtyGuardProvider({ children }: { children: React.ReactNode }):
   // One prompt at a time: concurrent callers share the same answer.
   const confirmLeave = useCallback(() => {
     if (!isDirty()) return Promise.resolve(true);
-    if (!pending.current) {
-      pending.current = deferred();
-      setAsking(true);
-    }
+    pending.current ??= deferred();
+    setAsking(true);
     return pending.current.promise;
   }, [isDirty]);
 
@@ -133,103 +150,4 @@ export function DirtyGuardProvider({ children }: { children: React.ReactNode }):
       {asking ? <LeaveDialog onStay={() => settle(false)} onDiscard={() => settle(true)} /> : null}
     </DirtyGuardContext.Provider>
   );
-}
-
-/** Keep Tab / Shift+Tab cycling between the dialog's buttons. */
-function trapTab(e: React.KeyboardEvent<HTMLElement>, panel: HTMLElement): void {
-  const buttons = Array.from(panel.querySelectorAll<HTMLElement>("button"));
-  const edge = e.shiftKey ? buttons[0] : buttons[buttons.length - 1];
-  if (document.activeElement !== edge) return;
-  e.preventDefault();
-  (e.shiftKey ? buttons[buttons.length - 1] : buttons[0]).focus();
-}
-
-interface LeaveDialogProps {
-  onStay: () => void;
-  onDiscard: () => void;
-}
-
-/**
- * Stay / Discard confirmation. A real modal (UX-11 "modal semantics require
- * modal behavior"): initial focus on the safe choice, Escape = Stay, Tab is
- * trapped, and focus returns to whatever held it before.
- */
-function LeaveDialog({ onStay, onDiscard }: LeaveDialogProps): React.JSX.Element {
-  const panelRef = useRef<HTMLDivElement>(null);
-  const stayRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    const previouslyFocused = document.activeElement as HTMLElement | null;
-    stayRef.current?.focus();
-    return () => previouslyFocused?.focus?.();
-  }, []);
-
-  function onKeyDown(e: React.KeyboardEvent<HTMLDivElement>): void {
-    if (e.key === "Escape") {
-      e.preventDefault();
-      onStay();
-    } else if (e.key === "Tab" && panelRef.current) {
-      trapTab(e, panelRef.current);
-    }
-  }
-
-  return (
-    <div className="leave-scrim" role="presentation">
-      <div
-        ref={panelRef}
-        className="leave-dialog"
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby="leave-dialog-title"
-        aria-describedby="leave-dialog-desc"
-        onKeyDown={onKeyDown}
-      >
-        <h2 id="leave-dialog-title" className="leave-dialog__title">
-          Leave without saving?
-        </h2>
-        <p id="leave-dialog-desc" className="leave-dialog__desc">
-          This page has changes that are not saved. If you leave, they are lost.
-        </p>
-        <div className="leave-dialog__actions">
-          <button ref={stayRef} type="button" className="btn-primary" onClick={onStay}>
-            Stay on this page
-          </button>
-          <button type="button" className="btn-destructive" onClick={onDiscard}>
-            Discard changes
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/**
- * Blocks in-app navigation (links, back/forward) while a form is dirty and asks
- * Stay / Discard. Needs a data router (App uses createBrowserRouter). A
- * post-save redirect carrying SAVED_NAVIGATION passes straight through.
- */
-export function NavigationBlocker(): null {
-  const guard = useDirtyGuard();
-  const blocker = useBlocker(({ currentLocation, nextLocation }) => {
-    const state = nextLocation.state as { dirtyGuard?: string } | null;
-    if (state?.dirtyGuard === SAVED_NAVIGATION.dirtyGuard) return false;
-    const moving =
-      currentLocation.pathname !== nextLocation.pathname ||
-      currentLocation.search !== nextLocation.search;
-    return moving && guard.isDirty();
-  });
-  const latest = useRef(blocker);
-  latest.current = blocker;
-
-  useEffect(() => {
-    if (blocker.state !== "blocked") return;
-    void guard.confirmLeave().then((ok) => {
-      const current = latest.current;
-      if (current.state !== "blocked") return;
-      if (ok) current.proceed();
-      else current.reset();
-    });
-  }, [blocker.state, guard]);
-
-  return null;
 }
