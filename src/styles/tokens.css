@@ -32,6 +32,9 @@
   --color-primary-hover: #163d61;
   --color-primary-subtle: #0e1e30;
   --color-accent: #2e7da3;
+  /* Focus role (UX-11). Aliased to the accent so the light-first token slice can
+   * remap focus in one place. >= 3:1 against every current ground surface. */
+  --color-focus: var(--color-accent);
 
   /* Semantic */
   --color-success: #1f8a5b;

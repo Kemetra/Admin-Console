@@ -22,10 +22,8 @@
 .btn-primary:hover:not(:disabled) {
   background-color: var(--color-primary-hover);
 }
-.btn-primary:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(31, 78, 122, 0.45);
-}
+/* Focus: the global outline (a11y.css). Its 2px offset keeps the ring on the
+ * page ground, where it holds 3:1, instead of on the navy fill. */
 .btn-primary:disabled {
   opacity: 0.4;
   cursor: not-allowed;
@@ -51,10 +49,6 @@
 .btn-secondary:hover {
   border-color: var(--color-primary);
   background-color: var(--color-primary-subtle);
-}
-.btn-secondary:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(46, 125, 163, 0.3);
 }
 
 .btn-ghost {
@@ -94,10 +88,6 @@
 }
 .btn-destructive:hover:not(:disabled) {
   background-color: #9a2730;
-}
-.btn-destructive:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(179, 46, 54, 0.4);
 }
 .btn-destructive:disabled {
   opacity: 0.4;
@@ -150,10 +140,9 @@
 .input::placeholder {
   color: var(--color-text-disabled);
 }
+/* Border shift reinforces focus; the global outline (a11y.css) is the signal. */
 .input:focus-visible {
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px rgba(46, 125, 163, 0.3);
-  outline: none;
+  border-color: var(--color-focus);
 }
 .input[aria-invalid="true"] {
   border-color: var(--color-danger);

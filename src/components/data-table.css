@@ -40,10 +40,10 @@
 .data-table__row:hover {
   background-color: var(--color-surface-raised);
 }
+/* Row focus: the global outline, inset so the table edge doesn't clip it. */
 .data-table__row:focus-visible {
-  outline: none;
+  outline-offset: -2px;
   background-color: var(--color-surface-raised);
-  box-shadow: inset 3px 0 0 0 var(--color-gold);
 }
 .data-table__cell--mono {
   font-family: var(--font-mono);

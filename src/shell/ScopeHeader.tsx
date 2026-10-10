@@ -8,6 +8,15 @@ import { useActiveContextValue } from "@/context/ActiveContextProvider";
 import { useState } from "react";
 import "./scope-header.css";
 
+/** Non-color "current scope" cue (RT-267/UX-11); aria-current names it for AT. */
+function ActiveCheck(): React.JSX.Element {
+  return (
+    <span className="scope-menu__check" aria-hidden="true">
+      ✓
+    </span>
+  );
+}
+
 export function ScopeHeader(): React.JSX.Element | null {
   const { context, switchStore, clearStore } = useActiveContextValue();
   const [open, setOpen] = useState(false);
@@ -53,24 +62,28 @@ export function ScopeHeader(): React.JSX.Element | null {
             type="button"
             role="menuitem"
             className={`scope-menu__item${store ? "" : " scope-menu__item--active"}`}
+            aria-current={store ? undefined : "true"}
             onClick={() => {
               void clearStore();
               setOpen(false);
             }}
           >
             All stores
+            {store ? null : <ActiveCheck />}
           </button>
           {store?.id ? (
             <button
               type="button"
               role="menuitem"
               className="scope-menu__item scope-menu__item--active"
+              aria-current="true"
               onClick={() => {
                 void switchStore(store.id as string);
                 setOpen(false);
               }}
             >
               {store.name}
+              <ActiveCheck />
             </button>
           ) : null}
         </div>

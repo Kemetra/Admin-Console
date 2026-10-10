@@ -63,6 +63,11 @@
   border-color: var(--color-primary);
   background: var(--color-surface-raised);
 }
+/* Inset ring: .pick-list scrolls (overflow:auto, 2px padding) and would clip
+ * the global outside ring (RT-267). */
+.pick:focus-visible {
+  outline-offset: -2px;
+}
 .pick__avatar {
   width: 32px;
   height: 32px;

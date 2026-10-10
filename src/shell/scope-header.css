@@ -26,11 +26,11 @@
   background: rgba(200, 162, 74, 0.1);
 }
 .scope__btn:focus-visible {
-  outline: 2px solid var(--color-gold);
-  outline-offset: 1px;
+  outline-offset: 1px; /* focus color from the global baseline, not gold */
 }
+/* Hierarchy by weight, not opacity: 0.7 opacity scored 3.99:1 (axe, RT-267). */
 .scope__crumb {
-  opacity: 0.7;
+  font-weight: 500;
 }
 .scope__sep {
   opacity: 0.4;
@@ -79,4 +79,9 @@
 .scope-menu__item--active {
   background: var(--color-gold-soft);
   color: var(--color-gold);
+}
+/* Non-color cue for the active scope (RT-267): a check that survives forced
+ * colors and color-vision loss. aria-current carries it for assistive tech. */
+.scope-menu__check {
+  margin-inline-start: auto;
 }
