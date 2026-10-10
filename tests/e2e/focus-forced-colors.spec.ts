@@ -45,9 +45,16 @@ interface FocusStop {
   label: string;
   outlineStyle: string;
   outlineWidth: number;
+  /** Selector of an overflow-clipping ancestor that cuts the ring off, if any. */
+  clippedBy: string | null;
 }
 
-/** Tab through the page until focus wraps (or a cap), recording each stop's outline. */
+/**
+ * Tab through the page until focus wraps (or a cap), recording each stop's
+ * outline. Computed style alone can't see an ancestor with overflow != visible
+ * clipping the ring, so each stop also checks the painted ring box (border box
+ * grown by offset + width) against every clipping ancestor's padding box.
+ */
 async function walkFocus(page: Page, maxStops = 40): Promise<FocusStop[]> {
   const stops: FocusStop[] = [];
   const seen = new Set<string>();
@@ -64,11 +71,38 @@ async function walkFocus(page: Page, maxStops = 40): Promise<FocusStop[]> {
         );
       }
       const name = (el.getAttribute("aria-label") ?? el.textContent ?? "").trim().slice(0, 40);
+      const grow = Number.parseFloat(cs.outlineOffset) + Number.parseFloat(cs.outlineWidth);
+      const r = el.getBoundingClientRect();
+      const ring = {
+        left: r.left - grow,
+        top: r.top - grow,
+        right: r.right + grow,
+        bottom: r.bottom + grow,
+      };
+      let clippedBy: string | null = null;
+      for (let a = el.parentElement; a && a !== document.documentElement; a = a.parentElement) {
+        const acs = getComputedStyle(a);
+        if (acs.overflowX === "visible" && acs.overflowY === "visible") continue;
+        const ar = a.getBoundingClientRect();
+        const left = ar.left + a.clientLeft;
+        const top = ar.top + a.clientTop;
+        const tol = 0.5;
+        if (
+          ring.left < left - tol ||
+          ring.top < top - tol ||
+          ring.right > left + a.clientWidth + tol ||
+          ring.bottom > top + a.clientHeight + tol
+        ) {
+          clippedBy = `${a.tagName.toLowerCase()}.${a.className}`;
+          break;
+        }
+      }
       return {
         key: path.join("/"),
         label: `${el.tagName.toLowerCase()}.${el.className} "${name}"`,
         outlineStyle: cs.outlineStyle,
         outlineWidth: Number.parseFloat(cs.outlineWidth),
+        clippedBy,
       };
     });
     if (!stop || seen.has(stop.key)) break;
@@ -77,17 +111,25 @@ async function walkFocus(page: Page, maxStops = 40): Promise<FocusStop[]> {
       label: stop.label,
       outlineStyle: stop.outlineStyle,
       outlineWidth: stop.outlineWidth,
+      clippedBy: stop.clippedBy,
     });
   }
   return stops;
 }
 
-function expectVisibleOutlines(stops: FocusStop[]): void {
-  expect(stops.length).toBeGreaterThan(3);
+function expectVisibleOutlines(stops: FocusStop[], minStops = 4): void {
+  expect(stops.length).toBeGreaterThanOrEqual(minStops);
   const missing = stops.filter((s) => s.outlineStyle !== "solid" || s.outlineWidth < 2);
   expect(
     missing,
     `focus stops without a >=2px solid outline:\n${missing.map((s) => s.label).join("\n")}`,
+  ).toEqual([]);
+  const clipped = stops.filter((s) => s.clippedBy);
+  expect(
+    clipped,
+    `focus rings clipped by an overflow ancestor:\n${clipped
+      .map((s) => `${s.label} <- ${s.clippedBy}`)
+      .join("\n")}`,
   ).toEqual([]);
 }
 
@@ -102,6 +144,27 @@ for (const forcedColors of ["none", "active"] as const) {
       await page.goto("/stores");
       await expect(page.getByRole("cell", { name: "Cairo Festival City" })).toBeVisible();
       expectVisibleOutlines(await walkFocus(page));
+    });
+
+    test("scope gate: tenant picks show an unclipped outline", async ({ page }) => {
+      await page.route("**/api/v1/context/me", (r) =>
+        r.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            ...context,
+            active_tenant: null,
+            active_role_code: null,
+            memberships: [
+              { tenant_id: "t1", tenant_name: "Northstar Retail", role_code: "tenant_admin" },
+              { tenant_id: "t2", tenant_name: "Helios Markets", role_code: "tenant_admin" },
+            ],
+          }),
+        }),
+      );
+      await page.goto("/");
+      await expect(page.getByText("Helios Markets")).toBeVisible();
+      expectVisibleOutlines(await walkFocus(page), 2); // one pick per membership
     });
 
     test("tenant form: every keyboard focus stop shows an outline", async ({ page }) => {
@@ -174,6 +237,8 @@ for (const forcedColors of ["none", "active"] as const) {
       await page.keyboard.press("Enter");
       const drawer = page.getByRole("dialog");
       await expect(drawer).toBeFocused();
+      // Guard the opt-out itself: the panel DOES match :focus-visible here.
+      expect(await drawer.evaluate((el) => el.matches(":focus-visible"))).toBe(true);
       // The panel is a programmatic initial-focus target (tabindex=-1), not a Tab
       // stop: a 2px ring around the whole pane would be noise, not a focus signal.
       expect(await drawer.evaluate((el) => getComputedStyle(el).outlineStyle)).toBe("none");

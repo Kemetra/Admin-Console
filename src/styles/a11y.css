@@ -26,6 +26,8 @@
     border: 1px solid ButtonText;
   }
   .btn-primary:disabled,
+  .btn-secondary:disabled,
+  .btn-ghost:disabled,
   .btn-destructive:disabled {
     border-color: GrayText;
     color: GrayText;
