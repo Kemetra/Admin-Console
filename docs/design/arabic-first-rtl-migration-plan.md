@@ -31,7 +31,8 @@ while Audit evidence stays in exact, labelled UTC.
 | --- | --- | --- |
 | `index.html` | `<html lang="en">`, no `dir`, English `<title>` | `lang`/`dir` set from the active locale before first paint |
 | Shell grid (`app-shell.css`) | `grid-template-areas` (direction-aware; flips correctly in RTL) | no change needed |
-| Scope header separator | literal `›` glyph between Tenant and Store (`ScopeHeader.tsx`) | direction-aware separator (`‹` in RTL, or a mirrored icon), `aria-hidden` |
+| Scope header separator | literal `›` (U+203A) between Tenant and Store (`ScopeHeader.tsx`) | **keep `›`**: it is Bidi_Mirrored, so it already renders as `‹` in an RTL run. Hard-coding `‹` would display reversed. Isolate the Tenant/Store names (`<bdi>`) so Latin-only names can't resolve the neutral separator to LTR. Keep `aria-hidden`. |
+| "Back" links | `← Back to stores/tenants` (U+2190, **not** mirrored) at `StockDiscrepancyStore.tsx:39`, `StoreDetail.tsx:48,74`, `TenantDetail.tsx:51,77` | a direction-aware back icon (mirrored under `[dir="rtl"]`, per UX-03 "RTL follows meaning"), with the label from the catalog |
 | Drawers | right-anchored with `justify-content: flex-end` (already logical) | entry animation must follow direction (see 2.2) |
 
 ### 2.2 Physical-direction CSS (21 declarations, 8 files)
@@ -65,7 +66,7 @@ starts. Inline `style={{…}}` in TSX: **none** with physical direction (verifie
 
 There is no catalog: every string is a JSX literal or a module-local constant. An approximate
 count of JSX text nodes, user-facing attributes and sentence literals (a heuristic scan,
-excluding tests and generated code) gives **~448** across 14 surfaces:
+excluding tests and generated code) gives **~447** across 14 surfaces:
 
 | Surface | Files | ~Strings |
 | --- | ---: | ---: |
@@ -90,7 +91,11 @@ Notable patterns:
   mapper choose client-authored `COPY` entries by **HTTP status**; components render
   `error.message` from that mapping, not raw backend text. That is the right seam. The gap is
   that selection is keyed on status rather than the envelope's `error.code`, and the copy is
-  English.
+  English. Other status→copy sites outside those two tables also need the catalog, notably:
+  - the RF-5 operators mapping (`src/operators/useMembers.ts:16`);
+  - inline "Try again" copy in `AuditSearch.tsx:101`, `InviteMember.tsx:116,130` and
+    `PayerCreate.tsx:94`;
+  - the stock-discrepancy notices (`stockDiscrepancyLogic.ts:256-258`).
 - **Machine identifiers appear in copy:** the Banner renders `request_id: …`, `PayerList`
   renders the raw enum `suspended`, and role codes (`active_role_code`) show in the topbar.
 - **Gate labels** `RF-3` / `RF-4` in navigation: RT-270 removes them, so don't translate them.
@@ -112,6 +117,9 @@ There are no `Intl.*` or `toLocale*` calls anywhere. Values are rendered verbati
 | `stock-discrepancies/StockDiscrepancyStore.tsx:154` | `item.quantity` | verbatim string | verbatim exact value, LTR-isolated, tabular |
 | `receivables/ReceivableList.tsx:114` | `outstandingBalance` | verbatim `Money` string | money formatter (§3.3) |
 | `receivables/ReconcileRemittance.tsx:126,130` | `claimedAmount`, `remittedAmount` | verbatim | money formatter |
+| `receivables/ReconcileRemittance.tsx:134` | `variance`: **signed** `Money` (can be negative) | verbatim | money formatter with the sign rule (§3.4) |
+| `unknown-items/UnknownItemInspectDrawer.tsx:47,48` | `encountered_at`, `resolved_at` | raw ISO | operational time (Store zone, once available) with exact time available |
+| `unknown-items/UnknownItemList.tsx:37` | `encountered_at` column | raw ISO | same, tabular, LTR-isolated |
 | `settlement-reconciliation/ApplyPayment.tsx:127,140` | `outstandingBalance` | verbatim | money formatter |
 | `audit/AuditPager.tsx:23` (via `AuditSearch.tsx:129`) | loaded row count | English «Showing N» | noun-first counter («المحمّل: N»), no total unless the contract gives one (UX-10) |
 
@@ -129,10 +137,22 @@ There are no `Intl.*` or `toLocale*` calls anywhere. Values are rendered verbati
 
 ### 3.2 Message catalog
 
-- **Shape:** one typed module per locale (`src/i18n/messages/ar.ts`, later `en.ts`). The
-  Arabic catalog is the source of truth. The type
-  `type MessageKey = keyof typeof ar` forces every other locale to be complete at compile
-  time, so a missing key is a type error, not a runtime fallback.
+- **Shape:** one **flat** typed module per locale (`src/i18n/messages/ar.ts`, later
+  `en.ts`), keyed by dotted strings. The Arabic catalog defines the key set, and every
+  other locale is typed against it so that a missing key is a compile error, not a runtime
+  fallback:
+
+  ```ts
+  type PluralMessage = Partial<Record<Intl.LDMLPluralRule, string>> & { other: string };
+  type Message = string | PluralMessage;
+  export const ar = { "shell.nav.stores": "المتاجر", /* … */ } satisfies Record<string, Message>;
+  export type MessageKey = keyof typeof ar;
+  export const en: Record<MessageKey, Message> = { /* … */ }; // must cover every key
+  ```
+
+  Plural categories are optional per locale except `other`. Arabic supplies all six where
+  prose needs them; English needs only `one` and `other`. A nested catalog would need a
+  recursive path type, so stay flat.
 - **Keys:** namespaced by surface and purpose (`shell.nav.stores`, `audit.table.time`,
   `errors.network.generic`), never by English text.
 - **Whole sentences with named parameters:** `t("stock.snapshot.staleNotice", { age })`.
@@ -150,26 +170,30 @@ There are no `Intl.*` or `toLocale*` calls anywhere. Values are rendered verbati
 UX-12: *machine codes drive copy; they are not copy*, and *a missing translation must not
 become a new operational error*.
 
-1. Mappers (`mapRf2Error`, the unknown-items mapper, `settlementWriteOutcome`, the idempotency
-   helpers) resolve copy by **`error.code` first**, for example `store_code_conflict`,
-   `idempotency_key_conflict`, `stale_version` or `not_signed_in`. Only then do they fall
-   back to an **HTTP status family** (`errors.http.403`, `errors.http.5xx`).
+1. Mappers (`mapRf2Error`, the unknown-items mapper, the RF-5 operators mapping,
+   `settlementWriteOutcome`, the idempotency helpers) resolve copy by **`error.code` first**.
+   Use codes the contract actually documents, for example `idempotency_key_conflict`,
+   `alias_conflict`, `already_reconciled`, `store_context_required` and `not_found`. Only
+   then do they fall back to an **HTTP status family** (`errors.http.403`,
+   `errors.http.5xx`). Note that `Error.error.code` is typed as a plain `string`
+   (`schema.d.ts:175`); codes are named only in `@description` prose, not as an enum.
 2. An unknown code with a known family uses the family message, such as «تعذر إكمال الطلب.»
    with the request reference. It never shows raw backend English and never shows the key.
 3. The request reference is kept exact and LTR: «المرجع: req_…» replaces `request_id: …`.
 4. Copy follows **What → Safety → Action → Evidence**. «حاول مرة أخرى» appears only where a
    retry can resolve the state; the current `serverError` "Try again" is fine for 5xx and
    wrong for 401/403/409.
-5. A unit test enumerates every code the generated OpenAPI documents for a surface and asserts
-   that it has a catalog entry. Adding a backend code without copy then fails CI instead of
-   reaching an operator.
+5. A unit test checks a **hand-maintained list of known error codes** (harvested from the
+   schema descriptions) against the catalog, so a known code without copy fails CI. Making
+   this automatic needs Backend-Core to publish `error.code` as an OpenAPI enum. That is a
+   cross-repo contract request (§4), not something this repo can derive today.
 
 ### 3.4 Formatters (`src/i18n/format.ts`)
 
 | Formatter | Rule | Implementation note |
 | --- | --- | --- |
 | Integer and count | Western digits in Arabic UI | `new Intl.NumberFormat("ar-EG-u-nu-latn")` |
-| Money | `1,250.00 EGP`: grouping, two minor digits, canonical `EGP`, LTR-isolated; **arithmetic unchanged** | Input is the exact-decimal `Money` **string**. Never `parseFloat`. Group the integer part from the string (or use `Intl.NumberFormat.format(string)`, which keeps exact decimals in Node 22 and current Chromium; TypeScript's `ES2022` lib types only accept `number \| bigint`, so a typed wrapper is needed). See open questions Q2 and Q3 on precision and currency. |
+| Money | `1,250.00 EGP`: grouping, two minor digits, canonical `EGP`, LTR-isolated; **arithmetic unchanged** | Input is the exact-decimal `Money` **string**. Never `parseFloat`. Group the integer part from the string (or use `Intl.NumberFormat.format(string)`, which keeps exact decimals in Node 22 and current Chromium; TypeScript's `ES2022` lib types only accept `number \| bigint`, so a typed wrapper is needed). **Sign rule:** a negative value (e.g. `variance`) renders as `-1,250.50 EGP` inside the LTR isolate. `Intl` output for negatives carries a leading U+200E (LRM), so exact-string tests must expect or strip it. See open questions Q2 and Q3 on precision and currency. |
 | Operational date/time | readable Arabic, Western digits, 24h, **Store timezone**, e.g. «7 أكتوبر 2026، 13:42» | `Intl.DateTimeFormat("ar-EG-u-nu-latn", { dateStyle: "long", timeStyle: "short", hourCycle: "h23", timeZone })`. Note: the default output joins with «في», so compose with `formatToParts` to get the UX-12 «،» form. |
 | Evidence timestamp (Audit, request evidence) | exact, timezone-explicit, UTC-labelled; Western digits | keep the ISO value; render `YYYY-MM-DD HH:mm:ss UTC` LTR-isolated with an Arabic label |
 | Relative time | orientation only; absolute value always available | `Intl.RelativeTimeFormat("ar-EG-u-nu-latn")`; never the only time on Audit |
@@ -187,7 +211,7 @@ All formatters take the locale explicitly and never read `navigator.language`.
 | Retail Item / `tenant_product` | «الصنف» | `tenant_product` |
 | Catalog | «الكتالوج» | |
 | Operator identity | «المستخدم» unless the role is known | `operator` |
-| Roles | localized role labels from a role-code map, e.g. `manager` → «المدير», `cashier` → «الكاشير»; Admin role codes (`role_code` is a free string in the contract; the code uses `platform_admin`, `tenant_admin`, `store_manager`) need owner-approved terms (Q4) and an unknown-code fallback | raw role codes stay out of copy |
+| Roles | localized role labels from a role-code map with an unknown-code fallback. Admin role codes in use are `owner`, `tenant_admin` and `store_manager` (`role_code` is a free string in the contract). Platform admin is the `is_platform_admin` flag, not a role code. The UX-12 table covers only the POS roles (`manager` → «المدير», `cashier` → «الكاشير»), so the Admin labels need owner-approved terms (Q4). | raw role codes stay out of copy |
 
 ERPNext, Frappe, EGP, SKU and API stay as proper or machine terms. Admin terms are
 coordinated with POS RT-311 through the same UX-12 glossary: one authority, no shared
@@ -199,6 +223,7 @@ runtime.
 | --- | --- | --- |
 | **Store timezone** for Store-local business time | **Blocked.** The generated OpenAPI schema (`src/generated/schema.d.ts`) has no Store timezone field. Until Backend-Core exposes one, operational times stay exact and zone-labelled (UTC) rather than guessing a zone. | Backend-Core (contract issue to be created) |
 | **Currency of `Money` values** | No currency field on `Money`; values are `numeric(19,4)` strings. `EGP` would be an assumption. | Backend-Core / owner decision (Q3) |
+| **Error codes as a contract enum** (for automatic catalog coverage, §3.3 item 5) | Not available: `error.code` is a plain `string` in the schema. Until then the coverage list is maintained by hand. | Backend-Core (contract request to be created) |
 | Store scope switcher rewrite | The scope header and menu will be rewritten by RT-268 / RT-354; localize them in that slice, not twice. | Admin-Console |
 | RF-* gated nav entries | removed by RT-270; do not translate. | Admin-Console |
 | Forced-colors / focus baseline | RT-267 converts the shell marker and table-focus lines to logical properties. | Admin-Console |
@@ -213,12 +238,12 @@ Each slice is its own Jira Implementation issue, one PR in this repo, with no ne
 | S1 | **i18n foundation** | `src/i18n/` (locale, typed `ar` catalog skeleton, `t()`, plural helper, formatters + unit tests incl. all six Arabic plural categories, money-string grouping without float, Western digits); no surface changes | unit tests; `pnpm build`/lint; no visual change |
 | S2 | **Document + shell** | `<html lang="ar-EG" dir="rtl">`; topbar, sidebar, scope header (unless RT-268 is in flight), sign-out, Overview, Banner/ListState/ConfirmDelete/Drawer chrome; logical CSS for every shell and shared-component row in §2.2 | RTL captures at 1280 and 1440; keyboard walk (Tab order matches visual RTL order); forced-colors capture; axe |
 | S3 | **Auth surfaces** | sign-in, accept invitation, no-access, scope gate | captures (LTR emails isolated); keyboard; axe |
-| S4 | **Tenants + Stores** | lists, detail, forms, error copy via codes (`store_code_conflict`, …) | RTL captures of list + form; keyboard; error-state captures |
+| S4 | **Tenants + Stores** | lists, detail, forms, back links, error copy via documented codes plus the 409 status-family fallback | RTL captures of list + form; keyboard; error-state captures |
 | S5 | **Operators** | member list, invite, edit/revoke drawer, role labels | RTL captures incl. drawer; focus trap/restore re-verified in RTL |
 | S6 | **Audit** | filters, table, pager, inspect drawer; evidence timestamps stay UTC-labelled | captures; keyboard shell → table → drawer → return in RTL |
 | S7 | **Stock discrepancies + Unknown items** | snapshot panel, stale/pending copy, counts, UNKNOWN state | captures incl. stale and UNKNOWN states |
-| S8 | **Money surfaces** | payers, receivables, settlement/apply payment with the money formatter | captures with large and zero amounts; exact-value preservation tests |
-| S9 | **Error-code coverage gate** | the catalog completeness test (§3.3 item 5) across all documented codes | CI test |
+| S8 | **Money surfaces** | payers, receivables, settlement/apply payment with the money formatter | captures with large, zero and **negative** (`variance`) amounts; exact-value preservation tests |
+| S9 | **Error-code coverage gate** | the catalog completeness test (§3.3 item 5) over the hand-maintained known-code list (automatic once Backend-Core publishes a code enum) | CI test |
 
 **Order:** S1 → S2 → S3–S8 in any order, following product priority → S9 (or S9 alongside
 S1 with a growing allowlist). S2 is the gate: no surface slice before the document is RTL.
@@ -241,7 +266,7 @@ S1 with a growing allowlist). S2 is the gate: no surface slice before the docume
 | **Q1** | **Do pilot staff use the Console?** | Sets priority. If the pilot operators are internal or platform staff only, the migration can follow the light-first token slice. If store managers use it in the pilot, S1–S2 move ahead of new surfaces such as RT-18. |
 | Q2 | `Money` is `numeric(19,4)`; UX-12 says "exactly two minor digits". Should a value with non-zero 3rd/4th decimals be rounded, truncated, or shown at full precision? | Rounding display money silently could misstate truth; the formatter must not guess. |
 | Q3 | Is every Admin `Money` value EGP, or will the contract carry a currency? | Determines whether `EGP` is a constant or a field. |
-| Q4 | Arabic labels for Admin role codes (`platform_admin`, `tenant_admin`, `store_manager`, and any others Backend-Core issues; `role_code` is an open string in the contract). | Not in the UX-12 table. |
+| Q4 | Arabic labels for Admin role codes (`owner`, `tenant_admin`, `store_manager`, any others Backend-Core issues) and for the platform-admin identity (`is_platform_admin`). `role_code` is an open string in the contract. | Not in the UX-12 table. |
 | Q5 | May axe (`axe-core` / `@axe-core/playwright`) be added as a dev dependency for accessibility evidence? | The evidence rules require axe and the repo forbids unapproved dependency changes. |
 | Q6 | Is an English Admin locale in scope (as POS RT-311 plans), and when? | Decides whether S1 ships a locale switcher and persistence or Arabic only. |
 
