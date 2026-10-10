@@ -1,5 +1,21 @@
 # Handoff: Retail Tower Console
 
+> [!IMPORTANT]
+> **Reference / prototype only — not design authority (RT-265, 2026-10-10).**
+> The Retail Tower UX/UI Constitution
+> ([Final Audit, 2026-10-07](https://rahmaqanater.atlassian.net/wiki/spaces/RETAIL/pages/24510466))
+> supersedes this bundle's identity. In particular these are **not adopted**:
+> - the dark-by-default theme, Tower Gold "authority" and navy "action" palette (UX-02 is
+>   light-first Mineral Daylight + Tower Teal, with no secondary brand accent);
+> - the English/LTR-first copy (UX-12: Arabic-first);
+> - the KPI coloring, up=green/down=red deltas, dual-axis charts, color-only donuts and
+>   semantic-status chart palette (UX-13);
+> - the screen and route map as production IA (UX-09).
+>
+> Use it for ideas and data shapes only. The governing design baseline for this repo is
+> [`DESIGN.md`](../DESIGN.md). Instructions below such as "recreate this design" and
+> "final" fidelity describe the bundle as originally authored, not current intent.
+
 ## Overview
 **Retail Tower Console** is the admin web console for **Retail Tower OS**, a multi-tenant retail
 operations platform (tenants like *Northstar Retail*, stores like *Cairo Festival City*). It is an
