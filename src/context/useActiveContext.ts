@@ -39,6 +39,8 @@ export interface ActiveContextValue {
   switchTenant: (tenantId: string) => Promise<void>;
   switchStore: (storeId: string) => Promise<void>;
   clearStore: () => Promise<void>;
+  /** Re-fetch the context, e.g. after sign-in replaces a signed-out `session-lost` (RT-343). */
+  refresh: () => Promise<void>;
 }
 
 export function useActiveContext(): ActiveContextValue {
@@ -70,7 +72,13 @@ export function useActiveContext(): ActiveContextValue {
     retry: false,
   });
 
-  const invalidate = () => qc.invalidateQueries({ queryKey: queryKeys.activeContext });
+  // RT-343: cancel first. A fetch still in flight with no data yet (e.g. the
+  // signed-out one started on /signin) would otherwise be reused by the
+  // invalidation and land its stale 401 after sign-in.
+  const invalidate = async () => {
+    await qc.cancelQueries({ queryKey: queryKeys.activeContext });
+    await qc.invalidateQueries({ queryKey: queryKeys.activeContext });
+  };
 
   const tenant = useMutation({
     mutationFn: (tenantId: string) => switchActiveTenant(tenantId),
@@ -102,6 +110,9 @@ export function useActiveContext(): ActiveContextValue {
     },
     clearStore: async () => {
       await clear.mutateAsync();
+    },
+    refresh: async () => {
+      await invalidate();
     },
   };
 }
