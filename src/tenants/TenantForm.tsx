@@ -1,6 +1,7 @@
 import { Banner } from "@/components/Banner";
 import { InlineError } from "@/components/InlineError";
 import { type Rf2ErrorRender, mapRf2Error } from "@/lib/rf2-queries";
+import { SAVED_NAVIGATION } from "@/shell/dirty-guard";
 /**
  * SF-T3 — Tenant create/edit form (T018). Uncontrolled native form (research
  * R4-3; no form library). No client-side validation — the backend is the
@@ -59,7 +60,7 @@ export function TenantForm({ mode, tenantId, initial }: TenantFormProps): React.
         return;
       }
       const created = res.data as { id: string } | undefined;
-      if (created?.id) navigate(`/tenants/${created.id}`);
+      if (created?.id) navigate(`/tenants/${created.id}`, { state: SAVED_NAVIGATION });
       return;
     }
 
@@ -68,7 +69,7 @@ export function TenantForm({ mode, tenantId, initial }: TenantFormProps): React.
       handleRender(mapRf2Error({ ...res, context: "tenant" }));
       return;
     }
-    if (tenantId) navigate(`/tenants/${tenantId}`);
+    if (tenantId) navigate(`/tenants/${tenantId}`, { state: SAVED_NAVIGATION });
   }
 
   const title = mode === "create" ? "New tenant" : "Edit tenant";

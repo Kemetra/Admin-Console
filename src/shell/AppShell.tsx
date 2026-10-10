@@ -130,7 +130,10 @@ export function AppShell({ onSignOut, children }: AppShellProps): React.JSX.Elem
         </button>
       </nav>
 
-      <main className="content">{children}</main>
+      {/* data-dirty-scope: forms edited in here count as unsaved work (RT-268). */}
+      <main className="content" data-dirty-scope>
+        {children}
+      </main>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { Banner } from "@/components/Banner";
 import { ListState } from "@/components/ListState";
 import type { NegativeOnHandItem, StockSnapshotStatus } from "@/lib/stock-discrepancy-queries";
+import { ScopeMismatchBanner } from "@/shell/ScopeMismatchBanner";
 /**
  * RT-178 — one store's ERPNext negative on-hand items. Header: the API's
  * snapshot block ("ERPNext snapshot as of {readAt}", stale / no_snapshot /
@@ -272,6 +273,16 @@ function StoreView({ storeId, snapshot, data, showRefresh }: StoreViewProps): Re
 
 export function StockDiscrepancyStore(): React.JSX.Element {
   const { storeId } = useParams();
+  return (
+    <>
+      {/* A deep link to another store's view never switches scope (RT-268). */}
+      <ScopeMismatchBanner storeId={storeId} />
+      <StoreBody storeId={storeId} />
+    </>
+  );
+}
+
+function StoreBody({ storeId }: { storeId: string | undefined }): React.JSX.Element {
   const { scope, role } = useDiscrepancyScope();
   const data = useStoreNegativeOnHand(scope, storeId);
 

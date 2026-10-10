@@ -9,8 +9,13 @@ import { useStoreList } from "@/stores/useStoreQueries";
  * RT-354: the menu lists the stores the caller may enter in the active tenant
  * (see scope-stores.ts). The list loads only while the menu is open and shares
  * the Stores page's cache key.
+ *
+ * RT-268: a scope change asks Stay / Discard when a form holds unsaved work,
+ * Escape closes the menu back to its button, and the new scope is announced
+ * politely to screen readers.
  */
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useDirtyGuard } from "./dirty-guard";
 import { type ScopeMembership, type ScopeStore, scopeMenuStores } from "./scope-stores";
 import "./scope-header.css";
 
@@ -88,19 +93,54 @@ function ScopeMenu({
   );
 }
 
+/** Polite announcement of a scope change for screen-reader users (RT-268). */
+function useScopeAnnouncement(scopeKey: string, label: string): string {
+  const [announcement, setAnnouncement] = useState("");
+  const previous = useRef(scopeKey);
+  useEffect(() => {
+    if (previous.current === scopeKey) return;
+    previous.current = scopeKey;
+    setAnnouncement(`Now working in ${label}.`);
+  }, [scopeKey, label]);
+  return announcement;
+}
+
 export function ScopeHeader(): React.JSX.Element | null {
   const { context, switchStore, clearStore } = useActiveContextValue();
+  const guard = useDirtyGuard();
   const [open, setOpen] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   const tenant = context?.active_tenant;
   const store = context?.active_store;
+  const announcement = useScopeAnnouncement(
+    `${tenant?.id ?? ""}/${store?.id ?? "all"}`,
+    `${tenant?.name ?? ""}, ${store?.name ?? "all stores"}`,
+  );
   if (!tenant?.id) {
     return null; // no header until a tenant is resolved (chooser handles that)
   }
 
+  const closeMenu = () => {
+    setOpen(false);
+    buttonRef.current?.focus();
+  };
+  // A scope change is a context transition: unsaved work is confirmed first
+  // (RT-268), then the server switch runs and the context re-fetches.
+  const changeScope = async (change: () => Promise<void>) => {
+    closeMenu();
+    if (await guard.confirmLeave()) await change();
+  };
+
   return (
-    <div className="scope">
+    <div
+      className="scope"
+      onKeyDown={(e) => {
+        if (e.key === "Escape" && open) closeMenu();
+      }}
+    >
       <button
+        ref={buttonRef}
         type="button"
         className="scope__btn"
         aria-haspopup="menu"
@@ -132,15 +172,18 @@ export function ScopeHeader(): React.JSX.Element | null {
           activeStore={store}
           membership={context?.memberships?.find((m) => m.tenant_id === tenant.id)}
           onChooseStore={(storeId) => {
-            if (storeId !== store?.id) void switchStore(storeId);
-            setOpen(false);
+            if (storeId === store?.id) closeMenu();
+            else void changeScope(() => switchStore(storeId));
           }}
           onAllStores={() => {
-            void clearStore();
-            setOpen(false);
+            if (!store) closeMenu();
+            else void changeScope(clearStore);
           }}
         />
       ) : null}
+      <output className="sr-only" aria-live="polite">
+        {announcement}
+      </output>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { Banner } from "@/components/Banner";
 import { InlineError } from "@/components/InlineError";
 import { type Rf2ErrorRender, mapRf2Error } from "@/lib/rf2-queries";
+import { SAVED_NAVIGATION } from "@/shell/dirty-guard";
 /**
  * SF-S3 — Store create/edit form (T028). Scoped to the ACTIVE TENANT: the form
  * has NO tenant picker — the active tenant from RF-1's provider is shown as a
@@ -73,7 +74,7 @@ export function StoreForm({ mode, storeId, initial }: StoreFormProps): React.JSX
         return;
       }
       const created = res.data as { id: string } | undefined;
-      if (created?.id) navigate(`/stores/${created.id}`);
+      if (created?.id) navigate(`/stores/${created.id}`, { state: SAVED_NAVIGATION });
       return;
     }
 
@@ -83,7 +84,7 @@ export function StoreForm({ mode, storeId, initial }: StoreFormProps): React.JSX
       handleRender(mapRf2Error({ ...res, context: "store" }));
       return;
     }
-    if (storeId) navigate(`/stores/${storeId}`);
+    if (storeId) navigate(`/stores/${storeId}`, { state: SAVED_NAVIGATION });
   }
 
   const title = mode === "create" ? "New store" : "Edit store";
