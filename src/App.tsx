@@ -28,6 +28,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 import "@/styles/tokens.css";
 import "@/styles/controls.css";
+import "@/styles/a11y.css";
 
 const queryClient = createQueryClient();
 

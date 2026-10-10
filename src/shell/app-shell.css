@@ -111,7 +111,7 @@
 }
 .nav-section {
   font: 600 var(--text-caption) / 1 var(--font-sans);
-  color: var(--color-text-disabled);
+  color: var(--color-text-muted); /* text-disabled scored 2.87:1 (axe, RT-267) */
   padding: var(--space-4) var(--space-3) var(--space-2);
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -156,8 +156,7 @@
   color: var(--color-text-muted);
 }
 .nav-entry:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: -2px;
+  outline-offset: -2px; /* inset: entries fill the sidebar width */
 }
 .nav-entry--active {
   background: var(--color-primary-subtle);
@@ -172,11 +171,12 @@
   content: "";
   position: absolute;
   top: 50%;
-  left: 0;
+  inset-inline-start: 0;
   transform: translateY(-50%);
   width: 3px;
   height: 20px;
-  border-radius: 0 2px 2px 0;
+  border-start-end-radius: 2px;
+  border-end-end-radius: 2px;
   background: var(--color-gold);
 }
 .nav-entry--disabled {
@@ -213,6 +213,21 @@
 .content__sub {
   margin: 0;
   color: var(--color-text-muted);
+}
+
+/* Forced colors (RT-267): the active tint and the marker's fill are forced to
+ * Canvas, which would erase "you are here". Keep the marker as a system-colored
+ * shape, and grey out gated entries that relied on opacity alone. */
+@media (forced-colors: active) {
+  .nav-entry--active::before {
+    forced-color-adjust: none;
+    background: Highlight;
+  }
+  .nav-entry--disabled,
+  .nav-gate {
+    color: GrayText;
+    border-color: GrayText;
+  }
 }
 
 @media (max-width: 768px) {

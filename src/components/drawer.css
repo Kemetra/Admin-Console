@@ -17,12 +17,24 @@
   box-shadow: var(--shadow-pane);
   display: flex;
   flex-direction: column;
-  outline: none;
   animation: drawer-in var(--duration-3) var(--ease-out);
+}
+/* The panel is a programmatic initial-focus target (tabindex=-1), never a Tab
+ * stop, so it opts out of the global focus ring (a11y.css). Every control inside
+ * keeps its outline. Specificity, not bundle order, decides this (RT-267). */
+.drawer:focus-visible {
+  outline: none;
 }
 @media (prefers-reduced-motion: reduce) {
   .drawer {
     animation: none;
+  }
+}
+/* Forced colors drop the pane shadow; a full system-colored edge keeps the
+ * dialog visibly separate from the page it covers (RT-267). */
+@media (forced-colors: active) {
+  .drawer {
+    border: 1px solid CanvasText;
   }
 }
 @keyframes drawer-in {
