@@ -40,9 +40,12 @@ export function ProtectedArea(): React.JSX.Element | null {
   }
   // Authenticated + scope resolved: the shell wraps the routed surface (T009).
   // The nested route (Overview index, /tenants, /stores) renders into <Outlet/>.
+  // RT-268: keyed by scope, so a scope change remounts the surface and every
+  // filter, selection and draft that belonged to the old scope is dropped.
+  const scopeKey = `${context.active_tenant.id}/${context.active_store?.id ?? "all"}`;
   return (
     <AppShell onSignOut={signOut}>
-      <Outlet />
+      <Outlet key={scopeKey} />
     </AppShell>
   );
 }

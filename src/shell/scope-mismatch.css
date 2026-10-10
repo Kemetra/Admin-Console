@@ -1,0 +1,11 @@
+/* RT-268 deep-link scope notice: the banner chrome comes from .rtc-alert. */
+.scope-mismatch {
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-block-end: var(--space-4);
+}
+.scope-mismatch__actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

@@ -42,6 +42,8 @@ export function AuditFilters({
     <form
       ref={formRef}
       className="audit-filters"
+      // Filters are not unsaved work: no Stay / Discard prompt for them (RT-268).
+      data-dirty-guard="off"
       onSubmit={(e) => {
         e.preventDefault();
         onApply(read());

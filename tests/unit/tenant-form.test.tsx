@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
+import { SAVED_NAVIGATION } from "@/shell/dirty-guard";
+
 const createTenant = vi.fn();
 const updateTenant = vi.fn();
 const navigate = vi.fn();
@@ -66,7 +68,9 @@ describe("TenantForm create", () => {
     createTenant.mockResolvedValue({ status: 201, data: { id: "t9", slug: "acme", name: "Acme" } });
     renderForm({ mode: "create" });
     submit({ slug: "acme", name: "Acme" });
-    await waitFor(() => expect(navigate).toHaveBeenCalledWith("/tenants/t9"));
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith("/tenants/t9", { state: SAVED_NAVIGATION }),
+    );
   });
 
   test("409 slug conflict -> inline error on the slug field, no route change", async () => {

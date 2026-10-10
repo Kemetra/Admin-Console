@@ -106,7 +106,7 @@ describe("ScopeHeader store menu", () => {
     renderHeader();
     openMenu();
     fireEvent.click(await screen.findByRole("menuitem", { name: "New Cairo Mall" }));
-    expect(switchStore).toHaveBeenCalledWith("s2");
+    await waitFor(() => expect(switchStore).toHaveBeenCalledWith("s2"));
     expect(screen.queryByRole("menu")).toBeNull();
   });
 
@@ -134,7 +134,7 @@ describe("ScopeHeader store menu", () => {
     renderHeader();
     openMenu();
     fireEvent.click(screen.getByRole("menuitem", { name: "All stores" }));
-    expect(clearStore).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(clearStore).toHaveBeenCalledTimes(1));
   });
 
   test("loading, then empty state", async () => {

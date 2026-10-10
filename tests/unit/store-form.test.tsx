@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
+import { SAVED_NAVIGATION } from "@/shell/dirty-guard";
+
 const createStore = vi.fn();
 const updateStore = vi.fn();
 const navigate = vi.fn();
@@ -87,7 +89,9 @@ describe("StoreForm create", () => {
     });
     renderForm({ mode: "create" });
     submit({ code: "CFC", name: "Cairo FC" });
-    await waitFor(() => expect(navigate).toHaveBeenCalledWith("/stores/s9"));
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith("/stores/s9", { state: SAVED_NAVIGATION }),
+    );
   });
 
   test("409 store-code conflict -> inline on the code field, no route change", async () => {
