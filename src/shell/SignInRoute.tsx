@@ -10,11 +10,16 @@ import { useNavigate } from "react-router";
 
 export function SignInRoute(): React.JSX.Element {
   const navigate = useNavigate();
-  const { switchTenant } = useActiveContextValue();
+  const { switchTenant, refresh } = useActiveContextValue();
 
   async function onResolved(resolution: SignInResolution): Promise<void> {
     if (resolution.kind === "auto-select") {
       await switchTenant(resolution.tenantId);
+    } else {
+      // RT-343: the context cached before sign-in is the signed-out 401. Only
+      // the tenant switch above refreshes it, so the other paths re-fetch here,
+      // or the protected area would read the stale entry and bounce to /signin.
+      await refresh();
     }
     // choose / no-access / auto-select all land in the protected area, which
     // renders the correct surface from the re-fetched context.
