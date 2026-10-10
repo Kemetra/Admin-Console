@@ -58,20 +58,11 @@ function formOf(target: EventTarget | null): HTMLFormElement | null {
   return form && form.dataset.dirtyGuard !== "off" ? form : null;
 }
 
-export function DirtyGuardProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
-  const forms = useRef(new Set<HTMLFormElement>());
-  const pending = useRef<{ promise: Promise<boolean>; resolve: (ok: boolean) => void } | null>(
-    null,
-  );
-  const [asking, setAsking] = useState(false);
-
-  const isDirty = useCallback(() => {
-    for (const form of forms.current) {
-      if (!form.isConnected) forms.current.delete(form);
-    }
-    return forms.current.size > 0;
-  }, []);
-
+/** Tracks edited forms in the content area, plus the tab-close prompt. */
+function useFormTracking(
+  forms: React.MutableRefObject<Set<HTMLFormElement>>,
+  isDirty: () => boolean,
+) {
   useEffect(() => {
     const track = (e: Event) => {
       const form = formOf(e.target);
@@ -89,16 +80,40 @@ export function DirtyGuardProvider({ children }: { children: React.ReactNode }):
       document.removeEventListener("change", track, true);
       window.removeEventListener("beforeunload", beforeUnload);
     };
-  }, [isDirty]);
+  }, [forms, isDirty]);
+}
 
+interface Deferred {
+  promise: Promise<boolean>;
+  resolve: (ok: boolean) => void;
+}
+
+function deferred(): Deferred {
+  let resolve: (ok: boolean) => void = () => {};
+  const promise = new Promise<boolean>((r) => {
+    resolve = r;
+  });
+  return { promise, resolve };
+}
+
+export function DirtyGuardProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
+  const forms = useRef(new Set<HTMLFormElement>());
+  const pending = useRef<Deferred | null>(null);
+  const [asking, setAsking] = useState(false);
+
+  const isDirty = useCallback(() => {
+    for (const form of forms.current) {
+      if (!form.isConnected) forms.current.delete(form);
+    }
+    return forms.current.size > 0;
+  }, []);
+  useFormTracking(forms, isDirty);
+
+  // One prompt at a time: concurrent callers share the same answer.
   const confirmLeave = useCallback(() => {
     if (!isDirty()) return Promise.resolve(true);
     if (!pending.current) {
-      let resolve: (ok: boolean) => void = () => {};
-      const promise = new Promise<boolean>((r) => {
-        resolve = r;
-      });
-      pending.current = { promise, resolve };
+      pending.current = deferred();
       setAsking(true);
     }
     return pending.current.promise;
@@ -118,6 +133,15 @@ export function DirtyGuardProvider({ children }: { children: React.ReactNode }):
       {asking ? <LeaveDialog onStay={() => settle(false)} onDiscard={() => settle(true)} /> : null}
     </DirtyGuardContext.Provider>
   );
+}
+
+/** Keep Tab / Shift+Tab cycling between the dialog's buttons. */
+function trapTab(e: React.KeyboardEvent<HTMLElement>, panel: HTMLElement): void {
+  const buttons = Array.from(panel.querySelectorAll<HTMLElement>("button"));
+  const edge = e.shiftKey ? buttons[0] : buttons[buttons.length - 1];
+  if (document.activeElement !== edge) return;
+  e.preventDefault();
+  (e.shiftKey ? buttons[buttons.length - 1] : buttons[0]).focus();
 }
 
 interface LeaveDialogProps {
@@ -144,18 +168,8 @@ function LeaveDialog({ onStay, onDiscard }: LeaveDialogProps): React.JSX.Element
     if (e.key === "Escape") {
       e.preventDefault();
       onStay();
-      return;
-    }
-    if (e.key !== "Tab" || !panelRef.current) return;
-    const buttons = Array.from(panelRef.current.querySelectorAll<HTMLElement>("button"));
-    const first = buttons[0];
-    const last = buttons[buttons.length - 1];
-    if (e.shiftKey && document.activeElement === first) {
-      e.preventDefault();
-      last.focus();
-    } else if (!e.shiftKey && document.activeElement === last) {
-      e.preventDefault();
-      first.focus();
+    } else if (e.key === "Tab" && panelRef.current) {
+      trapTab(e, panelRef.current);
     }
   }
 
