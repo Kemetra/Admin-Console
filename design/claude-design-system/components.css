@@ -141,6 +141,18 @@ kbd {
 .btn--primary.is-pressed {
   background: var(--color-primary-emphasis);
 }
+/* A toggle that is on (aria-pressed="true", e.g. the theme switch) reads as a
+ * selection: teal wash and a 2px teal edge, so the state shows by fill and edge
+ * weight, not by hue alone. The label stays constant. Hover keeps the wash.
+ * Enabled buttons only: a disabled toggle keeps the disabled look. */
+.btn[aria-pressed="true"]:not(:disabled, .is-disabled, [aria-disabled="true"]),
+.btn[aria-pressed="true"]:not(:disabled, .is-disabled, [aria-disabled="true"]):hover,
+.btn[aria-pressed="true"]:not(:disabled, .is-disabled, [aria-disabled="true"]).is-hover {
+  background: var(--color-primary-soft);
+  color: var(--color-text);
+  border-color: var(--color-primary);
+  box-shadow: inset 0 0 0 1px var(--color-primary);
+}
 .btn.is-focus {
   outline: var(--focus-width) solid var(--color-focus-ring);
   outline-offset: var(--focus-offset);
@@ -152,6 +164,7 @@ kbd {
   color: var(--color-text-muted);
   border-color: var(--color-border);
   border-style: dashed;
+  box-shadow: none;
   cursor: not-allowed;
   transform: none;
 }
@@ -742,6 +755,14 @@ kbd {
   .btn--primary,
   .btn--danger-commit {
     border-width: 2px;
+  }
+  /* Forced colours drop the inset shadow, so an on toggle gets a 2px Highlight
+   * border instead; 1px less inline padding keeps its width, so nothing beside
+   * it moves when it toggles. */
+  .btn[aria-pressed="true"]:not(:disabled, .is-disabled, [aria-disabled="true"]) {
+    border-width: 2px;
+    border-color: Highlight;
+    padding-inline: calc(var(--space-4) - 1px);
   }
   .dot:not(.dot--hollow) {
     background: CanvasText;

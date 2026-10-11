@@ -10,7 +10,7 @@ This is the target identity from the Retail Tower UX/UI Constitution: light-firs
 - The CSS uses logical properties only. Without `dir="rtl"`, the layout renders mirrored and wrong for Arabic.
 - **English** is the second locale: `<html lang="en" dir="ltr">`, and the same CSS mirrors the layout. Build in Arabic unless English is asked for.
 - **Dark theme:** add `data-theme="dark"` to `<html>` (or to one container). Every token switches to its dark value, so never hard-code a dark colour. Light is the default.
-- **Shell switches:** the top bar carries a language button (`btn btn--quiet`, labelled with the other language's name: «English» / «العربية») and a theme button (`btn btn--secondary`) with the constant label «الوضع الليلي» / "Dark mode" and `aria-pressed="true"` while dark is on (never swap the label), before the user's name.
+- **Shell switches:** the top bar carries a language button (`btn btn--quiet`, labelled with the other language's name: «English» / «العربية») and a theme button (`btn btn--secondary`) with the constant label «الوضع الليلي» / "Dark mode" and `aria-pressed="true"` while dark is on (never swap the label), before the user's name. The CSS draws an on toggle (teal wash, 2px teal edge); never restyle it by hand.
 - Font: `var(--font-sans)` (Dubai, embedded through `styles.css` in weights 300, 400, 500 and 700). Keep text at 12px or larger.
 
 ## Styling idiom: tokens + classes
