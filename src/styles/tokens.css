@@ -52,7 +52,7 @@
   --text-meta: 0.75rem; /* 12px, the floor */
   --text-money-total: 1.25rem; /* 20px, tabular */
   --text-numeric-row: 0.875rem; /* 14px, tabular */
-  --text-machine: 0.8125rem; /* 13px, mono, LTR-isolated */
+  --text-machine: 0.8125rem; /* 13px, mono (LTR isolation lands with RT-399) */
   --text-kbd: 0.75rem; /* 12px, mono */
 
   --leading-body: 1.7; /* Arabic body needs room */
@@ -123,4 +123,10 @@ body {
   accent-color: var(--color-primary);
   caret-color: var(--color-primary);
   -webkit-font-smoothing: antialiased;
+}
+
+/* The browser shrinks <small> to ~83% of its parent, under the 12px floor on
+ * 13-14px text; pin it to the meta role instead. */
+small {
+  font-size: var(--text-meta);
 }

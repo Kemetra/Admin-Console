@@ -41,8 +41,12 @@ typography:
   numeric-row: "0.875rem"
   machine: "0.8125rem"
   kbd: "0.75rem"
-  leading: { body: 1.7, title: 1.35, tight: 1.2 }
-  weights: { regular: 400, medium: 500, strong: 700 } # Dubai has no 600
+  leading-body: 1.7
+  leading-title: 1.35
+  leading-tight: 1.2
+  weight-regular: 400
+  weight-medium: 500
+  weight-strong: 700
 rounded:
   sm: "4px"
   control: "8px"
@@ -176,7 +180,7 @@ focus, copy, status and border/icon feedback stay intact.
   `section-title`, `body`, `body-strong`, `control`, `meta`, `money-hero`, `money-total`,
   `numeric-row`, `machine`, `kbd`. Shipped as `--text-*` in `src/styles/tokens.css` (RT-397),
   equal to the approved values; `body-strong` and `money-hero` are not defined yet.
-- **Readability floor: 12px.** No operator-readable text below 12px (enforced by
+- **Readability floor: 12px.** No operator-readable text below 12px (declared CSS sizes are checked by
   `tests/unit/tokens-identity.test.ts`). Arabic body keeps generous line-height (1.7).
   Hierarchy comes from placement, spacing, weight and alignment before size.
 - **Icons: Fluent System Icons** is the leading family, via a **semantic icon registry**

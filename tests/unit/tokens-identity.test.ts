@@ -4,10 +4,12 @@ import { describe, expect, test } from "vitest";
 import { CONTRAST_PAIRS } from "../../.design-sync/contrast-pairs.mjs";
 
 /**
- * RT-396 light-first token migration. The shipped colour tokens must trace to
- * the RT-392 approved light table (design/claude-design-system/colors_and_type.css),
- * every text and boundary pairing must pass WCAG AA, and no retired value (the
- * dark default, navy action, Tower Gold) may remain in src/.
+ * RT-396 light-first token migration and RT-397 Dubai type. The shipped colour
+ * and type tokens must trace to the RT-392 approved light block
+ * (design/claude-design-system/colors_and_type.css), every text and boundary
+ * pairing must pass WCAG AA, no retired value (the dark default, navy action,
+ * Tower Gold, Inter) may remain in src/, and declared CSS sizes keep the 12px
+ * floor.
  */
 
 const root = process.cwd();
@@ -186,6 +188,9 @@ describe("RT-397 Dubai type", () => {
       const sizes = [...code.matchAll(/font(?:-size)?:[^;]*?(\d*\.?\d+)(px|rem)/g)];
       const small = sizes.filter(([, n, unit]) => Number(n) * (unit === "rem" ? 16 : 1) < 12);
       expect({ file, small: small.map((m) => m[0]) }).toEqual({ file, small: [] });
+      // Relative keywords shrink below the floor without a number to check.
+      const keyword = /font(?:-size)?:[^;]*\b(smaller|x-small|xx-small)\b/.test(code);
+      expect({ file, keyword }).toEqual({ file, keyword: false });
       expect({ file, tracking: /letter-spacing/.test(code) }).toEqual({ file, tracking: false });
       if (file !== tokensFile) {
         const numericWeight = /font-weight:\s*\d|font:\s*\d{3}\s/.test(code);
