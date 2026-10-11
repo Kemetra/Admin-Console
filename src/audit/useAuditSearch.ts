@@ -43,8 +43,20 @@ export interface AuditSearchValue {
   hasMore: boolean;
   isLoading: boolean;
   isFetchingNextPage: boolean;
+  /** The search itself failed: nothing proven to show (full error state). */
   error?: AuditError;
+  /**
+   * RT-269 (UX-10): a later page ("Load more") failed. The loaded rows stay;
+   * the surface shows this inline with a retry. Cleared while the retry runs.
+   */
+  continuationError?: AuditError;
   loadMore: () => void;
+  /**
+   * Re-requests only the failed page, from the same cursor, and appends it.
+   * Earlier pages are not re-read, so the list is never re-stitched from a
+   * different read of page 1.
+   */
+  retryContinuation: () => void;
 }
 
 const INITIAL_CURSOR: string | undefined = undefined;
@@ -80,15 +92,21 @@ export function useAuditSearch(
   const error = query.error
     ? ((query.error as Error & { auditError?: AuditError }).auditError ?? { kind: "generic" })
     : undefined;
+  // A failed "Load more" keeps the pages already fetched in `data`; only a
+  // failure of the search itself is the full error state.
+  const continuationFailed = query.isFetchNextPageError && rows.length > 0;
+  const loadMore = (): void => {
+    if (query.hasNextPage && !query.isFetchingNextPage) void query.fetchNextPage();
+  };
 
   return {
     rows,
     hasMore: Boolean(query.hasNextPage),
     isLoading: query.isLoading && searched,
     isFetchingNextPage: query.isFetchingNextPage,
-    error,
-    loadMore: () => {
-      if (query.hasNextPage && !query.isFetchingNextPage) void query.fetchNextPage();
-    },
+    error: continuationFailed ? undefined : error,
+    continuationError: continuationFailed && !query.isFetchingNextPage ? error : undefined,
+    loadMore,
+    retryContinuation: loadMore,
   };
 }

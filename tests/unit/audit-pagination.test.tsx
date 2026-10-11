@@ -74,6 +74,59 @@ describe("useAuditSearch pagination", () => {
     expect(listAuditEvents).toHaveBeenCalledWith(expect.objectContaining({ cursor: "CUR1" }));
   });
 
+  test("RT-269: page 2 fails -> page-1 rows kept, continuation error (not the full error)", async () => {
+    listAuditEvents.mockImplementation(async (q?: { cursor?: string }) =>
+      q?.cursor === "CUR1"
+        ? { status: 503, error: { error: { request_id: "req-p2" } } }
+        : { status: 200, data: { items: [event("a"), event("b")], next_cursor: "CUR1" } },
+    );
+    const { result } = renderHook(() => useAuditSearch("t1", null, {}, true), { wrapper });
+    await waitFor(() => expect(result.current.hasMore).toBe(true));
+    result.current.loadMore();
+    await waitFor(() => expect(result.current.continuationError?.kind).toBe("generic"));
+    expect(result.current.continuationError?.requestId).toBe("req-p2");
+    expect(result.current.error).toBeUndefined();
+    expect(result.current.rows.map((r) => r.id)).toEqual(["a", "b"]);
+  });
+
+  test("RT-269: retryContinuation re-requests the failed cursor only and appends once", async () => {
+    let page2Calls = 0;
+    listAuditEvents.mockImplementation(async (q?: { cursor?: string }) => {
+      if (q?.cursor === "CUR1") {
+        page2Calls += 1;
+        return page2Calls === 1
+          ? { status: 503, error: { error: { request_id: "req-p2" } } }
+          : { status: 200, data: { items: [event("c")], next_cursor: null } };
+      }
+      return { status: 200, data: { items: [event("a"), event("b")], next_cursor: "CUR1" } };
+    });
+    const { result } = renderHook(() => useAuditSearch("t1", null, {}, true), { wrapper });
+    await waitFor(() => expect(result.current.hasMore).toBe(true));
+    result.current.loadMore();
+    await waitFor(() => expect(result.current.continuationError).toBeDefined());
+
+    result.current.retryContinuation();
+    await waitFor(() => expect(result.current.rows).toHaveLength(3));
+    expect(result.current.rows.map((r) => r.id)).toEqual(["a", "b", "c"]);
+    expect(result.current.continuationError).toBeUndefined();
+    expect(result.current.hasMore).toBe(false);
+    // Page 1 was never re-read: the retry continued from the same cursor, it
+    // did not re-stitch the list from a fresh first page.
+    const firstPageCalls = listAuditEvents.mock.calls.filter(
+      ([q]) => (q as { cursor?: string }).cursor === undefined,
+    );
+    expect(firstPageCalls).toHaveLength(1);
+    expect(page2Calls).toBe(2);
+  });
+
+  test("RT-269: first-page failure stays a full error, no continuation error", async () => {
+    listAuditEvents.mockResolvedValue({ status: 503, error: { error: { request_id: "req-p1" } } });
+    const { result } = renderHook(() => useAuditSearch("t1", null, {}, true), { wrapper });
+    await waitFor(() => expect(result.current.error?.kind).toBe("generic"));
+    expect(result.current.continuationError).toBeUndefined();
+    expect(result.current.rows).toEqual([]);
+  });
+
   test("403 -> error result, no rows", async () => {
     listAuditEvents.mockResolvedValue({ status: 403, error: { error: { request_id: "req-403" } } });
     const { result } = renderHook(() => useAuditSearch("t1", null, {}, true), { wrapper });
