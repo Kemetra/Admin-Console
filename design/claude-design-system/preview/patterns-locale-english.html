@@ -1,0 +1,50 @@
+<!-- @dsCard group="Patterns" name="English locale" subtitle="Second locale: same shell, lang=en dir=ltr, mirrored by logical CSS; one locale at a time" viewport="1280x860" -->
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>English locale</title>
+<link rel="stylesheet" href="_card.css">
+</head>
+<body>
+  <header class="ds-head">
+    <h1>English locale</h1>
+    <p>Arabic is the default. Choosing English sets <span class="machine">lang="en" dir="ltr"</span> on <span class="machine">&lt;html&gt;</span>; the logical CSS mirrors the layout with no other change. One locale at a time: never "English (عربي)".</p>
+  </header>
+
+  <div class="shell">
+    <header class="shell__top">
+      <div class="shell__product">Retail Tower<small>Tenant Console</small></div>
+      <div class="ds-row"><button class="btn btn--quiet" lang="ar" aria-label="التبديل إلى العربية">العربية</button><button class="btn btn--secondary" aria-pressed="false">Dark mode</button><span>Sara Mahmoud</span><button class="btn btn--quiet">Sign out</button></div>
+    </header>
+    <div class="shell__scope" role="region" aria-label="Current scope">
+      <span class="scope-item"><span>Tenant: </span><b>Al Nokhba Retail</b></span>
+      <span class="scope-item"><span>Store: </span><b>All stores</b></span>
+      <button class="btn btn--quiet">Change store</button>
+    </div>
+    <nav class="shell__nav" aria-label="Main navigation">
+      <a class="nav-item" href="#">Overview</a>
+      <a class="nav-item signal" href="#" aria-current="page">Stores</a>
+      <a class="nav-item" href="#">Users</a>
+      <a class="nav-item" href="#">Stock discrepancies</a>
+      <a class="nav-item" href="#">Audit log</a>
+    </nav>
+    <main class="shell__main">
+      <div class="ds-row" style="justify-content: space-between">
+        <h2>Stores</h2>
+        <button class="btn btn--primary">Add store</button>
+      </div>
+      <table class="table">
+        <thead><tr><th>Store</th><th>Code</th><th>Status</th><th class="col-num">Items</th><th>Last updated</th></tr></thead>
+        <tbody>
+          <tr><td><b>Al Waha store</b></td><td><span class="machine">WAH-01</span></td><td><span class="badge is-success"><span class="dot"></span>Connected</span></td><td class="col-num"><span class="num">1,284</span></td><td>Oct 7, 2026, 13:42</td></tr>
+          <tr><td><b>Nile store</b></td><td><span class="machine">NIL-02</span></td><td><span class="badge is-warning"><span class="dot"></span>Stale data</span></td><td class="col-num"><span class="num">962</span></td><td>Oct 6, 2026, 09:15</td></tr>
+          <tr><td><b>Shorouk store</b></td><td><span class="machine">SHR-03</span></td><td><span class="badge is-neutral"><span class="dot dot--hollow"></span>Suspended</span></td><td class="col-num"><span class="num">410</span></td><td>Sep 30, 2026, 18:02</td></tr>
+        </tbody>
+      </table>
+    </main>
+  </div>
+  <p class="ds-note" style="margin-block-start: var(--space-3)">Terms: tenant = المؤسسة, store = المتجر (never "branch"), item = الصنف, user = المستخدم. Money stays <span class="num">1,250.00 EGP</span>; times show in the store's own time zone.</p>
+</body>
+</html>

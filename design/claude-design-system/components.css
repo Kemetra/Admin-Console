@@ -12,6 +12,17 @@
   box-sizing: border-box;
 }
 
+/* A themed container (data-theme on <html> or on any element) repaints its own
+ * ground and ink, and its native controls, so a dark region inside a light page
+ * (or a light one inside a dark page) reads correctly. */
+[data-theme] {
+  background: var(--color-background);
+  color: var(--color-text);
+  caret-color: var(--color-primary);
+  accent-color: var(--color-primary);
+  scrollbar-color: var(--color-text-muted) var(--color-surface-sunken);
+}
+
 html {
   background: var(--color-background);
   color: var(--color-text);

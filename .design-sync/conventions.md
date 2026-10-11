@@ -8,6 +8,9 @@ This is the target identity from the Retail Tower UX/UI Constitution: light-firs
 
 - Root: `<html lang="ar" dir="rtl">`. Load `styles.css`; it imports `tokens/fonts.css` (Dubai), `tokens/colors_and_type.css` (tokens) and `tokens/components.css` (classes). No provider or wrapper is needed.
 - The CSS uses logical properties only. Without `dir="rtl"`, the layout renders mirrored and wrong for Arabic.
+- **English** is the second locale: `<html lang="en" dir="ltr">`, and the same CSS mirrors the layout. Build in Arabic unless English is asked for.
+- **Dark theme:** add `data-theme="dark"` to `<html>` (or to one container). Every token switches to its dark value, so never hard-code a dark colour. Light is the default.
+- **Shell switches:** the top bar carries a language button (`btn btn--quiet`, labelled with the other language's name: «English» / «العربية») and a theme button (`btn btn--secondary`) with the constant label «الوضع الليلي» / "Dark mode" and `aria-pressed="true"` while dark is on (never swap the label), before the user's name.
 - Font: `var(--font-sans)` (Dubai, embedded through `styles.css` in weights 300, 400, 500 and 700). Keep text at 12px or larger.
 
 ## Styling idiom: tokens + classes
@@ -32,11 +35,11 @@ This is the target identity from the Retail Tower UX/UI Constitution: light-firs
 
 ## Where the truth lives
 
-`tokens/colors_and_type.css` and `tokens/components.css`. The reference cards are under `preview/`, for example `preview/patterns-shell-tenant.html` and `preview/foundations-content.html` (wording rules).
+`tokens/colors_and_type.css` and `tokens/components.css`. The reference cards are under `preview/`, for example `preview/patterns-shell-tenant.html`, `preview/foundations-content.html` (wording rules), `preview/foundations-dark-theme.html` and `preview/patterns-locale-english.html`.
 
 ## Rules
 
-- **Language:** Arabic only, one locale at a time.
+- **Language:** Arabic by default, English as the second locale, one locale at a time; never "عربي (English)".
 - **Terms:**
   - «المؤسسة» = tenant
   - «المتجر» = store, never «الفرع»
@@ -51,7 +54,7 @@ This is the target identity from the Retail Tower UX/UI Constitution: light-firs
   - A missing signal is «لا توجد إشارة» (hollow neutral).
   - Healthy stays quiet: a steady connection is a green `dot` beside «متصل», never a banner.
 - **Messages:** what happened, what is safe, what to do, then the evidence (a `.machine` reference).
-- **Not allowed:** charts or KPI tiles, icons, toasts, dark theme, gradients, new colours.
+- **Not allowed:** charts or KPI tiles, icons, toasts, gradients, new colours (dark mode uses the approved dark values through `data-theme`, never its own).
 - **Consoles:** the Tenant and Platform consoles share every token and differ only in copy and scope bar.
 
 ```html

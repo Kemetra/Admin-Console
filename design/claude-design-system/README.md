@@ -15,8 +15,11 @@ Source bundle for the **Retail Tower Design System** project in Claude Design
 Read these before designing any Retail Tower Admin screen from this system.
 
 1. **Arabic first, RTL by structure.**
-   - Every screen is `lang="ar" dir="rtl"`, using logical CSS only.
-   - Show one locale at a time; never "عربي (English)".
+   - Every screen is `lang="ar" dir="rtl"` by default, using logical CSS only.
+   - English is the second locale (`lang="en" dir="ltr"`, owner decision 2026-10-11).
+     Show one locale at a time; never "عربي (English)".
+   - Light is the default theme; `data-theme="dark"` switches to the approved dark
+     values. The shell's top bar holds the language and theme switches.
    - Terminology follows `foundations-content.html`: «المؤسسة», «المتجر», «الصنف».
 2. **Tokens only.**
    - Every colour comes from `colors_and_type.css`.
@@ -49,7 +52,6 @@ Read these before designing any Retail Tower Admin screen from this system.
 8. **Not yet decided: don't invent.**
    - No icon set (RT-263 pending). Use text labels; if an icon is unavoidable, mark it as a placeholder.
    - No charts, KPI tiles or data palettes (UX-13). An overview shows attention items and next destinations, not a KPI wall.
-   - No dark theme.
 
 ## Authority
 
@@ -99,6 +101,31 @@ line 1. Claude Design builds the Design System pane from those markers.
 | Degraded | `--color-warning` | `#a35a00` | |
 | Danger / UNKNOWN | `--color-danger` | `#b3261e` | never softened to neutral |
 
+**Dark theme values** (owner-approved 2026-10-11, RT-392; applied by
+`[data-theme="dark"]` on `<html>` or any container, light stays the default).
+`.design-sync/build-bundle.mjs` checks 32 text and boundary pairings per theme
+against WCAG AA and fails the build on a miss. The lowest text pairing is dark
+muted text on the selected-row wash at 6.21:1 (light: warning on sunken, 4.64:1).
+
+| Token | Light | Dark |
+|---|---|---|
+| `--color-background` | `#f7f9fa` | `#0e161f` |
+| `--color-surface` | `#ffffff` | `#16212d` |
+| `--color-surface-sunken` | `#eef2f6` | `#111a24` |
+| `--color-text` | `#0f1d2e` | `#e7edf3` |
+| `--color-text-muted` | `#53647a` | `#9fb0c2` |
+| `--color-border` | `#d8dfe7` | `#2a3846` |
+| `--color-primary` | `#0f766e` | `#3fb8a8` |
+| `--color-primary-emphasis` | `#0b5b55` | `#6fd0c2` |
+| `--color-primary-soft` | `#e6f4f1` | `#12322f` |
+| `--color-success` | `#15774d` | `#5cc995` |
+| `--color-warning` | `#a35a00` | `#e9a84a` |
+| `--color-danger` | `#b3261e` | `#ff8b7f` |
+| `--color-info` | `#1b6ca8` | `#6db3ea` |
+
+In dark, `--color-on-primary` is the dark background (text on a teal or danger fill is
+dark), and the scrim and overlay shadow are alphas of the dark background.
+
 The derived roles are aliases or alpha values of the colours above:
 - `--color-on-primary`
 - `--color-control-border`
@@ -129,8 +156,8 @@ pairing before using it.
 
 ## Deliberately excluded
 
-- **Retired identity:** gold, navy as action or brand, Inter, the dark theme,
-  English UI copy.
+- **Retired identity:** gold, navy as action or brand, Inter, the old navy/gold dark
+  default. (The approved dark theme above is a new, opt-in alternate, not that.)
 - **POS-only parts:** the POS dark rail and the POS dark theme.
 - **Icons:** Fluent System Icons are pending the RT-263 fit/licensing PoC. The
   bundle ships no icon set.

@@ -73,6 +73,51 @@ function checkConventionNames(md, tokensCss, componentsCss) {
   return { tokens: tokens.size, classes: classes.size };
 }
 
+// WCAG AA gate over every text (4.5) and boundary (3) pairing the components use,
+// in both themes. Values are read from colors_and_type.css, so a new colour that
+// fails cannot ship.
+const LAYERS = ['background', 'surface', 'surface-sunken'];
+const CONTRAST_PAIRS = [
+  ...LAYERS.flatMap((bg) => [
+    ['text', bg, 4.5], ['text-muted', bg, 4.5], ['control-border', bg, 3], ['focus-ring', bg, 3],
+    ...['success', 'warning', 'danger', 'info'].map((s) => [s, bg, 4.5]),
+  ]),
+  ['text', 'primary-soft', 4.5], ['text-muted', 'primary-soft', 4.5], ['primary-emphasis', 'primary-soft', 4.5],
+  ['primary-emphasis', 'surface', 4.5], ['primary', 'primary-soft', 3],
+  ['on-primary', 'primary', 4.5], ['on-primary', 'primary-emphasis', 4.5], ['on-primary', 'danger', 4.5],
+];
+
+function paletteOf(css, selector) {
+  const start = css.indexOf(`${selector} {`);
+  if (start < 0) throw new Error(`palette block ${selector} not found`);
+  const block = css.slice(start, css.indexOf('}', start));
+  const raw = Object.fromEntries([...block.matchAll(/--color-([a-z-]+):\s*([^;]+);/g)].map((m) => [m[1], m[2].trim()]));
+  const resolve = (v) => (v.startsWith('var(--color-') ? resolve(raw[v.slice(12, -1)]) : v);
+  return Object.fromEntries(Object.keys(raw).map((k) => [k, resolve(raw[k])]));
+}
+
+function luminance(hex) {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+    .map((c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function checkContrast(css) {
+  const lowest = [];
+  for (const [name, selector] of [['light', '[data-theme="light"]'], ['dark', '[data-theme="dark"]']]) {
+    const p = paletteOf(css, selector);
+    const ratios = CONTRAST_PAIRS.map(([fg, bg, min]) => {
+      const [hi, lo] = [luminance(p[fg]), luminance(p[bg])].sort((a, b) => b - a);
+      return { fg, bg, min, ratio: (hi + 0.05) / (lo + 0.05) };
+    });
+    const fails = ratios.filter((r) => r.ratio < r.min);
+    if (fails.length) throw new Error(`${name} contrast fails: ${fails.map((f) => `${f.fg}/${f.bg} ${f.ratio.toFixed(2)} < ${f.min}`).join(', ')}`);
+    const text = ratios.filter((r) => r.min === 4.5).sort((a, b) => a.ratio - b.ratio)[0];
+    lowest.push(`${name} ${text.fg}/${text.bg} ${text.ratio.toFixed(2)}`);
+  }
+  return { pairs: CONTRAST_PAIRS.length, lowest: lowest.join(', ') };
+}
+
 if (existsSync(OUT)) {
   if (!existsSync(join(OUT, '.ds-build-meta.json'))) throw new Error(`refusing to rm ${OUT}: not a prior bundle`);
   rmSync(OUT, { recursive: true, force: true });
@@ -85,6 +130,7 @@ mkdirSync(join(OUT, 'components'), { recursive: true });
 // Styles: designs receive only the styles.css @import closure.
 const tokensCss = readLF(join(SRC, 'colors_and_type.css'));
 const componentsCss = readLF(join(SRC, 'components.css'));
+const contrast = checkContrast(stripComments(tokensCss));
 writeFileSync(join(OUT, 'tokens', 'colors_and_type.css'), tokensCss);
 writeFileSync(join(OUT, 'tokens', 'components.css'), componentsCss);
 // Fonts: the Dubai TTFs are not committed (© Dubai Executive Council, all rights
@@ -152,4 +198,4 @@ writeFileSync(join(OUT, 'README.md'), conventions + '\n' + body);
 writeFileSync(join(OUT, '_ds_needs_recompile'), JSON.stringify({ by: 'design-sync-cli' }) + '\n');
 writeFileSync(join(OUT, '.ds-build-meta.json'), JSON.stringify({ componentCount: 0, cardCount: cards.length, shape: 'package', offScript: true }, null, 2) + '\n');
 
-console.log(`[OK] ds-bundle: ${cards.length} cards in ${groups.length} groups, styles.css + 3 token files, ${FONT_FACES.length} Dubai faces, README ${conventions.length} char header (${named.tokens} tokens + ${named.classes} classes checked)`);
+console.log(`[OK] ds-bundle: ${cards.length} cards in ${groups.length} groups, styles.css + 3 token files, ${FONT_FACES.length} Dubai faces, README ${conventions.length} char header (${named.tokens} tokens + ${named.classes} classes checked); contrast ${contrast.pairs}/${contrast.pairs} per theme, lowest text: ${contrast.lowest}`);
