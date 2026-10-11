@@ -33,7 +33,7 @@
 ## Verification (the validator does not render `preview/`)
 
 - `package-validate.mjs` walks only `components/` for cards, so it reports "0/0 previews".
-- **Automated in the repo:** only the builder's own checks (line-1 markers, each card's `_card.css` link, the chrome import, the name check, the four Dubai files being present).
+- **Automated in the repo:** only the builder's own checks (line-1 markers, each card's `_card.css` link, the chrome import, the name check, the four Dubai files being present, the contrast gate).
 - **Manual, not committed:** the render checks below were run by hand with scratch scripts on each sync. Redo them on every sync that changes CSS or cards.
   - Serve the bundle: `python -m http.server 8765 --bind 127.0.0.1` inside `ds-bundle/`.
   - **Playwright** with the repo's `@playwright/test`, against the served `ds-bundle`. Each card is checked for:
@@ -78,7 +78,8 @@
 - **Card viewports** are hard-coded in each marker. A content change that grows a card needs its `viewport` height raised (the check reports `size=…/WxH`).
 - **Colour values** are the RT-392 approved light and dark tables only. Any new value needs a new owner decision.
   - The dark set lives in `[data-theme="dark"]` in `colors_and_type.css`.
-  - A new component pairing needs its contrast checked in **both** themes. The 2026-10-11 check covered 31 pairings in each, all passing WCAG AA.
+  - **Contrast gate:** the builder checks `CONTRAST_PAIRS` (32 text and boundary pairings) against WCAG AA in both themes and fails on a miss. A new component that pairs colours differently needs a row added there.
+  - **Theme scope:** theming works on `<html>` or a container. `[data-theme="light"]` and `[data-theme="dark"]` each restate their values and the derived aliases (focus ring, control border, on-primary), so a nested region resolves its own.
 - **Owner decisions, 2026-10-11:**
   - A steady healthy connection shows a green dot beside «متصل». The cards already did this; conventions.md now says it.
   - **Language:** Arabic default, with English as a second locale (`lang="en" dir="ltr"`), one at a time. Card: `patterns-locale-english.html`.

@@ -102,8 +102,10 @@ line 1. Claude Design builds the Design System pane from those markers.
 | Danger / UNKNOWN | `--color-danger` | `#b3261e` | never softened to neutral |
 
 **Dark theme values** (owner-approved 2026-10-11, RT-392; applied by
-`[data-theme="dark"]`, light stays the default). Contrast: 31/31 text and boundary
-pairings pass WCAG AA; the tightest is danger on surface at 7.17:1.
+`[data-theme="dark"]` on `<html>` or any container, light stays the default).
+`.design-sync/build-bundle.mjs` checks 32 text and boundary pairings per theme
+against WCAG AA and fails the build on a miss. The lowest text pairing is dark
+muted text on the selected-row wash at 6.21:1 (light: warning on sunken, 4.64:1).
 
 | Token | Light | Dark |
 |---|---|---|
@@ -122,7 +124,7 @@ pairings pass WCAG AA; the tightest is danger on surface at 7.17:1.
 | `--color-info` | `#1b6ca8` | `#6db3ea` |
 
 In dark, `--color-on-primary` is the dark background (text on a teal or danger fill is
-dark), the scrim is black at 60%, and the overlay shadow is deeper.
+dark), and the scrim and overlay shadow are alphas of the dark background.
 
 The derived roles are aliases or alpha values of the colours above:
 - `--color-on-primary`
