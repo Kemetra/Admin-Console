@@ -117,7 +117,7 @@ pairing before using it.
 - **Dubai font** is embedded in the Claude Design project (owner, 2026-10-11): four
   weights from dubaifont.com under `fonts/`, wired by `tokens/fonts.css`. The TTFs
   are not committed here (© Dubai Executive Council, all rights reserved; this repo
-  is public). The licence basis is not recorded yet (see `.design-sync/NOTES.md`).
+  is public). The owner accepted the dubaifont.com terms of use on 2026-10-11 (RT-392).
   Opened straight from this folder, the cards use an installed Dubai or
   the `Segoe UI` / `Tahoma` fallbacks.
 - **Arabic role labels** for `owner` / `tenant_admin` / `store_manager` are not in

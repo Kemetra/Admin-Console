@@ -59,7 +59,7 @@
 
 - **Dubai is embedded** (owner, 2026-10-11). The owner downloaded it from dubaifont.com and uploaded it to the project, which clears `[FONT_MISSING]`.
   - **Before building:** copy `Dubai-Light/Regular/Medium/Bold.ttf` into `.design-sync/fonts/`. The folder is gitignored and the builder fails without the files.
-  - **Licence basis: not recorded.** The files carry no licence text, and the dubaifont.com terms were not reviewed in this session. Uploading to the private project was the owner's call. Record the terms and the acceptance date in RT-392 before the font is used outside Claude Design.
+  - **Licence basis:** the owner accepted the dubaifont.com terms of use on 2026-10-11 (recorded in RT-392). The files themselves carry no licence text. Using the font outside Claude Design (for example shipping it in the Admin Console) is covered only as far as those terms allow.
   - **Why not committed:** the files say «© 2017 Dubai Executive Council. All rights reserved.» and carry no licence text, and this repo is public. They go only to the private Claude Design project.
   - **Wiring:** the builder writes `tokens/fonts.css` (four `@font-face` rules: 300, 400, 500, 700) and imports it first in `styles.css`.
   - **Verifying:** the font is installed on Windows, so a render alone proves nothing. Check `document.fonts` (the faces report `loaded`) and the 200 responses for `fonts/*.ttf`.
@@ -79,5 +79,5 @@
 - **Colour values** are the RT-392 approved table only. Any new value needs a new owner decision.
 - **Owner decisions, 2026-10-11:**
   - A steady healthy connection shows a green dot beside «متصل». The cards already did this; conventions.md now says it.
-  - Store time zone: the owner answered «حسب المتجر» (per store). Whether it can be edited after creation is still to be confirmed.
+  - Store time zone is set per store and stays editable after creation (owner: «يغير براحته بعد كده»). This is a design rule only; the Backend-Core contract owns whether the API allows it.
 - The **Platform Console frame** is an RT-391 concept. Its navigation is illustrative; re-check it when RT-391 decides the IA.
