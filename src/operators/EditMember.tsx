@@ -1,6 +1,7 @@
 import { Banner } from "@/components/Banner";
 import { ConfirmDelete } from "@/components/ConfirmDelete";
 import { Drawer } from "@/components/Drawer";
+import { type MessageKey, useT } from "@/i18n";
 /**
  * SF5-3 — Edit / revoke member drawer (T022/T023). Pre-filled role + store-access
  * (uncontrolled native form); one `.btn-primary` "Save changes" via
@@ -20,7 +21,8 @@ export interface EditMemberProps {
   onChanged: () => void;
 }
 
-const NOT_FOUND_MSG = "This member could not be found.";
+/** Both ops document only 404 → one uniform message (kept as a key, RT-399). */
+const NOT_FOUND_MSG: MessageKey = "operators.edit.notFound";
 
 export function EditMember({
   activeTenantId,
@@ -28,9 +30,10 @@ export function EditMember({
   onClose,
   onChanged,
 }: EditMemberProps): React.JSX.Element {
+  const t = useT();
   const update = useUpdateMembership(activeTenantId);
   const revoke = useRevokeMembership(activeTenantId);
-  const [banner, setBanner] = useState<string | undefined>();
+  const [banner, setBanner] = useState<MessageKey | undefined>();
   const [confirming, setConfirming] = useState(false);
   const [specific, setSpecific] = useState(member.storeAccessKind === "specific");
 
@@ -73,16 +76,22 @@ export function EditMember({
   const memberName = member.displayName ?? member.email;
 
   return (
-    <Drawer title="Edit member" onClose={onClose}>
-      {banner ? <Banner variant="danger" message={banner} /> : null}
+    <Drawer title={t("operators.edit.title")} onClose={onClose}>
+      {banner ? <Banner variant="danger" message={t(banner)} /> : null}
 
       <form className="surface__form" onSubmit={onSave} noValidate>
         <p className="surface__scope-line">
-          Editing <strong>{memberName}</strong>.
+          {t.rich("operators.edit.scopeLine", {
+            name: (
+              <strong>
+                <bdi>{memberName}</bdi>
+              </strong>
+            ),
+          })}
         </p>
 
         <div className="field">
-          <label htmlFor="edit-role">Role</label>
+          <label htmlFor="edit-role">{t("operators.form.role")}</label>
           <input
             id="edit-role"
             name="role_code"
@@ -93,7 +102,7 @@ export function EditMember({
         </div>
 
         <div className="field">
-          <span className="field-row__label">Store access</span>
+          <span className="field-row__label">{t("operators.form.storeAccess")}</span>
           <div className="drawer__radio-group">
             <label className="drawer__radio">
               <input
@@ -102,7 +111,7 @@ export function EditMember({
                 checked={!specific}
                 onChange={() => setSpecific(false)}
               />
-              All stores
+              {t("operators.storeAccess.all")}
             </label>
             <label className="drawer__radio">
               <input
@@ -111,7 +120,7 @@ export function EditMember({
                 checked={specific}
                 onChange={() => setSpecific(true)}
               />
-              Specific stores
+              {t("operators.storeAccess.specific")}
             </label>
           </div>
           {specific ? (
@@ -119,7 +128,7 @@ export function EditMember({
               name="store_ids"
               className="input"
               defaultValue={member.accessibleStoreIds.join(", ")}
-              placeholder="Store ids, comma-separated"
+              placeholder={t("operators.form.storeIdsPlaceholder")}
               autoComplete="off"
             />
           ) : null}
@@ -128,20 +137,20 @@ export function EditMember({
         <div className="surface__actions">
           <button type="submit" className="btn-primary" disabled={pending}>
             {update.isPending ? <span className="spinner" aria-hidden="true" /> : null}
-            Save changes
+            {t("operators.edit.save")}
           </button>
           <button type="button" className="btn-secondary" onClick={onClose} disabled={pending}>
-            Cancel
+            {t("common.cancel")}
           </button>
         </div>
       </form>
 
-      <section className="drawer__danger-section" aria-label="Revoke membership">
-        <h3 className="drawer__danger-title">Revoke membership</h3>
+      <section className="drawer__danger-section" aria-label={t("operators.edit.revoke.title")}>
+        <h3 className="drawer__danger-title">{t("operators.edit.revoke.title")}</h3>
         {confirming ? (
           <ConfirmDelete
-            resourceName={`${memberName}'s membership`}
-            confirmLabel="Revoke"
+            resourceName={t("operators.edit.revoke.resource", { name: memberName })}
+            confirmLabel={t("operators.edit.revoke.confirm")}
             pending={revoke.isPending}
             onConfirm={onRevoke}
             onCancel={() => setConfirming(false)}
@@ -153,7 +162,7 @@ export function EditMember({
             onClick={() => setConfirming(true)}
             disabled={pending}
           >
-            Revoke membership
+            {t("operators.edit.revoke.open")}
           </button>
         )}
       </section>

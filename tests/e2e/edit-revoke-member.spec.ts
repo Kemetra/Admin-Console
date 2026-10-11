@@ -1,8 +1,10 @@
-import { type Page, expect, test } from "@playwright/test";
+import { type Page, expect, test } from "./fixtures";
 
 /**
  * RF-5 edit + revoke E2E (VG-2, S4/S5). Edit role/store-access → re-fetch;
- * revoke → confirm → 204 → revoked marker. Mocked DP2 (C-5).
+ * revoke → confirm → 204 → revoked marker. Mocked DP2 (C-5). RT-399: runs in
+ * both locales; copy is selected through the catalog (`t`), mocked data stays
+ * as authored.
  */
 
 const ctx = {
@@ -38,7 +40,7 @@ async function mockBase(page: Page): Promise<void> {
   );
 }
 
-test("S4: edit a member → 200 → drawer closes + list re-fetches", async ({ page }) => {
+test("S4: edit a member → 200 → drawer closes + list re-fetches", async ({ page, t }) => {
   await mockBase(page);
   await page.route("**/api/v1/tenants/t1/members", (r) =>
     r.fulfill({
@@ -57,13 +59,14 @@ test("S4: edit a member → 200 → drawer closes + list re-fetches", async ({ p
 
   await page.goto("/operators");
   await page.getByRole("cell", { name: /Omar Khaled/ }).click();
-  await expect(page.getByRole("dialog", { name: /edit member/i })).toBeVisible();
-  await page.getByLabel(/role/i).fill("tenant_admin");
-  await page.getByRole("button", { name: /save changes/i }).click();
-  await expect(page.getByRole("dialog", { name: /edit member/i })).toBeHidden();
+  const drawer = page.getByRole("dialog", { name: t("operators.edit.title") });
+  await expect(drawer).toBeVisible();
+  await page.getByLabel(t("operators.form.role")).fill("tenant_admin");
+  await page.getByRole("button", { name: t("operators.edit.save") }).click();
+  await expect(drawer).toBeHidden();
 });
 
-test("S5: revoke → confirm → 204 → revoked marker on the refreshed list", async ({ page }) => {
+test("S5: revoke → confirm → 204 → revoked marker on the refreshed list", async ({ page, t }) => {
   await mockBase(page);
   let revoked = false;
   await page.route("**/api/v1/tenants/t1/members", (r) =>
@@ -87,12 +90,15 @@ test("S5: revoke → confirm → 204 → revoked marker on the refreshed list", 
 
   await page.goto("/operators");
   await page.getByRole("cell", { name: /Omar Khaled/ }).click();
-  await page.getByRole("button", { name: /revoke membership/i }).click();
+  await page.getByRole("button", { name: t("operators.edit.revoke.open") }).click();
   // confirm step names the member
-  const confirm = page.getByRole("region", { name: /confirm: revoke/i });
+  const revoke = t("operators.edit.revoke.confirm");
+  const confirm = page.getByRole("region", {
+    name: t("components.confirmDelete.label", { action: revoke }),
+  });
   await expect(confirm).toContainText("Omar Khaled");
-  await confirm.getByRole("button", { name: /^revoke$/i }).click();
+  await confirm.getByRole("button", { name: revoke, exact: true }).click();
 
-  await expect(page.getByRole("dialog", { name: /edit member/i })).toBeHidden();
-  await expect(page.getByText("Revoked")).toBeVisible();
+  await expect(page.getByRole("dialog", { name: t("operators.edit.title") })).toBeHidden();
+  await expect(page.getByText(t("operators.state.revoked"), { exact: true })).toBeVisible();
 });

@@ -1,9 +1,10 @@
-import { type Page, expect, test } from "@playwright/test";
+import { type Page, expect, test } from "./fixtures";
 
 /**
  * RF-5 invite E2E (VG-2, S2). Invite → 201 + list re-fetch; duplicate-pending
  * 409 → distinct warning. Mocked DP2 (C-5). Asserts the Idempotency-Key header
- * is sent on the POST.
+ * is sent on the POST. RT-399: runs in both locales; copy is selected through
+ * the catalog (`t`), mocked data stays as authored.
  */
 
 const ctx = {
@@ -33,6 +34,7 @@ async function mockBase(page: Page): Promise<void> {
 
 test("S2: invite a member → 201 → drawer closes, list re-fetches; Idempotency-Key sent", async ({
   page,
+  t,
 }) => {
   await mockBase(page);
   let sawKey = false;
@@ -47,19 +49,21 @@ test("S2: invite a member → 201 → drawer closes, list re-fetches; Idempotenc
 
   await page.goto("/operators");
   // empty state carries the invite primary
-  await page.getByRole("button", { name: /invite member/i }).click();
-  await expect(page.getByRole("dialog", { name: /invite member/i })).toBeVisible();
-  await page.getByLabel(/email/i).fill("new@northstar.eg");
-  await page.getByLabel(/role/i).fill("store_staff");
-  await page.getByRole("button", { name: /send invitation/i }).click();
+  await page.getByRole("button", { name: t("operators.list.invite") }).click();
+  const drawer = page.getByRole("dialog", { name: t("operators.invite.title") });
+  await expect(drawer).toBeVisible();
+  await page.getByLabel(t("operators.form.email")).fill("new@northstar.eg");
+  await page.getByLabel(t("operators.form.role")).fill("store_staff");
+  await page.getByRole("button", { name: t("operators.invite.submit") }).click();
 
   // drawer closes on success
-  await expect(page.getByRole("dialog", { name: /invite member/i })).toBeHidden();
+  await expect(drawer).toBeHidden();
   expect(sawKey).toBe(true);
 });
 
 test("S2: duplicate-pending 409 → distinct 'already pending' warning, drawer stays", async ({
   page,
+  t,
 }) => {
   await mockBase(page);
   await page.route("**/api/v1/memberships/invite", (r) =>
@@ -71,11 +75,11 @@ test("S2: duplicate-pending 409 → distinct 'already pending' warning, drawer s
   );
 
   await page.goto("/operators");
-  await page.getByRole("button", { name: /invite member/i }).click();
-  await page.getByLabel(/email/i).fill("dup@northstar.eg");
-  await page.getByLabel(/role/i).fill("store_staff");
-  await page.getByRole("button", { name: /send invitation/i }).click();
+  await page.getByRole("button", { name: t("operators.list.invite") }).click();
+  await page.getByLabel(t("operators.form.email")).fill("dup@northstar.eg");
+  await page.getByLabel(t("operators.form.role")).fill("store_staff");
+  await page.getByRole("button", { name: t("operators.invite.submit") }).click();
 
-  await expect(page.getByText(/already pending for this email/i)).toBeVisible();
-  await expect(page.getByRole("dialog", { name: /invite member/i })).toBeVisible();
+  await expect(page.getByText(t("operators.invite.errors.pendingExists"))).toBeVisible();
+  await expect(page.getByRole("dialog", { name: t("operators.invite.title") })).toBeVisible();
 });

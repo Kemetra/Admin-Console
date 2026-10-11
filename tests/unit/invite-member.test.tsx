@@ -17,6 +17,7 @@ vi.mock("@/lib/client", async (importOriginal) => {
 });
 vi.mock("@/shell/useSignOut", () => ({ useSignOut: () => signOut }));
 
+import { setLocale } from "@/i18n/locale";
 import { createQueryClient } from "@/lib/query";
 import { InviteMember } from "@/operators/InviteMember";
 
@@ -134,5 +135,82 @@ describe("InviteMember outcomes", () => {
     renderInvite();
     fillAndSend();
     await waitFor(() => expect(signOut).toHaveBeenCalledOnce());
+  });
+
+  test("425 -> disabled submit shows the countdown sentence, then retries with the SAME key", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      createInvitation
+        .mockResolvedValueOnce(result(425, undefined, { "Retry-After": "3" }))
+        .mockResolvedValueOnce(result(201));
+      const { onInvited } = renderInvite();
+      fillAndSend();
+      const submit = await screen.findByRole("button", { name: "Retrying in 3s…" });
+      expect((submit as HTMLButtonElement).disabled).toBe(true);
+      await vi.advanceTimersByTimeAsync(3000);
+      await waitFor(() => expect(onInvited).toHaveBeenCalledOnce());
+      expect(createInvitation).toHaveBeenCalledTimes(2);
+      expect(createInvitation.mock.calls[1][1]).toBe(createInvitation.mock.calls[0][1]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe("InviteMember in Arabic", () => {
+  beforeEach(() => {
+    createInvitation.mockReset();
+    refreshSession.mockClear();
+    signOut.mockReset();
+  });
+
+  test("drawer, fields and primary action render in Arabic", () => {
+    setLocale("ar");
+    renderInvite();
+    expect(screen.getByRole("dialog", { name: "دعوة مستخدم" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "إرسال الدعوة" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "إلغاء" })).toBeDefined();
+    expect(screen.getByLabelText("البريد الإلكتروني")).toBeDefined();
+    expect(screen.getByLabelText("الدور")).toBeDefined();
+    expect(screen.getByText("كل المتاجر")).toBeDefined();
+    expect(screen.getByText("متاجر محددة")).toBeDefined();
+    // The tenant name stays as authored, isolated inside the Arabic sentence.
+    expect(screen.getByText("Northstar Retail").tagName).toBe("BDI");
+    for (const english of [/invite member/i, /send invitation/i, /^cancel$/i, /all stores/i]) {
+      expect(screen.queryByText(english)).toBeNull();
+    }
+  });
+
+  test("409 pending -> Arabic warning banner, request reference kept exact", async () => {
+    setLocale("ar");
+    createInvitation.mockResolvedValue(result(409, "pending_invitation"));
+    renderInvite();
+    fireEvent.change(screen.getByLabelText("البريد الإلكتروني"), {
+      target: { value: "new@northstar.eg" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "إرسال الدعوة" }));
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("توجد دعوة معلّقة بالفعل لهذا البريد الإلكتروني.");
+    expect(alert.textContent).toMatch(/req-x/);
+    expect(alert.textContent).not.toMatch(/already pending/i);
+  });
+
+  test("425 -> the countdown is one Arabic sentence with the plural-correct count", async () => {
+    setLocale("ar");
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      createInvitation
+        .mockResolvedValueOnce(result(425, undefined, { "Retry-After": "3" }))
+        .mockResolvedValueOnce(result(201));
+      const { onInvited } = renderInvite();
+      fireEvent.click(screen.getByRole("button", { name: "إرسال الدعوة" }));
+      expect(
+        await screen.findByRole("button", { name: "إعادة المحاولة بعد 3 ثوانٍ…" }),
+      ).toBeDefined();
+      await vi.advanceTimersByTimeAsync(3000);
+      await waitFor(() => expect(onInvited).toHaveBeenCalledOnce());
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

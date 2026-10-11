@@ -1,8 +1,10 @@
-import { type Page, expect, test } from "@playwright/test";
+import { type Page, expect, test } from "./fixtures";
 
 /**
  * RF-5 member list E2E (VG-2, S1/S3). Active tenant → graph table; no active
  * tenant → RF-1 scope gate (listMembers never reached). Mocked DP2 (C-5).
+ * RT-399: runs in both locales; copy is selected through the catalog (`t`),
+ * role labels through `roleName`, and mocked data stays as authored.
  */
 
 const user = {
@@ -21,7 +23,11 @@ async function mockBase(page: Page, ctx: unknown): Promise<void> {
   );
 }
 
-test("S1: member graph renders identity / role / store-access / state", async ({ page }) => {
+test("S1: member graph renders identity / role / store-access / state", async ({
+  page,
+  t,
+  roleName,
+}) => {
   await mockBase(page, {
     user,
     active_tenant: { id: "t1", name: "Northstar Retail" },
@@ -55,16 +61,27 @@ test("S1: member graph renders identity / role / store-access / state", async ({
   );
 
   await page.goto("/operators");
-  await expect(page.getByRole("heading", { name: "Operators" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: t("operators.title") })).toBeVisible();
   await expect(page.getByRole("cell", { name: /Amal Saleh/ })).toBeVisible();
-  // "tenant_admin" also appears in the topbar role; scope to the role-column badge.
-  await expect(page.getByRole("cell", { name: "store_manager" })).toBeVisible();
-  await expect(page.getByRole("cell", { name: "All stores" })).toBeVisible();
-  await expect(page.getByRole("cell", { name: "2 stores" })).toBeVisible();
-  await expect(page.getByRole("cell", { name: "Revoked" })).toBeVisible();
+  // Role codes render as role labels, never raw (RT-399). The active role also
+  // appears in the topbar; scope to the role-column cell.
+  await expect(page.getByRole("cell", { name: roleName("store_manager") })).toBeVisible();
+  await expect(page.getByRole("cell", { name: "store_manager" })).toHaveCount(0);
+  await expect(
+    page.getByRole("cell", { name: t("operators.storeAccess.all"), exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("cell", {
+      name: t("operators.storeAccess.count", { count: 2 }),
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("cell", { name: t("operators.state.revoked"), exact: true }),
+  ).toBeVisible();
 });
 
-test("S3: no active tenant → RF-1 scope gate; listMembers never called", async ({ page }) => {
+test("S3: no active tenant → RF-1 scope gate; listMembers never called", async ({ page, t }) => {
   let called = false;
   await mockBase(page, {
     user,
@@ -81,12 +98,13 @@ test("S3: no active tenant → RF-1 scope gate; listMembers never called", async
   });
 
   await page.goto("/operators");
-  await expect(page.getByRole("heading", { name: /select your context/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: t("shell.gate.title") })).toBeVisible();
   expect(called).toBe(false);
 });
 
 test("T031 a11y: a member row is keyboard-focusable and Enter opens the edit drawer", async ({
   page,
+  t,
 }) => {
   await mockBase(page, {
     user,
@@ -117,5 +135,5 @@ test("T031 a11y: a member row is keyboard-focusable and Enter opens the edit dra
   await row.focus();
   await expect(row).toBeFocused();
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("dialog", { name: /edit member/i })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: t("operators.edit.title") })).toBeVisible();
 });

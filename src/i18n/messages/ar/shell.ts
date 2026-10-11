@@ -45,5 +45,5 @@ export const shell = {
   "components.list.loading": "جارٍ تحميل {label}…",
   "components.list.loadingDefault": "العناصر",
   "components.confirmDelete.label": "تأكيد: {action}",
-  "components.confirmDelete.prompt": "{action} {name}؟ يمكن لمسؤول استعادته لاحقًا.",
+  "components.confirmDelete.prompt": "{action} {name}؟ يمكن لمسؤول التراجع عن ذلك لاحقًا.",
 } satisfies Messages;

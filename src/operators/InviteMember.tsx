@@ -1,6 +1,7 @@
 import { Banner } from "@/components/Banner";
 import { Drawer } from "@/components/Drawer";
 import { InlineError } from "@/components/InlineError";
+import { type MessageKey, useT } from "@/i18n";
 import { type InvitationCreateBody, createInvitation, refreshSession } from "@/lib/client";
 import { useSignOut } from "@/shell/useSignOut";
 /**
@@ -29,7 +30,8 @@ export interface InviteMemberProps {
   onInvited: () => void;
 }
 
-type BannerState = { variant: "danger" | "warning"; message: string; requestId?: string };
+/** Banner copy is kept as a message key and translated at render (RT-399). */
+type BannerState = { variant: "danger" | "warning"; messageKey: MessageKey; requestId?: string };
 
 const MAX_TOO_EARLY_RETRIES = 3;
 
@@ -38,8 +40,9 @@ export function InviteMember({
   onClose,
   onInvited,
 }: InviteMemberProps): React.JSX.Element {
+  const t = useT();
   const signOut = useSignOut();
-  const [emailError, setEmailError] = useState<string | undefined>();
+  const [emailError, setEmailError] = useState<MessageKey | undefined>();
   const [banner, setBanner] = useState<BannerState | undefined>();
   const [pending, setPending] = useState(false);
   const [tooEarly, setTooEarly] = useState<number | null>(null);
@@ -65,7 +68,7 @@ export function InviteMember({
     if (outcome.kind === "precondition") {
       // No active tenant: route to the RF-1 scope chooser (clear the store-less
       // scope so ProtectedArea renders the gate). Never a sign-out.
-      setBanner({ variant: "warning", message: "Select a tenant before inviting members." });
+      setBanner({ variant: "warning", messageKey: "operators.invite.errors.selectTenant" });
       return;
     }
 
@@ -82,7 +85,7 @@ export function InviteMember({
         onInvited();
         return;
       case "validation":
-        setEmailError("Check the invitation details and try again.");
+        setEmailError("operators.invite.errors.validation");
         return;
       case "regenerate-key":
         // Client-internal key fault: regenerate and resubmit once, silently.
@@ -91,21 +94,21 @@ export function InviteMember({
       case "forbidden":
         setBanner({
           variant: "danger",
-          message: "You do not have permission to invite members to this tenant.",
+          messageKey: "operators.invite.errors.forbidden",
           requestId: classified.requestId,
         });
         return;
       case "pending-exists":
         setBanner({
           variant: "warning",
-          message: "An invitation is already pending for this email.",
+          messageKey: "operators.invite.errors.pendingExists",
           requestId: classified.requestId,
         });
         return;
       case "key-conflict":
         setBanner({
           variant: "danger",
-          message: "That invitation could not be completed. Please try again.",
+          messageKey: "operators.invite.errors.keyConflict",
           requestId: classified.requestId,
         });
         return;
@@ -113,7 +116,7 @@ export function InviteMember({
         if (tooEarlyRetries >= MAX_TOO_EARLY_RETRIES) {
           setBanner({
             variant: "danger",
-            message: "The invitation is taking too long. Try again.",
+            messageKey: "operators.invite.errors.tooLong",
           });
           return;
         }
@@ -127,7 +130,7 @@ export function InviteMember({
       default:
         setBanner({
           variant: "danger",
-          message: "Something went wrong sending the invitation. Try again.",
+          messageKey: "operators.invite.errors.generic",
           requestId: classified.requestId,
         });
     }
@@ -157,18 +160,28 @@ export function InviteMember({
   }
 
   return (
-    <Drawer title="Invite member" onClose={onClose}>
+    <Drawer title={t("operators.invite.title")} onClose={onClose}>
       {banner ? (
-        <Banner variant={banner.variant} message={banner.message} requestId={banner.requestId} />
+        <Banner
+          variant={banner.variant}
+          message={t(banner.messageKey)}
+          requestId={banner.requestId}
+        />
       ) : null}
 
       <form className="surface__form" onSubmit={onSubmit} noValidate>
         <p className="surface__scope-line">
-          Inviting to tenant <strong>{activeTenant.name}</strong>.
+          {t.rich("operators.invite.scopeLine", {
+            tenant: (
+              <strong>
+                <bdi>{activeTenant.name}</bdi>
+              </strong>
+            ),
+          })}
         </p>
 
         <div className="field">
-          <label htmlFor="invite-email">Email</label>
+          <label htmlFor="invite-email">{t("operators.form.email")}</label>
           <input
             id="invite-email"
             name="email"
@@ -179,17 +192,17 @@ export function InviteMember({
             autoComplete="off"
           />
           <span id="invite-email-error">
-            <InlineError message={emailError} />
+            <InlineError message={emailError ? t(emailError) : undefined} />
           </span>
         </div>
 
         <div className="field">
-          <label htmlFor="invite-role">Role</label>
+          <label htmlFor="invite-role">{t("operators.form.role")}</label>
           <input id="invite-role" name="role_code" className="input" autoComplete="off" />
         </div>
 
         <div className="field">
-          <span className="field-row__label">Store access</span>
+          <span className="field-row__label">{t("operators.form.storeAccess")}</span>
           <div className="drawer__radio-group">
             <label className="drawer__radio">
               <input
@@ -198,7 +211,7 @@ export function InviteMember({
                 checked={!specific}
                 onChange={() => setSpecific(false)}
               />
-              All stores
+              {t("operators.storeAccess.all")}
             </label>
             <label className="drawer__radio">
               <input
@@ -207,14 +220,14 @@ export function InviteMember({
                 checked={specific}
                 onChange={() => setSpecific(true)}
               />
-              Specific stores
+              {t("operators.storeAccess.specific")}
             </label>
           </div>
           {specific ? (
             <input
               name="store_ids"
               className="input"
-              placeholder="Store ids, comma-separated"
+              placeholder={t("operators.form.storeIdsPlaceholder")}
               autoComplete="off"
             />
           ) : null}
@@ -223,10 +236,12 @@ export function InviteMember({
         <div className="surface__actions">
           <button type="submit" className="btn-primary" disabled={pending || tooEarly !== null}>
             {pending ? <span className="spinner" aria-hidden="true" /> : null}
-            {tooEarly !== null ? `Retrying in ${tooEarly}s…` : "Send invitation"}
+            {tooEarly !== null
+              ? t("operators.invite.retrying", { count: tooEarly })
+              : t("operators.invite.submit")}
           </button>
           <button type="button" className="btn-secondary" onClick={onClose} disabled={pending}>
-            Cancel
+            {t("common.cancel")}
           </button>
         </div>
       </form>
