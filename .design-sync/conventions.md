@@ -8,7 +8,7 @@ This is the target identity from the Retail Tower UX/UI Constitution: light-firs
 
 - Root: `<html lang="ar" dir="rtl">`. Load `styles.css`; it imports `tokens/colors_and_type.css` (tokens) and `tokens/components.css` (classes). No provider or wrapper is needed.
 - The CSS uses logical properties only. Without `dir="rtl"`, the layout renders mirrored and wrong for Arabic.
-- Font: `var(--font-sans)` (Dubai; installed on Windows, falls back elsewhere). Keep text at 12px or larger.
+- Font: `var(--font-sans)` (Dubai, embedded through `styles.css` in weights 300, 400, 500 and 700). Keep text at 12px or larger.
 
 ## Styling idiom: tokens + classes
 
@@ -48,7 +48,7 @@ This is the target identity from the Retail Tower UX/UI Constitution: light-firs
   - Never colour alone.
   - An UNKNOWN outcome is danger.
   - A missing signal is «لا توجد إشارة» (hollow neutral).
-  - Healthy stays quiet.
+  - Healthy stays quiet: a steady connection is a green `dot` beside «متصل», never a banner.
 - **Messages:** what happened, what is safe, what to do, then the evidence (a `.machine` reference).
 - **Not allowed:** charts or KPI tiles, icons, toasts, dark theme, gradients, new colours.
 - **Consoles:** the Tenant and Platform consoles share every token and differ only in copy and scope bar.

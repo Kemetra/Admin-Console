@@ -56,9 +56,11 @@
 
 ## Decisions and known warnings
 
-- **`[FONT_MISSING] "Dubai"`: accepted substitute.** Owner OK, 2026-10-11.
-  - Dubai renders where it is installed (it ships with Windows). Elsewhere it falls back to Segoe UI / Tahoma / system-ui.
-  - The licence check for embedding a Dubai woff2 is still open in RT-392. When cleared, add the woff2 + `@font-face` to the bundle (`fonts/` + an import in `styles.css`) and drop this note.
+- **Dubai is embedded** (owner, 2026-10-11). The owner downloaded it from dubaifont.com and uploaded it to the project, which clears `[FONT_MISSING]`.
+  - **Before building:** copy `Dubai-Light/Regular/Medium/Bold.ttf` into `.design-sync/fonts/`. The folder is gitignored and the builder fails without the files.
+  - **Why not committed:** the files say «© 2017 Dubai Executive Council. All rights reserved.» and carry no licence text, and this repo is public. They go only to the private Claude Design project.
+  - **Wiring:** the builder writes `tokens/fonts.css` (four `@font-face` rules: 300, 400, 500, 700) and imports it first in `styles.css`.
+  - **Verifying:** the font is installed on Windows, so a render alone proves nothing. Check `document.fonts` (the faces report `loaded`) and the 200 responses for `fonts/*.ttf`.
 - **`_ds_sync.json absent`:** expected for this off-script layout. There is no anchor, so every sync re-verifies everything (20 cards, cheap).
 - **`Cascadia Code`** was removed from `--font-mono` in the target tokens (2026-10-11). Consolas covers Windows; this cleared a second `[FONT_MISSING]`.
 
@@ -73,7 +75,7 @@
   - Do not split the overlay layer (for example 100/101): an open drawer would then stay above a later confirm's scrim.
 - **Card viewports** are hard-coded in each marker. A content change that grows a card needs its `viewport` height raised (the check reports `size=…/WxH`).
 - **Colour values** are the RT-392 approved table only. Any new value needs a new owner decision.
-- **Open owner decisions** that may change cards:
-  - green dot for a steady healthy connection;
-  - whether store time zone is editable after creation.
+- **Owner decisions, 2026-10-11:**
+  - A steady healthy connection shows a green dot beside «متصل». The cards already did this; conventions.md now says it.
+  - Store time zone: the owner answered «حسب المتجر» (per store). Whether it can be edited after creation is still to be confirmed.
 - The **Platform Console frame** is an RT-391 concept. Its navigation is illustrative; re-check it when RT-391 decides the IA.
