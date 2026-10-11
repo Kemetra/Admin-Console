@@ -16,21 +16,25 @@ import { useActiveContextValue } from "@/context/ActiveContextProvider";
  * 401 (not signed in / expired) is distinct from a 200 with zero memberships
  * (signed in, no access).
  */
-import { Navigate, Outlet } from "react-router";
+import { Navigate, Outlet, useLocation } from "react-router";
 import { AppShell } from "./AppShell";
 import { ScopeGate } from "./ScopeGate";
+import { type SignInRedirectState, returnPathOf } from "./return-path";
 import { useSignOut } from "./useSignOut";
 
 export function ProtectedArea(): React.JSX.Element | null {
   const { context, isLoading, sessionLost, membershipCount } = useActiveContextValue();
   const signOut = useSignOut();
+  const location = useLocation();
 
   if (isLoading) {
     return null;
   }
   if (sessionLost || !context) {
     // Not authenticated (no cookie) or session expired and refresh failed (S5).
-    return <Navigate to="/signin" replace />;
+    // RT-355: keep the requested URL so sign-in can return to it.
+    const state: SignInRedirectState = { from: returnPathOf(location) };
+    return <Navigate to="/signin" replace state={state} />;
   }
   if (membershipCount === 0) {
     return <NoAccess onSignOut={signOut} />;
