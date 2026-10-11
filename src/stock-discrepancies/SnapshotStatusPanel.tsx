@@ -1,4 +1,5 @@
 import { Banner } from "@/components/Banner";
+import { DateTime, formatNumber, useT } from "@/i18n";
 import type { PendingSnapshotRequest, StockSnapshotStatus } from "@/lib/stock-discrepancy-queries";
 /**
  * RT-178 snapshot freshness block for one store (RT-51 D4). Renders the API's
@@ -10,6 +11,9 @@ import type { PendingSnapshotRequest, StockSnapshotStatus } from "@/lib/stock-di
  *   - pendingRequest           → "Snapshot requested, awaiting Connector"
  * A snapshot is a point-in-time ERPNext read; the copy never calls it live.
  * State → view derivations live in `stockDiscrepancyLogic` (`statusView`).
+ * RT-399: snapshot instants render as operational times (`<DateTime>`, UTC-
+ * labelled until the Store time zone is exposed, RT-401), with the exact ISO
+ * value kept in the `<time>` element.
  */
 import { asOfTime, formatStaleAfter, isPendingOverdue, statusView } from "./stockDiscrepancyLogic";
 
@@ -20,20 +24,17 @@ export interface SnapshotStatusPanelProps {
 }
 
 function SnapshotHeading({ snapshot }: { snapshot: StockSnapshotStatus }): React.JSX.Element {
+  const t = useT();
   const view = statusView(snapshot.status);
   const asOf = asOfTime(snapshot);
   return (
     <div className="snapshot-panel__head">
       <h2 className="snapshot-panel__asof">
-        {asOf ? (
-          <>
-            ERPNext snapshot as of <time dateTime={asOf}>{asOf}</time>
-          </>
-        ) : (
-          "No ERPNext snapshot"
-        )}
+        {asOf
+          ? t.rich("stock.panel.asOf", { time: <DateTime value={asOf} /> })
+          : t("stock.panel.noSnapshot")}
       </h2>
-      <span className={view.badgeClass}>{view.label}</span>
+      <span className={view.badgeClass}>{t(view.labelKey)}</span>
     </div>
   );
 }
@@ -51,21 +52,26 @@ function MetaField({
 }
 
 function SnapshotMeta({ snapshot }: { snapshot: StockSnapshotStatus }): React.JSX.Element {
+  const t = useT();
   const { erpnextWarehouseRef, recordedAt, reportedEntryCount } = snapshot;
   return (
     <dl className="snapshot-panel__meta">
       {erpnextWarehouseRef ? (
-        <MetaField label="ERPNext warehouse">
-          <span className="mono">{erpnextWarehouseRef}</span>
+        <MetaField label={t("stock.panel.warehouse")}>
+          <bdi dir="ltr" className="mono">
+            {erpnextWarehouseRef}
+          </bdi>
         </MetaField>
       ) : null}
       {recordedAt ? (
-        <MetaField label="Recorded by Retail Tower">
-          <time dateTime={recordedAt}>{recordedAt}</time>
+        <MetaField label={t("stock.panel.recordedAt")}>
+          <DateTime value={recordedAt} />
         </MetaField>
       ) : null}
       {reportedEntryCount !== null ? (
-        <MetaField label="ERPNext Bins in snapshot">{reportedEntryCount}</MetaField>
+        <MetaField label={t("stock.panel.entryCount")}>
+          {formatNumber(reportedEntryCount, t.locale)}
+        </MetaField>
       ) : null}
     </dl>
   );
@@ -75,18 +81,19 @@ function SnapshotMeta({ snapshot }: { snapshot: StockSnapshotStatus }): React.JS
 function SnapshotStateBanner({
   snapshot,
 }: { snapshot: StockSnapshotStatus }): React.JSX.Element | null {
+  const t = useT();
   if (snapshot.status === "stale") {
     return (
       <Banner
         variant="warning"
-        message={`This ERPNext snapshot is older than ${formatStaleAfter(
-          snapshot.staleAfterSeconds,
-        )}. The items below come from that snapshot and may no longer match ERPNext. Request a fresh snapshot to re-read ERPNext.`}
+        message={t("stock.notice.stale", {
+          age: formatStaleAfter(snapshot.staleAfterSeconds, t.locale),
+        })}
       />
     );
   }
   const notice = statusView(snapshot.status).notice;
-  return notice ? <Banner variant={notice.variant} message={notice.message} /> : null;
+  return notice ? <Banner variant={notice.variant} message={t(notice.messageKey)} /> : null;
 }
 
 interface PendingNoteProps {
@@ -101,17 +108,16 @@ function PendingRequestNote({
   overdue,
   keepsPrevious,
 }: PendingNoteProps): React.JSX.Element {
+  const t = useT();
   return (
     <div className="snapshot-panel__pending">
-      <span className="badge badge--pending">Snapshot requested, awaiting Connector</span>{" "}
+      <span className="badge badge--pending">{t("stock.pending.badge")}</span>{" "}
       <span>
-        Requested <time dateTime={pending.requestedAt}>{pending.requestedAt}</time>.
+        {t.rich("stock.pending.requestedAt", { time: <DateTime value={pending.requestedAt} /> })}
       </span>
       {overdue ? (
         <p className="snapshot-panel__overdue">
-          Snapshot requested but not yet reported. The ERPNext Connector may be offline, or the
-          warehouse may hold more than 500 items, which the Connector does not report yet.
-          {keepsPrevious ? " The previous snapshot is still shown." : ""}
+          {t(keepsPrevious ? "stock.pending.overdueWithPrevious" : "stock.pending.overdue")}
         </p>
       ) : null}
     </div>
@@ -122,9 +128,10 @@ export function SnapshotStatusPanel({
   snapshot,
   nowMs = Date.now(),
 }: SnapshotStatusPanelProps): React.JSX.Element {
+  const t = useT();
   const pending = snapshot.pendingRequest;
   return (
-    <section className="snapshot-panel" aria-label="ERPNext snapshot">
+    <section className="snapshot-panel" aria-label={t("stock.panel.label")}>
       <SnapshotHeading snapshot={snapshot} />
       <SnapshotMeta snapshot={snapshot} />
       <SnapshotStateBanner snapshot={snapshot} />

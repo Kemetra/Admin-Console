@@ -1,6 +1,7 @@
 import { Banner } from "@/components/Banner";
 import { ConfirmDelete } from "@/components/ConfirmDelete";
-import type { ReviewQueueItem } from "@/lib/unknown-items-queries";
+import { useT } from "@/i18n";
+import { type ReviewQueueItem, identifierTypeKey } from "@/lib/unknown-items-queries";
 /**
  * SF-4a-3 — dismiss confirm (T008). Reuses the shared ConfirmDelete affordance
  * (inline confirm, not a reflexive modal) naming the item's identifier before
@@ -26,9 +27,16 @@ export function UnknownItemDismiss({
   onDismissed,
   onCancel,
 }: UnknownItemDismissProps): React.JSX.Element {
+  const t = useT();
   const dismiss = useUnknownItemDismiss(activeTenantId);
   const result = dismiss.data;
   const error = result && !result.ok ? result.render : undefined;
+  // The confirm names the item: its identifier type label + the exact value.
+  const typeKey = identifierTypeKey(item.identifier_type);
+  const resourceName = t("unknownItems.dismiss.resource", {
+    type: typeKey ? t(typeKey) : item.identifier_type,
+    value: item.identifier_value,
+  });
 
   function onConfirm(): void {
     dismiss.mutate(item.id, {
@@ -41,21 +49,21 @@ export function UnknownItemDismiss({
   return (
     <div className="unknown-item-dismiss">
       {error && error.kind === "banner" ? (
-        <Banner variant="danger" message={error.message} requestId={error.requestId} />
+        <Banner variant="danger" message={t(error.messageKey)} requestId={error.requestId} />
       ) : null}
       {error && error.kind === "already-reconciled" ? (
-        <Banner variant="warning" message={error.message} />
+        <Banner variant="warning" message={t(error.messageKey)} />
       ) : null}
       {error && error.kind === "not-found" ? (
-        <Banner variant="info" message={error.message} />
+        <Banner variant="info" message={t(error.messageKey)} />
       ) : null}
       {error && error.kind === "generic" ? (
-        <Banner variant="danger" message={error.message} requestId={error.requestId} />
+        <Banner variant="danger" message={t(error.messageKey)} requestId={error.requestId} />
       ) : null}
 
       <ConfirmDelete
-        resourceName={`${item.identifier_type} ${item.identifier_value}`}
-        confirmLabel="Dismiss"
+        resourceName={resourceName}
+        confirmLabel={t("unknownItems.dismiss.action")}
         pending={dismiss.isPending}
         onConfirm={onConfirm}
         onCancel={onCancel}

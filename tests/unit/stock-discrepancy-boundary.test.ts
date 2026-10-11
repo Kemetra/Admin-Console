@@ -1,5 +1,8 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { stock as arStock } from "@/i18n/messages/ar/stock";
+import { stock as enStock } from "@/i18n/messages/en/stock";
+import type { Message } from "@/i18n/messages/types";
 import * as queries from "@/lib/stock-discrepancy-queries";
 import { describe, expect, test } from "vitest";
 
@@ -79,5 +82,17 @@ describe("stock discrepancy boundary (RT-178)", () => {
       .map((m) => m[1] ?? m[2] ?? "")
       .join("\n");
     expect(strings).not.toMatch(/\blive\b|\bcurrent/i);
+  });
+
+  test("AC7: the stock catalog copy never calls the snapshot live or current (RT-399)", () => {
+    // The surface copy lives in the catalog now; check both locales' `stock.*`
+    // messages (Arabic: «مباشر» live, «حالي» current).
+    const copy = (catalog: Record<string, Message>) =>
+      Object.entries(catalog)
+        .filter(([key]) => key.startsWith("stock."))
+        .flatMap(([, m]) => (typeof m === "string" ? [m] : Object.values(m)))
+        .join("\n");
+    expect(copy(enStock)).not.toMatch(/\blive\b|\bcurrent/i);
+    expect(copy(arStock)).not.toMatch(/مباشر|حالي/);
   });
 });

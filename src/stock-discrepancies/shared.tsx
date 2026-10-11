@@ -4,6 +4,7 @@
  */
 import { Banner } from "@/components/Banner";
 import { useActiveContextValue } from "@/context/ActiveContextProvider";
+import { useT } from "@/i18n";
 import type { ScopeKey, StockDiscrepancyError } from "./useStockDiscrepancies";
 
 export interface DiscrepancyScope {
@@ -31,9 +32,10 @@ export function useDiscrepancyScope(): DiscrepancyScope {
 }
 
 export function TenantScopePrompt(): React.JSX.Element {
+  const t = useT();
   return (
     <div className="surface">
-      <p className="content__sub">Select a tenant to view ERPNext stock discrepancies.</p>
+      <p className="content__sub">{t("stock.tenantPrompt")}</p>
     </div>
   );
 }
@@ -41,6 +43,7 @@ export function TenantScopePrompt(): React.JSX.Element {
 export interface LoadMoreProps {
   hasMore: boolean;
   isFetching: boolean;
+  /** The translated button label ("Load more items" / "Load more stores"). */
   label: string;
   onLoadMore: () => void;
 }
@@ -51,11 +54,12 @@ export function LoadMoreButton({
   label,
   onLoadMore,
 }: LoadMoreProps): React.JSX.Element | null {
+  const t = useT();
   if (!hasMore) return null;
   return (
     <div>
       <button type="button" className="btn-secondary" onClick={onLoadMore} disabled={isFetching}>
-        {isFetching ? "Loading…" : label}
+        {isFetching ? t("common.loading") : label}
       </button>
     </div>
   );
@@ -68,15 +72,16 @@ export interface InlineErrorProps {
 
 /** A failed "Load more" or re-read, under rows that stay on screen. */
 export function InlineLoadError({ error, onRetry }: InlineErrorProps): React.JSX.Element | null {
+  const t = useT();
   if (!error) return null;
   return (
     <Banner
       variant="danger"
-      message="Some rows could not be loaded. The rows shown are from the last successful load."
+      message={t("stock.inlineError")}
       requestId={error.requestId}
       action={
         <button type="button" className="btn-secondary" onClick={onRetry}>
-          Retry
+          {t("stock.retry")}
         </button>
       }
     />

@@ -1,5 +1,6 @@
 import { Banner } from "@/components/Banner";
 import { ListState } from "@/components/ListState";
+import { DateTime, useT } from "@/i18n";
 import type { StoreNegativeOnHandSummary } from "@/lib/stock-discrepancy-queries";
 /**
  * RT-178 — ERPNext stock discrepancies, store summary list. One row per store
@@ -8,7 +9,8 @@ import type { StoreNegativeOnHandSummary } from "@/lib/stock-discrepancy-queries
  * returns, never filtered or widened here). Each row shows the API's snapshot
  * status, the "as of" time when a snapshot exists, and the negative item count;
  * `no_snapshot` / `no_warehouse_mapping` read "Unknown", never "0 issues".
- * A 404 (role not allowed) renders as not-found.
+ * A 404 (role not allowed) renders as not-found. Each store's "as of" time is
+ * an operational instant (`<DateTime>`, UTC-labelled until RT-401).
  */
 import { Link } from "react-router";
 import { InlineLoadError, LoadMoreButton, TenantScopePrompt, useDiscrepancyScope } from "./shared";
@@ -20,14 +22,12 @@ import "./stock-discrepancies.css";
 type StoresData = ReturnType<typeof useNegativeOnHandStores>;
 
 function StoresHeader(): React.JSX.Element {
+  const t = useT();
   return (
     <header className="surface__head">
       <div>
-        <h1 className="content__title">ERPNext stock discrepancies</h1>
-        <p className="content__sub">
-          Items with negative on-hand quantity in each store's latest recorded ERPNext snapshot.
-          Read-only; resolve the cause in ERPNext Desk.
-        </p>
+        <h1 className="content__title">{t("stock.title")}</h1>
+        <p className="content__sub">{t("stock.stores.sub")}</p>
       </div>
     </header>
   );
@@ -37,23 +37,20 @@ function StoresErrorBanner({
   error,
   onRetry,
 }: { error: StockDiscrepancyError; onRetry: () => void }): React.JSX.Element {
+  const t = useT();
   if (error.kind === "not-found") {
     return (
-      <Banner
-        variant="danger"
-        message="Not found. ERPNext stock discrepancies are not available to you in this tenant."
-        requestId={error.requestId}
-      />
+      <Banner variant="danger" message={t("stock.stores.notFound")} requestId={error.requestId} />
     );
   }
   return (
     <Banner
       variant="danger"
-      message="ERPNext stock discrepancies could not be loaded."
+      message={t("stock.loadFailed")}
       requestId={error.requestId}
       action={
         <button type="button" className="btn-secondary" onClick={onRetry}>
-          Retry
+          {t("stock.retry")}
         </button>
       }
     />
@@ -61,59 +58,65 @@ function StoresErrorBanner({
 }
 
 function AsOfCell({ row }: { row: StoreNegativeOnHandSummary }): React.JSX.Element {
+  const t = useT();
   const asOf = asOfTime(row.snapshot);
+  const reasonKey = statusView(row.snapshot.status).noSnapshotReasonKey;
   return (
     <td>
       {asOf ? (
-        <time dateTime={asOf}>{asOf}</time>
+        <DateTime value={asOf} />
       ) : (
-        <span className="muted">{statusView(row.snapshot.status).noSnapshotReason}</span>
+        <span className="muted">{reasonKey ? t(reasonKey) : null}</span>
       )}
     </td>
   );
 }
 
 function PendingCell({ row }: { row: StoreNegativeOnHandSummary }): React.JSX.Element {
+  const t = useT();
   return (
     <td>
       {row.snapshot.pendingRequest ? (
-        <span className="badge badge--pending">Requested, awaiting Connector</span>
+        <span className="badge badge--pending">{t("stock.stores.pending")}</span>
       ) : (
-        <span className="muted">None</span>
+        <span className="muted">{t("stock.stores.noPending")}</span>
       )}
     </td>
   );
 }
 
 function StoreRow({ row }: { row: StoreNegativeOnHandSummary }): React.JSX.Element {
+  const t = useT();
   const view = statusView(row.snapshot.status);
+  const count = negativeCountLabel(row.snapshot.status, row.negativeItemCount);
   return (
     <tr className="data-table__row">
       <td>
         <Link to={`/stock-discrepancies/${row.storeId}`}>{row.storeName}</Link>
       </td>
       <td className="nowrap">
-        <span className={view.badgeClass}>{view.label}</span>
+        <span className={view.badgeClass}>{t(view.labelKey)}</span>
       </td>
       <AsOfCell row={row} />
-      <td>{negativeCountLabel(row.snapshot.status, row.negativeItemCount)}</td>
+      <td>{t(count.key, count.params)}</td>
       <PendingCell row={row} />
     </tr>
   );
 }
 
 function StoresTable({ stores }: { stores: StoreNegativeOnHandSummary[] }): React.JSX.Element {
+  const t = useT();
   return (
     <div className="table-scroll">
       <table className="data-table stock-table">
-        <caption className="data-table__caption">Stores</caption>
+        <caption className="data-table__caption">{t("stock.stores.caption")}</caption>
         <thead>
           <tr>
-            <th scope="col">Store</th>
-            <th scope="col">ERPNext snapshot</th>
-            <th scope="col">As of</th>
-            <th scope="col">Negative items</th>
-            <th scope="col">Snapshot request</th>
+            <th scope="col">{t("stock.stores.col.store")}</th>
+            <th scope="col">{t("stock.stores.col.snapshot")}</th>
+            <th scope="col">{t("stock.stores.col.asOf")}</th>
+            <th scope="col">{t("stock.stores.col.negativeItems")}</th>
+            <th scope="col">{t("stock.stores.col.request")}</th>
           </tr>
         </thead>
         <tbody>
@@ -128,17 +131,17 @@ function StoresTable({ stores }: { stores: StoreNegativeOnHandSummary[] }): Reac
 
 /** Loading, error, empty, or the table — exactly one of them. */
 function StoresBody({ data }: { data: StoresData }): React.JSX.Element {
+  const t = useT();
   if (data.error) return <StoresErrorBanner error={data.error} onRetry={data.refetch} />;
-  if (data.isLoading) return <ListState state="loading" label="stores" />;
+  if (data.isLoading) return <ListState state="loading" label={t("stock.stores.loadingNoun")} />;
   if (data.stores.length === 0) {
-    return (
-      <ListState state="empty" emptyMessage="No stores are available to you in this tenant." />
-    );
+    return <ListState state="empty" emptyMessage={t("stock.stores.empty")} />;
   }
   return <StoresTable stores={data.stores} />;
 }
 
 export function StockDiscrepancyStores(): React.JSX.Element {
+  const t = useT();
   const { scope } = useDiscrepancyScope();
   const data = useNegativeOnHandStores(scope);
 
@@ -151,7 +154,7 @@ export function StockDiscrepancyStores(): React.JSX.Element {
       <LoadMoreButton
         hasMore={data.hasMore}
         isFetching={data.isFetchingNextPage}
-        label="Load more stores"
+        label={t("stock.stores.loadMore")}
         onLoadMore={data.loadMore}
       />
     </div>

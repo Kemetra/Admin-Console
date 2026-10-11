@@ -2,7 +2,12 @@ import { Banner } from "@/components/Banner";
 import { DataTable } from "@/components/DataTable";
 import { Icon } from "@/components/Icon";
 import { ListState } from "@/components/ListState";
-import type { ListUnknownItemsParams, ReviewQueueItem } from "@/lib/unknown-items-queries";
+import { DateTime, type T, useT } from "@/i18n";
+import {
+  type ListUnknownItemsParams,
+  type ReviewQueueItem,
+  identifierTypeKey,
+} from "@/lib/unknown-items-queries";
 /**
  * SF-4a-1 — Unknown-items review queue (T006). The backend-scoped pending page
  * rendered as a table (tables-over-cards); no client-side authorization filter.
@@ -13,6 +18,9 @@ import type { ListUnknownItemsParams, ReviewQueueItem } from "@/lib/unknown-item
  * group_by). Changing a control re-keys the query (the params are part of the
  * query key), so the queue re-fetches structurally. Row activation opens the
  * inspect drawer (SF-4a-2). No role-hiding of any action (VG-5).
+ * RT-399: column headers are built per render from the active locale; the
+ * identifier and store id are machine values (LTR-isolated) and
+ * `encountered_at` is an operational instant (`<DateTime>`).
  */
 import { useState } from "react";
 import { UnknownItemInspectDrawer } from "./UnknownItemInspectDrawer";
@@ -20,24 +28,47 @@ import { useUnknownItemList } from "./useUnknownItemQueries";
 import { useUnknownItemScope } from "./useUnknownItemScope";
 import "./unknown-items.css";
 
-const COLUMNS = [
-  {
-    key: "identifier",
-    header: "Identifier",
-    cell: (r: ReviewQueueItem) => r.identifier_value,
-    mono: true,
-  },
-  { key: "type", header: "Type", cell: (r: ReviewQueueItem) => r.identifier_type },
-  { key: "store", header: "Store", cell: (r: ReviewQueueItem) => r.store_id, mono: true },
-  {
-    key: "source",
-    header: "Source system",
-    cell: (r: ReviewQueueItem) => r.source_system ?? "—",
-  },
-  { key: "encountered", header: "Encountered", cell: (r: ReviewQueueItem) => r.encountered_at },
-];
+/** Identifier type label; an out-of-contract value shows verbatim. */
+function identifierTypeLabel(t: T, type: ReviewQueueItem["identifier_type"]): string {
+  const key = identifierTypeKey(type);
+  return key ? t(key) : type;
+}
+
+function columns(t: T) {
+  return [
+    {
+      key: "identifier",
+      header: t("unknownItems.col.identifier"),
+      cell: (r: ReviewQueueItem) => <bdi dir="ltr">{r.identifier_value}</bdi>,
+      mono: true,
+    },
+    {
+      key: "type",
+      header: t("unknownItems.col.type"),
+      cell: (r: ReviewQueueItem) => identifierTypeLabel(t, r.identifier_type),
+    },
+    {
+      key: "store",
+      header: t("unknownItems.col.store"),
+      cell: (r: ReviewQueueItem) => <bdi dir="ltr">{r.store_id}</bdi>,
+      mono: true,
+    },
+    {
+      key: "source",
+      header: t("unknownItems.col.source"),
+      cell: (r: ReviewQueueItem) =>
+        r.source_system ? <bdi dir="ltr">{r.source_system}</bdi> : "—",
+    },
+    {
+      key: "encountered",
+      header: t("unknownItems.col.encountered"),
+      cell: (r: ReviewQueueItem) => <DateTime value={r.encountered_at} />,
+    },
+  ];
+}
 
 export function UnknownItemList(): React.JSX.Element {
+  const t = useT();
   const { activeTenantId, activeStoreId } = useUnknownItemScope();
   const [sourceSystem, setSourceSystem] = useState("");
   const [sort, setSort] = useState<NonNullable<ListUnknownItemsParams["sort"]>>("age_desc");
@@ -62,47 +93,47 @@ export function UnknownItemList(): React.JSX.Element {
     <div className="surface">
       <header className="surface__head">
         <div>
-          <h1 className="content__title">Unknown items</h1>
-          <p className="content__sub">POS item references awaiting review in this tenant.</p>
+          <h1 className="content__title">{t("unknownItems.title")}</h1>
+          <p className="content__sub">{t("unknownItems.sub")}</p>
         </div>
       </header>
 
       <fieldset className="unknown-item-controls">
         <legend className="unknown-item-controls__legend">
           <Icon name="search" size={14} className="unknown-item-controls__icon" />
-          Queue filters
+          {t("unknownItems.filters.legend")}
         </legend>
         <label className="unknown-item-controls__field">
-          <span>Source system</span>
+          <span>{t("unknownItems.filters.source")}</span>
           <input
             type="text"
             value={sourceSystem}
             onChange={(e) => setSourceSystem(e.target.value)}
-            placeholder="All sources"
+            placeholder={t("unknownItems.filters.sourcePlaceholder")}
           />
         </label>
         <label className="unknown-item-controls__field">
-          <span>Sort</span>
+          <span>{t("unknownItems.filters.sort")}</span>
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value as NonNullable<ListUnknownItemsParams["sort"]>)}
           >
-            <option value="age_desc">Newest first</option>
-            <option value="age_asc">Oldest first</option>
-            <option value="store">By store</option>
+            <option value="age_desc">{t("unknownItems.sort.newest")}</option>
+            <option value="age_asc">{t("unknownItems.sort.oldest")}</option>
+            <option value="store">{t("unknownItems.sort.store")}</option>
           </select>
         </label>
         <label className="unknown-item-controls__field">
-          <span>Group by</span>
+          <span>{t("unknownItems.filters.groupBy")}</span>
           <select
             value={groupBy}
             onChange={(e) =>
               setGroupBy(e.target.value as NonNullable<ListUnknownItemsParams["group_by"]> | "")
             }
           >
-            <option value="">None</option>
-            <option value="store">Store</option>
-            <option value="source_system">Source system</option>
+            <option value="">{t("unknownItems.group.none")}</option>
+            <option value="store">{t("unknownItems.group.store")}</option>
+            <option value="source_system">{t("unknownItems.group.source")}</option>
           </select>
         </label>
       </fieldset>
@@ -110,31 +141,31 @@ export function UnknownItemList(): React.JSX.Element {
       {error && error.kind === "banner" ? (
         <Banner
           variant="danger"
-          message={error.message}
+          message={t(error.messageKey)}
           requestId={error.requestId}
           action={
             error.retryable ? (
               <button type="button" className="btn-ghost" onClick={refetch}>
-                Retry
+                {t("unknownItems.retry")}
               </button>
             ) : undefined
           }
         />
       ) : null}
       {error && error.kind === "generic" ? (
-        <Banner variant="danger" message={error.message} requestId={error.requestId} />
+        <Banner variant="danger" message={t(error.messageKey)} requestId={error.requestId} />
       ) : null}
 
-      {isLoading ? <ListState state="loading" label="unknown items" /> : null}
+      {isLoading ? <ListState state="loading" label={t("unknownItems.loadingNoun")} /> : null}
 
       {!isLoading && !error && rows.length === 0 ? (
-        <ListState state="empty" emptyMessage="No unknown items to review." />
+        <ListState state="empty" emptyMessage={t("unknownItems.empty")} />
       ) : null}
 
       {!isLoading && !error && rows.length > 0 ? (
         <DataTable
-          caption="Unknown items"
-          columns={COLUMNS}
+          caption={t("unknownItems.caption")}
+          columns={columns(t)}
           rows={rows}
           rowKey={(r) => r.id}
           onRowActivate={(r) => setInspectId(r.id)}
