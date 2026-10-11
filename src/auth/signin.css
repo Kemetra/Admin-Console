@@ -1,11 +1,10 @@
-/* SF-1 sign-in — centered card on the command-room field (shape brief). */
+/* SF-1 sign-in — centered card on the light canvas (shape brief). */
 .signin-stage {
   min-height: 100dvh;
   display: grid;
   place-items: center;
   padding: var(--space-7) var(--space-5);
-  background: radial-gradient(120% 80% at 50% 0%, rgba(31, 78, 122, 0.12), transparent 60%),
-    var(--color-bg);
+  background: var(--color-background);
 }
 
 .signin-shell {
@@ -13,15 +12,15 @@
   max-width: 384px;
 }
 
-/* Brand lockup sits above the card (Console v4.0): the gold mark anchors the
- * surface before the operator reads the form. Centered, gold reserved to the mark. */
+/* Brand lockup sits above the card (Console v4.0): the teal mark anchors the
+ * surface before the operator reads the form. Centered. */
 .signin-brand {
   display: flex;
   justify-content: center;
   margin-bottom: var(--space-5);
 }
 .signin-brand .tower-mark {
-  color: var(--color-gold);
+  color: var(--color-primary);
 }
 .signin-brand .tower-lockup__word {
   font: 700 var(--text-headline) / 1 var(--font-sans);
@@ -32,8 +31,8 @@
   width: 100%;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-dialog);
-  box-shadow: var(--shadow-pane);
+  border-radius: var(--radius-object);
+  box-shadow: var(--shadow-overlay);
   padding: var(--space-6);
 }
 

@@ -3,7 +3,7 @@
  * with no active tenant, RF-5 routes here instead of calling `listMembers`
  * (which has no precondition-401), or instead of letting a `createInvitation`
  * precondition-401 surface. A scope precondition, never a sign-out — the
- * operator resolves it via the RF-1 gold scope bar above.
+ * operator resolves it via the RF-1 scope bar above.
  */
 import "../shell/surface.css";
 

@@ -1,12 +1,12 @@
 /**
  * Side-panel drawer (RF-5 SF5-2/SF5-3). A new shared primitive: invite + edit
- * mount over the member list as a right-side panel (`--shadow-pane`, DESIGN.md
+ * mount over the member list as a right-side panel (`--shadow-overlay`, DESIGN.md
  * rule 8). Not a modal-as-first-thought — it is the intent-driven editing
  * surface for a row/action, with the list still visible behind it.
  *
  * Accessibility: labelled dialog, Escape closes, focus moves in on open, and
  * Tab/Shift+Tab are trapped within the panel so `aria-modal` is honest. No
- * nested cards (rule 5); internal grouping uses surface-raised sections.
+ * nested cards (rule 5); internal grouping uses ruled sections.
  */
 import { useEffect, useRef } from "react";
 import "./drawer.css";

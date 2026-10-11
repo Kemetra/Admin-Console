@@ -1,5 +1,5 @@
 /**
- * SF-6-1 pager (T021, OQ-4). A single navy "Load more" driven by `next_cursor`
+ * SF-6-1 pager (T021, OQ-4). A single primary "Load more" driven by `next_cursor`
  * (hidden when there is no next page). No page numbers, no auto-fetch-until-
  * exhausted. A muted count line shows how many rows are loaded.
  */

@@ -1,8 +1,8 @@
 import { useActiveContextValue } from "@/context/ActiveContextProvider";
 import { useStoreList } from "@/stores/useStoreQueries";
 /**
- * Persistent gold scope header (SF-2, T028). DESIGN.md signature: the only
- * persistent gold surface besides the active nav marker. Always visible
+ * Persistent scope header (SF-2, T028): a recessed bar under the top bar,
+ * always visible
  * in-context (rule 3). Click-to-switch opens the scope menu; selecting a tenant
  * or store drives the SF-3 mutators (which re-fetch — no optimistic update).
  *

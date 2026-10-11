@@ -11,7 +11,7 @@
   background-color: var(--color-primary);
   border: 1px solid var(--color-primary);
   border-radius: var(--radius-control);
-  color: #ffffff;
+  color: var(--color-on-primary);
   text-decoration: none;
   font: 600 var(--text-label) / 1 var(--font-sans);
   letter-spacing: -0.005em;
@@ -20,10 +20,10 @@
     var(--ease-out);
 }
 .btn-primary:hover:not(:disabled) {
-  background-color: var(--color-primary-hover);
+  background-color: var(--color-primary-emphasis);
 }
 /* Focus: the global outline (a11y.css). Its 2px offset keeps the ring on the
- * page ground, where it holds 3:1, instead of on the navy fill. */
+ * page ground, where it holds 3:1, instead of on the teal fill. */
 .btn-primary:disabled {
   opacity: 0.4;
   cursor: not-allowed;
@@ -37,7 +37,7 @@
   height: 36px;
   padding: 0 14px;
   background-color: transparent;
-  border: 1px solid var(--color-border-strong);
+  border: 1px solid var(--color-control-border);
   border-radius: var(--radius-control);
   color: var(--color-text);
   text-decoration: none;
@@ -48,7 +48,7 @@
 }
 .btn-secondary:hover {
   border-color: var(--color-primary);
-  background-color: var(--color-primary-subtle);
+  background-color: var(--color-primary-soft);
 }
 
 .btn-ghost {
@@ -60,14 +60,14 @@
   color: var(--color-text-muted);
   height: 32px;
   padding: 0 var(--space-2);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-control);
   font: 600 var(--text-label) / 1 var(--font-sans);
   cursor: pointer;
   transition: background-color var(--duration-2) var(--ease-out), color var(--duration-2)
     var(--ease-out);
 }
 .btn-ghost:hover {
-  background-color: var(--color-surface-raised);
+  background-color: var(--color-surface-sunken);
   color: var(--color-text);
 }
 
@@ -81,13 +81,10 @@
   background-color: var(--color-danger);
   border: 1px solid var(--color-danger);
   border-radius: var(--radius-control);
-  color: #ffffff;
+  color: var(--color-on-primary);
   font: 600 var(--text-label) / 1 var(--font-sans);
   cursor: pointer;
   transition: background-color var(--duration-2) var(--ease-out);
-}
-.btn-destructive:hover:not(:disabled) {
-  background-color: #9a2730;
 }
 .btn-destructive:disabled {
   opacity: 0.4;
@@ -102,26 +99,22 @@
   padding: 0 var(--space-2);
   border-radius: var(--radius-pill);
   border: 1px solid var(--color-border);
-  background-color: var(--color-surface-raised);
+  background-color: var(--color-surface);
   color: var(--color-text-muted);
   font: 600 var(--text-caption) / 1 var(--font-sans);
   white-space: nowrap;
 }
 .badge--active {
   border-color: var(--color-success);
-  color: var(--color-success-on-dark);
+  color: var(--color-success);
 }
 .badge--suspended {
   border-color: var(--color-warning);
-  color: var(--color-warning-on-dark);
+  color: var(--color-warning);
 }
 .badge--pending {
   border-color: var(--color-info);
-  color: var(--color-info-on-dark);
-}
-.badge--gold {
-  border-color: var(--color-gold-muted);
-  color: var(--color-gold);
+  color: var(--color-info);
 }
 
 .input {
@@ -129,8 +122,8 @@
   width: 100%;
   min-height: 36px;
   padding: var(--space-2) var(--space-3);
-  background-color: var(--color-surface-sunken);
-  border: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-control-border);
   border-radius: var(--radius-control);
   color: var(--color-text);
   font: 400 var(--text-body) / 1.5 var(--font-sans);
@@ -138,15 +131,15 @@
     var(--ease-out);
 }
 .input::placeholder {
-  color: var(--color-text-disabled);
+  color: var(--color-text-muted);
 }
 /* Border shift reinforces focus; the global outline (a11y.css) is the signal. */
 .input:focus-visible {
-  border-color: var(--color-focus);
+  border-color: var(--color-focus-ring);
 }
 .input[aria-invalid="true"] {
   border-color: var(--color-danger);
-  box-shadow: 0 0 0 3px rgba(179, 46, 54, 0.25);
+  box-shadow: 0 0 0 1px var(--color-danger);
 }
 .input:disabled {
   opacity: 0.55;
@@ -174,7 +167,7 @@
 .tower-mark {
   width: 28px;
   height: 28px;
-  color: var(--color-gold);
+  color: var(--color-primary);
   flex-shrink: 0;
 }
 
@@ -182,8 +175,8 @@
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.35);
-  border-top-color: #fff;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
   animation: rtc-spin 0.7s linear infinite;
 }
 @keyframes rtc-spin {

@@ -4,7 +4,7 @@ import { queryKeys } from "@/lib/query";
 import { useAcceptInvitation } from "@/operators/useMembers";
 /**
  * SF5-4 — Accept invitation (public, T026/T028). Sibling of SF-1 sign-in: the
- * same centered card on the command-room field (reuses the `signin-*` visual
+ * same centered card on the light canvas (reuses the `signin-*` visual
  * contract), NOT behind the protected gate. The accept token (from the email
  * link, `?token=`) authenticates the request (`acceptInvitation` is
  * `security: []`). New invitees set a display name + password; existing users

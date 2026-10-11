@@ -1,14 +1,14 @@
 /* Inline destructive-confirm region (T008). Sits in-flow on the detail/form
- * surface; not a modal. Tinted with the danger surface to signal blast radius. */
+ * surface; not a modal. Edged in danger to signal blast radius. */
 
 .confirm-delete {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-4);
-  background-color: var(--color-danger-surface);
+  background-color: var(--color-surface);
   border: 1px solid var(--color-danger);
-  border-radius: var(--radius-card);
+  border-radius: var(--radius-object);
 }
 .confirm-delete__msg {
   margin: 0;

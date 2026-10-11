@@ -1,6 +1,6 @@
 /**
- * Retail Tower OS gold shield mark. Stroke-only, currentColor (DESIGN.md icon
- * contract). The only brand-gold element besides the scope header + active nav.
+ * Retail Tower OS shield mark. Stroke-only, currentColor (DESIGN.md icon
+ * contract); the lockup colours it Tower Teal.
  */
 export function TowerMark({ className }: { className?: string }): React.JSX.Element {
   return (

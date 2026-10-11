@@ -4,40 +4,32 @@ description: >-
   Admin Console design baseline, rebaselined to the Retail Tower UX/UI Constitution
   (UX-01…UX-13, Final Audit 2026-10-07). Target: light-first Mineral Daylight + Tower Teal,
   one shared semantic color system with POS, Arabic-first (Dubai) type voice, RTL by structure.
-  The token block below records the CURRENT SHIPPED tokens (src/styles/tokens.css), which stay
-  technical truth until a bounded Jira slice migrates them. They are not the target.
+  The token block below records the CURRENT SHIPPED tokens (src/styles/tokens.css). Since
+  RT-396 the colours and radii ARE the approved light target (RT-392); type is still the
+  pre-migration Inter scale until RT-397.
 status: current-shipped-tokens
 # CURRENT SHIPPED TOKENS — a SUBSET of src/styles/tokens.css on main (colors, type, radius,
-# spacing); tokens.css is authoritative and also holds the surface, shadow (incl. the gold
-# ring), motion and shell tokens. A single dark token set:
-# there is no light theme, no [data-theme] switch and no theme toggle in production.
-# Gold / navy / Inter below are migration debt (see "Migration debts"), not design intent.
+# spacing); tokens.css is authoritative and also holds the scrim, overlay shadow, motion and
+# shell tokens. One light token set (RT-396): the approved dark theme (RT-392) is not built
+# yet (RT-398), so there is no [data-theme] switch in production.
+# Inter below is migration debt (RT-397), not design intent.
 colors:
-  bg: "#0d1520"
-  surface: "#131e2e"
-  surface-raised: "#1a2840"
-  surface-sunken: "#0a1018"
-  surface-overlay: "#1e2d42"
-  border: "#2a3d55"
-  border-strong: "#3a5270"
-  text: "#e8eef5"
-  text-muted: "#8a9db5"
-  text-disabled: "#4a5e78"
-  primary: "#1f4e7a" # navy action fill — retired as a target (UX-02: teal = intent)
-  primary-hover: "#163d61"
-  primary-subtle: "#0e1e30"
-  accent: "#2e7da3" # interactive accent; most (not all) current focus rings
-  gold: "#c8a24a" # Tower Gold — retired as a target (UX-02: no secondary brand accent)
-  gold-soft: "#2a2010"
-  gold-muted: "#8a6a2a"
-  success: "#1f8a5b"
-  warning: "#b87600"
-  danger: "#b32e36"
-  info: "#1e6f8c"
-  success-on-dark: "#52b986"
-  warning-on-dark: "#d49030"
-  danger-on-dark: "#c84d55"
-  info-on-dark: "#50a2c0"
+  background: "#f7f9fa"
+  surface: "#ffffff"
+  surface-sunken: "#eef2f6"
+  text: "#0f1d2e"
+  text-muted: "#53647a" # also the control boundary (control-border)
+  border: "#d8dfe7" # decorative dividers only
+  primary: "#0f766e" # Tower Teal: intent (action, selection, focus)
+  primary-emphasis: "#0b5b55"
+  primary-soft: "#e6f4f1"
+  success: "#15774d"
+  warning: "#a35a00"
+  danger: "#b3261e"
+  info: "#1b6ca8"
+  on-primary: "#ffffff" # alias of surface
+  control-border: "#53647a" # alias of text-muted
+  focus-ring: "#0f766e" # alias of primary
 typography:
   fontFamily: "Inter Variable, Inter, Segoe UI, system-ui, -apple-system, sans-serif" # retired as a target (UX-03: Dubai)
   monoFamily: "ui-monospace, Cascadia Code, JetBrains Mono, Consolas, monospace"
@@ -50,10 +42,9 @@ typography:
   mono: "0.8125rem"
 rounded:
   sm: "4px"
-  md: "6px"
-  control: "10px"
-  card: "12px"
-  dialog: "16px"
+  control: "8px"
+  object: "12px"
+  overlay: "16px"
   pill: "9999px"
 spacing:
   s1: "4px"
@@ -132,8 +123,8 @@ focus, copy, status and border/icon feedback stay intact.
   color. Do not introduce purple, coral, orange or another permanent accent; a future need
   must be demonstrated by Admin or data-visualization work.
 - **Neutrals.** Low-chroma mineral neutrals with a subtle blue-green relationship to Tower
-  Teal. Avoid both clinical cold gray and warm beige. *Exact mineral-neutral values are a
-  later token-implementation decision (UX-02); this file does not invent them.*
+  Teal. Avoid both clinical cold gray and warm beige. *The values are the owner-approved
+  RT-392 light table, shipped in `src/styles/tokens.css` by RT-396.*
 
 ### Color jurisdiction
 
@@ -211,7 +202,7 @@ focus, copy, status and border/icon feedback stay intact.
   - **Dialog:** the strongest elevation.
 - **Shape (target):** 8px controls, 12px genuine contained objects, 16px independent overlays.
   Round the object, not the page. Pills only for true status, counts or tags, never ordinary
-  buttons. *Current shipped radii (10px control) stay until the token slice changes them.*
+  buttons. *Shipped as `--radius-control` / `--radius-object` / `--radius-overlay` (RT-396).*
 - **Borders and tone before shadows.** Work surfaces, sections, cards and panels are shadowless.
   Popovers, drawers and dialogs may use restrained elevation.
 - **One primary scroll owner** per workspace. A drawer may own its own scroll. Overflow belongs
@@ -305,33 +296,23 @@ focus, copy, status and border/icon feedback stay intact.
 These classes exist on `main` and new work reuses them until a migration slice replaces them.
 **Bold** items are the deprecated identity each slice must not extend.
 
-- **Buttons:** `.btn-primary` (**navy fill**), `.btn-secondary`, `.btn-ghost`,
-  `.btn-destructive`. Keep one primary per context. In the target, primary becomes Tower Teal.
-- **Badge** `.badge` (`--active` / `--suspended` / `--pending` / **`--gold`**). Status badges
+- **Buttons:** `.btn-primary` (Tower Teal fill), `.btn-secondary`, `.btn-ghost`,
+  `.btn-destructive`. Keep one primary per context.
+- **Badge** `.badge` (`--active` / `--suspended` / `--pending`). Status badges
   always carry text, so status is never color alone.
 - **Banner** `.rtc-alert--{danger,warning,success,info}`: persistent operational state, not a
   toast.
 - **Inputs** `.input` and `.field`. Errors use `aria-invalid` plus inline text.
 - **DataTable** (`src/components/DataTable.tsx`), **Drawer** (focus-trapped dialog), and
   **ListState** (loading / empty).
-- **Shell** (`src/shell/`): topbar, a **gold scope header** and a sidebar with a **gold active
-  marker**. In the target, the scope bar is a neutral mineral surface with the teal Signal Line
-  for current context. Gold is removed.
+- **Shell** (`src/shell/`): topbar, a recessed (`surface-sunken`) scope header, and a sidebar
+  whose active entry takes the teal wash and the teal Signal Line (RT-396).
 
-**Known debt in these components. Do not copy it.**
-- **Focus:** `.btn-*` and `.input` focus is `outline: none` plus a box-shadow ring, and
-  the DataTable row focus is a **gold** inset box-shadow. That is box-shadow-only focus, which
-  §7 and §11 forbid. It is being replaced by an outline baseline in **RT-267**; new work uses
-  an outline.
-- **Gold sites beyond the scope header and nav marker:**
-  - the active nav icon;
-  - the sign-in brand mark and `TowerMark`;
-  - the scope-button focus ring;
-  - the DataTable row focus;
-  - `.badge--gold`;
-  - `--shadow-gold-ring`.
-
-  All are retired by the light-first token migration (§10).
+**Notes on these components.**
+- **Focus:** every focus stop draws the global outline (`src/styles/a11y.css`, RT-267) in
+  `--color-focus-ring`. No box-shadow-only focus remains; new work keeps the outline.
+- **Gold:** retired by RT-396 (the scope header, nav marker and icon, `TowerMark`,
+  `.badge--gold` and the gold shadow ring). Do not reintroduce it.
 
 ## 10. Migration debts
 
@@ -345,8 +326,8 @@ Each debt is tracked separately. Do not fold them into feature work.
 | Audit search keeps loaded rows when a later page fails + inline continuation retry | UX-10 | **RT-269** |
 | Remove RF-* dev-gated entries from production navigation | UX-09 | **RT-270** |
 | Semantic icon registry + Fluent System Icons fit / licensing / bundle PoC | UX-03 | **RT-263** |
-| Light-first token migration: Mineral Daylight neutrals + Tower Teal roles; retire Tower Gold, navy action and the dark default | UX-02, UX-04 (radius 8/12/16) | **No ticket — owner to create** |
-| Admin type migration Inter → Dubai (with Arabic line-height and the 12px floor) | UX-03 | **No ticket — owner to create** |
+| Light-first token migration: Mineral Daylight neutrals + Tower Teal roles; retire Tower Gold, navy action and the dark default | UX-02, UX-04 (radius 8/12/16) | **RT-396** |
+| Admin type migration Inter → Dubai (with Arabic line-height and the 12px floor) | UX-03 | **RT-397** |
 | Reconcile `PRODUCT.md` Principle 6 and the anti-reference note with light-first | UX-02 | **No ticket — owner to decide** (docs-only) |
 
 ## 11. Do's and Don'ts

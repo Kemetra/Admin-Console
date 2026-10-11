@@ -2,7 +2,7 @@ import { Banner } from "@/components/Banner";
 import { TowerMark } from "@/components/TowerMark";
 import { signIn } from "@/lib/client";
 /**
- * SF-1 sign-in surface (T020/T023). Centered card on the command-room field
+ * SF-1 sign-in surface (T020/T023). Centered card on the light canvas
  * (confirmed shape brief). Uncontrolled native form (R3-4, no form library).
  * All states from the mockup: default, submitting, 401 generic, 429 retry-after.
  *
