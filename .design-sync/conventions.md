@@ -47,7 +47,7 @@ This is the target identity from the Retail Tower UX/UI Constitution: light-firs
   - «المستخدم» = user
 - **Buttons** name the action: «حفظ المتجر», not «موافق».
 - **Money:** `1,250.00 EGP` inside `.num`, Western digits. Dates read «7 أكتوبر 2026، 13:42».
-- **Time:** operational times show in the store's own time zone. Each store has its own, and it stays editable on the store's settings after creation.
+- **Time:** operational times show in the store's own time zone. Each store has its own, and it stays editable on the store's settings after creation, except while a shift is open; a change goes through an impact review before it applies. Show the blocked state with its reason, not a hidden control.
 - **Status:**
   - Never colour alone.
   - An UNKNOWN outcome is danger.

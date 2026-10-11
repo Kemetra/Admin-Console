@@ -85,5 +85,5 @@
   - **Language:** Arabic default, with English as a second locale (`lang="en" dir="ltr"`), one at a time. Card: `patterns-locale-english.html`.
   - **Theme:** light default, with an opt-in dark theme (`data-theme="dark"`). The owner approved the palette from a side-by-side review page. Card: `foundations-dark-theme.html`.
   - **Switch placement:** both switches sit in the shell top bar, as shown in the two shell cards.
-  - Store time zone is set per store and stays editable after creation (owner: «يغير براحته بعد كده»). This is a design rule only; the Backend-Core contract owns whether the API allows it.
+  - Store time zone is set per store and stays editable after creation, except during an open shift, with an impact review before it applies (owner chose this to reconcile with decision 214; RT-401). This is a design rule only; the Backend-Core contract (RT-401) owns the API.
 - The **Platform Console frame** is an RT-391 concept. Its navigation is illustrative; re-check it when RT-391 decides the IA.
