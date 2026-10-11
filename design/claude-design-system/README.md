@@ -143,7 +143,9 @@ pairing before using it.
 
 ## Re-sync checklist
 
-1. Edit `colors_and_type.css`, `preview/_card.css` or the cards. Keep every card
+1. Edit `colors_and_type.css` (tokens), `components.css` (the class vocabulary that
+   designs receive) or the cards. `preview/_card.css` is card chrome only: a class
+   edited there never reaches a generated design. Keep every card
    `lang="ar" dir="rtl"`. Use logical CSS, Western digits, `1,250.00 EGP`, UX-12
    terms and fictitious data only.
 2. Run a self-check before syncing:
@@ -156,8 +158,9 @@ pairing before using it.
    then `node .ds-sync/package-validate.mjs ./ds-bundle` must exit 0 (see `.design-sync/NOTES.md`). Upload steps:
    1. `list_projects`.
    2. `get_project` must report `PROJECT_TYPE_DESIGN_SYSTEM`.
-   3. `finalize_plan` with `localDir` set to this folder. The owner reviews the path
-      list here.
+   3. `finalize_plan` with `localDir` set to `./ds-bundle` at the repo root (built
+      above), never this folder: only the build has `styles.css`, `tokens/` and the
+      README with the conventions header. The owner reviews the path list here.
    4. `write_files`.
    5. `report_validate`.
 4. Keep syncs incremental: no wholesale replace and no deletes unless the plan lists

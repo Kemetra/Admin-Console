@@ -442,13 +442,19 @@ kbd {
 }
 
 /* ── Overlays (UX-04 surface grammar) ────────────────────────────────── */
+/* One shared layer: every overlay sits above in-page positioned boxes (a sticky
+ * table header would otherwise paint over it), and overlays stack among
+ * themselves by DOM order, so a confirm opened from a drawer (scrim, drawer,
+ * scrim, dialog) dims the drawer. Each scrim comes directly before its overlay. */
 .scrim {
   position: fixed;
   inset: 0;
+  z-index: 100;
   background: var(--color-scrim);
 }
 .drawer {
   position: fixed;
+  z-index: 100;
   inset-block: 0;
   inset-inline-end: 0;
   inline-size: min(380px, 70%);
@@ -480,6 +486,7 @@ kbd {
 }
 .dialog {
   position: fixed;
+  z-index: 100;
   inset-block-start: 50%;
   inset-inline: 0;
   margin-inline: auto;
