@@ -23,7 +23,7 @@
   padding: 0;
   margin-bottom: var(--space-3);
   color: var(--color-text-muted);
-  font: 600 var(--text-label) / 1.4 var(--font-sans);
+  font: var(--weight-strong) var(--text-control) / var(--leading-title) var(--font-sans);
 }
 .unknown-item-controls__icon {
   color: var(--color-text-muted);
@@ -31,7 +31,7 @@
 .unknown-item-controls__field {
   display: grid;
   gap: var(--space-1);
-  font-size: var(--text-label);
+  font-size: var(--text-control);
   color: var(--color-text-muted);
 }
 .unknown-item-controls__field input,
@@ -61,7 +61,7 @@
 }
 .unknown-item-detail__label {
   color: var(--color-text-muted);
-  font: 600 var(--text-label) / 1.4 var(--font-sans);
+  font: var(--weight-strong) var(--text-control) / var(--leading-title) var(--font-sans);
 }
 .unknown-item-detail__value {
   margin: 0;

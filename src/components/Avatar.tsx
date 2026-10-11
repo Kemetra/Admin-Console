@@ -32,7 +32,8 @@ export function Avatar({ name, size = 32 }: AvatarProps): React.JSX.Element {
     <span
       className="avatar"
       aria-hidden="true"
-      style={{ width: size, height: size, fontSize: Math.round(size * 0.4) }}
+      // Initials never drop below the 12px readability floor (UX-03).
+      style={{ width: size, height: size, fontSize: Math.max(12, Math.round(size * 0.4)) }}
     >
       {initialsOf(name)}
     </span>

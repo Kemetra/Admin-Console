@@ -20,7 +20,7 @@
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
   color: var(--color-text);
-  font: 600 var(--text-label) / 1 var(--font-sans);
+  font: var(--weight-strong) var(--text-control) / var(--leading-tight) var(--font-sans);
 }
 .scope__btn:hover {
   background: var(--color-primary-soft);
@@ -30,7 +30,7 @@
 }
 /* Hierarchy by weight, not opacity: 0.7 opacity scored 3.99:1 (axe, RT-267). */
 .scope__crumb {
-  font-weight: 500;
+  font-weight: var(--weight-medium);
 }
 .scope__sep {
   opacity: 0.4;
@@ -55,7 +55,7 @@
   padding: var(--space-3);
 }
 .scope-menu__group {
-  font: 600 var(--text-caption) / 1 var(--font-sans);
+  font: var(--weight-strong) var(--text-meta) / var(--leading-tight) var(--font-sans);
   color: var(--color-text-muted);
   padding: var(--space-2) var(--space-2) var(--space-1);
 }
@@ -89,5 +89,5 @@
 .scope-menu__note {
   padding: var(--space-2) var(--space-3);
   color: var(--color-text-muted);
-  font-size: var(--text-label);
+  font-size: var(--text-control);
 }

@@ -5,14 +5,12 @@ description: >-
   (UX-01…UX-13, Final Audit 2026-10-07). Target: light-first Mineral Daylight + Tower Teal,
   one shared semantic color system with POS, Arabic-first (Dubai) type voice, RTL by structure.
   The token block below records the CURRENT SHIPPED tokens (src/styles/tokens.css). Since
-  RT-396 the colours and radii ARE the approved light target (RT-392); type is still the
-  pre-migration Inter scale until RT-397.
+  RT-396 and RT-397 the colours, radii and type ARE the approved light target (RT-392).
 status: current-shipped-tokens
 # CURRENT SHIPPED TOKENS — a SUBSET of src/styles/tokens.css on main (colors, type, radius,
 # spacing); tokens.css is authoritative and also holds the scrim, overlay shadow, motion and
 # shell tokens. One light token set (RT-396): the approved dark theme (RT-392) is not built
 # yet (RT-398), so there is no [data-theme] switch in production.
-# Inter below is migration debt (RT-397), not design intent.
 colors:
   background: "#f7f9fa"
   surface: "#ffffff"
@@ -31,15 +29,24 @@ colors:
   control-border: "#53647a" # alias of text-muted
   focus-ring: "#0f766e" # alias of primary
 typography:
-  fontFamily: "Inter Variable, Inter, Segoe UI, system-ui, -apple-system, sans-serif" # retired as a target (UX-03: Dubai)
-  monoFamily: "ui-monospace, Cascadia Code, JetBrains Mono, Consolas, monospace"
-  display: "1.875rem"
-  headline: "1.25rem"
-  title: "1rem"
+  fontFamily: "Dubai, Segoe UI, Tahoma, system-ui, sans-serif" # no font files served (RT-397)
+  monoFamily: "ui-monospace, Consolas, monospace"
+  display: "1.875rem" # rare
+  screen-title: "1.25rem"
+  section-title: "1rem"
   body: "0.875rem"
-  label: "0.8125rem"
-  caption: "0.75rem"
-  mono: "0.8125rem"
+  control: "0.8125rem"
+  meta: "0.75rem" # the 12px floor
+  money-total: "1.25rem"
+  numeric-row: "0.875rem"
+  machine: "0.8125rem"
+  kbd: "0.75rem"
+  leading-body: 1.7
+  leading-title: 1.35
+  leading-tight: 1.2
+  weight-regular: 400
+  weight-medium: 500
+  weight-strong: 700
 rounded:
   sm: "4px"
   control: "8px"
@@ -161,16 +168,20 @@ focus, copy, status and border/icon feedback stay intact.
 
 - **One Arabic-first UI voice shared with POS: Dubai** (the incumbent). IBM Plex Sans Arabic is
   the long-term challenger and Noto Sans Arabic UI the density benchmark. **No speculative
-  font migration:** a change of primary font needs rendered same-screen A/B evidence. Moving
-  the Admin Console off Inter onto Dubai is a bounded implementation slice; it is not done.
+  font migration:** a change of primary font needs rendered same-screen A/B evidence. The
+  Admin Console moved to Dubai in RT-397. No font files are served: Dubai renders where it is
+  installed, otherwise Segoe UI / Tahoma. Dubai has 300/400/500/700 only, so use the
+  `--weight-*` roles; a 600 silently renders as Bold. No `letter-spacing`: tracking breaks
+  Arabic letter joining.
 - **Type has jurisdiction.** UI sans owns language. Tabular numerals own money, quantities and
   KPI values. **Monospace is only for machine data**: IDs, request refs, SKUs, codes and
   evidence strings. It is never used as a "technical" aesthetic.
 - **Semantic type roles (target vocabulary):** `display` (rare), `screen-title`,
   `section-title`, `body`, `body-strong`, `control`, `meta`, `money-hero`, `money-total`,
-  `numeric-row`, `machine`, `kbd`. Exact values are token decisions for the migration slice.
-- **Readability floor: 12px.** No operator-readable text below 12px, which rules out the
-  current 10px `.nav-gate` badge in new work. Arabic body keeps generous line-height.
+  `numeric-row`, `machine`, `kbd`. Shipped as `--text-*` in `src/styles/tokens.css` (RT-397),
+  equal to the approved values; `body-strong` and `money-hero` are not defined yet.
+- **Readability floor: 12px.** No operator-readable text below 12px (declared CSS sizes are checked by
+  `tests/unit/tokens-identity.test.ts`). Arabic body keeps generous line-height (1.7).
   Hierarchy comes from placement, spacing, weight and alignment before size.
 - **Icons: Fluent System Icons** is the leading family, via a **semantic icon registry**
   (`icon.store`, `icon.inventory`, `icon.sync`, `icon.posting`, …) instead of raw vendor

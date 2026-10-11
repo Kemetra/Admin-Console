@@ -38,14 +38,11 @@
   color: var(--color-primary);
 }
 .tower-lockup__word {
-  font: 700 var(--text-title) / 1 var(--font-sans);
-  letter-spacing: -0.01em;
+  font: var(--weight-strong) var(--text-section-title) / var(--leading-tight) var(--font-sans);
 }
 /* "Console" is a product label, not a control — a quiet pill, never teal. */
 .tower-lockup__tag {
-  font: 600 var(--text-caption) / 1 var(--font-sans);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font: var(--weight-strong) var(--text-meta) / var(--leading-tight) var(--font-sans);
   color: var(--color-text-muted);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-pill);
@@ -71,7 +68,7 @@
   background: var(--color-primary);
   display: grid;
   place-items: center;
-  font: 700 var(--text-caption) / 1 var(--font-sans);
+  font: var(--weight-strong) var(--text-meta) / var(--leading-tight) var(--font-sans);
   color: var(--color-on-primary);
 }
 /* Presence dot — a truthful signal about the viewing operator (they are here,
@@ -88,13 +85,13 @@
   border: 2px solid var(--color-surface);
 }
 .topbar__name {
-  font-size: var(--text-label);
-  font-weight: 600;
-  line-height: 1.2;
+  font-size: var(--text-control);
+  font-weight: var(--weight-strong);
+  line-height: var(--leading-tight);
 }
 .topbar__name small {
   display: block;
-  font-weight: 400;
+  font-weight: var(--weight-regular);
   color: var(--color-text-muted);
 }
 
@@ -110,11 +107,9 @@
   overflow: auto;
 }
 .nav-section {
-  font: 600 var(--text-caption) / 1 var(--font-sans);
+  font: var(--weight-strong) var(--text-meta) / var(--leading-tight) var(--font-sans);
   color: var(--color-text-muted); /* text-disabled scored 2.87:1 (axe, RT-267) */
   padding: var(--space-4) var(--space-3) var(--space-2);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
 }
 .nav-entry {
   position: relative;
@@ -185,7 +180,7 @@
 }
 .nav-gate {
   margin-left: auto;
-  font: 600 10px / 1 var(--font-mono);
+  font: var(--weight-strong) var(--text-kbd) / var(--leading-tight) var(--font-mono);
   color: var(--color-text-muted);
   border: 1px solid var(--color-border);
   padding: 2px 5px;
@@ -207,8 +202,7 @@
 }
 .content__title {
   margin: 0 0 var(--space-2);
-  font: 700 var(--text-display) / 1.25 var(--font-sans);
-  letter-spacing: -0.015em;
+  font: var(--weight-strong) var(--text-display) / var(--leading-title) var(--font-sans);
 }
 .content__sub {
   margin: 0;

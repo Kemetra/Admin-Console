@@ -6,7 +6,6 @@
  * or an alias/alpha of one; tests/unit/tokens-identity.test.ts checks that and
  * the WCAG AA pairings. Components consume these role names, never hex values,
  * so a theme can remap the roles without changing what a component means.
- * Type is still the pre-migration scale and family (RT-397 moves it to Dubai).
  */
 
 :root {
@@ -38,18 +37,31 @@
   --color-scrim: rgb(15 29 46 / 0.45); /* text at 45% */
   --shadow-overlay: 0 12px 32px rgb(15 29 46 / 0.16), 0 2px 6px rgb(15 29 46 / 0.08);
 
-  /* Typography */
-  --font-sans: "Inter Variable", Inter, "Segoe UI", system-ui, -apple-system, sans-serif;
-  --font-mono: ui-monospace, "Cascadia Code", "JetBrains Mono", "Consolas", monospace;
+  /* Type (UX-03, RT-397). Dubai is the one Arabic-first UI voice shared with POS.
+   * No font files are served: Dubai renders where it is installed, otherwise the
+   * Segoe UI / Tahoma fallbacks. Dubai ships 300/400/500/700 only, so weights use
+   * the three roles below (a 600 would silently fall to Bold). Floor: 12px. */
+  --font-sans: "Dubai", "Segoe UI", Tahoma, system-ui, sans-serif;
+  --font-mono: ui-monospace, "Consolas", monospace;
 
-  --text-display: 1.875rem;
-  --text-headline: 1.25rem;
-  --text-title: 1rem;
-  --text-body: 0.875rem;
-  --text-label: 0.8125rem;
-  --text-caption: 0.75rem;
-  --text-mono: 0.8125rem;
-  --text-mono-lg: 0.875rem;
+  --text-display: 1.875rem; /* 30px, rare */
+  --text-screen-title: 1.25rem; /* 20px */
+  --text-section-title: 1rem; /* 16px */
+  --text-body: 0.875rem; /* 14px */
+  --text-control: 0.8125rem; /* 13px */
+  --text-meta: 0.75rem; /* 12px, the floor */
+  --text-money-total: 1.25rem; /* 20px, tabular */
+  --text-numeric-row: 0.875rem; /* 14px, tabular */
+  --text-machine: 0.8125rem; /* 13px, mono (LTR isolation lands with RT-399) */
+  --text-kbd: 0.75rem; /* 12px, mono */
+
+  --leading-body: 1.7; /* Arabic body needs room */
+  --leading-title: 1.35;
+  --leading-tight: 1.2;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-strong: 700;
 
   /* Radius (UX-04): round the object, not the page */
   --radius-sm: 4px; /* small inline marks: tags, code chips */
@@ -103,7 +115,7 @@ body {
   margin: 0;
   font-family: var(--font-sans);
   font-size: var(--text-body);
-  line-height: 1.5;
+  line-height: var(--leading-body);
   color: var(--color-text);
   background-color: var(--color-background);
   /* Native checkboxes, radios, date pickers and the caret take Tower Teal, never
@@ -111,4 +123,10 @@ body {
   accent-color: var(--color-primary);
   caret-color: var(--color-primary);
   -webkit-font-smoothing: antialiased;
+}
+
+/* The browser shrinks <small> to ~83% of its parent, under the 12px floor on
+ * 13-14px text; pin it to the meta role instead. */
+small {
+  font-size: var(--text-meta);
 }
