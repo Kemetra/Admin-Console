@@ -32,3 +32,10 @@ graphify-out/
 
 # tester-army/e2e run output (RT-299): reports, results, replay cache, logs
 .e2e/
+
+# design-sync (RT-392): staged converter scripts, generated upload bundle, machine state
+.ds-sync/
+ds-bundle/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules
