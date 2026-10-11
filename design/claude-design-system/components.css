@@ -442,13 +442,17 @@ kbd {
 }
 
 /* ── Overlays (UX-04 surface grammar) ────────────────────────────────── */
+/* Explicit layers: without them a sticky table header or any positioned box
+ * later in the DOM paints over the scrim and the overlay. */
 .scrim {
   position: fixed;
   inset: 0;
+  z-index: 100;
   background: var(--color-scrim);
 }
 .drawer {
   position: fixed;
+  z-index: 101;
   inset-block: 0;
   inset-inline-end: 0;
   inline-size: min(380px, 70%);
@@ -480,6 +484,7 @@ kbd {
 }
 .dialog {
   position: fixed;
+  z-index: 101;
   inset-block-start: 50%;
   inset-inline: 0;
   margin-inline: auto;

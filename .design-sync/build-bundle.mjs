@@ -12,16 +12,46 @@
 //   node .design-sync/build-bundle.mjs            -> ./ds-bundle
 //   node .ds-sync/package-validate.mjs ./ds-bundle  (the gate; must exit 0)
 //
-// Deterministic: same source in, same bytes out. Nothing here is uploaded by
-// itself; DesignSync uploads ./ds-bundle.
-import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+// .ds-sync/ is gitignored: `/design-sync` stages the validator there at the start
+// of each run, so the gate exists only during a sync.
+//
+// Deterministic: same source in, same bytes out. Every text input is read with its
+// line endings normalised to LF, so a CRLF checkout (core.autocrlf=true) builds the
+// same bundle as an LF one. Nothing here is uploaded by itself; DesignSync uploads
+// ./ds-bundle.
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = join(ROOT, 'design', 'claude-design-system');
 const OUT = join(ROOT, 'ds-bundle');
-const cfg = JSON.parse(readFileSync(join(ROOT, '.design-sync', 'config.json'), 'utf8'));
+const readLF = (p) => readFileSync(p, 'utf8').replace(/\r\n/g, '\n');
+const cfg = JSON.parse(readLF(join(ROOT, '.design-sync', 'config.json')));
+
+// Every token and class conventions.md names must exist in the CSS designs receive.
+// Without this, a rename in components.css ships a README that teaches the design
+// agent a class that no longer styles anything.
+function checkConventionNames(md, tokensCss, componentsCss) {
+  const defined = new Set([...tokensCss.matchAll(/(--[a-z0-9-]+)\s*:/g)].map((m) => m[1]));
+  const tokens = new Set([...md.matchAll(/(?<![\w-])--[a-z][a-z0-9-]*/g)].map((m) => m[0]));
+  const classes = new Set();
+  for (const line of md.split('\n')) {
+    const tableRow = line.startsWith('| ');
+    for (const [, span] of line.matchAll(/`([^`]+)`/g)) {
+      const m = /^\.([a-z][\w-]*)$/.exec(span) ?? /^(?:label|input|select|tr)\.([a-z][\w-]*)$/.exec(span);
+      if (m) classes.add(m[1]);
+      else if (tableRow && /^(?!aria-)[a-z][\w-]*$/.test(span)) classes.add(span);
+    }
+  }
+  for (const [, list] of md.matchAll(/class="([^"]+)"/g)) for (const c of list.split(/\s+/)) classes.add(c);
+  const missing = [
+    ...[...tokens].filter((t) => !defined.has(t)),
+    ...[...classes].filter((c) => !new RegExp(`\\.${c}(?![\\w-])`).test(componentsCss)).map((c) => `.${c}`),
+  ];
+  if (missing.length) throw new Error(`conventions.md names undefined token(s)/class(es): ${missing.join(', ')}`);
+  return { tokens: tokens.size, classes: classes.size };
+}
 
 if (existsSync(OUT)) {
   if (!existsSync(join(OUT, '.ds-build-meta.json'))) throw new Error(`refusing to rm ${OUT}: not a prior bundle`);
@@ -33,24 +63,26 @@ mkdirSync(join(OUT, 'preview'), { recursive: true });
 mkdirSync(join(OUT, 'components'), { recursive: true });
 
 // Styles: designs receive only the styles.css @import closure.
-cpSync(join(SRC, 'colors_and_type.css'), join(OUT, 'tokens', 'colors_and_type.css'));
-cpSync(join(SRC, 'components.css'), join(OUT, 'tokens', 'components.css'));
+const tokensCss = readLF(join(SRC, 'colors_and_type.css'));
+const componentsCss = readLF(join(SRC, 'components.css'));
+writeFileSync(join(OUT, 'tokens', 'colors_and_type.css'), tokensCss);
+writeFileSync(join(OUT, 'tokens', 'components.css'), componentsCss);
 writeFileSync(join(OUT, 'styles.css'),
   '/* Retail Tower Design System: the closure every generated design receives. */\n' +
   '@import "./tokens/colors_and_type.css";\n' +
   '@import "./tokens/components.css";\n');
 
 // Card chrome: cards link it; it pulls styles.css so cards render exactly what designs get.
-const chrome = readFileSync(join(SRC, 'preview', '_card.css'), 'utf8')
+const chrome = readLF(join(SRC, 'preview', '_card.css'))
   .replace(/^@import url\("\.\.\/colors_and_type\.css"\);\n@import url\("\.\.\/components\.css"\);\n/m,
            '@import url("../styles.css");\n');
 if (!chrome.includes('@import url("../styles.css");')) throw new Error('card chrome imports did not match');
 writeFileSync(join(OUT, 'preview', '_card.css'), chrome);
 
-// Cards: preview/<file>.html, copied byte-for-byte (they already link ./_card.css).
+// Cards: preview/<file>.html, copied with LF endings (they already link ./_card.css).
 const cards = [];
 for (const f of readdirSync(join(SRC, 'preview')).filter((f) => f.endsWith('.html')).sort()) {
-  const html = readFileSync(join(SRC, 'preview', f), 'utf8');
+  const html = readLF(join(SRC, 'preview', f));
   const m = /^<!-- @dsCard group="([^"]+)" name="([^"]+)" subtitle="([^"]+)" viewport="(\d+)x(\d+)" -->/.exec(html);
   if (!m) throw new Error(`${f}: line 1 is not a full @dsCard marker`);
   const [, group, name] = m;
@@ -67,7 +99,8 @@ writeFileSync(join(OUT, '_ds_bundle.js'),
   `(function(){var g=typeof window!=='undefined'?window:globalThis;g[${JSON.stringify(cfg.globalName)}]=g[${JSON.stringify(cfg.globalName)}]||{};})();\n`);
 
 // README = the conventions header (the design agent's system-prompt slot) + a short body.
-const conventions = readFileSync(join(ROOT, cfg.readmeHeader), 'utf8').trimEnd();
+const conventions = readLF(join(ROOT, cfg.readmeHeader)).trimEnd();
+const named = checkConventionNames(conventions, tokensCss, componentsCss);
 const groups = [...new Set(cards.map((c) => c.group))];
 const body = [
   '', '---', '', '## Reference cards', '',
@@ -83,4 +116,4 @@ writeFileSync(join(OUT, 'README.md'), conventions + '\n' + body);
 writeFileSync(join(OUT, '_ds_needs_recompile'), JSON.stringify({ by: 'design-sync-cli' }) + '\n');
 writeFileSync(join(OUT, '.ds-build-meta.json'), JSON.stringify({ componentCount: 0, cardCount: cards.length, shape: 'package', offScript: true }, null, 2) + '\n');
 
-console.log(`[OK] ds-bundle: ${cards.length} cards in ${groups.length} groups, styles.css + 2 token files, README ${conventions.length} char header`);
+console.log(`[OK] ds-bundle: ${cards.length} cards in ${groups.length} groups, styles.css + 2 token files, README ${conventions.length} char header (${named.tokens} tokens + ${named.classes} classes checked)`);
