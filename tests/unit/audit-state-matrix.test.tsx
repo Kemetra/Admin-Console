@@ -107,6 +107,43 @@ describe("AuditSearch state matrix", () => {
     expect(screen.getByText(/audit search failed/i)).toBeDefined();
   });
 
+  test("RT-269: page 2 fails -> page-1 rows stay, inline continuation error with Retry", async () => {
+    let page2Calls = 0;
+    listAuditEvents.mockImplementation(async (q?: { cursor?: string }) => {
+      if (q?.cursor === "CUR1") {
+        page2Calls += 1;
+        return page2Calls === 1
+          ? { status: 503, error: { error: { request_id: "req-p2" } } }
+          : {
+              status: 200,
+              data: { items: [{ ...event("price.changed"), id: "e2" }], next_cursor: null },
+            };
+      }
+      return { status: 200, data: { items: [event("shift.forced_close")], next_cursor: "CUR1" } };
+    });
+    renderSearch();
+    apply();
+    expect(await screen.findByText("shift.forced_close")).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: /load more/i }));
+
+    const alert = await screen.findByRole("alert");
+    // Names the failed continuation, not the whole search.
+    expect(alert.textContent).toMatch(/could not load more audit events/i);
+    expect(alert.textContent).toMatch(/req-p2/);
+    expect(screen.queryByText(/audit search failed/i)).toBeNull();
+    // Page-1 rows stay on screen.
+    expect(screen.getByText("shift.forced_close")).toBeDefined();
+    expect(screen.getByText(/showing 1/i)).toBeDefined();
+    // The retry replaces "Load more" while the continuation is failed.
+    expect(screen.queryByRole("button", { name: /load more/i })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: /retry/i }));
+    expect(await screen.findByText("price.changed")).toBeDefined();
+    expect(screen.getAllByText("shift.forced_close")).toHaveLength(1);
+    expect(screen.getByText(/showing 2/i)).toBeDefined();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
   test("no active tenant: scope prompt, no query", () => {
     activeContext.mockReturnValue({ context: { active_tenant: null, active_store: null } });
     renderSearch();

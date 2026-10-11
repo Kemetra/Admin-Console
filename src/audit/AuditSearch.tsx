@@ -48,12 +48,16 @@ export function AuditSearch(): React.JSX.Element {
     setInspecting(null);
   }, [activeTenantId, activeStoreId]);
 
-  const { rows, hasMore, isLoading, isFetchingNextPage, error, loadMore } = useAuditSearch(
-    activeTenantId,
-    activeStoreId,
-    filters,
-    searched,
-  );
+  const {
+    rows,
+    hasMore,
+    isLoading,
+    isFetchingNextPage,
+    error,
+    continuationError,
+    loadMore,
+    retryContinuation,
+  } = useAuditSearch(activeTenantId, activeStoreId, filters, searched);
 
   if (!activeTenant) {
     return <OperatorScopePromptLike />;
@@ -125,9 +129,27 @@ export function AuditSearch(): React.JSX.Element {
       {showRows ? (
         <>
           <AuditTable rows={rows} onInspect={setInspecting} />
+          {/* RT-269 (UX-10): a failed "Load more" keeps the rows above and
+              offers a retry of just that page; it replaces "Load more". */}
+          {continuationError ? (
+            <Banner
+              variant="danger"
+              message={
+                continuationError.kind === "forbidden"
+                  ? "Could not load more audit events: you do not have permission. The events above are kept."
+                  : "Could not load more audit events. The events above are kept."
+              }
+              requestId={continuationError.requestId}
+              action={
+                <button type="button" className="btn-secondary" onClick={retryContinuation}>
+                  Retry
+                </button>
+              }
+            />
+          ) : null}
           <AuditPager
             loadedCount={rows.length}
-            hasMore={hasMore}
+            hasMore={hasMore && !continuationError}
             isFetchingNextPage={isFetchingNextPage}
             onLoadMore={loadMore}
           />
