@@ -5,6 +5,7 @@
   width: 100%;
   border-collapse: collapse;
   font-size: var(--text-body);
+  font-variant-numeric: tabular-nums;
 }
 /* The caption names the table for screen readers; it is visually redundant
  * with the page title, so it is hidden visually but kept in the a11y tree. */
@@ -24,7 +25,7 @@
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--color-border);
   color: var(--color-text-muted);
-  font: 600 var(--text-label) / 1 var(--font-sans);
+  font: var(--weight-strong) var(--text-control) / var(--leading-tight) var(--font-sans);
   white-space: nowrap;
 }
 .data-table__row {
@@ -47,6 +48,6 @@
 }
 .data-table__cell--mono {
   font-family: var(--font-mono);
-  font-size: var(--text-mono);
+  font-size: var(--text-machine);
   color: var(--color-text-muted);
 }

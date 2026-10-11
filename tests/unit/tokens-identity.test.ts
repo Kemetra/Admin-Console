@@ -155,3 +155,42 @@ describe("RT-396 light-first tokens", () => {
     }
   });
 });
+
+describe("RT-397 Dubai type", () => {
+  const typeTokens = Object.keys(approved).filter((k) => /^--(font|text|leading|weight)-/.test(k));
+
+  test("every type token equals its approved value, and no other type token is shipped", () => {
+    expect(typeTokens.length).toBeGreaterThan(0);
+    for (const name of typeTokens) {
+      expect({ name, value: shipped[name] }).toEqual({ name, value: approved[name] });
+    }
+    const shippedType = Object.keys(shipped).filter((k) =>
+      /^--(font|text|leading|weight)-/.test(k),
+    );
+    expect(shippedType.sort()).toEqual([...typeTokens].sort());
+  });
+
+  test("Dubai leads the UI stack and Inter is gone from src/", () => {
+    expect(shipped["--font-sans"].startsWith('"Dubai"')).toBe(true);
+    for (const file of cssFiles(join(root, "src"))) {
+      const code = stripComments(readFileSync(file, "utf8"));
+      expect({ file, inter: /\bInter\b/.test(code) }).toEqual({ file, inter: false });
+    }
+  });
+
+  test("CSS keeps the 12px floor, the three Dubai weights, and no tracking", () => {
+    const tokensFile = join(root, "src", "styles", "tokens.css");
+    for (const file of cssFiles(join(root, "src")).filter((f) => f.endsWith(".css"))) {
+      const code = stripComments(readFileSync(file, "utf8"));
+      // Any font size written in px below 12, or in rem below 0.75.
+      const sizes = [...code.matchAll(/font(?:-size)?:[^;]*?(\d*\.?\d+)(px|rem)/g)];
+      const small = sizes.filter(([, n, unit]) => Number(n) * (unit === "rem" ? 16 : 1) < 12);
+      expect({ file, small: small.map((m) => m[0]) }).toEqual({ file, small: [] });
+      expect({ file, tracking: /letter-spacing/.test(code) }).toEqual({ file, tracking: false });
+      if (file !== tokensFile) {
+        const numericWeight = /font-weight:\s*\d|font:\s*\d{3}\s/.test(code);
+        expect({ file, numericWeight }).toEqual({ file, numericWeight: false });
+      }
+    }
+  });
+});

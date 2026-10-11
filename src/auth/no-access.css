@@ -14,8 +14,7 @@
 }
 .noaccess__title {
   margin: 0;
-  font: 700 var(--text-headline) / 1.3 var(--font-sans);
-  letter-spacing: -0.01em;
+  font: var(--weight-strong) var(--text-screen-title) / var(--leading-title) var(--font-sans);
   color: var(--color-text);
 }
 .noaccess__body {

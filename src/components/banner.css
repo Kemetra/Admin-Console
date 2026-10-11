@@ -10,12 +10,12 @@
 }
 
 .rtc-alert__msg {
-  font-weight: 500;
+  font-weight: var(--weight-medium);
 }
 
 .rtc-alert__req {
   font-family: var(--font-mono);
-  font-size: var(--text-mono);
+  font-size: var(--text-machine);
   color: var(--color-text-muted);
 }
 

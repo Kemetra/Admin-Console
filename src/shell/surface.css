@@ -34,14 +34,14 @@
 }
 .field-row__label {
   color: var(--color-text-muted);
-  font: 600 var(--text-label) / 1.4 var(--font-sans);
+  font: var(--weight-strong) var(--text-control) / var(--leading-title) var(--font-sans);
 }
 .field-row__value {
   color: var(--color-text);
 }
 .field-row__value--mono {
   font-family: var(--font-mono);
-  font-size: var(--text-mono);
+  font-size: var(--text-machine);
   color: var(--color-text-muted);
 }
 .surface__actions {
@@ -57,7 +57,7 @@
   gap: var(--space-1);
   color: var(--color-text-muted);
   text-decoration: none;
-  font-size: var(--text-label);
+  font-size: var(--text-control);
 }
 .surface__back:hover {
   color: var(--color-text);
@@ -86,11 +86,11 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-control);
   color: var(--color-text-muted);
-  font-size: var(--text-label);
+  font-size: var(--text-control);
 }
 .surface__scope-line strong {
   color: var(--color-text);
-  font-weight: 600;
+  font-weight: var(--weight-strong);
 }
 
 /* Scope prompt: the store surfaces' no-active-tenant state. A precondition,
@@ -103,5 +103,5 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-object);
   color: var(--color-text-muted);
-  line-height: 1.6;
+  line-height: var(--leading-body);
 }
