@@ -10,14 +10,16 @@ import { TowerMark } from "@/components/TowerMark";
  *
  * Console v4.0 visual adoption: each nav entry leads with a decorative line icon
  * (aria-hidden, so labels stay the sole accessible name) and the topbar carries
- * the Console product label. Operational chrome with no backing yet (search,
- * notifications, system status, theme switch) is intentionally NOT rendered — a
+ * the Console product label, and the dark-mode switch (RT-398) before the user.
+ * Operational chrome with no backing yet (search, notifications, system
+ * status) is intentionally NOT rendered — a
  * dead control reads as a fake to an operator (PRODUCT.md P4/P5); each arrives as
  * its own slice when wired. Gated nav entries are the one exception, and they
  * announce it explicitly with a gate badge (RF-3 / RF-4).
  */
 import { useActiveContextValue } from "@/context/ActiveContextProvider";
 import { canReadStockDiscrepancies } from "@/stock-discrepancies/stockDiscrepancyLogic";
+import { ThemeToggle } from "@/theme/ThemeToggle";
 import { NavLink } from "react-router";
 import { ScopeHeader } from "./ScopeHeader";
 import "./app-shell.css";
@@ -69,6 +71,7 @@ export function AppShell({
         </span>
 
         <div className="topbar__spacer" />
+        <ThemeToggle userId={user?.id} />
         {user ? (
           <span className="topbar__user">
             <span className="topbar__avatar-wrap">

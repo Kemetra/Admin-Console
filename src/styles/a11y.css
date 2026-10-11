@@ -25,6 +25,13 @@
   .btn-destructive {
     border: 1px solid ButtonText;
   }
+  /* Forced colours drop the inset edge of an on toggle (RT-398): a 2px Highlight
+   * border instead, with 1px less padding so the button keeps its width. */
+  .btn-secondary[aria-pressed="true"]:not(:disabled) {
+    border-width: 2px;
+    border-color: Highlight;
+    padding: 0 13px;
+  }
   .btn-primary:disabled,
   .btn-secondary:disabled,
   .btn-ghost:disabled,

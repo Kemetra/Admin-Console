@@ -96,6 +96,38 @@
   --ease-in-out: cubic-bezier(0.45, 0.05, 0.25, 1);
 }
 
+/* Dark theme (owner-approved 2026-10-11, RT-392; shipped by RT-398). Light stays
+ * the default: the top-bar switch sets data-theme="dark" on <html>, and the
+ * pre-paint script in index.html restores it before first paint. The same
+ * thirteen roles take dark values and the derived aliases are restated here, so
+ * no component changes. Verbatim from the approved dark block; it must come after
+ * :root, which has the same specificity. */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --color-background: #0e161f;
+  --color-surface: #16212d;
+  --color-surface-sunken: #111a24;
+  --color-text: #e7edf3;
+  --color-text-muted: #9fb0c2;
+  --color-border: #2a3846;
+
+  --color-primary: #3fb8a8;
+  --color-primary-emphasis: #6fd0c2;
+  --color-primary-soft: #12322f;
+
+  --color-success: #5cc995;
+  --color-warning: #e9a84a;
+  --color-danger: #ff8b7f;
+  --color-info: #6db3ea;
+
+  --color-on-primary: var(--color-background); /* text on a teal or danger fill is dark */
+  --color-control-border: var(--color-text-muted);
+  --color-focus-ring: var(--color-primary);
+  --color-scrim: rgb(14 22 31 / 0.7); /* background at 70% */
+  --shadow-overlay: 0 12px 32px rgb(14 22 31 / 0.7), 0 2px 6px rgb(14 22 31 / 0.5);
+}
+
 @media (prefers-reduced-motion: reduce) {
   :root {
     --duration-1: 0ms;

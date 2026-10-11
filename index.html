@@ -4,6 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Retail Tower Console</title>
+    <!-- RT-398: restore the dark theme before first paint (no light flash). The key
+         must match THEME_LAST_KEY in src/theme/theme.ts. A future CSP needs this
+         script's hash. -->
+    <script>
+      try {
+        if (localStorage.getItem("rt.theme.v1:last") === "dark") {
+          document.documentElement.dataset.theme = "dark";
+        }
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>
