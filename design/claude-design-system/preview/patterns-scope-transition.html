@@ -19,11 +19,12 @@
   <div class="pair">
     <section class="ds-section">
       <h2>اختيار المتجر</h2>
-      <div class="menu" role="menu" aria-label="المتاجر المتاحة">
-        <div class="menu__item" role="menuitemradio" aria-checked="false">كل المتاجر</div>
-        <div class="menu__item" role="menuitemradio" aria-checked="true">متجر الواحة</div>
-        <div class="menu__item" role="menuitemradio" aria-checked="false">متجر النيل</div>
-      </div>
+      <fieldset class="menu">
+        <legend class="sr-only">المتاجر المتاحة</legend>
+        <label class="menu__item"><input type="radio" name="scope-store" value="all"> كل المتاجر</label>
+        <label class="menu__item"><input type="radio" name="scope-store" value="OAS-01" checked> متجر الواحة</label>
+        <label class="menu__item"><input type="radio" name="scope-store" value="NIL-02"> متجر النيل</label>
+      </fieldset>
       <p class="ds-note">القائمة تعرض المتاجر المصرَّح لك بها فقط. اختيار «كل المتاجر» يتطلب صلاحية على كل المتاجر.</p>
     </section>
 
@@ -31,9 +32,9 @@
       <h2>عمل غير محفوظ</h2>
       <div class="stage" style="min-block-size: 300px">
         <div class="scrim"></div>
-        <div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="t">
+        <div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="t" aria-describedby="d">
           <h3 id="t">لديك تغييرات غير محفوظة على «متجر الواحة».</h3>
-          <p>الانتقال إلى «متجر النيل» سيغلق هذا النموذج.</p>
+          <p id="d">الانتقال إلى «متجر النيل» سيغلق هذا النموذج.</p>
           <div class="dialog__actions">
             <button class="btn btn--secondary is-focus">البقاء في الصفحة</button>
             <button class="btn btn--primary">حفظ ثم الانتقال</button>

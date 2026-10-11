@@ -670,6 +670,7 @@ kbd {
 }
 .menu {
   display: grid;
+  margin: 0;
   min-inline-size: 240px;
   padding: var(--space-1);
   background: var(--color-surface);
@@ -678,11 +679,15 @@ kbd {
   box-shadow: var(--shadow-overlay);
 }
 .menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
   padding-block: var(--space-2);
   padding-inline: var(--space-3);
   border-radius: 6px;
 }
-.menu__item[aria-checked="true"] {
+.menu__item:has(input:checked) {
   background: var(--color-primary-soft);
   color: var(--color-primary-emphasis);
   font-weight: var(--weight-strong);
@@ -814,7 +819,7 @@ kbd {
     background: Highlight;
   }
   .nav-item[aria-current="page"],
-  .menu__item[aria-checked="true"] {
+  .menu__item:has(input:checked) {
     outline: 2px solid Highlight;
     outline-offset: -2px;
   }
