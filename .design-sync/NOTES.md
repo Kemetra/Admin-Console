@@ -17,7 +17,8 @@
 
 | Path | Contents | Reaches designs? |
 |---|---|---|
-| `styles.css` | imports `tokens/colors_and_type.css` and `tokens/components.css` | yes (this closure only) |
+| `styles.css` | imports `tokens/fonts.css`, `tokens/colors_and_type.css` and `tokens/components.css` | yes (this closure only) |
+| `fonts/` | `Dubai-{Light,Regular,Medium,Bold}.ttf`, copied from the gitignored `.design-sync/fonts/` | yes (through `tokens/fonts.css`) |
 | `preview/*.html` + `preview/_card.css` | 20 hand-authored cards; chrome imports `../styles.css` | no (cards only) |
 | `components/` | empty, by design: the tokens-only contract | — |
 | `_ds_bundle.js` | empty IIFE (`window.RetailTowerDS = {}`) with the `@ds-bundle` header | — |
@@ -32,7 +33,7 @@
 ## Verification (the validator does not render `preview/`)
 
 - `package-validate.mjs` walks only `components/` for cards, so it reports "0/0 previews".
-- **Automated in the repo:** only the builder's own checks (line-1 markers, each card's `_card.css` link, the chrome import, the name check).
+- **Automated in the repo:** only the builder's own checks (line-1 markers, each card's `_card.css` link, the chrome import, the name check, the four Dubai files being present).
 - **Manual, not committed:** the render checks below were run by hand with scratch scripts on each sync. Redo them on every sync that changes CSS or cards.
   - Serve the bundle: `python -m http.server 8765 --bind 127.0.0.1` inside `ds-bundle/`.
   - **Playwright** with the repo's `@playwright/test`, against the served `ds-bundle`. Each card is checked for:
@@ -58,6 +59,7 @@
 
 - **Dubai is embedded** (owner, 2026-10-11). The owner downloaded it from dubaifont.com and uploaded it to the project, which clears `[FONT_MISSING]`.
   - **Before building:** copy `Dubai-Light/Regular/Medium/Bold.ttf` into `.design-sync/fonts/`. The folder is gitignored and the builder fails without the files.
+  - **Licence basis: not recorded.** The files carry no licence text, and the dubaifont.com terms were not reviewed in this session. Uploading to the private project was the owner's call. Record the terms and the acceptance date in RT-392 before the font is used outside Claude Design.
   - **Why not committed:** the files say «© 2017 Dubai Executive Council. All rights reserved.» and carry no licence text, and this repo is public. They go only to the private Claude Design project.
   - **Wiring:** the builder writes `tokens/fonts.css` (four `@font-face` rules: 300, 400, 500, 700) and imports it first in `styles.css`.
   - **Verifying:** the font is installed on Windows, so a render alone proves nothing. Check `document.fonts` (the faces report `loaded`) and the 200 responses for `fonts/*.ttf`.

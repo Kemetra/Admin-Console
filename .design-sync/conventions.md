@@ -6,7 +6,7 @@ This is the target identity from the Retail Tower UX/UI Constitution: light-firs
 
 ## Setup
 
-- Root: `<html lang="ar" dir="rtl">`. Load `styles.css`; it imports `tokens/colors_and_type.css` (tokens) and `tokens/components.css` (classes). No provider or wrapper is needed.
+- Root: `<html lang="ar" dir="rtl">`. Load `styles.css`; it imports `tokens/fonts.css` (Dubai), `tokens/colors_and_type.css` (tokens) and `tokens/components.css` (classes). No provider or wrapper is needed.
 - The CSS uses logical properties only. Without `dir="rtl"`, the layout renders mirrored and wrong for Arabic.
 - Font: `var(--font-sans)` (Dubai, embedded through `styles.css` in weights 300, 400, 500 and 700). Keep text at 12px or larger.
 

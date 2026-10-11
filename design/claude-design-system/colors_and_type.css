@@ -39,9 +39,9 @@
   --shadow-overlay: 0 12px 32px rgb(15 29 46 / 0.16), 0 2px 6px rgb(15 29 46 / 0.08);
 
   /* ── Type (UX-03) ────────────────────────────────────────────────── */
-  /* Dubai is the one Arabic-first UI voice shared with POS. It is loaded as an
-   * installed font (Windows ships it); embedding is pending the licence check in
-   * RT-392, so non-Windows viewers see the fallback. */
+  /* Dubai is the one Arabic-first UI voice shared with POS. The synced Claude
+   * Design bundle embeds it through tokens/fonts.css (300/400/500/700); opened
+   * straight from the repo, it uses an installed Dubai or the fallbacks. */
   --font-sans: "Dubai", "Segoe UI", Tahoma, system-ui, sans-serif;
   --font-mono: ui-monospace, "Consolas", monospace;
 

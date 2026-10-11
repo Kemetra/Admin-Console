@@ -15,7 +15,8 @@
 // .ds-sync/ is gitignored: `/design-sync` stages the validator there at the start
 // of each run, so the gate exists only during a sync.
 //
-// Deterministic: same source in, same bytes out. Every text input is read with its
+// Deterministic: same source in, same bytes out (the source includes the untracked
+// Dubai TTFs in .design-sync/fonts/). Every text input is read with its
 // line endings normalised to LF, so a CRLF checkout (core.autocrlf=true) builds the
 // same bundle as an LF one. Nothing here is uploaded by itself; DesignSync uploads
 // ./ds-bundle.
