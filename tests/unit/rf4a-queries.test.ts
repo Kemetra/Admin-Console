@@ -1,8 +1,12 @@
 import { describe, expect, test } from "vitest";
 
+import { translate } from "@/i18n";
 import {
   type UnknownItemOp,
+  identifierTypeKey,
   mapUnknownItemError,
+  resolutionActionKey,
+  resolutionStatusKey,
   unknownItemsQueryKeys,
 } from "@/lib/unknown-items-queries";
 
@@ -29,7 +33,9 @@ describe("mapUnknownItemError — 403 forbidden (007 8th category)", () => {
       if (r.kind === "banner") {
         expect(r.retryable).toBe(false);
         expect(r.requestId).toBe("req-403");
-        expect(r.message).toMatch(/permission/i);
+        // RT-399: the render decision carries a catalog key, never copy.
+        expect(r.messageKey).toBe("unknownItems.errors.forbidden");
+        expect(translate("en", r.messageKey)).toMatch(/permission/i);
       }
     });
   }
@@ -51,7 +57,10 @@ describe("mapUnknownItemError — 409 already_reconciled (dismiss only)", () => 
   test("dismiss: 409 -> already-reconciled", () => {
     const r = mapUnknownItemError(env(409, "dismiss"));
     expect(r.kind).toBe("already-reconciled");
-    if (r.kind === "already-reconciled") expect(r.message).toMatch(/already been resolved/i);
+    if (r.kind === "already-reconciled") {
+      expect(r.messageKey).toBe("unknownItems.errors.alreadyReconciled");
+      expect(translate("en", r.messageKey)).toMatch(/already been resolved/i);
+    }
   });
   test("list: 409 is undocumented -> generic", () => {
     expect(mapUnknownItemError(env(409, "list")).kind).toBe("generic");
@@ -78,6 +87,44 @@ describe("mapUnknownItemError — 5xx retryable, and undocumented 4xx fall to ge
   });
   test("429 is undocumented anywhere -> generic", () => {
     expect(mapUnknownItemError(env(429, "list")).kind).toBe("generic");
+  });
+});
+
+describe("mapUnknownItemError — message keys (RT-399)", () => {
+  test("not-found / 5xx / generic reuse the right keys", () => {
+    expect(mapUnknownItemError(env(404, "inspect"))).toEqual({
+      kind: "not-found",
+      messageKey: "unknownItems.errors.notFound",
+    });
+    expect(mapUnknownItemError(env(503, "list", "req-503"))).toMatchObject({
+      messageKey: "errors.server",
+      requestId: "req-503",
+    });
+    expect(mapUnknownItemError(env(400, "list"))).toMatchObject({ messageKey: "errors.generic" });
+  });
+
+  test("the keys resolve to Arabic copy in the Arabic catalog", () => {
+    const r = mapUnknownItemError(env(403, "list"));
+    expect(translate("ar", r.messageKey)).toBe(
+      "ليست لديك صلاحية لمراجعة الأصناف غير المعروفة في هذا النطاق.",
+    );
+  });
+});
+
+describe("enum label keys — codes drive copy, they are not copy", () => {
+  test("identifier type, status and action map to catalog keys", () => {
+    expect(identifierTypeKey("barcode")).toBe("unknownItems.identifierType.barcode");
+    expect(identifierTypeKey("external_pos_id")).toBe(
+      "unknownItems.identifierType.external_pos_id",
+    );
+    expect(resolutionStatusKey("pending")).toBe("unknownItems.status.pending");
+    expect(resolutionActionKey("linked")).toBe("unknownItems.action.linked");
+    expect(resolutionActionKey(null)).toBeNull();
+  });
+
+  test("a value outside the contract enum gets no key (shown verbatim, never a crash)", () => {
+    expect(identifierTypeKey("gtin" as never)).toBeNull();
+    expect(resolutionStatusKey("toString" as never)).toBeNull();
   });
 });
 

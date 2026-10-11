@@ -1,4 +1,4 @@
-import { type Page, expect, test } from "@playwright/test";
+import { type Page, expect, test } from "./fixtures";
 
 /**
  * RF-6 audit search E2E (VG-2, S1/S2/S4). Scoped search + filter → rows;
@@ -53,7 +53,7 @@ async function mockContext(page: Page): Promise<void> {
   );
 }
 
-test("S1: scoped search + Apply renders audit rows", async ({ page }) => {
+test("S1: scoped search + Apply renders audit rows", async ({ page, t }) => {
   await mockContext(page);
   await page.route("**/api/v1/audit/events**", (r) =>
     r.fulfill({
@@ -65,13 +65,19 @@ test("S1: scoped search + Apply renders audit rows", async ({ page }) => {
 
   await page.goto("/audit");
   // pre-query: prompt, no rows yet
-  await expect(page.getByText(/search audit activity/i)).toBeVisible();
-  await page.getByRole("button", { name: /apply/i }).click();
+  await expect(page.getByText(t("audit.prequery", { tenant: "Northstar Retail" }))).toBeVisible();
+  await page.getByRole("button", { name: t("audit.filters.apply"), exact: true }).click();
   await expect(page.getByText("shift.forced_close")).toBeVisible();
   await expect(page.getByText("auth.signin")).toBeVisible();
+  // RT-399: the time column names UTC and shows the exact evidence instant.
+  await expect(page.getByRole("columnheader", { name: t("audit.field.time") })).toBeVisible();
+  await expect(page.getByText("2026-06-01 21:14:03 UTC", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText(t("audit.pager.loaded", { count: 2 }), { exact: true }),
+  ).toBeVisible();
 });
 
-test("S2: a POS-originated event renders read-only (no write affordance)", async ({ page }) => {
+test("S2: a POS-originated event renders read-only (no write affordance)", async ({ page, t }) => {
   await mockContext(page);
   await page.route("**/api/v1/audit/events**", (r) =>
     r.fulfill({
@@ -95,18 +101,21 @@ test("S2: a POS-originated event renders read-only (no write affordance)", async
   );
 
   await page.goto("/audit");
-  await page.getByRole("button", { name: /apply/i }).click();
+  await page.getByRole("button", { name: t("audit.filters.apply"), exact: true }).click();
   await expect(page.getByText("operator.session.takeover")).toBeVisible();
   // read-only: opening it offers no acknowledge/annotate/export buttons
   await page.getByText("operator.session.takeover").click();
-  const drawer = page.getByRole("dialog", { name: /audit event/i });
+  const drawer = page.getByRole("dialog", { name: t("audit.inspect.title") });
   await expect(drawer).toBeVisible();
+  // Locale-neutral: the only buttons are Copy (request_id) and the drawer's
+  // Close, so no acknowledge/annotate/export/save/revoke affordance exists.
+  await expect(drawer.getByRole("button")).toHaveCount(2);
   await expect(
-    drawer.getByRole("button", { name: /acknowledge|annotate|export|save|revoke/i }),
-  ).toHaveCount(0);
+    drawer.getByRole("button", { name: t("audit.inspect.copy"), exact: true }),
+  ).toBeVisible();
 });
 
-test("S4: 403 → not-permitted banner with request_id", async ({ page }) => {
+test("S4: 403 → not-permitted banner with request_id", async ({ page, t }) => {
   await mockContext(page);
   await page.route("**/api/v1/audit/events**", (r) =>
     r.fulfill({
@@ -117,8 +126,8 @@ test("S4: 403 → not-permitted banner with request_id", async ({ page }) => {
   );
 
   await page.goto("/audit");
-  await page.getByRole("button", { name: /apply/i }).click();
+  await page.getByRole("button", { name: t("audit.filters.apply"), exact: true }).click();
   await expect(page.getByRole("alert")).toBeVisible();
-  await expect(page.getByText(/permission/i)).toBeVisible();
+  await expect(page.getByText(t("audit.errors.forbidden"))).toBeVisible();
   await expect(page.getByText(/req-403/)).toBeVisible();
 });

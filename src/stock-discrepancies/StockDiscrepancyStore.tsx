@@ -1,5 +1,7 @@
+import { BackArrow } from "@/components/BackArrow";
 import { Banner } from "@/components/Banner";
 import { ListState } from "@/components/ListState";
+import { type MessageKey, useT } from "@/i18n";
 import type { NegativeOnHandItem, StockSnapshotStatus } from "@/lib/stock-discrepancy-queries";
 import { ScopeMismatchBanner } from "@/shell/ScopeMismatchBanner";
 /**
@@ -11,6 +13,7 @@ import { ScopeMismatchBanner } from "@/shell/ScopeMismatchBanner";
  * ERPNext Desk guidance; no acknowledge, no re_sync / re_map, no ERPNext call.
  * "Request fresh snapshot" (owner / tenant_admin only) calls the existing
  * `triggerReconciliationRun`. A 404 renders as not-found.
+ * RT-399: the quantity stays the exact API string, LTR-isolated and tabular.
  */
 import { useState } from "react";
 import { Link, useParams } from "react-router";
@@ -35,29 +38,25 @@ import "./stock-discrepancies.css";
 type StoreData = ReturnType<typeof useStoreNegativeOnHand>;
 
 function BackLink(): React.JSX.Element {
+  const t = useT();
   return (
     <Link to="/stock-discrepancies" className="surface__back">
-      ← Back to stores
+      <BackArrow /> {t("stock.store.back")}
     </Link>
   );
 }
 
 function DeskGuidance(): React.JSX.Element {
+  const t = useT();
   return (
-    <aside className="desk-guidance" aria-label="Resolving in ERPNext Desk">
-      <h2 className="desk-guidance__title">Resolving a negative quantity in ERPNext Desk</h2>
+    <aside className="desk-guidance" aria-label={t("stock.desk.label")}>
+      <h2 className="desk-guidance__title">{t("stock.desk.title")}</h2>
       <ul>
-        <li>
-          Post the missing Purchase Receipt, or a Stock Entry (Material Receipt or Material
-          Transfer), for the item and warehouse.
-        </li>
-        <li>Or record a physical count with a Stock Reconciliation.</li>
-        <li>Do not post a balancing entry blindly; find the missing document first.</li>
+        <li>{t("stock.desk.receipt")}</li>
+        <li>{t("stock.desk.count")}</li>
+        <li>{t("stock.desk.noBlindEntry")}</li>
       </ul>
-      <p>
-        Retail Tower creates no stock documents. A row clears only when a later ERPNext snapshot
-        shows the item at zero or above.
-      </p>
+      <p>{t("stock.desk.note")}</p>
     </aside>
   );
 }
@@ -86,7 +85,7 @@ function useSnapshotRequest(storeId: string | undefined) {
 interface RefreshButtonProps {
   isPending: boolean;
   /** Why the button is disabled (no mapping / request pending), or null. */
-  blockReason: string | null;
+  blockReason: MessageKey | null;
   onRequest: () => void;
 }
 
@@ -96,6 +95,7 @@ function RefreshButton({
   blockReason,
   onRequest,
 }: RefreshButtonProps): React.JSX.Element {
+  const t = useT();
   return (
     <div className="refresh-action">
       <button
@@ -104,39 +104,37 @@ function RefreshButton({
         onClick={onRequest}
         disabled={isPending || blockReason !== null}
       >
-        {isPending ? "Requesting…" : "Request fresh snapshot"}
+        {isPending ? t("stock.refresh.requesting") : t("stock.refresh.action")}
       </button>
-      {blockReason ? <small className="muted">{blockReason}</small> : null}
+      {blockReason ? <small className="muted">{t(blockReason)}</small> : null}
     </div>
   );
 }
 
 /** Shown after a later page came from a newer snapshot and the list reloaded. */
 function SnapshotChangedNotice({ show }: { show: boolean }): React.JSX.Element | null {
+  const t = useT();
   if (!show) return null;
-  return (
-    <Banner
-      variant="info"
-      message="Snapshot changed — reloaded. A newer ERPNext snapshot was recorded while paging, so the list was reloaded from its first page."
-    />
-  );
+  return <Banner variant="info" message={t("stock.store.snapshotChanged")} />;
 }
 
 function OutcomeBanner({ outcome }: { outcome: TriggerOutcome | null }): React.JSX.Element | null {
+  const t = useT();
   const view = outcome ? outcomeBannerView(outcome) : null;
   if (!outcome || !view) return null;
   const requestId = "requestId" in outcome ? outcome.requestId : undefined;
-  return <Banner variant={view.variant} message={view.message} requestId={requestId} />;
+  return <Banner variant={view.variant} message={t(view.messageKey)} requestId={requestId} />;
 }
 
 function ProductCell({ item }: { item: NegativeOnHandItem }): React.JSX.Element {
+  const t = useT();
   if (item.tenantProduct && item.mappingStatus === "mapped") {
     return <td>{item.tenantProduct.name}</td>;
   }
   return (
     <td>
-      <span className="badge badge--suspended" title="Not mapped to a Retail Tower product">
-        Not mapped
+      <span className="badge badge--suspended" title={t("stock.items.notMappedTitle")}>
+        {t("stock.items.notMapped")}
       </span>
     </td>
   );
@@ -147,12 +145,17 @@ function ItemRow({ item }: { item: NegativeOnHandItem }): React.JSX.Element {
     <tr className="data-table__row">
       <ProductCell item={item} />
       <td>
-        <code className="mono">{item.erpnextItemRef.name}</code>
+        <code className="mono" dir="ltr">
+          {item.erpnextItemRef.name}
+        </code>
       </td>
-      <td className="mono">{item.erpnextWarehouseRef}</td>
-      {/* Exact-decimal string from the API — rendered verbatim, sign included. */}
+      <td className="mono">
+        <bdi dir="ltr">{item.erpnextWarehouseRef}</bdi>
+      </td>
+      {/* Exact-decimal string from the API — rendered verbatim, sign included,
+          LTR-isolated so the minus sign stays in front in an RTL table. */}
       <td className="num mono" data-testid="negative-quantity">
-        {item.quantity}
+        <bdi dir="ltr">{item.quantity}</bdi>
       </td>
       <td>{item.stockUom}</td>
     </tr>
@@ -160,20 +163,21 @@ function ItemRow({ item }: { item: NegativeOnHandItem }): React.JSX.Element {
 }
 
 function ItemsTable({ items }: { items: NegativeOnHandItem[] }): React.JSX.Element | null {
+  const t = useT();
   if (items.length === 0) return null;
   return (
     <div className="table-scroll">
       <table className="data-table stock-table">
-        <caption className="data-table__caption">Items below zero in ERPNext</caption>
+        <caption className="data-table__caption">{t("stock.items.caption")}</caption>
         <thead>
           <tr>
-            <th scope="col">Product</th>
-            <th scope="col">ERPNext Item</th>
-            <th scope="col">Warehouse</th>
+            <th scope="col">{t("stock.items.col.product")}</th>
+            <th scope="col">{t("stock.items.col.erpnextItem")}</th>
+            <th scope="col">{t("stock.items.col.warehouse")}</th>
             <th scope="col" className="num">
-              Quantity
+              {t("stock.items.col.quantity")}
             </th>
-            <th scope="col">Stock UOM</th>
+            <th scope="col">{t("stock.items.col.uom")}</th>
           </tr>
         </thead>
         <tbody>
@@ -191,38 +195,37 @@ function NoNegativeItems({
   snapshot,
   itemCount,
 }: { snapshot: StockSnapshotStatus; itemCount: number }): React.JSX.Element | null {
+  const t = useT();
   if (!statusView(snapshot.status).hasSnapshot || itemCount > 0) return null;
-  return <ListState state="empty" emptyMessage="No items below zero in this ERPNext snapshot." />;
+  return <ListState state="empty" emptyMessage={t("stock.items.empty")} />;
 }
 
 function StoreErrorView({ error }: { error: StockDiscrepancyError }): React.JSX.Element {
+  const t = useT();
   return (
     <div className="surface">
       <BackLink />
       {error.kind === "not-found" ? (
         <>
-          <h1 className="content__title">Store not found</h1>
+          <h1 className="content__title">{t("stock.store.notFoundTitle")}</h1>
           <Banner
             variant="danger"
-            message="Not found. This store does not exist or is not available to you."
+            message={t("stock.store.notFound")}
             requestId={error.requestId}
           />
         </>
       ) : (
-        <Banner
-          variant="danger"
-          message="ERPNext stock discrepancies could not be loaded."
-          requestId={error.requestId}
-        />
+        <Banner variant="danger" message={t("stock.loadFailed")} requestId={error.requestId} />
       )}
     </div>
   );
 }
 
 function LoadingView(): React.JSX.Element {
+  const t = useT();
   return (
     <div className="surface">
-      <ListState state="loading" label="ERPNext snapshot" />
+      <ListState state="loading" label={t("stock.store.loadingNoun")} />
     </div>
   );
 }
@@ -235,16 +238,15 @@ interface StoreViewProps {
 }
 
 function StoreView({ storeId, snapshot, data, showRefresh }: StoreViewProps): React.JSX.Element {
+  const t = useT();
   const refresh = useSnapshotRequest(storeId);
   return (
     <div className="surface">
       <BackLink />
       <header className="surface__head">
         <div>
-          <h1 className="content__title">ERPNext stock discrepancies</h1>
-          <p className="content__sub">
-            Items below zero in this store's latest recorded ERPNext snapshot.
-          </p>
+          <h1 className="content__title">{t("stock.title")}</h1>
+          <p className="content__sub">{t("stock.store.sub")}</p>
         </div>
         {showRefresh ? (
           <RefreshButton
@@ -263,7 +265,7 @@ function StoreView({ storeId, snapshot, data, showRefresh }: StoreViewProps): Re
       <LoadMoreButton
         hasMore={data.hasMore}
         isFetching={data.isFetchingNextPage}
-        label="Load more items"
+        label={t("stock.store.loadMore")}
         onLoadMore={data.loadMore}
       />
       <DeskGuidance />

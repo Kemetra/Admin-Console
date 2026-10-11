@@ -5,9 +5,16 @@
  * primary Apply; a quiet Clear. Serializes to the contract's query params.
  */
 import { Icon } from "@/components/Icon";
+import { useT } from "@/i18n";
 import { useRef } from "react";
 import type { AuditFilters as Filters } from "./auditQueryKeys";
 import "./audit.css";
+
+/**
+ * Example action-code prefixes. Audit action codes are machine data, identical
+ * in every locale and never translated, so this hint is not catalog copy.
+ */
+const ACTION_EXAMPLE = "auth. / shift.";
 
 export interface AuditFiltersProps {
   /** True when the active scope carries a store dimension (shows the store filter). */
@@ -21,6 +28,7 @@ export function AuditFilters({
   onApply,
   onClear,
 }: AuditFiltersProps): React.JSX.Element {
+  const t = useT();
   const formRef = useRef<HTMLFormElement>(null);
 
   function read(): Filters {
@@ -54,48 +62,52 @@ export function AuditFilters({
         <Icon name="search" size={16} />
       </span>
       <div className="audit-filters__field">
-        <label htmlFor="f-action">Action</label>
+        <label htmlFor="f-action">{t("audit.field.action")}</label>
+        {/* Action codes and IDs are machine data: typed and shown LTR (UX-11). */}
         <input
           id="f-action"
           name="action"
           className="input"
-          placeholder="auth. / shift."
+          dir="ltr"
+          placeholder={ACTION_EXAMPLE}
           autoComplete="off"
         />
       </div>
       <div className="audit-filters__field">
-        <label htmlFor="f-actor">Actor</label>
+        <label htmlFor="f-actor">{t("audit.field.actor")}</label>
         <input
           id="f-actor"
           name="actor_user_id"
           className="input"
-          placeholder="user id"
+          dir="ltr"
+          placeholder={t("audit.filters.actorPlaceholder")}
           autoComplete="off"
         />
       </div>
       {storeInScope ? (
         <div className="audit-filters__field">
-          <label htmlFor="f-store">Store</label>
+          <label htmlFor="f-store">{t("audit.field.store")}</label>
           <input
             id="f-store"
             name="store_id"
             className="input"
-            placeholder="store id"
+            dir="ltr"
+            placeholder={t("audit.filters.storePlaceholder")}
             autoComplete="off"
           />
         </div>
       ) : null}
       <div className="audit-filters__field">
-        <label htmlFor="f-from">From</label>
+        <label htmlFor="f-from">{t("audit.filters.from")}</label>
         <input id="f-from" name="from" type="datetime-local" className="input" />
       </div>
       <div className="audit-filters__field">
-        <label htmlFor="f-to">To</label>
+        <label htmlFor="f-to">{t("audit.filters.to")}</label>
         <input id="f-to" name="to" type="datetime-local" className="input" />
       </div>
       <div className="audit-filters__actions">
         <button type="submit" className="btn-primary">
-          Apply
+          {t("audit.filters.apply")}
         </button>
         <button
           type="button"
@@ -105,7 +117,7 @@ export function AuditFilters({
             onClear();
           }}
         >
-          Clear
+          {t("audit.filters.clear")}
         </button>
       </div>
     </form>

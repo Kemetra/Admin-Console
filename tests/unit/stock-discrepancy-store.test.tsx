@@ -16,6 +16,8 @@ vi.mock("@/context/ActiveContextProvider", () => ({
   useActiveContextValue: () => activeContext(),
 }));
 
+import { formatDateTime, translate } from "@/i18n";
+import { setLocale } from "@/i18n/locale";
 import { createQueryClient } from "@/lib/query";
 import { StockDiscrepancyStore } from "@/stock-discrepancies/StockDiscrepancyStore";
 
@@ -122,9 +124,25 @@ describe("StockDiscrepancyStore (RT-178)", () => {
     listErpnextNegativeOnHand.mockResolvedValue(page(snapshot(), [item()]));
     renderStore();
     const heading = await screen.findByRole("heading", { name: /erpnext snapshot as of/i });
-    expect(heading.textContent).toBe(`ERPNext snapshot as of ${READ_AT}`);
+    // RT-399: an operational time, UTC-labelled until the Store zone exists (RT-401).
+    expect(heading.textContent).toBe("ERPNext snapshot as of Oct 4, 2026, 07:58 UTC");
+    expect(heading.textContent).toBe(`ERPNext snapshot as of ${formatDateTime(READ_AT)}`);
+    // The exact instant stays machine-readable.
     expect(heading.querySelector("time")?.getAttribute("dateTime")).toBe(READ_AT);
+    expect(heading.querySelector("time")?.getAttribute("title")).toBe(READ_AT);
     expectNoLiveOrCurrent();
+  });
+
+  test("RT-399: snapshot meta renders the recorded time and the Bin count", async () => {
+    activeContext.mockReturnValue(ctx("tenant_admin"));
+    listErpnextNegativeOnHand.mockResolvedValue(
+      page(snapshot({ reportedEntryCount: 1284 }), [item()]),
+    );
+    renderStore();
+    const recorded = await screen.findByText(formatDateTime(RECORDED_AT));
+    expect(recorded.tagName).toBe("TIME");
+    expect(recorded.getAttribute("dateTime")).toBe(RECORDED_AT);
+    expect(screen.getByText("1,284")).toBeDefined();
   });
 
   test("AC3: stale shows a warning AND still lists the items", async () => {
@@ -398,7 +416,7 @@ describe("StockDiscrepancyStore (RT-178)", () => {
     expect(screen.queryByText("ITM-0001")).toBeNull();
     expect(screen.queryByText("ITM-0009")).toBeNull();
     const heading = screen.getByRole("heading", { name: /erpnext snapshot as of/i });
-    expect(heading.textContent).toBe("ERPNext snapshot as of 2026-10-04T09:30:00.000Z");
+    expect(heading.textContent).toBe("ERPNext snapshot as of Oct 4, 2026, 09:30 UTC");
   });
 
   test("same snapshot across pages: no reset, no notice", async () => {
@@ -465,6 +483,61 @@ describe("StockDiscrepancyStore (RT-178)", () => {
     expect(screen.getByText("A snapshot request is already pending.")).toBeDefined();
     fireEvent.click(button);
     expect(triggerReconciliationRun).not.toHaveBeenCalled();
+  });
+
+  test("AC1/RT-399: the quantity cell is the exact string, LTR-isolated", async () => {
+    activeContext.mockReturnValue(ctx("tenant_admin"));
+    listErpnextNegativeOnHand.mockResolvedValue(page(snapshot(), [item()]));
+    renderStore();
+    const cell = (await screen.findAllByTestId("negative-quantity"))[0];
+    const bdi = cell.querySelector("bdi");
+    expect(bdi?.getAttribute("dir")).toBe("ltr");
+    expect(bdi?.textContent).toBe("-3.000000");
+    expect(cell.classList.contains("num")).toBe(true);
+  });
+
+  test("back link: arrow is decorative, the accessible name is the label", async () => {
+    activeContext.mockReturnValue(ctx("tenant_admin"));
+    listErpnextNegativeOnHand.mockResolvedValue(page(snapshot(), [item()]));
+    renderStore();
+    const back = await screen.findByRole("link", { name: "Back to stores" });
+    expect(back.getAttribute("href")).toBe("/stock-discrepancies");
+  });
+
+  test("Arabic: the store view renders Arabic copy, with UNKNOWN and times localized", async () => {
+    setLocale("ar");
+    activeContext.mockReturnValue(ctx("tenant_admin"));
+    listErpnextNegativeOnHand.mockResolvedValue(
+      page(snapshot({ status: "stale" }), [
+        item(),
+        item({
+          mappingStatus: "unmapped",
+          tenantProduct: null,
+          erpnextItemRef: { doctype: "Item", name: "ERP-ONLY-77" },
+        }),
+      ]),
+    );
+    renderStore();
+    const title = await screen.findByRole("heading", { level: 1 });
+    expect(title.textContent).toBe(translate("ar", "stock.title"));
+    expect(title.textContent).toBe("فروقات مخزون ERPNext");
+    const button = screen.getByRole("button", { name: "طلب لقطة حديثة" });
+    expect(button.textContent).not.toMatch(/request|snapshot/i);
+    const asOf = screen.getByRole("heading", { level: 2, name: /^لقطة ERPNext بتاريخ/ });
+    expect(asOf.textContent).toBe(
+      `لقطة ERPNext بتاريخ ${formatDateTime(READ_AT, { locale: "ar" })}`,
+    );
+    expect(asOf.textContent).toContain("أكتوبر 2026");
+    expect(screen.getByText("لقطة متقادمة")).toBeDefined();
+    expect(screen.getByText(/لقطة ERPNext هذه أقدم من 24 ساعة/)).toBeDefined();
+    expect(screen.getByText("غير مربوط")).toBeDefined();
+    expect(screen.getByRole("link", { name: "العودة إلى المتاجر" })).toBeDefined();
+    // Machine values stay verbatim.
+    expect(screen.getByText("ERP-ONLY-77")).toBeDefined();
+    expect(screen.getAllByTestId("negative-quantity")[0].textContent).toBe("-3.000000");
+    expect(document.body.textContent ?? "").not.toMatch(
+      /Stale snapshot|Request fresh|Back to stores|Not mapped/,
+    );
   });
 
   test("P3-5: a malformed :storeId renders not-found without calling the API", async () => {

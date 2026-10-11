@@ -3,6 +3,7 @@
  * require modal behavior"): initial focus on the safe choice, Escape = Stay,
  * Tab is trapped, and focus returns to whatever held it before.
  */
+import { useT } from "@/i18n";
 import { useEffect, useRef } from "react";
 import "./dirty-guard.css";
 
@@ -50,6 +51,7 @@ export interface LeaveDialogProps {
 }
 
 export function LeaveDialog({ onStay, onDiscard }: LeaveDialogProps): React.JSX.Element {
+  const t = useT();
   const panelRef = useRef<HTMLDivElement>(null);
   const stayRef = useRef<HTMLButtonElement>(null);
   useFocusWhileOpen(stayRef);
@@ -66,17 +68,17 @@ export function LeaveDialog({ onStay, onDiscard }: LeaveDialogProps): React.JSX.
         onKeyDown={(e) => handleKey(e, panelRef.current, onStay)}
       >
         <h2 id="leave-dialog-title" className="leave-dialog__title">
-          Leave without saving?
+          {t("shell.leave.title")}
         </h2>
         <p id="leave-dialog-desc" className="leave-dialog__desc">
-          This page has changes that are not saved. If you leave, they are lost.
+          {t("shell.leave.desc")}
         </p>
         <div className="leave-dialog__actions">
           <button ref={stayRef} type="button" className="btn-primary" onClick={onStay}>
-            Stay on this page
+            {t("shell.leave.stay")}
           </button>
           <button type="button" className="btn-destructive" onClick={onDiscard}>
-            Discard changes
+            {t("shell.leave.discard")}
           </button>
         </div>
       </div>

@@ -13,6 +13,7 @@ vi.mock("@/lib/client", async (importOriginal) => {
   };
 });
 
+import { setLocale } from "@/i18n/locale";
 import { createQueryClient } from "@/lib/query";
 import { ReconcileRemittance } from "@/receivables/ReconcileRemittance";
 
@@ -91,12 +92,40 @@ describe("ReconcileRemittance", () => {
     );
     const { onReconciled } = renderReconcile();
     fillAndReconcile("80.00");
-    expect(await screen.findByText(/partial/i)).toBeDefined();
-    expect(screen.getByText(/20\.00/)).toBeDefined();
+    // The outcome renders as its catalog label; amounts through <Money>.
+    expect(await screen.findByText("Partial")).toBeDefined();
+    expect(screen.getByText("100.00 EGP")).toBeDefined();
+    expect(screen.getByText("80.00 EGP")).toBeDefined();
+    expect(screen.getByText("20.00 EGP")).toBeDefined();
     await waitFor(() => expect(onReconciled).toHaveBeenCalled());
-    const [claimRef, , key] = consoleReconcileRemittance.mock.calls[0];
+    const [claimRef, body, key] = consoleReconcileRemittance.mock.calls[0];
     expect(claimRef).toBe("c1");
+    // The typed amount goes to the API unchanged (inputs are never formatted).
+    expect((body as { remittedAmount: string }).remittedAmount).toBe("80.00");
     expect(String(key)).toMatch(/^[\x21-\x7E]{16,128}$/);
+  });
+
+  test("large amounts and a NEGATIVE variance format exactly from the strings (no float)", async () => {
+    // Over-remittance at the numeric(19,4) ceiling: claimed − remitted = −1250.5000.
+    // Number() would round both amounts to 1e15 and lose the variance entirely.
+    consoleReconcileRemittance.mockResolvedValue(
+      result(200, {
+        claimRef: "c1",
+        claimedAmount: "999999999998749.4999",
+        remittedAmount: "999999999999999.9999",
+        variance: "-1250.5000",
+        outcome: "flagged",
+      }),
+    );
+    renderReconcile();
+    fillAndReconcile("999999999999999.9999");
+    expect(await screen.findByText("999,999,999,998,749.4999 EGP")).toBeDefined();
+    expect(screen.getByText("999,999,999,999,999.9999 EGP")).toBeDefined();
+    const variance = screen.getByText("-1,250.50 EGP");
+    // The sign stays inside the LTR isolate, so RTL never moves it.
+    expect(variance.tagName).toBe("BDI");
+    expect(variance.getAttribute("dir")).toBe("ltr");
+    expect(screen.getByText("Flagged")).toBeDefined();
   });
 
   test("403 -> permission banner", async () => {
@@ -111,5 +140,33 @@ describe("ReconcileRemittance", () => {
     renderReconcile();
     fillAndReconcile();
     await waitFor(() => expect(screen.getByRole("alert")).toBeDefined());
+    expect(
+      screen.getByText("That remittance could not be reconciled. Please try again."),
+    ).toBeDefined();
+  });
+
+  test("Arabic: title, labels, actions and result render in Arabic only", async () => {
+    setLocale("ar");
+    consoleReconcileRemittance.mockResolvedValue(
+      result(200, {
+        claimRef: "c1",
+        claimedAmount: "1250.0000",
+        remittedAmount: "2500.5000",
+        variance: "-1250.5000",
+        outcome: "partial",
+      }),
+    );
+    renderReconcile();
+    expect(screen.getByRole("heading", { name: "مطابقة السداد" })).toBeDefined();
+    expect(screen.getByLabelText("المبلغ المسدَّد")).toBeDefined();
+    expect(screen.getByRole("button", { name: "إلغاء" })).toBeDefined();
+    fireEvent.change(screen.getByLabelText("المبلغ المسدَّد"), { target: { value: "2500.50" } });
+    fireEvent.click(screen.getByRole("button", { name: "مطابقة" }));
+    expect(await screen.findByText("تسوية جزئية")).toBeDefined();
+    expect(screen.getByText("الفرق")).toBeDefined();
+    expect(screen.getByText("-1,250.50 EGP")).toBeDefined();
+    expect(screen.getByRole("button", { name: "تم" })).toBeDefined();
+    expect(screen.queryByText(/reconcile/i)).toBeNull();
+    expect(screen.queryByText(/variance/i)).toBeNull();
   });
 });

@@ -1,4 +1,4 @@
-import { type Page, expect, test } from "@playwright/test";
+import { type Page, expect, test } from "./fixtures";
 
 /**
  * RT-268 (UX-09) — scope change and navigation are context transitions. With
@@ -63,52 +63,55 @@ test.beforeEach(async ({ page }) => {
   await mock(page);
 });
 
-test("scope switch with a dirty form: Stay keeps the work, Discard switches", async ({ page }) => {
+test("scope switch with a dirty form: Stay keeps the work, Discard switches", async ({
+  page,
+  t,
+}) => {
   await page.goto("/tenants/new");
-  const name = page.getByLabel("Name", { exact: true });
+  const name = page.getByLabel(t("tenants.field.name"), { exact: true });
   await name.fill("Helios Markets");
 
   await page.getByRole("button", { name: /Northstar Retail/ }).click();
   await page.getByRole("menuitem", { name: "New Cairo Mall" }).click();
-  const dialog = page.getByRole("alertdialog", { name: /leave without saving/i });
+  const dialog = page.getByRole("alertdialog", { name: t("shell.leave.title") });
   await expect(dialog).toBeVisible();
-  await expect(page.getByRole("button", { name: "Stay on this page" })).toBeFocused();
+  await expect(page.getByRole("button", { name: t("shell.leave.stay") })).toBeFocused();
 
-  await page.getByRole("button", { name: "Stay on this page" }).click();
+  await page.getByRole("button", { name: t("shell.leave.stay") }).click();
   await expect(dialog).toBeHidden();
   await expect(name).toHaveValue("Helios Markets");
   expect(storeSwitches).toEqual([]);
 
   await page.getByRole("button", { name: /Northstar Retail/ }).click();
   await page.getByRole("menuitem", { name: "New Cairo Mall" }).click();
-  await page.getByRole("button", { name: "Discard changes" }).click();
+  await page.getByRole("button", { name: t("shell.leave.discard") }).click();
   await expect(page.getByRole("button", { name: /New Cairo Mall/ })).toBeVisible();
   expect(storeSwitches).toEqual(["s2"]);
   // The old scope's draft is gone: the routed surface remounted.
-  await expect(page.getByLabel("Name", { exact: true })).toHaveValue("");
+  await expect(page.getByLabel(t("tenants.field.name"), { exact: true })).toHaveValue("");
 });
 
-test("navigating away from a dirty form asks first", async ({ page }) => {
+test("navigating away from a dirty form asks first", async ({ page, t }) => {
   await page.goto("/tenants/new");
-  await page.getByLabel("Name", { exact: true }).fill("Helios Markets");
-  await page.getByRole("link", { name: "Stores" }).click();
+  await page.getByLabel(t("tenants.field.name"), { exact: true }).fill("Helios Markets");
+  await page.getByRole("link", { name: t("shell.nav.stores") }).click();
   await expect(page.getByRole("alertdialog")).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page).toHaveURL(/\/tenants\/new$/);
 
-  await page.getByRole("link", { name: "Stores" }).click();
-  await page.getByRole("button", { name: "Discard changes" }).click();
+  await page.getByRole("link", { name: t("shell.nav.stores") }).click();
+  await page.getByRole("button", { name: t("shell.leave.discard") }).click();
   await expect(page).toHaveURL(/\/stores$/);
 });
 
-test("a deep link to another store's view asks instead of switching", async ({ page }) => {
+test("a deep link to another store's view asks instead of switching", async ({ page, t }) => {
   activeStore = { id: "s1", name: "Cairo Festival City" };
   await page.goto("/stock-discrepancies/s2");
-  const notice = page.getByRole("region", { name: "Scope" });
-  await expect(notice).toContainText(/link is for a different store/i);
+  const notice = page.getByRole("region", { name: t("shell.mismatch.label") });
+  await expect(notice).toContainText(t("shell.mismatch.message", { store: "Cairo Festival City" }));
   expect(storeSwitches).toEqual([]);
 
-  await notice.getByRole("button", { name: "Switch to this store" }).click();
+  await notice.getByRole("button", { name: t("shell.mismatch.switch") }).click();
   await expect(notice).toBeHidden();
   expect(storeSwitches).toEqual(["s2"]);
 });

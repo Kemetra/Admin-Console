@@ -8,13 +8,14 @@
  * RF-1's persistent Banner (reuse, not a new surface). The create entry point
  * is passed in and rendered in the empty state (never role-hidden, OQ-3).
  */
+import { useT } from "@/i18n";
 import "./list-state.css";
 
 export type ListStateKind = "loading" | "empty" | "ready";
 
 export interface ListStateProps {
   state: ListStateKind;
-  /** Used by the loading copy ("Loading {label}…"). */
+  /** Translated plural noun for the loading copy ("Loading {label}…"). */
   label?: string;
   /** Empty-state message; the zero-row success copy. */
   emptyMessage?: string;
@@ -28,6 +29,7 @@ export function ListState({
   emptyMessage,
   action,
 }: ListStateProps): React.JSX.Element | null {
+  const t = useT();
   if (state === "ready") {
     return null;
   }
@@ -35,7 +37,9 @@ export function ListState({
     return (
       <div className="list-state list-state--loading" aria-busy="true">
         <span className="spinner" aria-hidden="true" />
-        <span>Loading {label ?? "items"}…</span>
+        <span>
+          {t("components.list.loading", { label: label ?? t("components.list.loadingDefault") })}
+        </span>
       </div>
     );
   }

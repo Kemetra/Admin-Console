@@ -1,6 +1,7 @@
 import { Banner } from "@/components/Banner";
 import { DataTable } from "@/components/DataTable";
 import { ListState } from "@/components/ListState";
+import { type T, useT } from "@/i18n";
 /**
  * SF-S1 — Store roster (T026). Scoped to the ACTIVE TENANT read from RF-1's
  * provider. Pre-gate (OQ-4): with no active tenant we render the scope prompt
@@ -20,21 +21,38 @@ import "../shell/surface.css";
 
 type StoreRow = { id: string; code: string; name: string; is_active?: boolean };
 
-const COLUMNS = [
-  { key: "name", header: "Name", cell: (s: StoreRow) => s.name },
-  { key: "code", header: "Code", cell: (s: StoreRow) => s.code, mono: true },
-  {
-    key: "state",
-    header: "State",
-    cell: (s: StoreRow) => (
-      <span className={s.is_active === false ? "badge badge--suspended" : "badge badge--active"}>
-        {s.is_active === false ? "inactive" : "active"}
-      </span>
-    ),
-  },
-];
+function storeColumns(t: T) {
+  return [
+    { key: "name", header: t("stores.field.name"), cell: (s: StoreRow) => s.name },
+    {
+      key: "code",
+      header: t("stores.field.code"),
+      cell: (s: StoreRow) => <bdi dir="ltr">{s.code}</bdi>,
+      mono: true,
+    },
+    {
+      key: "state",
+      header: t("stores.field.state"),
+      cell: (s: StoreRow) => (
+        <span className={s.is_active === false ? "badge badge--suspended" : "badge badge--active"}>
+          {t(s.is_active === false ? "stores.state.inactive" : "stores.state.active")}
+        </span>
+      ),
+    },
+  ];
+}
+
+/**
+ * A business-authored name inside a plain-string message (a `string` prop),
+ * isolated with FSI/PDI: the text equivalent of <bdi>, so a Latin name can't
+ * reorder the Arabic sentence around it.
+ */
+function isolate(name: string | null): string {
+  return `\u2068${name ?? ""}\u2069`;
+}
 
 export function StoreList(): React.JSX.Element {
+  const t = useT();
   const { activeTenantId, activeTenantName } = useStoreScope();
   const { result, isLoading, refetch } = useStoreList(activeTenantId);
   const navigate = useNavigate();
@@ -56,12 +74,14 @@ export function StoreList(): React.JSX.Element {
     <div className="surface">
       <header className="surface__head">
         <div>
-          <h1 className="content__title">Stores</h1>
-          <p className="content__sub">Stores in {activeTenantName}.</p>
+          <h1 className="content__title">{t("stores.list.title")}</h1>
+          <p className="content__sub">
+            {t.rich("stores.list.sub", { tenant: <bdi>{activeTenantName}</bdi> })}
+          </p>
         </div>
         {!isLoading && !error && rows.length > 0 ? (
           <Link to="/stores/new" className="btn-primary">
-            New store
+            {t("stores.list.add")}
           </Link>
         ) : null}
       </header>
@@ -69,27 +89,27 @@ export function StoreList(): React.JSX.Element {
       {error ? (
         <Banner
           variant="danger"
-          message={error.message}
+          message={t(error.messageKey)}
           requestId={error.requestId}
           action={
             error.retryable ? (
               <button type="button" className="btn-ghost" onClick={refetch}>
-                Retry
+                {t("stores.list.retry")}
               </button>
             ) : undefined
           }
         />
       ) : null}
 
-      {isLoading ? <ListState state="loading" label="stores" /> : null}
+      {isLoading ? <ListState state="loading" label={t("stores.list.loadingNoun")} /> : null}
 
       {!isLoading && !error && rows.length === 0 ? (
         <ListState
           state="empty"
-          emptyMessage={`No stores in ${activeTenantName} yet.`}
+          emptyMessage={t("stores.list.empty", { tenant: isolate(activeTenantName) })}
           action={
             <Link to="/stores/new" className="btn-primary">
-              New store
+              {t("stores.list.add")}
             </Link>
           }
         />
@@ -97,8 +117,8 @@ export function StoreList(): React.JSX.Element {
 
       {!isLoading && !error && rows.length > 0 ? (
         <DataTable
-          caption="Stores"
-          columns={COLUMNS}
+          caption={t("stores.list.caption")}
+          columns={storeColumns(t)}
           rows={rows}
           rowKey={(s) => s.id}
           onRowActivate={(s) => navigate(`/stores/${s.id}`)}

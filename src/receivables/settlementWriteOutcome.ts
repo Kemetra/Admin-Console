@@ -14,7 +14,23 @@
  *   5xx                              → generic
  *
  * The key is a v4 UUID (satisfies the contract format `^[\x21-\x7E]{16,128}$`).
+ *
+ * RT-399: the three drawers share these outcomes but word them differently, so
+ * each passes its own `WriteCopy` (catalog keys) and every operator-facing
+ * outcome carries the `messageKey` to render with `t()` at display time. No
+ * translated string is held in component state.
  */
+import type { MessageKey } from "@/i18n";
+
+/** A drawer's copy for each operator-facing outcome (409 key/other conflicts share one). */
+export interface WriteCopy {
+  validation: MessageKey;
+  unauthenticated: MessageKey;
+  forbidden: MessageKey;
+  conflict: MessageKey;
+  error: MessageKey;
+}
+
 interface BackendError {
   error?: { code?: string; message?: string; request_id?: string };
 }
@@ -28,13 +44,13 @@ export interface WriteResult {
 export type WriteOutcome =
   | { kind: "ok" }
   | { kind: "replayed" }
-  | { kind: "validation"; requestId?: string }
+  | { kind: "validation"; messageKey: MessageKey; requestId?: string }
   | { kind: "regenerate-key" }
-  | { kind: "unauthenticated" }
-  | { kind: "forbidden"; requestId?: string }
-  | { kind: "key-conflict"; requestId?: string }
-  | { kind: "conflict"; requestId?: string }
-  | { kind: "error"; requestId?: string };
+  | { kind: "unauthenticated"; messageKey: MessageKey }
+  | { kind: "forbidden"; messageKey: MessageKey; requestId?: string }
+  | { kind: "key-conflict"; messageKey: MessageKey; requestId?: string }
+  | { kind: "conflict"; messageKey: MessageKey; requestId?: string }
+  | { kind: "error"; messageKey: MessageKey; requestId?: string };
 
 export function newIdempotencyKey(): string {
   return crypto.randomUUID();
@@ -47,7 +63,7 @@ function requestIdOf(r: WriteResult): string | undefined {
   return r.error?.error?.request_id;
 }
 
-export function classifyWriteOutcome(result: WriteResult): WriteOutcome {
+export function classifyWriteOutcome(result: WriteResult, copy: WriteCopy): WriteOutcome {
   const requestId = requestIdOf(result);
 
   if (result.status >= 200 && result.status < 300) {
@@ -60,14 +76,14 @@ export function classifyWriteOutcome(result: WriteResult): WriteOutcome {
     if (code === "idempotency_key_required" || code === "idempotency_key_malformed") {
       return { kind: "regenerate-key" };
     }
-    return { kind: "validation", requestId };
+    return { kind: "validation", messageKey: copy.validation, requestId };
   }
-  if (result.status === 401) return { kind: "unauthenticated" };
-  if (result.status === 403) return { kind: "forbidden", requestId };
+  if (result.status === 401) return { kind: "unauthenticated", messageKey: copy.unauthenticated };
+  if (result.status === 403) return { kind: "forbidden", messageKey: copy.forbidden, requestId };
   if (result.status === 409) {
     return codeOf(result) === "idempotency_key_conflict"
-      ? { kind: "key-conflict", requestId }
-      : { kind: "conflict", requestId };
+      ? { kind: "key-conflict", messageKey: copy.conflict, requestId }
+      : { kind: "conflict", messageKey: copy.conflict, requestId };
   }
-  return { kind: "error", requestId };
+  return { kind: "error", messageKey: copy.error, requestId };
 }

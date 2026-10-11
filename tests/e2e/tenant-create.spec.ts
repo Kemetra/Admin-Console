@@ -1,4 +1,4 @@
-import { type Page, expect, test } from "@playwright/test";
+import { type Page, expect, test } from "./fixtures";
 
 /**
  * RF-2 tenant onboard E2E (VG-2, Scenario S2). Create flow + the 409 slug
@@ -31,7 +31,7 @@ async function mockBase(page: Page): Promise<void> {
   );
 }
 
-test("S2: create a tenant routes to its detail on success", async ({ page }) => {
+test("S2: create a tenant routes to its detail on success", async ({ page, t }) => {
   await mockBase(page);
   await page.route("**/api/v1/tenants", (r) => {
     if (r.request().method() === "POST") {
@@ -52,15 +52,17 @@ test("S2: create a tenant routes to its detail on success", async ({ page }) => 
   );
 
   await page.goto("/tenants/new");
-  await page.getByLabel(/slug/i).fill("acme");
-  await page.getByLabel(/name/i).fill("Acme Corp");
-  await page.getByRole("button", { name: /create tenant/i }).click();
+  await expect(page.getByRole("heading", { name: t("tenants.form.createTitle") })).toBeVisible();
+  await page.getByLabel(t("tenants.field.slug"), { exact: true }).fill("acme");
+  await page.getByLabel(t("tenants.field.name"), { exact: true }).fill("Acme Corp");
+  await page.getByRole("button", { name: t("tenants.form.create") }).click();
 
   await expect(page.getByRole("heading", { name: "Acme Corp" })).toBeVisible();
 });
 
 test("S2: duplicate slug renders an inline conflict on the slug field, no route change", async ({
   page,
+  t,
 }) => {
   await mockBase(page);
   await page.route("**/api/v1/tenants", (r) => {
@@ -75,11 +77,14 @@ test("S2: duplicate slug renders an inline conflict on the slug field, no route 
   });
 
   await page.goto("/tenants/new");
-  await page.getByLabel(/slug/i).fill("taken");
-  await page.getByLabel(/name/i).fill("Dup Co");
-  await page.getByRole("button", { name: /create tenant/i }).click();
+  await page.getByLabel(t("tenants.field.slug"), { exact: true }).fill("taken");
+  await page.getByLabel(t("tenants.field.name"), { exact: true }).fill("Dup Co");
+  await page.getByRole("button", { name: t("tenants.form.create") }).click();
 
-  await expect(page.getByText(/slug is already in use/i)).toBeVisible();
-  await expect(page.getByLabel(/slug/i)).toHaveAttribute("aria-invalid", "true");
+  await expect(page.getByText(t("tenants.errors.slugConflict"))).toBeVisible();
+  await expect(page.getByLabel(t("tenants.field.slug"), { exact: true })).toHaveAttribute(
+    "aria-invalid",
+    "true",
+  );
   await expect(page).toHaveURL(/\/tenants\/new$/);
 });

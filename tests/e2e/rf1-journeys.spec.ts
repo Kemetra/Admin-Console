@@ -1,4 +1,4 @@
-import { type Page, expect, test } from "@playwright/test";
+import { type Page, expect, test } from "./fixtures";
 
 /**
  * RF-1 E2E journeys (VG-2). Drives the built SPA with mocked DP2 responses
@@ -24,7 +24,7 @@ async function mockContext(page: Page, body: unknown) {
   );
 }
 
-test("S2: multi-membership lands on the full-screen scope gate", async ({ page }) => {
+test("S2: multi-membership lands on the full-screen scope gate", async ({ page, t }) => {
   await mockContext(page, {
     user,
     active_tenant: null,
@@ -34,12 +34,12 @@ test("S2: multi-membership lands on the full-screen scope gate", async ({ page }
     ],
   });
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: /select your context/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: t("shell.gate.title") })).toBeVisible();
   await expect(page.getByText("Northstar Retail")).toBeVisible();
   await expect(page.getByText("Helios Markets")).toBeVisible();
 });
 
-test("resolved context renders the app shell with the gold scope header", async ({ page }) => {
+test("resolved context renders the app shell with the gold scope header", async ({ page, t }) => {
   await mockContext(page, {
     user,
     active_tenant: { id: "t1", name: "Northstar Retail" },
@@ -48,22 +48,23 @@ test("resolved context renders the app shell with the gold scope header", async 
     memberships: [{ tenant_id: "t1", tenant_name: "Northstar Retail" }],
   });
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: t("shell.overview.title") })).toBeVisible();
   // Scope header shows tenant > store
   await expect(
     page.getByRole("button", { name: /Northstar Retail.*Cairo Festival City/s }),
   ).toBeVisible();
 });
 
-test("S7: zero memberships renders the no-access state with sign-out", async ({ page }) => {
+test("S7: zero memberships renders the no-access state with sign-out", async ({ page, t }) => {
   await mockContext(page, { user, active_tenant: null, memberships: [] });
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: /no assigned access/i })).toBeVisible();
-  await expect(page.getByRole("button", { name: /sign out/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: t("auth.noAccess.title") })).toBeVisible();
+  await expect(page.getByRole("button", { name: t("auth.noAccess.signOut") })).toBeVisible();
 });
 
 test("S5/A7: a 401 on the protected route redirects to sign-in (refresh also fails)", async ({
   page,
+  t,
 }) => {
   // No session: context (and the refresh retry) both 401. The guard must route
   // to SF-1, NOT render no-access. Distinguishes 'not signed in' from 'no access'.
@@ -76,5 +77,5 @@ test("S5/A7: a 401 on the protected route redirects to sign-in (refresh also fai
   );
   await page.goto("/");
   await expect(page).toHaveURL(/\/signin$/);
-  await expect(page.getByRole("button", { name: /sign in/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: t("auth.signIn.submit") })).toBeVisible();
 });

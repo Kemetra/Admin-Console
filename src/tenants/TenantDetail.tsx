@@ -1,6 +1,8 @@
+import { BackArrow } from "@/components/BackArrow";
 import { Banner } from "@/components/Banner";
 import { ConfirmDelete } from "@/components/ConfirmDelete";
 import { ListState } from "@/components/ListState";
+import { type MessageKey, useT } from "@/i18n";
 import { type Rf2ErrorRender, mapRf2Error } from "@/lib/rf2-queries";
 /**
  * SF-T2 — Tenant detail (T017). Read-first: labeled field rows, a display-only
@@ -22,7 +24,19 @@ const STATUS_CLASS: Record<string, string> = {
   pending: "badge badge--pending",
 };
 
+/** The status code drives the badge label; the raw code is never the copy (UX-12). */
+const STATUS_LABEL: Record<string, MessageKey> = {
+  active: "tenants.status.active",
+  suspended: "tenants.status.suspended",
+  pending: "tenants.status.pending",
+};
+
+function statusLabel(status: string): MessageKey {
+  return Object.hasOwn(STATUS_LABEL, status) ? STATUS_LABEL[status] : "tenants.status.unknown";
+}
+
 export function TenantDetail(): React.JSX.Element {
+  const t = useT();
   const { tenantId } = useParams();
   const navigate = useNavigate();
   const { result, isLoading } = useTenantDetail(tenantId);
@@ -33,7 +47,7 @@ export function TenantDetail(): React.JSX.Element {
   if (isLoading) {
     return (
       <div className="surface">
-        <ListState state="loading" label="tenant" />
+        <ListState state="loading" label={t("tenants.detail.loadingNoun")} />
       </div>
     );
   }
@@ -44,11 +58,11 @@ export function TenantDetail(): React.JSX.Element {
       <div className="surface">
         <Banner
           variant="danger"
-          message={r.kind === "not-found" ? r.message : r.message}
+          message={t(r.messageKey)}
           requestId={r.kind === "banner" ? r.requestId : undefined}
         />
         <Link to="/tenants" className="surface__back">
-          ← Back to tenants
+          <BackArrow /> {t("tenants.detail.back")}
         </Link>
       </div>
     );
@@ -74,41 +88,51 @@ export function TenantDetail(): React.JSX.Element {
   return (
     <div className="surface">
       <Link to="/tenants" className="surface__back">
-        ← Back to tenants
+        <BackArrow /> {t("tenants.detail.back")}
       </Link>
       <header className="surface__head">
         <h1 className="content__title">{tenant.name}</h1>
       </header>
 
       {deleteError && deleteError.kind === "banner" ? (
-        <Banner variant="danger" message={deleteError.message} requestId={deleteError.requestId} />
+        <Banner
+          variant="danger"
+          message={t(deleteError.messageKey)}
+          requestId={deleteError.requestId}
+        />
       ) : null}
 
       <dl className="surface__detail">
         <div className="field-row">
-          <dt className="field-row__label">Slug</dt>
-          <dd className="field-row__value field-row__value--mono">{tenant.slug}</dd>
+          <dt className="field-row__label">{t("tenants.field.slug")}</dt>
+          <dd className="field-row__value field-row__value--mono">
+            <bdi dir="ltr">{tenant.slug}</bdi>
+          </dd>
         </div>
         <div className="field-row">
-          <dt className="field-row__label">Status</dt>
+          <dt className="field-row__label">{t("tenants.field.status")}</dt>
           <dd className="field-row__value">
             {tenant.status ? (
-              <span className={STATUS_CLASS[tenant.status] ?? "badge"}>{tenant.status}</span>
+              <span className={STATUS_CLASS[tenant.status] ?? "badge"}>
+                {t(statusLabel(tenant.status))}
+              </span>
             ) : (
               "—"
             )}
           </dd>
         </div>
         <div className="field-row">
-          <dt className="field-row__label">Tenant ID</dt>
-          <dd className="field-row__value field-row__value--mono">{tenant.id}</dd>
+          <dt className="field-row__label">{t("tenants.field.id")}</dt>
+          <dd className="field-row__value field-row__value--mono">
+            <bdi dir="ltr">{tenant.id}</bdi>
+          </dd>
         </div>
       </dl>
 
       {confirming ? (
         <ConfirmDelete
           resourceName={tenant.name}
-          confirmLabel="Soft-delete"
+          confirmLabel={t("tenants.detail.softDelete")}
           pending={del.isPending}
           onConfirm={onConfirmDelete}
           onCancel={() => setConfirming(false)}
@@ -116,10 +140,10 @@ export function TenantDetail(): React.JSX.Element {
       ) : (
         <div className="surface__actions">
           <Link to={`/tenants/${tenant.id}/edit`} className="btn-secondary">
-            Edit
+            {t("tenants.detail.edit")}
           </Link>
           <button type="button" className="btn-destructive" onClick={() => setConfirming(true)}>
-            Soft-delete
+            {t("tenants.detail.softDelete")}
           </button>
         </div>
       )}

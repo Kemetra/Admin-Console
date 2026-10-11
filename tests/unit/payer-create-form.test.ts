@@ -17,16 +17,21 @@ describe("validatePayerDraft", () => {
     expect(validatePayerDraft(draft({}))).toEqual({});
   });
 
-  test("missing displayName -> required error", () => {
-    expect(validatePayerDraft(draft({ displayName: "" })).displayName).toBeDefined();
+  test("missing displayName -> required error (a message key, not copy)", () => {
+    expect(validatePayerDraft(draft({ displayName: "" })).displayName).toEqual({
+      messageKey: "payers.form.displayNameRequired",
+    });
   });
 
   test("whitespace-only displayName -> required error (trimmed)", () => {
     expect(validatePayerDraft(draft({ displayName: "   " })).displayName).toBeDefined();
   });
 
-  test("displayName over 200 chars -> length error", () => {
-    expect(validatePayerDraft(draft({ displayName: "x".repeat(201) })).displayName).toBeDefined();
+  test("displayName over 200 chars -> length error with the limit as a param", () => {
+    expect(validatePayerDraft(draft({ displayName: "x".repeat(201) })).displayName).toEqual({
+      messageKey: "payers.form.displayNameTooLong",
+      params: { max: 200 },
+    });
   });
 
   test("displayName exactly 200 -> ok", () => {
@@ -35,7 +40,9 @@ describe("validatePayerDraft", () => {
 
   test("invalid category not in the v1 enum -> category error", () => {
     // @ts-expect-error — exercising runtime guard against an out-of-enum value
-    expect(validatePayerDraft(draft({ category: "patient" })).category).toBeDefined();
+    expect(validatePayerDraft(draft({ category: "patient" })).category).toEqual({
+      messageKey: "payers.form.categoryRequired",
+    });
   });
 
   test("each v1 category is accepted", () => {

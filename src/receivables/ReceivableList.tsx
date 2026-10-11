@@ -1,20 +1,25 @@
 import { Banner } from "@/components/Banner";
 import { ListState } from "@/components/ListState";
 import { useActiveContextValue } from "@/context/ActiveContextProvider";
+import { Money, useT } from "@/i18n";
 import type { ReceivableState } from "@/lib/client";
 import { ApplyPayment } from "@/settlement-reconciliation/ApplyPayment";
 /**
  * 018 SF — Receivable list. Table of the active tenant's receivables: payer +
- * sale refs, outstanding balance (exact-decimal Money rendered VERBATIM — never
- * float-coerced), lifecycle-state badge, and the ERP Payment-Entry pointer
+ * sale refs, outstanding balance (exact-decimal Money formatted from the string
+ * as `1,250.00 EGP` — never float-coerced), lifecycle-state badge, and the ERP Payment-Entry pointer
  * ("not posted" until the 011-DR-POSTING-R1 gate clears → erpnextPaymentEntryRef
  * is null). Pre-call guard (no tenant → scope prompt, wrapper never issued).
  * 403/other → banner. Read-only here; claim-submit + reconcile drawers wire in
  * 018-D. Mirrors 017's PayerList.
+ *
+ * RT-399: copy comes from the catalog; `state` renders as a localized label
+ * (the raw API value never shows); refs are LTR-isolated machine data.
  */
 import { useState } from "react";
 import { ReconcileRemittance } from "./ReconcileRemittance";
 import { SubmitClaim } from "./SubmitClaim";
+import { receivableStateKey } from "./receivableListLogic";
 import { useReceivables } from "./useReceivables";
 import "../shell/surface.css";
 
@@ -29,14 +34,16 @@ interface ReceivableRowView {
 }
 
 function ScopePrompt(): React.JSX.Element {
+  const t = useT();
   return (
     <div className="surface">
-      <p className="content__sub">Select a tenant to view its receivables.</p>
+      <p className="content__sub">{t("receivables.list.scopePrompt")}</p>
     </div>
   );
 }
 
 export function ReceivableList(): React.JSX.Element {
+  const t = useT();
   const { context } = useActiveContextValue();
   const rawTenant = context?.active_tenant ?? null;
   const { rows, isLoading, error, refetch } = useReceivables(rawTenant?.id ?? null, {});
@@ -69,8 +76,10 @@ export function ReceivableList(): React.JSX.Element {
     <div className="surface">
       <header className="surface__head">
         <div>
-          <h1 className="content__title">Receivables</h1>
-          <p className="content__sub">Money owed against sales for {tenantName}.</p>
+          <h1 className="content__title">{t("receivables.list.title")}</h1>
+          <p className="content__sub">
+            {t.rich("receivables.list.subtitle", { tenant: <bdi>{tenantName}</bdi> })}
+          </p>
         </div>
       </header>
 
@@ -79,43 +88,55 @@ export function ReceivableList(): React.JSX.Element {
           variant="danger"
           message={
             error.kind === "forbidden"
-              ? "You do not have access to receivables for this tenant."
-              : "Receivables could not be loaded."
+              ? t("receivables.list.forbidden")
+              : t("receivables.list.loadFailed")
           }
           requestId={error.requestId}
         />
       ) : null}
 
-      {isLoading ? <ListState state="loading" label="receivables" /> : null}
+      {isLoading ? <ListState state="loading" label={t("receivables.list.loadingNoun")} /> : null}
 
       {!isLoading && !error && receivables.length === 0 ? (
-        <ListState state="empty" emptyMessage="No receivables in this tenant yet." />
+        <ListState state="empty" emptyMessage={t("receivables.list.empty")} />
       ) : null}
 
       {!isLoading && !error && receivables.length > 0 ? (
         <table className="data-table">
-          <caption className="data-table__caption">Receivables</caption>
+          <caption className="data-table__caption">{t("receivables.list.caption")}</caption>
           <thead>
             <tr>
-              <th scope="col">Receivable</th>
-              <th scope="col">Payer</th>
-              <th scope="col">Outstanding</th>
-              <th scope="col">State</th>
-              <th scope="col">ERP posting</th>
-              <th scope="col">Action</th>
+              <th scope="col">{t("receivables.list.col.receivable")}</th>
+              <th scope="col">{t("receivables.list.col.payer")}</th>
+              <th scope="col">{t("receivables.list.col.outstanding")}</th>
+              <th scope="col">{t("receivables.list.col.state")}</th>
+              <th scope="col">{t("receivables.list.col.erpPosting")}</th>
+              <th scope="col">{t("receivables.list.col.action")}</th>
             </tr>
           </thead>
           <tbody>
             {receivables.map((row) => (
               <tr key={row.receivableRef} className="data-table__row">
-                <td>{row.receivableRef}</td>
-                <td>{row.payerRef}</td>
-                {/* Exact-decimal Money string — rendered verbatim, never coerced. */}
-                <td>{row.outstandingBalance}</td>
                 <td>
-                  <span className="badge">{row.state}</span>
+                  <bdi dir="ltr">{row.receivableRef}</bdi>
                 </td>
-                <td>{row.erpnextPaymentEntryRef ?? "not posted"}</td>
+                <td>
+                  <bdi dir="ltr">{row.payerRef}</bdi>
+                </td>
+                {/* Exact-decimal Money string — formatted from the string, never coerced. */}
+                <td>
+                  <Money value={row.outstandingBalance} />
+                </td>
+                <td>
+                  <span className="badge">{t(receivableStateKey(row.state))}</span>
+                </td>
+                <td>
+                  {row.erpnextPaymentEntryRef != null ? (
+                    <bdi dir="ltr">{row.erpnextPaymentEntryRef}</bdi>
+                  ) : (
+                    t("receivables.list.notPosted")
+                  )}
+                </td>
                 <td>
                   {row.state === "open" || row.state === "partially_applied" ? (
                     <>
@@ -124,14 +145,14 @@ export function ReceivableList(): React.JSX.Element {
                         className="btn-secondary"
                         onClick={() => setApplying(row)}
                       >
-                        Apply payment
+                        {t("receivables.list.applyPayment")}
                       </button>
                       <button
                         type="button"
                         className="btn-secondary"
                         onClick={() => startClaim(row.payerRef)}
                       >
-                        Submit claim
+                        {t("receivables.list.submitClaim")}
                       </button>
                     </>
                   ) : null}

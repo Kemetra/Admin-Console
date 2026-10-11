@@ -23,9 +23,14 @@
  * slug/code uniqueness conflict. The 007 `forbidden` (403) is its own branch,
  * distinct from the non-disclosing 404. The contract documents NO 422/429, so
  * none is asserted.
+ *
+ * RT-399: the mapper returns a catalog `messageKey`, never copy; the surfaces
+ * translate it at render, so a locale switch never leaves a cached string in
+ * the old language (the render decision lives in the TanStack Query cache).
  */
 import { apiClient } from "@/generated/client";
 import type { components, operations } from "@/generated/schema";
+import type { MessageKey } from "@/i18n";
 
 // --- Generated projections (no hand-typed shapes) -----------------------------
 
@@ -80,6 +85,56 @@ export const unknownItemsQueryKeys = {
   item: (id: string) => ["rf4a", "unknown-item", id] as const,
 } as const;
 
+// --- Enum labels --------------------------------------------------------------
+// Contract enums drive copy; they are not copy (UX-12). Each maps to a catalog
+// key, so a raw code never renders in either locale.
+
+const IDENTIFIER_TYPE: Record<ReviewQueueItem["identifier_type"], MessageKey> = {
+  barcode: "unknownItems.identifierType.barcode",
+  sku: "unknownItems.identifierType.sku",
+  plu: "unknownItems.identifierType.plu",
+  supplier_code: "unknownItems.identifierType.supplier_code",
+  external_pos_id: "unknownItems.identifierType.external_pos_id",
+};
+
+const RESOLUTION_STATUS: Record<ReviewQueueItem["resolution_status"], MessageKey> = {
+  pending: "unknownItems.status.pending",
+  resolved: "unknownItems.status.resolved",
+  dismissed: "unknownItems.status.dismissed",
+};
+
+const RESOLUTION_ACTION: Record<NonNullable<ReviewQueueItem["resolution_action"]>, MessageKey> = {
+  linked: "unknownItems.action.linked",
+  created: "unknownItems.action.created",
+  dismissed: "unknownItems.action.dismissed",
+};
+
+function enumKey<K extends string>(map: Record<K, MessageKey>, value: string): MessageKey | null {
+  return Object.hasOwn(map, value) ? map[value as K] : null;
+}
+
+/**
+ * Label key for an identifier type. Null only for a value outside the contract
+ * enum, which the surface then shows verbatim rather than guessing a label.
+ */
+export function identifierTypeKey(type: ReviewQueueItem["identifier_type"]): MessageKey | null {
+  return enumKey(IDENTIFIER_TYPE, type);
+}
+
+/** Label key for a resolution status (null outside the contract enum). */
+export function resolutionStatusKey(
+  status: ReviewQueueItem["resolution_status"],
+): MessageKey | null {
+  return enumKey(RESOLUTION_STATUS, status);
+}
+
+/** Label key for a resolution action; null while pending (or outside the enum). */
+export function resolutionActionKey(
+  action: ReviewQueueItem["resolution_action"],
+): MessageKey | null {
+  return action ? enumKey(RESOLUTION_ACTION, action) : null;
+}
+
 // --- Typed error mapping ------------------------------------------------------
 
 /** Backend error envelope: { error: { code, message, request_id } } (schema Error). */
@@ -98,21 +153,22 @@ export interface UnknownItemErrorContext {
 
 export type UnknownItemErrorRender =
   /** Persistent banner (403 forbidden, or retryable 5xx). Surfaces request_id. */
-  | { kind: "banner"; message: string; requestId?: string; retryable: boolean }
+  | { kind: "banner"; messageKey: MessageKey; requestId?: string; retryable: boolean }
   /** Uniform 404 — absent vs no-access indistinguishable (SI-004, inspect/dismiss). */
-  | { kind: "not-found"; message: string }
+  | { kind: "not-found"; messageKey: MessageKey }
   /** Dismiss 409 — the item is already terminal (`already_reconciled`). */
-  | { kind: "already-reconciled"; message: string }
+  | { kind: "already-reconciled"; messageKey: MessageKey }
   /** Anything else (incl. a 400 bad param) — generic banner copy. */
-  | { kind: "generic"; message: string; requestId?: string };
+  | { kind: "generic"; messageKey: MessageKey; requestId?: string };
 
+/** Catalog keys per render decision. 5xx and bad-request reuse the shared errors.* copy. */
 const COPY = {
-  forbidden403: "You do not have permission to review unknown items in this scope.",
-  notFound: "This item is not available.",
-  alreadyReconciled: "This item has already been resolved. Refresh to see its current state.",
-  serverError: "Something went wrong. Try again.",
-  badRequest: "The request could not be completed.",
-} as const;
+  forbidden403: "unknownItems.errors.forbidden",
+  notFound: "unknownItems.errors.notFound",
+  alreadyReconciled: "unknownItems.errors.alreadyReconciled",
+  serverError: "errors.server",
+  badRequest: "errors.generic",
+} as const satisfies Record<string, MessageKey>;
 
 function requestIdOf(input: UnknownItemErrorContext): string | undefined {
   return input.error?.error?.request_id ?? undefined;
@@ -141,25 +197,25 @@ export function mapUnknownItemError(input: UnknownItemErrorContext): UnknownItem
     case 403:
       // 007 8th category: `error.code = "forbidden"` — in-scope but insufficient
       // authority. Distinct from the non-disclosing 404. Rendered as a banner.
-      return { kind: "banner", message: COPY.forbidden403, requestId, retryable: false };
+      return { kind: "banner", messageKey: COPY.forbidden403, requestId, retryable: false };
     case 404:
       // Documented only on inspect / dismiss (SI-004 non-disclosing). The list
       // has no 404; a 404 there is undocumented and falls through to generic.
       if (input.op === "inspect" || input.op === "dismiss") {
-        return { kind: "not-found", message: COPY.notFound };
+        return { kind: "not-found", messageKey: COPY.notFound };
       }
-      return { kind: "generic", message: COPY.badRequest, requestId };
+      return { kind: "generic", messageKey: COPY.badRequest, requestId };
     case 409:
       // Documented only on dismiss: the item is already `resolved`/`dismissed`.
       if (input.op === "dismiss") {
-        return { kind: "already-reconciled", message: COPY.alreadyReconciled };
+        return { kind: "already-reconciled", messageKey: COPY.alreadyReconciled };
       }
-      return { kind: "generic", message: COPY.badRequest, requestId };
+      return { kind: "generic", messageKey: COPY.badRequest, requestId };
     default:
       if (input.status >= 500) {
-        return { kind: "banner", message: COPY.serverError, requestId, retryable: true };
+        return { kind: "banner", messageKey: COPY.serverError, requestId, retryable: true };
       }
       // 400 / 401 / any other documented-but-non-specific status.
-      return { kind: "generic", message: COPY.badRequest, requestId };
+      return { kind: "generic", messageKey: COPY.badRequest, requestId };
   }
 }

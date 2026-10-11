@@ -1,4 +1,5 @@
 import { resolveSignIn } from "@/auth/signin-flow";
+import { translate } from "@/i18n";
 import { describe, expect, test } from "vitest";
 
 /**
@@ -11,6 +12,8 @@ import { describe, expect, test } from "vitest";
  * - success + memberships===1 -> auto-select that tenant (OQ-4), go to shell.
  * - success + memberships>1 -> show scope chooser (S2).
  * - success + memberships===0 -> no-access (S7).
+ *
+ * RT-399: the error outcome is a catalog key, translated by SF-1 at render.
  */
 describe("resolveSignIn", () => {
   test("401 -> generic error with request_id, no leak", () => {
@@ -20,9 +23,11 @@ describe("resolveSignIn", () => {
     });
     expect(r.kind).toBe("error");
     if (r.kind === "error") {
-      expect(r.message).toBe("Sign-in failed. Check your email and password, then try again.");
+      expect(r.messageKey).toBe("auth.signIn.errors.failed");
       expect(r.requestId).toBe("req-1");
-      expect(r.message).not.toMatch(/email .* not found|no account|unknown user/i);
+      const copy = translate("en", r.messageKey);
+      expect(copy).toBe("Sign-in failed. Check your email and password, then try again.");
+      expect(copy).not.toMatch(/email .* not found|no account|unknown user/i);
     }
   });
 
@@ -71,5 +76,10 @@ describe("resolveSignIn", () => {
   test("5xx -> generic error", () => {
     const r = resolveSignIn({ status: 503, error: { error: { request_id: "req-5" } } });
     expect(r.kind).toBe("error");
+    if (r.kind === "error") {
+      // The same generic key as a 401: a 5xx never reads differently (FR-003-007).
+      expect(r.messageKey).toBe("auth.signIn.errors.failed");
+      expect(r.requestId).toBe("req-5");
+    }
   });
 });

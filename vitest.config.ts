@@ -16,6 +16,8 @@ export default defineConfig({
     globals: true,
     // C-5: no live Data-Pulse-2 — tests mock the generated client.
     include: ["tests/unit/**/*.test.ts", "tests/unit/**/*.test.tsx"],
+    // RT-399: pins the English locale for suites that assert English copy.
+    setupFiles: ["tests/unit/setup.ts"],
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],

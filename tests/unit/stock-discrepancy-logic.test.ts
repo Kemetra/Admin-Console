@@ -1,3 +1,5 @@
+import { translate } from "@/i18n";
+import { setLocale } from "@/i18n/locale";
 import {
   PENDING_OVERDUE_MS,
   canReadStockDiscrepancies,
@@ -10,6 +12,7 @@ import {
   negativeCountLabel,
   newSnapshotRequestKey,
   noSnapshotReason,
+  outcomeBannerView,
   pagesShareSnapshot,
   refreshBlockReason,
   snapshotStatusLabel,
@@ -49,23 +52,40 @@ describe("snapshot presentation", () => {
   });
 
   test("AC2: count is Unknown (never 0) when no snapshot exists", () => {
-    expect(negativeCountLabel("no_snapshot", 0)).toBe("Unknown");
-    expect(negativeCountLabel("no_warehouse_mapping", 0)).toBe("Unknown");
-    expect(negativeCountLabel("fresh", 0)).toBe("0");
-    expect(negativeCountLabel("stale", 3)).toBe("3");
+    const label = (s: Parameters<typeof negativeCountLabel>[0], n: number, l: "en" | "ar") => {
+      const { key, params } = negativeCountLabel(s, n);
+      return translate(l, key, params);
+    };
+    expect(negativeCountLabel("no_snapshot", 0)).toEqual({ key: "stock.stores.countUnknown" });
+    expect(negativeCountLabel("no_warehouse_mapping", 0)).toEqual({
+      key: "stock.stores.countUnknown",
+    });
+    expect(label("no_snapshot", 0, "en")).toBe("Unknown");
+    expect(label("no_warehouse_mapping", 0, "ar")).toBe("غير معروف");
+    expect(label("fresh", 0, "en")).toBe("0");
+    expect(label("stale", 3, "en")).toBe("3");
+    // Counts render with Western digits and grouping in both locales.
+    expect(label("fresh", 1284, "ar")).toBe("1,284");
   });
 
   test("AC2/AC7: labels name 'No ERPNext snapshot' and never say live/current", () => {
-    expect(snapshotStatusLabel("no_snapshot").label).toMatch(/no erpnext snapshot/i);
-    expect(snapshotStatusLabel("no_warehouse_mapping").label).toMatch(/no erpnext snapshot/i);
+    const en = (s: Parameters<typeof snapshotStatusLabel>[0]) =>
+      translate("en", snapshotStatusLabel(s).labelKey);
+    expect(en("no_snapshot")).toMatch(/no erpnext snapshot/i);
+    expect(en("no_warehouse_mapping")).toMatch(/no erpnext snapshot/i);
     for (const s of ["fresh", "stale", "no_snapshot", "no_warehouse_mapping"] as const) {
-      expect(snapshotStatusLabel(s).label).not.toMatch(/\blive\b|\bcurrent/i);
+      expect(en(s)).not.toMatch(/\blive\b|\bcurrent/i);
+      // Arabic: no «مباشر» (live) / «الحالي» (current) either.
+      expect(translate("ar", snapshotStatusLabel(s).labelKey)).not.toMatch(/مباشر|حالي/);
     }
   });
 
   test("noSnapshotReason distinguishes the two no-snapshot states", () => {
-    expect(noSnapshotReason("no_warehouse_mapping")).toBe("No warehouse mapping");
-    expect(noSnapshotReason("no_snapshot")).toBe("Not recorded yet");
+    expect(noSnapshotReason("no_warehouse_mapping")).toBe("stock.noSnapshotReason.noMapping");
+    expect(noSnapshotReason("no_snapshot")).toBe("stock.noSnapshotReason.notRecorded");
+    expect(noSnapshotReason("fresh")).toBeNull();
+    expect(translate("en", "stock.noSnapshotReason.noMapping")).toBe("No warehouse mapping");
+    expect(translate("en", "stock.noSnapshotReason.notRecorded")).toBe("Not recorded yet");
   });
 
   test("formatStaleAfter renders hours / minutes / seconds", () => {
@@ -73,6 +93,13 @@ describe("snapshot presentation", () => {
     expect(formatStaleAfter(3600)).toBe("1 hour");
     expect(formatStaleAfter(900)).toBe("15 minutes");
     expect(formatStaleAfter(61)).toBe("61 seconds");
+  });
+
+  test("formatStaleAfter follows the locale (Arabic plural phrases, Western digits)", () => {
+    expect(formatStaleAfter(86400, "ar")).toBe("24 ساعة");
+    expect(formatStaleAfter(3600, "ar")).toBe("ساعة واحدة");
+    setLocale("ar");
+    expect(formatStaleAfter(900)).toBe("15 دقيقة");
   });
 
   test("pending is overdue after three Connector ticks (15 min)", () => {
@@ -160,9 +187,28 @@ describe("paging consistency, store id, refresh block (P3 fixes)", () => {
           requestedAt: "2026-10-04T08:05:00.000Z",
         },
       }),
-    ).toBe("A snapshot request is already pending.");
-    expect(refreshBlockReason({ ...base, status: "no_warehouse_mapping" })).toMatch(
+    ).toBe("stock.refresh.blocked.pending");
+    expect(refreshBlockReason({ ...base, status: "no_warehouse_mapping" })).toBe(
+      "stock.refresh.blocked.noMapping",
+    );
+    expect(translate("en", "stock.refresh.blocked.noMapping")).toMatch(
       /map an erpnext stock warehouse/i,
     );
+  });
+
+  test("outcomeBannerView returns message keys (no copy in the view model)", () => {
+    expect(outcomeBannerView({ kind: "requested" })).toBeNull();
+    expect(outcomeBannerView({ kind: "not-found" })).toEqual({
+      variant: "danger",
+      messageKey: "stock.refresh.outcome.notFound",
+    });
+    expect(outcomeBannerView({ kind: "key-conflict" })).toEqual({
+      variant: "warning",
+      messageKey: "stock.refresh.outcome.keyConflict",
+    });
+    expect(outcomeBannerView({ kind: "error" })).toEqual({
+      variant: "danger",
+      messageKey: "stock.refresh.outcome.error",
+    });
   });
 });

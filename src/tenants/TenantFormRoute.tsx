@@ -1,5 +1,6 @@
 import { Banner } from "@/components/Banner";
 import { ListState } from "@/components/ListState";
+import { useT } from "@/i18n";
 /**
  * Route wrapper for the tenant form (T018). Bridges the router (params) to the
  * presentational TenantForm: in edit mode it reads the tenant id from the path
@@ -25,19 +26,20 @@ export function TenantFormRoute({ mode }: TenantFormRouteProps): React.JSX.Eleme
 }
 
 function EditTenantForm({ tenantId }: { tenantId: string | undefined }): React.JSX.Element {
+  const t = useT();
   const { result, isLoading } = useTenantDetail(tenantId);
 
   if (isLoading) {
     return (
       <div className="surface">
-        <ListState state="loading" label="tenant" />
+        <ListState state="loading" label={t("tenants.detail.loadingNoun")} />
       </div>
     );
   }
   if (result?.kind === "error") {
     return (
       <div className="surface">
-        <Banner variant="danger" message={result.render.message} />
+        <Banner variant="danger" message={t(result.render.messageKey)} />
       </div>
     );
   }

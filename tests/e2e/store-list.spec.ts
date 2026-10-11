@@ -1,4 +1,4 @@
-import { type Page, expect, test } from "@playwright/test";
+import { type Page, expect, test } from "./fixtures";
 
 /**
  * RF-2 store list E2E (VG-2, Scenarios S4/S5). With an active tenant the store
@@ -22,7 +22,10 @@ async function mockBase(page: Page, ctx: unknown): Promise<void> {
   );
 }
 
-test("S4: store list renders the active tenant's stores and opens a detail", async ({ page }) => {
+test("S4: store list renders the active tenant's stores and opens a detail", async ({
+  page,
+  t,
+}) => {
   await mockBase(page, {
     user,
     active_tenant: { id: "t1", name: "Northstar Retail" },
@@ -49,16 +52,25 @@ test("S4: store list renders the active tenant's stores and opens a detail", asy
   );
 
   await page.goto("/stores");
-  await expect(page.getByRole("heading", { name: "Stores" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: t("stores.list.title"), exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole("cell", { name: "Cairo Festival City" })).toBeVisible();
   await expect(page.getByRole("cell", { name: "New Cairo Mall" })).toBeVisible();
+  // State badges are catalog labels, one per row.
+  await expect(
+    page.getByRole("cell", { name: t("stores.state.active"), exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("cell", { name: t("stores.state.inactive"), exact: true }),
+  ).toBeVisible();
 
   await page.getByRole("cell", { name: "Cairo Festival City" }).click();
   await expect(page.getByRole("heading", { name: "Cairo Festival City" })).toBeVisible();
   await expect(page.getByText("CFC")).toBeVisible();
 });
 
-test("S5: no active tenant -> scope prompt, store list never loads", async ({ page }) => {
+test("S5: no active tenant -> scope prompt, store list never loads", async ({ page, t }) => {
   let storesCalled = false;
   await mockBase(page, {
     user,
@@ -79,6 +91,6 @@ test("S5: no active tenant -> scope prompt, store list never loads", async ({ pa
   // is what an operator sees; the store route is unreachable without scope.
   await page.goto("/stores");
   // The protected layout gates on context: no active tenant -> RF-1 scope gate.
-  await expect(page.getByRole("heading", { name: /select your context/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: t("shell.gate.title") })).toBeVisible();
   expect(storesCalled).toBe(false);
 });

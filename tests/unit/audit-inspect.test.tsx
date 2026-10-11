@@ -1,5 +1,6 @@
 import { AuditInspectDrawer } from "@/audit/AuditInspectDrawer";
 import type { AuditRow } from "@/audit/useAuditSearch";
+import { setLocale } from "@/i18n/locale";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, test, vi } from "vitest";
 
@@ -47,6 +48,42 @@ describe("AuditInspectDrawer", () => {
     render(<AuditInspectDrawer row={row} onClose={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: /copy/i }));
     expect(writeText).toHaveBeenCalledWith("11111111-1111-1111-1111-111111111111");
+  });
+
+  test("RT-399: occurred_at is exact UTC evidence, labelled UTC, LTR-isolated", () => {
+    render(<AuditInspectDrawer row={row} onClose={vi.fn()} />);
+    expect(screen.getByText("Time (UTC)")).toBeDefined();
+    const time = screen.getByText("2026-06-01 09:30:00 UTC");
+    expect(time.tagName).toBe("BDI");
+    expect(time.getAttribute("dir")).toBe("ltr");
+    // Machine data stays verbatim and LTR-isolated.
+    for (const machine of ["shift.forced_close", "11111111-1111-1111-1111-111111111111", "s1"]) {
+      expect(screen.getByText(machine).closest("bdi")?.getAttribute("dir")).toBe("ltr");
+    }
+  });
+
+  test("RT-399: Arabic renders the drawer chrome in Arabic; machine data unchanged", () => {
+    setLocale("ar");
+    render(<AuditInspectDrawer row={row} onClose={vi.fn()} />);
+    expect(screen.getByRole("dialog", { name: "حدث التدقيق" })).toBeDefined();
+    expect(screen.getByRole("heading", { name: "حدث التدقيق" })).toBeDefined();
+    expect(screen.getByText("الوقت (UTC)")).toBeDefined();
+    expect(screen.getByText("مرجع الطلب")).toBeDefined();
+    expect(screen.getByRole("heading", { name: "البيانات الوصفية" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "نسخ" })).toBeDefined();
+    expect(screen.queryByRole("button", { name: /copy/i })).toBeNull();
+    expect(screen.queryByText("Audit event")).toBeNull();
+    expect(screen.queryByText("Metadata")).toBeNull();
+    // Action codes, IDs and the evidence time are not translated.
+    expect(screen.getByText("shift.forced_close")).toBeDefined();
+    expect(screen.getByText("2026-06-01 09:30:00 UTC")).toBeDefined();
+    expect(screen.getByText("11111111-1111-1111-1111-111111111111")).toBeDefined();
+  });
+
+  test("RT-399: Arabic empty metadata copy", () => {
+    setLocale("ar");
+    render(<AuditInspectDrawer row={{ ...row, metadata: {} }} onClose={vi.fn()} />);
+    expect(screen.getByText("لا توجد بيانات وصفية.")).toBeDefined();
   });
 
   test("Escape closes the drawer", () => {

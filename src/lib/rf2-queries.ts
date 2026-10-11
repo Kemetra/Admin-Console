@@ -16,6 +16,7 @@
  * document NO 422/429 on these ops, so none is asserted (AS-5, Principle 2).
  */
 import { apiClient } from "@/generated/client";
+import type { MessageKey } from "@/i18n";
 
 // --- Typed operation wrappers -------------------------------------------------
 // Each returns `{ status, data?, error? }` so callers branch on `status`
@@ -141,27 +142,34 @@ export interface Rf2ErrorContext {
   context: Rf2Resource;
 }
 
+/**
+ * A render decision. It carries the catalog KEY of its copy (RT-399), never a
+ * translated string: the decision lives in the TanStack Query cache and in
+ * component state, and the surface renders `t(render.messageKey)`, so a locale
+ * switch re-renders it in the new language.
+ */
 export type Rf2ErrorRender =
   /** Persistent banner (403 permission, or retryable 5xx). Surfaces request_id. */
-  | { kind: "banner"; message: string; requestId?: string; retryable: boolean }
+  | { kind: "banner"; messageKey: MessageKey; requestId?: string; retryable: boolean }
   /** Uniform 404 — absent vs no-access indistinguishable (FR-004-008). */
-  | { kind: "not-found"; message: string }
+  | { kind: "not-found"; messageKey: MessageKey }
   /** 409 conflict, rendered inline on the named field (slug | code, OQ-9). */
-  | { kind: "conflict"; field: "slug" | "code"; message: string }
+  | { kind: "conflict"; field: "slug" | "code"; messageKey: MessageKey }
   /** Store 401 "No active tenant" — scope precondition, NOT session expiry (OQ-4). */
-  | { kind: "scope-required"; message: string }
+  | { kind: "scope-required"; messageKey: MessageKey }
   /** Anything else (incl. an undocumented tenant 401) — generic banner copy. */
-  | { kind: "generic"; message: string; requestId?: string };
+  | { kind: "generic"; messageKey: MessageKey; requestId?: string };
 
+/** Client-authored copy, selected by status (never raw backend text). */
 const COPY = {
-  forbidden403: "You do not have permission to perform this action.",
-  notFound: "This resource is not available.",
-  slugConflict: "That slug is already in use. Choose a different one.",
-  codeConflict: "That store code is already in use in this tenant. Choose a different one.",
-  scopeRequired: "Select a tenant before managing stores.",
-  serverError: "Something went wrong. Try again.",
-  generic: "The request could not be completed.",
-} as const;
+  forbidden403: "errors.forbidden",
+  notFound: "errors.notFound",
+  slugConflict: "tenants.errors.slugConflict",
+  codeConflict: "stores.errors.codeConflict",
+  scopeRequired: "stores.errors.scopeRequired",
+  serverError: "errors.server",
+  generic: "errors.generic",
+} as const satisfies Record<string, MessageKey>;
 
 function requestIdOf(input: Rf2ErrorContext): string | undefined {
   return input.error?.error?.request_id;
@@ -180,21 +188,21 @@ export function mapRf2Error(input: Rf2ErrorContext): Rf2ErrorRender {
       // Only the store ops document a 401 (scope precondition). A 401 on a
       // tenant op is undocumented — do not invent scope handling; fall through.
       if (input.context === "store") {
-        return { kind: "scope-required", message: COPY.scopeRequired };
+        return { kind: "scope-required", messageKey: COPY.scopeRequired };
       }
-      return { kind: "generic", message: COPY.generic, requestId };
+      return { kind: "generic", messageKey: COPY.generic, requestId };
     case 403:
-      return { kind: "banner", message: COPY.forbidden403, requestId, retryable: false };
+      return { kind: "banner", messageKey: COPY.forbidden403, requestId, retryable: false };
     case 404:
-      return { kind: "not-found", message: COPY.notFound };
+      return { kind: "not-found", messageKey: COPY.notFound };
     case 409:
       return input.context === "tenant"
-        ? { kind: "conflict", field: "slug", message: COPY.slugConflict }
-        : { kind: "conflict", field: "code", message: COPY.codeConflict };
+        ? { kind: "conflict", field: "slug", messageKey: COPY.slugConflict }
+        : { kind: "conflict", field: "code", messageKey: COPY.codeConflict };
     default:
       if (input.status >= 500) {
-        return { kind: "banner", message: COPY.serverError, requestId, retryable: true };
+        return { kind: "banner", messageKey: COPY.serverError, requestId, retryable: true };
       }
-      return { kind: "generic", message: COPY.generic, requestId };
+      return { kind: "generic", messageKey: COPY.generic, requestId };
   }
 }

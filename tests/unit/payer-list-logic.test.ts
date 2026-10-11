@@ -1,4 +1,10 @@
-import { type PayerListPage, flattenPayerPages, nextPayerCursor } from "@/payers/payerListLogic";
+import {
+  type PayerListPage,
+  flattenPayerPages,
+  nextPayerCursor,
+  payerCategoryKey,
+  payerStatusKey,
+} from "@/payers/payerListLogic";
 import { describe, expect, test } from "vitest";
 
 /**
@@ -33,5 +39,28 @@ describe("flattenPayerPages", () => {
 
   test("no pages yet -> empty array", () => {
     expect(flattenPayerPages([])).toEqual([]);
+  });
+});
+
+/**
+ * RT-399: raw `category` / `status` codes drive copy; they are not copy. Each
+ * maps to a catalog label key, and an unknown code gets a localized fallback
+ * instead of leaking the raw value.
+ */
+describe("payer label keys", () => {
+  test("each v1 category maps to its own label key", () => {
+    expect(payerCategoryKey("credit_customer")).toBe("payers.category.credit_customer");
+    expect(payerCategoryKey("corporate")).toBe("payers.category.corporate");
+    expect(payerCategoryKey("insurer")).toBe("payers.category.insurer");
+  });
+
+  test("an unknown (upstream-extended) category -> the localized fallback", () => {
+    expect(payerCategoryKey("patient")).toBe("payers.category.unknown");
+    expect(payerCategoryKey("toString")).toBe("payers.category.unknown");
+  });
+
+  test("status: suspended -> suspended label; otherwise active (display-only)", () => {
+    expect(payerStatusKey("suspended")).toBe("payers.status.suspended");
+    expect(payerStatusKey("active")).toBe("payers.status.active");
   });
 });

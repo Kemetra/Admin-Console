@@ -15,6 +15,7 @@ vi.mock("@/lib/client", async (importOriginal) => {
   };
 });
 
+import { setLocale } from "@/i18n/locale";
 import { createQueryClient } from "@/lib/query";
 import { EditMember } from "@/operators/EditMember";
 import type { MemberRow } from "@/operators/useMembers";
@@ -98,5 +99,34 @@ describe("EditMember", () => {
     fireEvent.click(btns[btns.length - 1]);
     expect(await screen.findByText(/could not be found/i)).toBeDefined();
     expect(onChanged).not.toHaveBeenCalled();
+  });
+
+  test("Arabic: drawer, actions and the named revoke confirm render in Arabic", async () => {
+    setLocale("ar");
+    revokeMembership.mockResolvedValue({ status: 204, data: undefined, error: undefined });
+    const { onChanged } = renderEdit();
+    expect(screen.getByRole("dialog", { name: "تعديل المستخدم" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "حفظ التغييرات" })).toBeDefined();
+    expect(screen.getByLabelText("الدور")).toBeDefined();
+    // The editable role field keeps the raw code: it is the value sent to the API.
+    expect((screen.getByLabelText("الدور") as HTMLInputElement).value).toBe("store_manager");
+    expect(screen.getByRole("heading", { name: "إبطال العضوية" })).toBeDefined();
+    for (const english of [/edit member/i, /save changes/i, /revoke membership/i]) {
+      expect(screen.queryByText(english)).toBeNull();
+    }
+
+    fireEvent.click(screen.getByRole("button", { name: "إبطال العضوية" }));
+    const region = await screen.findByRole("region", { name: "تأكيد: إبطال" });
+    expect(region.textContent).toContain("عضوية Omar Khaled");
+    fireEvent.click(screen.getByRole("button", { name: "إبطال" }));
+    await waitFor(() => expect(onChanged).toHaveBeenCalledOnce());
+  });
+
+  test("Arabic: save -> 404 -> Arabic not-found banner", async () => {
+    setLocale("ar");
+    updateMembership.mockResolvedValue({ status: 404, data: undefined, error: undefined });
+    renderEdit();
+    fireEvent.click(screen.getByRole("button", { name: "حفظ التغييرات" }));
+    expect(await screen.findByText("تعذّر العثور على هذا المستخدم.")).toBeDefined();
   });
 });

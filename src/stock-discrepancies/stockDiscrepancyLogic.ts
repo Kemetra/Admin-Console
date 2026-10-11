@@ -3,7 +3,11 @@
  * React, no fetch. The view never recomputes "negative" or "stale": it renders
  * the API's `snapshot.status`, `negativeItemCount` and `quantity` as received
  * (RT-178 non-goal: no business logic beyond presentation).
+ *
+ * RT-399: helpers return catalog message keys (plus params), never copy; the
+ * components translate at render so a locale switch re-renders them.
  */
+import { type Locale, type MessageKey, type Params, formatDuration } from "@/i18n";
 import type { SnapshotStatusCode, StockSnapshotStatus } from "@/lib/stock-discrepancy-queries";
 
 /** Roles the API lets read the negative on-hand surface (RT-177 `@Roles`). */
@@ -22,14 +26,20 @@ export function canRequestSnapshot(role: string | null | undefined): boolean {
 }
 
 export interface SnapshotStatusLabel {
-  label: string;
+  labelKey: MessageKey;
   badgeClass: string;
 }
 
 /** Banner a no-snapshot state shows on the store page (AC2). */
 export interface SnapshotStateNotice {
   variant: "info";
-  message: string;
+  messageKey: MessageKey;
+}
+
+/** A catalog message to render: its key and any params. */
+export interface MessageRef {
+  key: MessageKey;
+  params?: Params;
 }
 
 /**
@@ -39,53 +49,47 @@ export interface SnapshotStateNotice {
  */
 export interface SnapshotStatusView extends SnapshotStatusLabel {
   hasSnapshot: boolean;
-  /** Summary-list "As of" text when no snapshot exists. */
-  noSnapshotReason: string;
+  /** Summary-list "As of" text when no snapshot exists; null when one does. */
+  noSnapshotReasonKey: MessageKey | null;
   /** Store-page banner for a no-snapshot state; null when a snapshot exists. */
   notice: SnapshotStateNotice | null;
   /** Whether a refresh can produce a snapshot (needs a warehouse mapping). */
   canRefresh: boolean;
 }
 
-const NOT_SAME_AS_CLEAN = "This is not the same as having no discrepancies.";
-
 const STATUS_VIEW: Record<SnapshotStatusCode, SnapshotStatusView> = {
   fresh: {
-    label: "Fresh snapshot",
+    labelKey: "stock.status.fresh",
     badgeClass: "badge badge--active",
     hasSnapshot: true,
-    noSnapshotReason: "",
+    noSnapshotReasonKey: null,
     notice: null,
     canRefresh: true,
   },
   stale: {
-    label: "Stale snapshot",
+    labelKey: "stock.status.stale",
     badgeClass: "badge badge--suspended",
     hasSnapshot: true,
-    noSnapshotReason: "",
+    noSnapshotReasonKey: null,
     notice: null,
     canRefresh: true,
   },
   no_snapshot: {
-    label: "No ERPNext snapshot",
+    labelKey: "stock.status.none",
     badgeClass: "badge badge--pending",
     hasSnapshot: false,
-    noSnapshotReason: "Not recorded yet",
-    notice: {
-      variant: "info",
-      message: `No ERPNext snapshot has been recorded for this store yet, so its ERPNext stock is unknown. ${NOT_SAME_AS_CLEAN}`,
-    },
+    noSnapshotReasonKey: "stock.noSnapshotReason.notRecorded",
+    // Each notice is one whole message, ending "not the same as having no
+    // discrepancies" (AC2).
+    notice: { variant: "info", messageKey: "stock.notice.noSnapshot" },
     canRefresh: true,
   },
   no_warehouse_mapping: {
-    label: "No ERPNext snapshot",
+    labelKey: "stock.status.none",
     badgeClass: "badge",
     hasSnapshot: false,
-    noSnapshotReason: "No warehouse mapping",
-    notice: {
-      variant: "info",
-      message: `No ERPNext snapshot: this store has no ERPNext stock warehouse mapping, so its ERPNext stock is unknown. ${NOT_SAME_AS_CLEAN}`,
-    },
+    noSnapshotReasonKey: "stock.noSnapshotReason.noMapping",
+    notice: { variant: "info", messageKey: "stock.notice.noMapping" },
     canRefresh: false,
   },
 };
@@ -100,24 +104,26 @@ export function hasSnapshot(status: SnapshotStatusCode): boolean {
   return STATUS_VIEW[status].hasSnapshot;
 }
 
-/** Badge label per API snapshot status. Never "live" or "current". */
+/** Badge label key per API snapshot status. Never "live" or "current". */
 export function snapshotStatusLabel(status: SnapshotStatusCode): SnapshotStatusLabel {
-  const { label, badgeClass } = STATUS_VIEW[status];
-  return { label, badgeClass };
+  const { labelKey, badgeClass } = STATUS_VIEW[status];
+  return { labelKey, badgeClass };
 }
 
 /** Why a store has no snapshot, for the summary list's "As of" cell. */
-export function noSnapshotReason(status: SnapshotStatusCode): string {
-  return STATUS_VIEW[status].noSnapshotReason;
+export function noSnapshotReason(status: SnapshotStatusCode): MessageKey | null {
+  return STATUS_VIEW[status].noSnapshotReasonKey;
 }
 
 /**
  * The summary-list count cell. `negativeItemCount` is `0` for
  * `no_warehouse_mapping` / `no_snapshot`, which the contract defines as
- * UNKNOWN — never "no issues" (AC2).
+ * UNKNOWN — a distinct localized state, never "0" or "no issues" (AC2).
  */
-export function negativeCountLabel(status: SnapshotStatusCode, count: number): string {
-  return STATUS_VIEW[status].hasSnapshot ? String(count) : "Unknown";
+export function negativeCountLabel(status: SnapshotStatusCode, count: number): MessageRef {
+  return STATUS_VIEW[status].hasSnapshot
+    ? { key: "stock.stores.count", params: { count } }
+    : { key: "stock.stores.countUnknown" };
 }
 
 /** The "as of" time to show, or null when the API reports no snapshot. */
@@ -125,17 +131,12 @@ export function asOfTime(snapshot: StockSnapshotStatus): string | null {
   return STATUS_VIEW[snapshot.status].hasSnapshot ? snapshot.readAt : null;
 }
 
-/** Human duration for `staleAfterSeconds` (v1 = 86400 → "24 hours"). */
-export function formatStaleAfter(seconds: number): string {
-  if (seconds % 3600 === 0) {
-    const hours = seconds / 3600;
-    return hours === 1 ? "1 hour" : `${hours} hours`;
-  }
-  if (seconds % 60 === 0) {
-    const minutes = seconds / 60;
-    return minutes === 1 ? "1 minute" : `${minutes} minutes`;
-  }
-  return `${seconds} seconds`;
+/**
+ * Human duration for `staleAfterSeconds` (v1 = 86400 → «24 ساعة» / "24 hours"),
+ * from the catalog's plural duration phrases.
+ */
+export function formatStaleAfter(seconds: number, locale?: Locale): string {
+  return formatDuration(seconds, locale);
 }
 
 /**
@@ -232,30 +233,22 @@ export function classifyTriggerOutcome(result: TriggerResult): TriggerOutcome {
  * without a warehouse mapping cannot produce a snapshot; a request already
  * pending (the API's `pendingRequest`) should not be duplicated.
  */
-export function refreshBlockReason(snapshot: StockSnapshotStatus): string | null {
-  if (!STATUS_VIEW[snapshot.status].canRefresh) {
-    return "Map an ERPNext stock warehouse for this store first.";
-  }
-  return snapshot.pendingRequest ? "A snapshot request is already pending." : null;
+export function refreshBlockReason(snapshot: StockSnapshotStatus): MessageKey | null {
+  if (!STATUS_VIEW[snapshot.status].canRefresh) return "stock.refresh.blocked.noMapping";
+  return snapshot.pendingRequest ? "stock.refresh.blocked.pending" : null;
 }
 
 /** Banner for a refresh outcome; `requested` shows none (the pending note does). */
 export interface OutcomeBannerView {
   variant: "danger" | "warning";
-  message: string;
+  messageKey: MessageKey;
 }
 
 const OUTCOME_BANNER: Record<TriggerOutcome["kind"], OutcomeBannerView | null> = {
   requested: null,
-  "not-found": {
-    variant: "danger",
-    message: "Not found. A snapshot cannot be requested for this store.",
-  },
-  "key-conflict": {
-    variant: "warning",
-    message: "That snapshot request conflicted with an earlier one. Try again.",
-  },
-  error: { variant: "danger", message: "The snapshot request could not be sent. Try again." },
+  "not-found": { variant: "danger", messageKey: "stock.refresh.outcome.notFound" },
+  "key-conflict": { variant: "warning", messageKey: "stock.refresh.outcome.keyConflict" },
+  error: { variant: "danger", messageKey: "stock.refresh.outcome.error" },
 };
 
 export function outcomeBannerView(outcome: TriggerOutcome): OutcomeBannerView | null {

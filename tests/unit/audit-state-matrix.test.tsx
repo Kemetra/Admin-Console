@@ -15,6 +15,7 @@ vi.mock("@/context/ActiveContextProvider", () => ({
 }));
 
 import { AuditSearch } from "@/audit/AuditSearch";
+import { setLocale } from "@/i18n/locale";
 import { createQueryClient } from "@/lib/query";
 
 function renderSearch(): void {
@@ -78,6 +79,71 @@ describe("AuditSearch state matrix", () => {
     apply();
     expect(await screen.findByText("shift.forced_close")).toBeDefined();
     expect(screen.getByText("Amal Saleh")).toBeDefined();
+  });
+
+  test("RT-399: the time column is exact UTC evidence, labelled UTC, LTR-isolated", async () => {
+    listAuditEvents.mockResolvedValue({
+      status: 200,
+      data: { items: [event("shift.forced_close")], next_cursor: null },
+    });
+    renderSearch();
+    apply();
+    expect(await screen.findByText("shift.forced_close")).toBeDefined();
+    expect(screen.getByRole("columnheader", { name: "Time (UTC)" })).toBeDefined();
+    // Same output as before the localization: the exact instant, T -> space, Z -> UTC.
+    const time = screen.getByText("2026-06-01 09:30:00 UTC");
+    expect(time.tagName).toBe("BDI");
+    expect(time.getAttribute("dir")).toBe("ltr");
+    // The action code is machine data: verbatim and LTR-isolated.
+    expect(screen.getByText("shift.forced_close").closest("bdi")?.getAttribute("dir")).toBe("ltr");
+  });
+
+  test("RT-399: Arabic renders the surface in Arabic (heading, filters, table, pager)", async () => {
+    setLocale("ar");
+    listAuditEvents.mockResolvedValue({
+      status: 200,
+      data: { items: [event("shift.forced_close")], next_cursor: null },
+    });
+    renderSearch();
+    expect(screen.getByRole("heading", { name: "سجل التدقيق" })).toBeDefined();
+    expect(screen.queryByRole("heading", { name: "Audit" })).toBeNull();
+    const prompt = screen.getByText(/ابحث في نشاط التدقيق/);
+    expect(prompt.textContent).toBe("ابحث في نشاط التدقيق للمؤسسة Northstar Retail.");
+    expect(screen.getByLabelText("الإجراء")).toBeDefined();
+    expect(screen.getByLabelText("المستخدم")).toBeDefined();
+    expect(screen.queryByRole("button", { name: /apply/i })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "تطبيق" }));
+    expect(await screen.findByText("shift.forced_close")).toBeDefined();
+    expect(screen.getByRole("columnheader", { name: "الوقت (UTC)" })).toBeDefined();
+    expect(screen.getByRole("columnheader", { name: "الإجراء" })).toBeDefined();
+    expect(screen.queryByRole("columnheader", { name: /^time/i })).toBeNull();
+    // Evidence time is locale-independent: identical in Arabic.
+    expect(screen.getByText("2026-06-01 09:30:00 UTC")).toBeDefined();
+    // Noun-first counter, Western digits.
+    expect(screen.getByText("المحمّل: 1")).toBeDefined();
+    expect(screen.queryByText(/showing/i)).toBeNull();
+  });
+
+  test("RT-399: Arabic error and empty copy", async () => {
+    setLocale("ar");
+    listAuditEvents.mockResolvedValue({ status: 200, data: { items: [], next_cursor: null } });
+    renderSearch();
+    fireEvent.click(screen.getByRole("button", { name: "تطبيق" }));
+    expect(await screen.findByText("لا توجد أحداث تدقيق تطابق عوامل التصفية هذه.")).toBeDefined();
+    expect(screen.getByRole("button", { name: "مسح عوامل التصفية" })).toBeDefined();
+    expect(screen.queryByText(/no audit events/i)).toBeNull();
+  });
+
+  test("RT-399: Arabic 403 banner keeps the request reference", async () => {
+    setLocale("ar");
+    listAuditEvents.mockResolvedValue({ status: 403, error: { error: { request_id: "req-403" } } });
+    renderSearch();
+    fireEvent.click(screen.getByRole("button", { name: "تطبيق" }));
+    await waitFor(() => expect(screen.getByRole("alert")).toBeDefined());
+    expect(screen.getByText("ليست لديك صلاحية لعرض سجل التدقيق في هذا النطاق.")).toBeDefined();
+    expect(screen.getByRole("alert").textContent).toMatch(/req-403/);
+    expect(screen.queryByText(/permission/i)).toBeNull();
   });
 
   test("empty-after-filter: Apply -> 0 items -> distinct empty (with Clear), not pre-query", async () => {
@@ -151,6 +217,15 @@ describe("AuditSearch state matrix", () => {
     expect(listAuditEvents).not.toHaveBeenCalled();
   });
 
+  test("RT-399: no active tenant in Arabic: Arabic scope prompt", () => {
+    setLocale("ar");
+    activeContext.mockReturnValue({ context: { active_tenant: null, active_store: null } });
+    renderSearch();
+    expect(screen.getByRole("heading", { name: "سجل التدقيق" })).toBeDefined();
+    expect(screen.getByText(/^اختر مؤسسة للبحث في نشاط التدقيق/)).toBeDefined();
+    expect(screen.queryByText(/select a tenant/i)).toBeNull();
+  });
+
   test("S6: a scope switch resets the surface back to pre-query (filters + results)", async () => {
     listAuditEvents.mockResolvedValue({
       status: 200,
@@ -184,7 +259,12 @@ describe("AuditSearch state matrix", () => {
     );
 
     // Reset to pre-query: prior rows gone, prompt back (filters cleared too).
-    expect(await screen.findByText(/search audit activity for helios/i)).toBeDefined();
+    // The tenant name is its own <bdi> inside the sentence, so match the whole text.
+    await waitFor(() =>
+      expect(screen.getByText(/search audit activity/i).textContent).toBe(
+        "Search audit activity for Helios Markets.",
+      ),
+    );
     expect(screen.queryByText("auth.signin")).toBeNull();
   });
 });

@@ -1,7 +1,13 @@
 import { Banner } from "@/components/Banner";
 import { Drawer } from "@/components/Drawer";
 import { ListState } from "@/components/ListState";
-import type { ReviewQueueItem } from "@/lib/unknown-items-queries";
+import { DateTime, type MessageKey, useT } from "@/i18n";
+import {
+  type ReviewQueueItem,
+  identifierTypeKey,
+  resolutionActionKey,
+  resolutionStatusKey,
+} from "@/lib/unknown-items-queries";
 /**
  * SF-4a-2 — inspect drawer (T007). Reuses the shared Drawer (right-side panel,
  * focus-trapped, Escape closes) to render the `ReviewQueueItem` projection
@@ -12,6 +18,8 @@ import type { ReviewQueueItem } from "@/lib/unknown-items-queries";
  * For a `pending` item it offers a Dismiss entry, which swaps the body to the
  * dismiss confirm. The dismiss action and its inline error live in
  * UnknownItemDismiss; this surface just owns the panel + the read-only detail.
+ * RT-399: enum fields render their localized labels (never the raw code), ids
+ * stay LTR-isolated, and the instants render as operational times.
  */
 import { useState } from "react";
 import { UnknownItemDismiss } from "./UnknownItemDismiss";
@@ -35,18 +43,42 @@ function Field({ label, value }: { label: string; value: React.ReactNode }): Rea
   );
 }
 
+/** A machine value (id, code) isolated LTR, or null to show the empty mark. */
+function machine(value: string | null): React.ReactNode {
+  return value === null ? null : <bdi dir="ltr">{value}</bdi>;
+}
+
 function DetailBody({ item }: { item: ReviewQueueItem }): React.JSX.Element {
+  const t = useT();
+  // An enum value outside the contract shows verbatim rather than a guess.
+  const label = (key: MessageKey | null, raw: string | null): React.ReactNode =>
+    key ? t(key) : machine(raw);
   return (
     <dl className="unknown-item-detail">
-      <Field label="Identifier" value={item.identifier_value} />
-      <Field label="Identifier type" value={item.identifier_type} />
-      <Field label="Source system" value={item.source_system} />
-      <Field label="Store" value={item.store_id} />
-      <Field label="Status" value={item.resolution_status} />
-      <Field label="Resolution action" value={item.resolution_action} />
-      <Field label="Encountered at" value={item.encountered_at} />
-      <Field label="Resolved at" value={item.resolved_at} />
-      <Field label="Resolved by" value={item.resolved_by} />
+      <Field label={t("unknownItems.field.identifier")} value={machine(item.identifier_value)} />
+      <Field
+        label={t("unknownItems.field.identifierType")}
+        value={label(identifierTypeKey(item.identifier_type), item.identifier_type)}
+      />
+      <Field label={t("unknownItems.field.source")} value={machine(item.source_system)} />
+      <Field label={t("unknownItems.field.store")} value={machine(item.store_id)} />
+      <Field
+        label={t("unknownItems.field.status")}
+        value={label(resolutionStatusKey(item.resolution_status), item.resolution_status)}
+      />
+      <Field
+        label={t("unknownItems.field.resolutionAction")}
+        value={label(resolutionActionKey(item.resolution_action), item.resolution_action)}
+      />
+      <Field
+        label={t("unknownItems.field.encounteredAt")}
+        value={<DateTime value={item.encountered_at} />}
+      />
+      <Field
+        label={t("unknownItems.field.resolvedAt")}
+        value={item.resolved_at ? <DateTime value={item.resolved_at} /> : null}
+      />
+      <Field label={t("unknownItems.field.resolvedBy")} value={machine(item.resolved_by)} />
     </dl>
   );
 }
@@ -57,6 +89,7 @@ export function UnknownItemInspectDrawer({
   onClose,
   onDismissed,
 }: UnknownItemInspectDrawerProps): React.JSX.Element {
+  const t = useT();
   const { result, isLoading } = useUnknownItemInspect(id);
   const [confirming, setConfirming] = useState(false);
 
@@ -65,14 +98,16 @@ export function UnknownItemInspectDrawer({
   const isPending = item?.resolution_status === "pending";
 
   return (
-    <Drawer title="Unknown item" onClose={onClose}>
-      {isLoading ? <ListState state="loading" label="item" /> : null}
+    <Drawer title={t("unknownItems.drawer.title")} onClose={onClose}>
+      {isLoading ? (
+        <ListState state="loading" label={t("unknownItems.drawer.loadingNoun")} />
+      ) : null}
 
       {error && error.kind === "not-found" ? (
-        <Banner variant="info" message={error.message} />
+        <Banner variant="info" message={t(error.messageKey)} />
       ) : null}
       {error && (error.kind === "banner" || error.kind === "generic") ? (
-        <Banner variant="danger" message={error.message} requestId={error.requestId} />
+        <Banner variant="danger" message={t(error.messageKey)} requestId={error.requestId} />
       ) : null}
 
       {item ? (
@@ -81,7 +116,7 @@ export function UnknownItemInspectDrawer({
           {isPending && !confirming ? (
             <div className="unknown-item-detail__actions">
               <button type="button" className="btn-destructive" onClick={() => setConfirming(true)}>
-                Dismiss
+                {t("unknownItems.dismiss.action")}
               </button>
             </div>
           ) : null}

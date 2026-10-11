@@ -5,20 +5,19 @@
  * precondition-401 surface. A scope precondition, never a sign-out — the
  * operator resolves it via the RF-1 scope bar above.
  */
+import { useT } from "@/i18n";
 import "../shell/surface.css";
 
 export function OperatorScopePrompt(): React.JSX.Element {
+  const t = useT();
   return (
     <div className="surface">
       <header className="surface__head">
         <div>
-          <h1 className="content__title">Operators</h1>
+          <h1 className="content__title">{t("operators.title")}</h1>
         </div>
       </header>
-      <p className="scope-prompt">
-        Select a tenant to manage its operators. Use the tenant selector in the scope bar above to
-        choose where you are working.
-      </p>
+      <p className="scope-prompt">{t("operators.scopePrompt.message")}</p>
     </div>
   );
 }

@@ -18,10 +18,10 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  float: left;
+  float: inline-start;
   width: 100%;
   padding: 0;
-  margin-bottom: var(--space-3);
+  margin-block-end: var(--space-3);
   color: var(--color-text-muted);
   font: var(--weight-strong) var(--text-control) / var(--leading-title) var(--font-sans);
 }

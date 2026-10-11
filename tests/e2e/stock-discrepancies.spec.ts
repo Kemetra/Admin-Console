@@ -1,4 +1,5 @@
-import { type Page, expect, test } from "@playwright/test";
+import { formatDateTime } from "../../src/i18n/format";
+import { type Page, expect, test } from "./fixtures";
 
 /**
  * RT-178 ERPNext stock discrepancies E2E against mocked Backend-Core (C-5).
@@ -6,6 +7,8 @@ import { type Page, expect, test } from "@playwright/test";
  * "as of" header, Not mapped badge) → Request fresh snapshot (Idempotency-Key).
  * S2: store_manager — nav visible, refresh hidden. S3: cashier — no nav entry.
  * S4: per-store 404 → not-found.
+ * RT-399: runs in both locales; copy is selected through the catalog (`t`),
+ * mocked data (store names, refs, quantities) stays as authored.
  */
 const S1 = "0190f000-0000-7000-8000-0000000000a1";
 const S2 = "0190f000-0000-7000-8000-0000000000a2";
@@ -96,6 +99,8 @@ async function mockBase(page: Page, role: string): Promise<void> {
 
 test("S1: tenant_admin → summary → store items verbatim → request fresh snapshot", async ({
   page,
+  t,
+  appLocale,
 }) => {
   await mockBase(page, "tenant_admin");
   let triggerKey: string | null = null;
@@ -119,45 +124,50 @@ test("S1: tenant_admin → summary → store items verbatim → request fresh sn
   });
 
   await page.goto("/");
-  await page.getByRole("link", { name: /stock discrepancies/i }).click();
-  await expect(page.getByRole("heading", { name: "ERPNext stock discrepancies" })).toBeVisible();
+  await page.getByRole("link", { name: t("shell.nav.stockDiscrepancies") }).click();
+  await expect(page.getByRole("heading", { name: t("stock.title") })).toBeVisible();
   const zamalek = page.getByRole("row", { name: /Zamalek/ });
-  await expect(zamalek.getByRole("cell", { name: "Unknown" })).toBeVisible();
+  // UNKNOWN is its own localized state, never 0.
+  await expect(
+    zamalek.getByRole("cell", { name: t("stock.stores.countUnknown"), exact: true }),
+  ).toBeVisible();
 
   await page.getByRole("link", { name: "Cairo Festival City" }).click();
   await expect(
-    page.getByRole("heading", { name: `ERPNext snapshot as of ${READ_AT}` }),
+    page.getByRole("heading", {
+      name: t("stock.panel.asOf", { time: formatDateTime(READ_AT, { locale: appLocale }) }),
+    }),
   ).toBeVisible();
   await expect(page.getByRole("cell", { name: "-3.000000" })).toBeVisible();
   await expect(page.getByRole("cell", { name: "-1.500000" })).toBeVisible();
-  await expect(page.getByText("Not mapped", { exact: true })).toBeVisible();
+  await expect(page.getByText(t("stock.items.notMapped"), { exact: true })).toBeVisible();
 
-  await page.getByRole("button", { name: "Request fresh snapshot" }).click();
+  await page.getByRole("button", { name: t("stock.refresh.action") }).click();
   await expect.poll(() => triggerKey).toMatch(/^[\x21-\x7E]{16,128}$/);
   expect(triggerBody).toEqual({ storeId: S1 });
 });
 
-test("S2: store_manager sees the nav entry but no refresh button", async ({ page }) => {
+test("S2: store_manager sees the nav entry but no refresh button", async ({ page, t }) => {
   await mockBase(page, "store_manager");
   await page.goto(`/stock-discrepancies/${S1}`);
-  await expect(page.getByRole("link", { name: /stock discrepancies/i })).toBeVisible();
+  await expect(page.getByRole("link", { name: t("shell.nav.stockDiscrepancies") })).toBeVisible();
   await expect(page.getByRole("cell", { name: "-3.000000" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Request fresh snapshot" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: t("stock.refresh.action") })).toHaveCount(0);
 });
 
-test("S3: cashier has no nav entry", async ({ page }) => {
+test("S3: cashier has no nav entry", async ({ page, t }) => {
   await mockBase(page, "cashier");
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
-  await expect(page.getByRole("link", { name: /stock discrepancies/i })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: t("shell.overview.title") })).toBeVisible();
+  await expect(page.getByRole("link", { name: t("shell.nav.stockDiscrepancies") })).toHaveCount(0);
 });
 
-test("S4: per-store 404 renders not-found", async ({ page }) => {
+test("S4: per-store 404 renders not-found", async ({ page, t }) => {
   await mockBase(page, "store_manager");
   await page.route(
     `**/api/v1/catalog/erpnext-reconciliation/stores/${S2}/negative-on-hand**`,
     (r) => r.fulfill(json({ error: { code: "not_found", message: "Not found" } }, 404)),
   );
   await page.goto(`/stock-discrepancies/${S2}`);
-  await expect(page.getByRole("heading", { name: "Store not found" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: t("stock.store.notFoundTitle") })).toBeVisible();
 });

@@ -1,5 +1,6 @@
 import { Banner } from "@/components/Banner";
 import { TowerMark } from "@/components/TowerMark";
+import { type MessageKey, useT } from "@/i18n";
 import { signIn } from "@/lib/client";
 /**
  * SF-1 sign-in surface (T020/T023). Centered card on the light canvas
@@ -9,6 +10,11 @@ import { signIn } from "@/lib/client";
  * Logic lives in resolveSignIn (signin-flow.ts, unit-tested); this component
  * owns presentation + the submit lifecycle. Credentials are read from the form
  * at submit and never persisted (FR-003-009).
+ *
+ * RT-399: copy comes from the `auth.signIn.*` catalog. The phase keeps the
+ * error's message key, not its text, so a locale switch re-renders it. The
+ * word mark is the product's proper name and stays Latin in both locales; the
+ * email and password inputs take machine input, so they stay LTR (UX-11).
  */
 import { type FormEvent, useState } from "react";
 import { type SignInResolution, resolveSignIn } from "./signin-flow";
@@ -22,10 +28,11 @@ export interface SignInProps {
 type Phase =
   | { status: "idle" }
   | { status: "submitting" }
-  | { status: "error"; message: string; requestId?: string }
+  | { status: "error"; messageKey: MessageKey; requestId?: string }
   | { status: "rate-limited"; retryAfterSeconds: number; requestId?: string };
 
 export function SignIn({ onResolved }: SignInProps): React.JSX.Element {
+  const t = useT();
   const [phase, setPhase] = useState<Phase>({ status: "idle" });
 
   const submitting = phase.status === "submitting";
@@ -48,7 +55,11 @@ export function SignIn({ onResolved }: SignInProps): React.JSX.Element {
     });
 
     if (resolution.kind === "error") {
-      setPhase({ status: "error", message: resolution.message, requestId: resolution.requestId });
+      setPhase({
+        status: "error",
+        messageKey: resolution.messageKey,
+        requestId: resolution.requestId,
+      });
       return;
     }
     if (resolution.kind === "rate-limited") {
@@ -76,20 +87,20 @@ export function SignIn({ onResolved }: SignInProps): React.JSX.Element {
 
         <div className="signin-card">
           <div className="signin-head">
-            <h1 className="signin-head__title">Sign in</h1>
-            <p className="signin-head__sub">Operator access to the command console.</p>
+            <h1 className="signin-head__title">{t("auth.signIn.title")}</h1>
+            <p className="signin-head__sub">{t("auth.signIn.subtitle")}</p>
           </div>
 
           {phase.status === "error" ? (
             <div className="signin-banner">
-              <Banner variant="danger" message={phase.message} requestId={phase.requestId} />
+              <Banner variant="danger" message={t(phase.messageKey)} requestId={phase.requestId} />
             </div>
           ) : null}
           {phase.status === "rate-limited" ? (
             <div className="signin-banner">
               <Banner
                 variant="warning"
-                message={`Too many attempts. You can try again in ${phase.retryAfterSeconds}s.`}
+                message={t("auth.signIn.errors.rateLimited", { count: phase.retryAfterSeconds })}
                 requestId={phase.requestId}
               />
             </div>
@@ -97,12 +108,13 @@ export function SignIn({ onResolved }: SignInProps): React.JSX.Element {
 
           <form className="signin-form" onSubmit={handleSubmit} noValidate>
             <div className="field">
-              <label htmlFor="email">Email</label>
+              <label htmlFor="email">{t("auth.signIn.email.label")}</label>
               <input
                 className="input"
                 id="email"
                 name="email"
                 type="email"
+                dir="ltr"
                 autoComplete="username"
                 placeholder="you@operator.example"
                 disabled={disabled}
@@ -111,12 +123,13 @@ export function SignIn({ onResolved }: SignInProps): React.JSX.Element {
               />
             </div>
             <div className="field">
-              <label htmlFor="password">Password</label>
+              <label htmlFor="password">{t("auth.signIn.password.label")}</label>
               <input
                 className="input"
                 id="password"
                 name="password"
                 type="password"
+                dir="ltr"
                 autoComplete="current-password"
                 placeholder="••••••••••"
                 disabled={disabled}
@@ -127,18 +140,18 @@ export function SignIn({ onResolved }: SignInProps): React.JSX.Element {
             <button className="btn-primary signin-submit" type="submit" disabled={disabled}>
               {submitting ? (
                 <>
-                  <span className="spinner" aria-hidden="true" /> Signing in
+                  <span className="spinner" aria-hidden="true" /> {t("auth.signIn.submitting")}
                 </>
               ) : rateLimited ? (
-                `Try again in ${phase.retryAfterSeconds}s`
+                t("auth.signIn.retryIn", { count: phase.retryAfterSeconds })
               ) : (
-                "Sign in"
+                t("auth.signIn.submit")
               )}
             </button>
           </form>
         </div>
 
-        <p className="signin-foot">Protected platform · all activity is audited</p>
+        <p className="signin-foot">{t("auth.signIn.footer")}</p>
       </div>
     </div>
   );

@@ -7,27 +7,39 @@
  *                         optional opaque remittanceRef.
  * The server stays authoritative; this is a fail-fast UX guard. Mirrors 017's
  * payerCreateForm.
+ *
+ * RT-399: errors are message keys (plus params), translated at render time.
  */
+import type { MessageKey, Params } from "@/i18n";
+
+/** A field error: the catalog key and its params, rendered with `t()` at display time. */
+export interface ReceivableFieldError {
+  messageKey: MessageKey;
+  params?: Params;
+}
 
 export interface ClaimDraft {
   payerRef: string;
   receivableRefs: string[];
 }
 
-export type ClaimDraftErrors = Partial<Record<"payerRef" | "receivableRefs", string>>;
+export type ClaimDraftErrors = Partial<Record<"payerRef" | "receivableRefs", ReceivableFieldError>>;
 
 const CLAIM_MAX_RECEIVABLES = 500;
 
 export function validateClaimDraft(draft: ClaimDraft): ClaimDraftErrors {
   const errors: ClaimDraftErrors = {};
   if (!draft.payerRef || draft.payerRef.trim().length === 0) {
-    errors.payerRef = "Select a payer for this claim.";
+    errors.payerRef = { messageKey: "receivables.form.payerRequired" };
   }
   const n = draft.receivableRefs.length;
   if (n < 1) {
-    errors.receivableRefs = "Select at least one receivable to claim.";
+    errors.receivableRefs = { messageKey: "receivables.form.receivablesRequired" };
   } else if (n > CLAIM_MAX_RECEIVABLES) {
-    errors.receivableRefs = `A claim may bundle at most ${CLAIM_MAX_RECEIVABLES} receivables.`;
+    errors.receivableRefs = {
+      messageKey: "receivables.form.receivablesTooMany",
+      params: { max: CLAIM_MAX_RECEIVABLES },
+    };
   }
   return errors;
 }
@@ -37,7 +49,7 @@ export interface RemittanceDraft {
   remittanceRef?: string | null;
 }
 
-export type RemittanceDraftErrors = Partial<Record<"remittedAmount", string>>;
+export type RemittanceDraftErrors = Partial<Record<"remittedAmount", ReceivableFieldError>>;
 
 /**
  * Money: non-negative exact-decimal string, up to 4 fractional digits. Unlike a
@@ -49,7 +61,7 @@ export function validateRemittanceDraft(draft: RemittanceDraft): RemittanceDraft
   const errors: RemittanceDraftErrors = {};
   const v = (draft.remittedAmount ?? "").trim();
   if (!NON_NEGATIVE_MONEY.test(v)) {
-    errors.remittedAmount = "Enter a valid amount (e.g. 120.00).";
+    errors.remittedAmount = { messageKey: "receivables.form.amountInvalid" };
   }
   return errors;
 }

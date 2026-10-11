@@ -1,4 +1,4 @@
-import { type Page, expect, test } from "@playwright/test";
+import { type Page, expect, test } from "./fixtures";
 
 /**
  * RF-2 unpermitted tenant-create E2E (VG-2, Scenario S3, FR-004-004). The
@@ -35,6 +35,7 @@ async function mockBase(page: Page): Promise<void> {
 
 test("S3: a non-admin can open the create form (not pre-hidden) and sees a 403 on submit", async ({
   page,
+  t,
 }) => {
   await mockBase(page);
   await page.route("**/api/v1/tenants", (r) => {
@@ -54,15 +55,16 @@ test("S3: a non-admin can open the create form (not pre-hidden) and sees a 403 o
 
   // The create entry point is rendered for everyone (no role pre-hide, OQ-3).
   await page.goto("/tenants");
-  await page.getByRole("link", { name: /new tenant/i }).click();
+  await page.getByRole("link", { name: t("tenants.list.add") }).click();
   await expect(page).toHaveURL(/\/tenants\/new$/);
 
-  await page.getByLabel(/slug/i).fill("attempt");
-  await page.getByLabel(/name/i).fill("Attempt Co");
-  await page.getByRole("button", { name: /create tenant/i }).click();
+  await page.getByLabel(t("tenants.field.slug"), { exact: true }).fill("attempt");
+  await page.getByLabel(t("tenants.field.name"), { exact: true }).fill("Attempt Co");
+  await page.getByRole("button", { name: t("tenants.form.create") }).click();
 
   // 403 surfaces in the persistent banner with request_id; operator stays put.
   await expect(page.getByRole("alert")).toBeVisible();
+  await expect(page.getByRole("alert")).toContainText(t("errors.forbidden"));
   await expect(page.getByText(/req-403/)).toBeVisible();
   await expect(page).toHaveURL(/\/tenants\/new$/);
 });

@@ -1,6 +1,7 @@
 import { Banner } from "@/components/Banner";
 import { ListState } from "@/components/ListState";
 import { useActiveContextValue } from "@/context/ActiveContextProvider";
+import { useT } from "@/i18n";
 /**
  * SF-6-1 — the `/audit` route component (T022/T027). Orchestrates the state
  * matrix (pre-query / loading / rows / empty-after-filter / 403 / generic) over
@@ -24,6 +25,7 @@ import "./audit.css";
 const EMPTY_FILTERS: Filters = {};
 
 export function AuditSearch(): React.JSX.Element {
+  const t = useT();
   const { context } = useActiveContextValue();
   const activeTenant = context?.active_tenant ?? null;
   const activeStore = context?.active_store ?? null;
@@ -80,10 +82,16 @@ export function AuditSearch(): React.JSX.Element {
     <div className="surface">
       <header className="surface__head">
         <div>
-          <h1 className="content__title">Audit</h1>
+          <h1 className="content__title">{t("audit.title")}</h1>
           <p className="content__sub">
-            {activeTenant.name}
-            {activeStore ? ` · ${activeStore.name}` : ""}
+            {activeStore ? (
+              t.rich("audit.header.scope", {
+                tenant: <bdi>{activeTenant.name}</bdi>,
+                store: <bdi>{activeStore.name}</bdi>,
+              })
+            ) : (
+              <bdi>{activeTenant.name}</bdi>
+            )}
           </p>
         </div>
       </header>
@@ -99,28 +107,28 @@ export function AuditSearch(): React.JSX.Element {
       {error ? (
         <Banner
           variant="danger"
-          message={
-            error.kind === "forbidden"
-              ? "You do not have permission to view audit for this scope."
-              : "Audit search failed. Try again."
-          }
+          message={t(
+            error.kind === "forbidden" ? "audit.errors.forbidden" : "audit.errors.searchFailed",
+          )}
           requestId={error.requestId}
         />
       ) : null}
 
       {showPreQuery ? (
-        <p className="audit-prequery">Search audit activity for {activeTenant.name}.</p>
+        <p className="audit-prequery">
+          {t.rich("audit.prequery", { tenant: <bdi>{activeTenant.name}</bdi> })}
+        </p>
       ) : null}
 
-      {isLoading ? <ListState state="loading" label="audit events" /> : null}
+      {isLoading ? <ListState state="loading" label={t("audit.list.loadingNoun")} /> : null}
 
       {showEmpty ? (
         <ListState
           state="empty"
-          emptyMessage="No audit events match these filters."
+          emptyMessage={t("audit.list.empty")}
           action={
             <button type="button" className="btn-ghost" onClick={onClear}>
-              Clear filters
+              {t("audit.list.clearFilters")}
             </button>
           }
         />
@@ -134,15 +142,15 @@ export function AuditSearch(): React.JSX.Element {
           {continuationError ? (
             <Banner
               variant="danger"
-              message={
+              message={t(
                 continuationError.kind === "forbidden"
-                  ? "Could not load more audit events: you do not have permission. The events above are kept."
-                  : "Could not load more audit events. The events above are kept."
-              }
+                  ? "audit.continuation.forbidden"
+                  : "audit.continuation.failed",
+              )}
               requestId={continuationError.requestId}
               action={
                 <button type="button" className="btn-secondary" onClick={retryContinuation}>
-                  Retry
+                  {t("audit.continuation.retry")}
                 </button>
               }
             />

@@ -45,7 +45,7 @@
 .scope-menu {
   position: absolute;
   top: 44px;
-  left: var(--space-5);
+  inset-inline-start: var(--space-5);
   z-index: 20;
   min-width: 280px;
   background: var(--color-surface);
@@ -71,7 +71,7 @@
   font-size: var(--text-body);
   background: transparent;
   border: none;
-  text-align: left;
+  text-align: start;
 }
 .scope-menu__item:hover {
   background: var(--color-surface-sunken);

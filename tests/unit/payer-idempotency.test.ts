@@ -43,6 +43,7 @@ describe("classifyPayerCreateOutcome", () => {
       res({ status: 400, error: { error: { code: "validation_failure" } } }),
     );
     expect(o.kind).toBe("validation");
+    expect(o).toMatchObject({ messageKey: "payers.create.errors.validation" });
   });
 
   test("400 idempotency_key_* -> regenerate key + retry (not user-facing)", () => {
@@ -53,11 +54,21 @@ describe("classifyPayerCreateOutcome", () => {
   });
 
   test("401 -> session (re-auth)", () => {
-    expect(classifyPayerCreateOutcome(res({ status: 401 })).kind).toBe("unauthenticated");
+    expect(classifyPayerCreateOutcome(res({ status: 401 }))).toEqual({
+      kind: "unauthenticated",
+      messageKey: "payers.create.errors.sessionExpired",
+    });
   });
 
-  test("403 -> permission banner", () => {
-    expect(classifyPayerCreateOutcome(res({ status: 403 })).kind).toBe("forbidden");
+  test("403 -> permission banner (message key + request_id evidence)", () => {
+    const o = classifyPayerCreateOutcome(
+      res({ status: 403, error: { error: { request_id: "req-403" } } }),
+    );
+    expect(o).toEqual({
+      kind: "forbidden",
+      messageKey: "payers.create.errors.forbidden",
+      requestId: "req-403",
+    });
   });
 
   test("409 idempotency_key_conflict -> terminal; regenerate a NEW key", () => {
@@ -65,14 +76,25 @@ describe("classifyPayerCreateOutcome", () => {
       res({ status: 409, error: { error: { code: "idempotency_key_conflict" } } }),
     );
     expect(o.kind).toBe("key-conflict");
+    expect(o).toMatchObject({ messageKey: "payers.create.errors.keyConflict" });
   });
 
   test("409 (other) -> non-disclosing conflict banner (no cross-tenant leak)", () => {
     const o = classifyPayerCreateOutcome(res({ status: 409 }));
     expect(o.kind).toBe("conflict");
+    expect(o).toMatchObject({ messageKey: "payers.create.errors.conflict" });
   });
 
   test("5xx -> generic retryable error", () => {
-    expect(classifyPayerCreateOutcome(res({ status: 503 })).kind).toBe("error");
+    const o = classifyPayerCreateOutcome(res({ status: 503 }));
+    expect(o.kind).toBe("error");
+    expect(o).toMatchObject({ messageKey: "payers.create.errors.generic" });
+  });
+
+  test("RT-399: outcomes carry message keys, never translated copy", () => {
+    for (const status of [400, 401, 403, 409, 500]) {
+      const o = classifyPayerCreateOutcome(res({ status })) as { messageKey?: string };
+      expect(o.messageKey).toMatch(/^payers\.create\.errors\./);
+    }
   });
 });

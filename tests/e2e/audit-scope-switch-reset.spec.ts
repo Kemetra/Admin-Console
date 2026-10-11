@@ -1,4 +1,4 @@
-import { type Page, expect, test } from "@playwright/test";
+import { type Page, expect, test } from "./fixtures";
 
 /**
  * RF-6 scope-switch reset E2E (VG-2, S6). After a search, switching scope (RF-1
@@ -64,23 +64,23 @@ async function mock(page: Page): Promise<() => number> {
   return () => auditCalls;
 }
 
-test("S6: switching scope re-queries and resets the surface to pre-query", async ({ page }) => {
+test("S6: switching scope re-queries and resets the surface to pre-query", async ({ page, t }) => {
   // Seed an active store so the scope header exposes a store entry to switch to.
   activeStore = { id: "s1", name: "Cairo Festival City" };
   const auditCalls = await mock(page);
   activeStore = { id: "s1", name: "Cairo Festival City" };
 
   await page.goto("/audit");
-  await page.getByRole("button", { name: /apply/i }).click();
+  await page.getByRole("button", { name: t("audit.filters.apply"), exact: true }).click();
   await expect(page.getByText("auth.signin")).toBeVisible();
   const callsAfterSearch = auditCalls();
   expect(callsAfterSearch).toBeGreaterThan(0);
 
   // Switch scope via the gold scope header: clear the store (a scope change).
   await page.getByRole("button", { name: /Northstar Retail/ }).click();
-  await page.getByRole("menuitem", { name: /all stores/i }).click();
+  await page.getByRole("menuitem", { name: t("shell.scope.allStores") }).click();
 
   // Surface resets to pre-query (the prior search's rows are gone, prompt back).
-  await expect(page.getByText(/search audit activity/i)).toBeVisible();
+  await expect(page.getByText(t("audit.prequery", { tenant: "Northstar Retail" }))).toBeVisible();
   await expect(page.getByText("auth.signin")).toBeHidden();
 });

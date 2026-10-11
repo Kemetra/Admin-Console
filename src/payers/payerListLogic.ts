@@ -6,6 +6,7 @@
  * filtering is `category` + opaque cursor only; any displayName search is a
  * client-side affordance over the already-returned rows (not modeled here).
  */
+import type { MessageKey } from "@/i18n";
 
 /** A rendered payer row (subset; full projection lands with the generated type). */
 export interface PayerRow {
@@ -29,4 +30,29 @@ export function nextPayerCursor(page: PayerListPage): string | undefined {
 /** Flatten fetched pages into a single newest-first row list (fetch order). */
 export function flattenPayerPages(pages: readonly PayerListPage[]): PayerRow[] {
   return pages.flatMap((page) => page.items);
+}
+
+// --- Display labels (RT-399) -------------------------------------------------
+// Machine codes drive copy; they are not copy (UX-12). The raw `category` /
+// `status` values stay as the API sent them; only their labels are localized.
+
+const CATEGORY_KEYS: Record<string, MessageKey> = {
+  credit_customer: "payers.category.credit_customer",
+  corporate: "payers.category.corporate",
+  insurer: "payers.category.insurer",
+};
+
+/**
+ * The label key for a payer category. `PayerCategory` is extensible upstream,
+ * so a code this build does not know gets a localized fallback, never the raw value.
+ */
+export function payerCategoryKey(category: string): MessageKey {
+  return Object.hasOwn(CATEGORY_KEYS, category)
+    ? CATEGORY_KEYS[category]
+    : "payers.category.unknown";
+}
+
+/** The label key for a payer status (display-only; anything not suspended reads as active). */
+export function payerStatusKey(status: string): MessageKey {
+  return status === "suspended" ? "payers.status.suspended" : "payers.status.active";
 }

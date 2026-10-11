@@ -25,6 +25,7 @@ vi.mock("@/context/ActiveContextProvider", () => ({
   }),
 }));
 
+import { setLocale } from "@/i18n/locale";
 import { createQueryClient } from "@/lib/query";
 import { StoreDetail } from "@/stores/StoreDetail";
 
@@ -73,7 +74,8 @@ describe("StoreDetail", () => {
     readStore.mockResolvedValue({ status: 404 });
     renderDetail();
     expect(await screen.findByText(/not available/i)).toBeDefined();
-    expect(screen.getByRole("link", { name: /back to stores/i })).toBeDefined();
+    // The back arrow is decorative (aria-hidden): the accessible name is the label.
+    expect(screen.getByRole("link", { name: "Back to stores" })).toBeDefined();
   });
 
   test("scope-401 -> scope prompt, not a sign-out", async () => {
@@ -96,5 +98,32 @@ describe("StoreDetail", () => {
     const btns = screen.getAllByRole("button", { name: /soft-delete/i });
     fireEvent.click(btns[btns.length - 1]);
     await waitFor(() => expect(navigate).toHaveBeenCalledWith("/stores"));
+  });
+
+  test("Arabic: labels, state badge and actions render in Arabic", async () => {
+    setLocale("ar");
+    readStore.mockResolvedValue({
+      status: 200,
+      data: { id: "s1", code: "CFC", name: "Cairo Festival City", is_active: false },
+    });
+    renderDetail();
+    expect(await screen.findByRole("heading", { name: "Cairo Festival City" })).toBeDefined();
+    expect(screen.getByText("الرمز")).toBeDefined();
+    expect(screen.getByText("معرّف المتجر")).toBeDefined();
+    expect(screen.getByText("غير نشط").className).toContain("badge--suspended");
+    expect(screen.getByText("CFC")).toBeDefined();
+    expect(screen.getByRole("link", { name: "العودة إلى المتاجر" })).toBeDefined();
+    expect(screen.getByRole("link", { name: "تعديل" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "حذف" })).toBeDefined();
+    expect(screen.queryByText("inactive")).toBeNull();
+    expect(screen.queryByRole("button", { name: /soft-delete/i })).toBeNull();
+  });
+
+  test("Arabic: 404 renders the uniform not-available copy", async () => {
+    setLocale("ar");
+    readStore.mockResolvedValue({ status: 404 });
+    renderDetail();
+    expect(await screen.findByText("هذا العنصر غير متاح.")).toBeDefined();
+    expect(screen.getByRole("link", { name: "العودة إلى المتاجر" })).toBeDefined();
   });
 });

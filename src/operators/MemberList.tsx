@@ -2,6 +2,7 @@ import { Avatar } from "@/components/Avatar";
 import { Banner } from "@/components/Banner";
 import { ListState } from "@/components/ListState";
 import { useActiveContextValue } from "@/context/ActiveContextProvider";
+import { type T, roleKey, useT } from "@/i18n";
 import "@/components/avatar.css";
 /**
  * SF5-1 — Member list (T012/T013). The membership graph for the active tenant
@@ -21,13 +22,13 @@ import { OperatorScopePrompt } from "./OperatorScopePrompt";
 import { type MemberRow, useMembers } from "./useMembers";
 import "../shell/surface.css";
 
-function storeAccessLabel(row: MemberRow): string {
-  if (row.storeAccessKind === "all") return "All stores";
-  const n = row.accessibleStoreIds.length;
-  return `${n} ${n === 1 ? "store" : "stores"}`;
+function storeAccessLabel(row: MemberRow, t: T): string {
+  if (row.storeAccessKind === "all") return t("operators.storeAccess.all");
+  return t("operators.storeAccess.count", { count: row.accessibleStoreIds.length });
 }
 
 export function MemberList(): React.JSX.Element {
+  const t = useT();
   const { context } = useActiveContextValue();
   const rawTenant = context?.active_tenant ?? null;
   const { result, isLoading, refetch } = useMembers(rawTenant?.id ?? null);
@@ -47,14 +48,16 @@ export function MemberList(): React.JSX.Element {
     <div className="surface">
       <header className="surface__head">
         <div>
-          <h1 className="content__title">Operators</h1>
-          <p className="content__sub">Members of {activeTenant.name}.</p>
+          <h1 className="content__title">{t("operators.title")}</h1>
+          <p className="content__sub">
+            {t.rich("operators.list.subtitle", { tenant: <bdi>{activeTenant.name}</bdi> })}
+          </p>
         </div>
         {/* Single-primary (DESIGN.md 6): header invite shows only when there are
             rows; the empty state carries its own invite primary. */}
         {!isLoading && !notFound && rows.length > 0 ? (
           <button type="button" className="btn-primary" onClick={() => setInviting(true)}>
-            Invite member
+            {t("operators.list.invite")}
           </button>
         ) : null}
       </header>
@@ -62,20 +65,20 @@ export function MemberList(): React.JSX.Element {
       {notFound ? (
         <Banner
           variant="danger"
-          message="Members are not available for this tenant."
+          message={t("operators.list.notFound")}
           requestId={notFound.requestId}
         />
       ) : null}
 
-      {isLoading ? <ListState state="loading" label="members" /> : null}
+      {isLoading ? <ListState state="loading" label={t("operators.list.loadingNoun")} /> : null}
 
       {!isLoading && !notFound && rows.length === 0 ? (
         <ListState
           state="empty"
-          emptyMessage="No other members in this tenant yet."
+          emptyMessage={t("operators.list.empty")}
           action={
             <button type="button" className="btn-primary" onClick={() => setInviting(true)}>
-              Invite member
+              {t("operators.list.invite")}
             </button>
           }
         />
@@ -83,13 +86,13 @@ export function MemberList(): React.JSX.Element {
 
       {!isLoading && !notFound && rows.length > 0 ? (
         <table className="data-table">
-          <caption className="data-table__caption">Operators</caption>
+          <caption className="data-table__caption">{t("operators.list.caption")}</caption>
           <thead>
             <tr>
-              <th scope="col">Member</th>
-              <th scope="col">Role</th>
-              <th scope="col">Store access</th>
-              <th scope="col">State</th>
+              <th scope="col">{t("operators.list.col.member")}</th>
+              <th scope="col">{t("operators.list.col.role")}</th>
+              <th scope="col">{t("operators.list.col.storeAccess")}</th>
+              <th scope="col">{t("operators.list.col.state")}</th>
             </tr>
           </thead>
           <tbody>
@@ -112,20 +115,22 @@ export function MemberList(): React.JSX.Element {
                     <span className="member-identity">
                       <span className="member-identity__name">{row.displayName ?? row.email}</span>
                       {row.displayName ? (
-                        <span className="member-identity__email">{row.email}</span>
+                        <span className="member-identity__email">
+                          <bdi dir="ltr">{row.email}</bdi>
+                        </span>
                       ) : null}
                     </span>
                   </span>
                 </td>
                 <td>
-                  <span className="badge">{row.roleCode}</span>
+                  <span className="badge">{t(roleKey(row.roleCode))}</span>
                 </td>
-                <td>{storeAccessLabel(row)}</td>
+                <td>{storeAccessLabel(row, t)}</td>
                 <td>
                   {row.revoked ? (
-                    <span className="badge badge--suspended">Revoked</span>
+                    <span className="badge badge--suspended">{t("operators.state.revoked")}</span>
                   ) : (
-                    <span className="badge badge--active">Active</span>
+                    <span className="badge badge--active">{t("operators.state.active")}</span>
                   )}
                 </td>
               </tr>

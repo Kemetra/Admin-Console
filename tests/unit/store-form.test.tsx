@@ -1,5 +1,5 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -26,6 +26,7 @@ vi.mock("@/context/ActiveContextProvider", () => ({
   useActiveContextValue: () => activeContext(),
 }));
 
+import { setLocale } from "@/i18n/locale";
 import { createQueryClient } from "@/lib/query";
 import { StoreForm } from "@/stores/StoreForm";
 
@@ -130,5 +131,57 @@ describe("StoreForm pre-gate", () => {
     renderForm({ mode: "create" });
     expect(screen.getByText(/select a tenant before managing stores/i)).toBeDefined();
     expect(screen.queryByRole("button", { name: /create store/i })).toBeNull();
+  });
+});
+
+describe("StoreForm Arabic", () => {
+  beforeEach(() => {
+    createStore.mockReset();
+    updateStore.mockReset();
+    navigate.mockReset();
+    activeContext.mockReturnValue(withTenant);
+  });
+
+  test("create form renders in Arabic; the inline code conflict follows a locale switch", async () => {
+    setLocale("ar");
+    createStore.mockResolvedValue({ status: 409, error: { error: { request_id: "r1" } } });
+    renderForm({ mode: "create" });
+    expect(screen.getByRole("heading", { name: "متجر جديد" })).toBeDefined();
+    // the read-only scope line names the tenant as authored, isolated
+    const tenant = screen.getByText("Northstar Retail");
+    expect(tenant.tagName).toBe("BDI");
+    expect(tenant.closest("p")?.textContent).toBe("تتم الإضافة في المؤسسة Northstar Retail.");
+    expect(screen.queryByRole("button", { name: /create store/i })).toBeNull();
+    fireEvent.change(screen.getByLabelText("الرمز"), { target: { value: "DUP" } });
+    fireEvent.change(screen.getByLabelText("الاسم"), { target: { value: "Dup Store" } });
+    fireEvent.click(screen.getByRole("button", { name: "إضافة المتجر" }));
+    expect(
+      await screen.findByText("رمز المتجر هذا مستخدم بالفعل في هذه المؤسسة. اختر رمزًا آخر."),
+    ).toBeDefined();
+    act(() => setLocale("en"));
+    expect(await screen.findByText(/store code is already in use/i)).toBeDefined();
+  });
+
+  test("edit form renders its Arabic title, active toggle and save action", () => {
+    setLocale("ar");
+    renderForm({
+      mode: "edit",
+      storeId: "s1",
+      initial: { code: "CFC", name: "Cairo Festival City", is_active: true },
+    });
+    expect(screen.getByRole("heading", { name: "تعديل المتجر" })).toBeDefined();
+    expect(screen.getByRole("checkbox", { name: "نشط" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "حفظ التغييرات" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "إلغاء" })).toBeDefined();
+  });
+
+  test("Arabic: residual 401 -> Arabic scope prompt", async () => {
+    setLocale("ar");
+    createStore.mockResolvedValue({ status: 401 });
+    renderForm({ mode: "create" });
+    fireEvent.change(screen.getByLabelText("الرمز"), { target: { value: "X" } });
+    fireEvent.click(screen.getByRole("button", { name: "إضافة المتجر" }));
+    expect(await screen.findByText(/^اختر مؤسسة قبل إدارة المتاجر\./)).toBeDefined();
+    expect(navigate).not.toHaveBeenCalled();
   });
 });

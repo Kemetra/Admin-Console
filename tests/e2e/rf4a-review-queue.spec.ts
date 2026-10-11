@@ -1,10 +1,12 @@
-import { type Page, expect, test } from "@playwright/test";
+import { type Page, expect, test } from "./fixtures";
 
 /**
  * RF-4a unknown-items review-queue E2E (VG-2). Scoped queue → rows; inspect
  * drawer renders the ReviewQueueItem detail read-only; dismiss behind a confirm
  * resolves the item; 403 forbidden → not-permitted banner with request_id.
  * Mocked DP2 (no live backend).
+ * RT-399: runs in both locales; copy is selected through the catalog (`t`),
+ * mocked data (identifier values, request ids) stays as authored.
  */
 
 const ctx = {
@@ -43,7 +45,7 @@ async function mockContext(page: Page): Promise<void> {
   );
 }
 
-test("S1: scoped queue renders the pending rows", async ({ page }) => {
+test("S1: scoped queue renders the pending rows", async ({ page, t }) => {
   await mockContext(page);
   await page.route("**/api/v1/catalog/unknown-items?*", (r) =>
     r.fulfill({
@@ -54,11 +56,15 @@ test("S1: scoped queue renders the pending rows", async ({ page }) => {
   );
 
   await page.goto("/unknown-items");
+  await expect(page.getByRole("heading", { name: t("unknownItems.title") })).toBeVisible();
   await expect(page.getByText("5012345678900")).toBeVisible();
-  await expect(page.getByText("barcode")).toBeVisible();
+  // The identifier type renders as its localized label, never the raw enum code.
+  await expect(
+    page.getByRole("cell", { name: t("unknownItems.identifierType.barcode"), exact: true }),
+  ).toBeVisible();
 });
 
-test("S2: inspect drawer renders the ReviewQueueItem detail read-only", async ({ page }) => {
+test("S2: inspect drawer renders the ReviewQueueItem detail read-only", async ({ page, t }) => {
   await mockContext(page);
   await page.route("**/api/v1/catalog/unknown-items?*", (r) =>
     r.fulfill({
@@ -73,15 +79,18 @@ test("S2: inspect drawer renders the ReviewQueueItem detail read-only", async ({
 
   await page.goto("/unknown-items");
   await page.getByText("5012345678900").click();
-  const drawer = page.getByRole("dialog", { name: /unknown item/i });
+  const drawer = page.getByRole("dialog", { name: t("unknownItems.drawer.title") });
   await expect(drawer).toBeVisible();
   await expect(drawer.getByText("5012345678900")).toBeVisible();
-  // a pending item offers Dismiss; no link / create-product affordance (RF-4b out)
-  await expect(drawer.getByRole("button", { name: /dismiss/i })).toBeVisible();
-  await expect(drawer.getByRole("button", { name: /link|create product|reopen/i })).toHaveCount(0);
+  // a pending item offers Dismiss; no link / create-product affordance (RF-4b out):
+  // the drawer's only buttons are Close and Dismiss (locale-independent check).
+  await expect(
+    drawer.getByRole("button", { name: t("unknownItems.dismiss.action") }),
+  ).toBeVisible();
+  await expect(drawer.getByRole("button")).toHaveCount(2);
 });
 
-test("S3: dismiss behind a confirm resolves the item", async ({ page }) => {
+test("S3: dismiss behind a confirm resolves the item", async ({ page, t }) => {
   await mockContext(page);
   await page.route("**/api/v1/catalog/unknown-items?*", (r) =>
     r.fulfill({
@@ -107,16 +116,19 @@ test("S3: dismiss behind a confirm resolves the item", async ({ page }) => {
 
   await page.goto("/unknown-items");
   await page.getByText("5012345678900").click();
-  const drawer = page.getByRole("dialog", { name: /unknown item/i });
-  await drawer.getByRole("button", { name: /^dismiss$/i }).click();
-  // confirm step appears (its copy is unique to the confirm affordance), then confirm
-  await expect(drawer.getByText(/can be restored by an administrator/i)).toBeVisible();
-  await drawer.getByRole("button", { name: /^dismiss$/i }).click();
+  const drawer = page.getByRole("dialog", { name: t("unknownItems.drawer.title") });
+  const dismiss = t("unknownItems.dismiss.action");
+  await drawer.getByRole("button", { name: dismiss, exact: true }).click();
+  // confirm step appears (the confirm affordance's own labelled region), then confirm
+  await expect(
+    drawer.getByRole("region", { name: t("components.confirmDelete.label", { action: dismiss }) }),
+  ).toBeVisible();
+  await drawer.getByRole("button", { name: dismiss, exact: true }).click();
   // drawer closes on success
   await expect(drawer).toHaveCount(0);
 });
 
-test("S4: 403 forbidden → not-permitted banner with request_id", async ({ page }) => {
+test("S4: 403 forbidden → not-permitted banner with request_id", async ({ page, t }) => {
   await mockContext(page);
   await page.route("**/api/v1/catalog/unknown-items?*", (r) =>
     r.fulfill({
@@ -128,6 +140,6 @@ test("S4: 403 forbidden → not-permitted banner with request_id", async ({ page
 
   await page.goto("/unknown-items");
   await expect(page.getByRole("alert")).toBeVisible();
-  await expect(page.getByText(/permission/i)).toBeVisible();
+  await expect(page.getByText(t("unknownItems.errors.forbidden"))).toBeVisible();
   await expect(page.getByText(/req-403/)).toBeVisible();
 });

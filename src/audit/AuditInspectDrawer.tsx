@@ -5,8 +5,13 @@
  * no single-event read op. Read-only: NO action buttons (no acknowledge /
  * annotate / export — FR-006-009). `request_id` has a copy-to-clipboard control;
  * `metadata` renders as a readable mono key/value block.
+ *
+ * RT-399: `occurred_at` is evidence — exact UTC (`formatEvidenceTime`), with a
+ * UTC label. Action codes, IDs, request refs and metadata are machine data:
+ * never translated, LTR-isolated.
  */
 import { Drawer } from "@/components/Drawer";
+import { formatEvidenceTime, useT } from "@/i18n";
 import type { AuditRow } from "./useAuditSearch";
 import "./audit.css";
 
@@ -26,7 +31,15 @@ function Field({ label, value, mono }: { label: string; value: React.ReactNode; 
   );
 }
 
+function actorValue(row: AuditRow): React.ReactNode {
+  if (row.actor_label != null) return <bdi>{row.actor_label}</bdi>;
+  if (row.actor_user_id != null) return <bdi dir="ltr">{row.actor_user_id}</bdi>;
+  return "—";
+}
+
 export function AuditInspectDrawer({ row, onClose }: AuditInspectDrawerProps): React.JSX.Element {
+  const t = useT();
+
   function copyRequestId(): void {
     if (row.request_id) void navigator.clipboard?.writeText(row.request_id);
   }
@@ -34,25 +47,41 @@ export function AuditInspectDrawer({ row, onClose }: AuditInspectDrawerProps): R
   const metadataEntries = Object.entries(row.metadata ?? {});
 
   return (
-    <Drawer title="Audit event" onClose={onClose}>
+    <Drawer title={t("audit.inspect.title")} onClose={onClose}>
       <dl className="surface__detail">
-        <Field label="Time" value={row.occurred_at} mono />
-        <Field label="Action" value={row.action} mono />
-        <Field label="Actor" value={row.actor_label ?? row.actor_user_id ?? "—"} />
         <Field
-          label="Target"
-          value={row.target_type ? `${row.target_type} · ${row.target_id ?? "—"}` : "—"}
+          label={t("audit.field.time")}
+          value={<bdi dir="ltr">{formatEvidenceTime(row.occurred_at)}</bdi>}
           mono
         />
-        <Field label="Store" value={row.store_id ?? "—"} mono />
+        <Field label={t("audit.field.action")} value={<bdi dir="ltr">{row.action}</bdi>} mono />
+        <Field label={t("audit.field.actor")} value={actorValue(row)} />
         <Field
-          label="Request ID"
+          label={t("audit.field.target")}
+          value={
+            row.target_type ? (
+              <bdi dir="ltr">{`${row.target_type} · ${row.target_id ?? "—"}`}</bdi>
+            ) : (
+              "—"
+            )
+          }
+          mono
+        />
+        <Field
+          label={t("audit.field.store")}
+          value={<bdi dir="ltr">{row.store_id ?? "—"}</bdi>}
+          mono
+        />
+        <Field
+          label={t("audit.field.requestId")}
           value={
             <span className="audit-inspect__req">
-              <span className="field-row__value--mono">{row.request_id ?? "—"}</span>
+              <bdi dir="ltr" className="field-row__value--mono">
+                {row.request_id ?? "—"}
+              </bdi>
               {row.request_id ? (
                 <button type="button" className="btn-ghost" onClick={copyRequestId}>
-                  Copy
+                  {t("audit.inspect.copy")}
                 </button>
               ) : null}
             </span>
@@ -60,16 +89,20 @@ export function AuditInspectDrawer({ row, onClose }: AuditInspectDrawerProps): R
         />
       </dl>
 
-      <section className="audit-inspect__metadata" aria-label="Metadata">
-        <h3 className="drawer__danger-title">Metadata</h3>
+      <section className="audit-inspect__metadata" aria-label={t("audit.inspect.metadata")}>
+        <h3 className="drawer__danger-title">{t("audit.inspect.metadata")}</h3>
         {metadataEntries.length === 0 ? (
-          <p className="audit-table__muted">No metadata.</p>
+          <p className="audit-table__muted">{t("audit.inspect.noMetadata")}</p>
         ) : (
           <dl className="audit-inspect__kv">
             {metadataEntries.map(([k, v]) => (
               <div key={k} className="audit-inspect__kv-row">
-                <dt className="field-row__value--mono">{k}</dt>
-                <dd className="field-row__value--mono">{JSON.stringify(v)}</dd>
+                <dt className="field-row__value--mono">
+                  <bdi dir="ltr">{k}</bdi>
+                </dt>
+                <dd className="field-row__value--mono">
+                  <bdi dir="ltr">{JSON.stringify(v)}</bdi>
+                </dd>
               </div>
             ))}
           </dl>

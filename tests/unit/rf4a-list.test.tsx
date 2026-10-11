@@ -6,9 +6,14 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 // Mock the RF-4a data layer at the wrapper boundary (no live DP2).
 const listUnknownItems = vi.fn();
+const inspectUnknownItem = vi.fn();
 vi.mock("@/lib/unknown-items-queries", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/unknown-items-queries")>();
-  return { ...actual, listUnknownItems: (...a: unknown[]) => listUnknownItems(...a) };
+  return {
+    ...actual,
+    listUnknownItems: (...a: unknown[]) => listUnknownItems(...a),
+    inspectUnknownItem: (...a: unknown[]) => inspectUnknownItem(...a),
+  };
 });
 
 // Pin a stable active scope so the surface renders without the full provider.
@@ -20,6 +25,8 @@ vi.mock("@/unknown-items/useUnknownItemScope", () => ({
   }),
 }));
 
+import { formatDateTime } from "@/i18n";
+import { setLocale } from "@/i18n/locale";
 import { createQueryClient } from "@/lib/query";
 import { UnknownItemList } from "@/unknown-items/UnknownItemList";
 
@@ -61,6 +68,7 @@ const ITEM = {
 describe("UnknownItemList state matrix", () => {
   beforeEach(() => {
     listUnknownItems.mockReset();
+    inspectUnknownItem.mockReset();
   });
 
   test("loading -> shows a loading affordance", async () => {
@@ -73,7 +81,56 @@ describe("UnknownItemList state matrix", () => {
     listUnknownItems.mockResolvedValue({ status: 200, data: { items: [ITEM], next_cursor: null } });
     renderList();
     expect(await screen.findByText("5012345678900")).toBeDefined();
-    expect(screen.getByText("barcode")).toBeDefined();
+    // RT-399: the identifier type is a localized label, never the raw enum code.
+    expect(screen.getByText("Barcode")).toBeDefined();
+    expect(screen.queryByText("barcode")).toBeNull();
+    // encountered_at is an operational time; the exact ISO stays on <time>.
+    const encountered = screen.getByText(formatDateTime(ITEM.encountered_at));
+    expect(encountered.textContent).toBe("Jun 10, 2026, 10:00 UTC");
+    expect(encountered.getAttribute("dateTime")).toBe(ITEM.encountered_at);
+  });
+
+  test("row -> inspect drawer with localized labels and enum values", async () => {
+    listUnknownItems.mockResolvedValue({ status: 200, data: { items: [ITEM], next_cursor: null } });
+    inspectUnknownItem.mockResolvedValue({ status: 200, data: ITEM });
+    renderList();
+    fireEvent.click(await screen.findByText("5012345678900"));
+    const drawer = await screen.findByRole("dialog", { name: "Unknown item" });
+    await waitFor(() => expect(drawer.textContent).toContain("Identifier type"));
+    expect(drawer.textContent).toContain("Barcode");
+    expect(drawer.textContent).toContain("Pending");
+    expect(drawer.textContent).not.toMatch(/\bpending\b|\bbarcode\b/);
+    expect(drawer.querySelector(`time[datetime="${ITEM.encountered_at}"]`)).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Dismiss" })).toBeDefined();
+  });
+
+  test("Arabic: the queue and drawer render Arabic copy", async () => {
+    setLocale("ar");
+    listUnknownItems.mockResolvedValue({ status: 200, data: { items: [ITEM], next_cursor: null } });
+    inspectUnknownItem.mockResolvedValue({ status: 200, data: ITEM });
+    renderList();
+    expect(await screen.findByText("5012345678900")).toBeDefined();
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("أصناف غير معروفة");
+    expect(screen.getByRole("columnheader", { name: "المعرّف" })).toBeDefined();
+    expect(screen.getByText("باركود")).toBeDefined();
+    expect(screen.getByLabelText("الترتيب")).toBeDefined();
+    expect(screen.getByText(formatDateTime(ITEM.encountered_at, { locale: "ar" }))).toBeDefined();
+
+    fireEvent.click(screen.getByText("5012345678900"));
+    const drawer = await screen.findByRole("dialog", { name: "صنف غير معروف" });
+    await waitFor(() => expect(drawer.textContent).toContain("نوع المعرّف"));
+    expect(drawer.textContent).toContain("بانتظار المراجعة");
+    expect(screen.getByRole("button", { name: "استبعاد" })).toBeDefined();
+    expect(document.body.textContent ?? "").not.toMatch(
+      /Unknown items|Identifier|Dismiss|Pending|Barcode|Sort/,
+    );
+  });
+
+  test("Arabic: an empty queue reads the Arabic empty state", async () => {
+    setLocale("ar");
+    listUnknownItems.mockResolvedValue({ status: 200, data: { items: [], next_cursor: null } });
+    renderList();
+    expect(await screen.findByText("لا توجد أصناف غير معروفة للمراجعة.")).toBeDefined();
   });
 
   test("empty -> successful zero-row state", async () => {

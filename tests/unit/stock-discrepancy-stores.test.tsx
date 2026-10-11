@@ -14,6 +14,8 @@ vi.mock("@/context/ActiveContextProvider", () => ({
   useActiveContextValue: () => activeContext(),
 }));
 
+import { formatDateTime } from "@/i18n";
+import { setLocale } from "@/i18n/locale";
 import { createQueryClient } from "@/lib/query";
 import { StockDiscrepancyStores } from "@/stock-discrepancies/StockDiscrepancyStores";
 
@@ -101,7 +103,10 @@ describe("StockDiscrepancyStores (RT-178)", () => {
 
     const fresh = within(rowFor("Cairo Festival City"));
     expect(fresh.getByText("Fresh snapshot")).toBeDefined();
-    expect(fresh.getByText(READ_AT)).toBeDefined();
+    // RT-399: the per-store as-of is an operational time; the exact ISO stays on <time>.
+    const asOf = fresh.getByText(formatDateTime(READ_AT));
+    expect(asOf.textContent).toBe("Oct 4, 2026, 07:58 UTC");
+    expect(asOf.getAttribute("dateTime")).toBe(READ_AT);
     expect(fresh.getByText("2")).toBeDefined();
 
     const stale = within(rowFor("Maadi"));
@@ -120,6 +125,39 @@ describe("StockDiscrepancyStores (RT-178)", () => {
     expect(document.body.textContent ?? "").not.toMatch(/no discrepancies/i);
     // AC7: never "live" / "current".
     expect(document.body.textContent ?? "").not.toMatch(/\blive\b|\bcurrent/i);
+  });
+
+  test("Arabic: headings, states and UNKNOWN render in Arabic (never 0)", async () => {
+    setLocale("ar");
+    activeContext.mockReturnValue(ctx("tenant_admin"));
+    listErpnextNegativeOnHandStores.mockResolvedValue({
+      status: 200,
+      data: {
+        items: [
+          summary(S1, "Cairo Festival City", snapshot(), 1284),
+          summary(S3, "Zamalek", snapshot({ status: "no_snapshot", ...none }), 0),
+        ],
+        nextCursor: "c2",
+      },
+    });
+    renderStores();
+    await screen.findByRole("link", { name: "Cairo Festival City" });
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("فروقات مخزون ERPNext");
+    expect(screen.getByRole("columnheader", { name: "الأصناف السالبة" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "تحميل مزيد من المتاجر" })).toBeDefined();
+
+    const fresh = within(rowFor("Cairo Festival City"));
+    expect(fresh.getByText("لقطة حديثة")).toBeDefined();
+    expect(fresh.getByText("1,284")).toBeDefined();
+    expect(fresh.getByText(formatDateTime(READ_AT, { locale: "ar" }))).toBeDefined();
+
+    const zamalek = rowFor("Zamalek");
+    expect(within(zamalek).getByText("غير معروف")).toBeDefined();
+    expect(within(zamalek).getByText("لم تُسجَّل بعد")).toBeDefined();
+    expect(zamalek.textContent).not.toMatch(/\b0\b/);
+    expect(document.body.textContent ?? "").not.toMatch(
+      /Unknown|Fresh snapshot|Not recorded|Load more|Negative items/,
+    );
   });
 
   test("AC4: a store with a pendingRequest reads 'Requested, awaiting Connector'", async () => {

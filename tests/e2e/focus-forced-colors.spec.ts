@@ -1,4 +1,4 @@
-import { type Page, expect, test } from "@playwright/test";
+import { type Page, expect, test } from "./fixtures";
 
 /**
  * RT-267 (UX-11) — outline-focus + forced-colors baseline. Keyboard-walks the
@@ -212,20 +212,21 @@ for (const forcedColors of ["none", "active"] as const) {
       expectVisibleOutlines(await walkFocus(page), 2); // one pick per membership
     });
 
-    test("tenant form: every keyboard focus stop shows an outline", async ({ page }) => {
+    test("tenant form: every keyboard focus stop shows an outline", async ({ page, t }) => {
       await page.goto("/tenants/new");
-      await expect(page.getByLabel(/slug/i)).toBeVisible();
+      await expect(page.getByLabel(t("tenants.field.slug"))).toBeVisible();
       expectVisibleOutlines(await walkFocus(page));
     });
 
     test("scope menu items show an outline and mark the active scope without color", async ({
       page,
+      t,
     }) => {
       await page.goto("/stores");
       const scopeBtn = page.getByRole("button", { name: /Northstar Retail/ });
       await scopeBtn.focus();
       await page.keyboard.press("Enter");
-      const allStores = page.getByRole("menuitem", { name: /all stores/i });
+      const allStores = page.getByRole("menuitem", { name: t("shell.scope.allStores") });
       await expect(allStores).toHaveAttribute("aria-current", "true");
       await page.keyboard.press("Tab");
       await expect(allStores).toBeFocused();
@@ -239,10 +240,11 @@ for (const forcedColors of ["none", "active"] as const) {
 
     test("active nav entry keeps a visible marker distinct from its background", async ({
       page,
+      t,
     }) => {
       await page.goto("/stores");
       const active = page.locator(".sidebar a[aria-current='page']");
-      await expect(active).toHaveText(/Stores/);
+      await expect(active).toHaveText(t("shell.nav.stores"));
       const { marker, background } = await active.evaluate((el) => ({
         marker: getComputedStyle(el, "::before").backgroundColor,
         background: getComputedStyle(el).backgroundColor,
@@ -253,6 +255,7 @@ for (const forcedColors of ["none", "active"] as const) {
 
     test("keyboard-opened drawer: no ring on the panel, outline on its controls", async ({
       page,
+      t,
     }) => {
       await page.route("**/api/v1/audit/events**", (r) =>
         r.fulfill({
@@ -277,7 +280,7 @@ for (const forcedColors of ["none", "active"] as const) {
         }),
       );
       await page.goto("/audit");
-      await page.getByRole("button", { name: /apply/i }).click();
+      await page.getByRole("button", { name: t("audit.filters.apply") }).click();
       await page.getByRole("button", { name: "shift.forced_close" }).focus();
       await page.keyboard.press("Enter");
       const drawer = page.getByRole("dialog");
@@ -288,7 +291,7 @@ for (const forcedColors of ["none", "active"] as const) {
       // stop: a 2px ring around the whole pane would be noise, not a focus signal.
       expect(await drawer.evaluate((el) => getComputedStyle(el).outlineStyle)).toBe("none");
       await page.keyboard.press("Tab");
-      const close = drawer.getByRole("button", { name: "Close", exact: true });
+      const close = drawer.getByRole("button", { name: t("common.close"), exact: true });
       await expect(close).toBeFocused();
       expect(await close.evaluate((el) => getComputedStyle(el).outlineStyle)).toBe("solid");
     });

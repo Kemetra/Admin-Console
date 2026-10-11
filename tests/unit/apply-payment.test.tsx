@@ -10,6 +10,7 @@ vi.mock("@/lib/client", async (importOriginal) => {
   return { ...actual, consoleApplyPayment: (...a: unknown[]) => consoleApplyPayment(...a) };
 });
 
+import { setLocale } from "@/i18n/locale";
 import { createQueryClient } from "@/lib/query";
 import { ApplyPayment } from "@/settlement-reconciliation/ApplyPayment";
 
@@ -58,6 +59,14 @@ function fillAndApply(amount = "50.00"): void {
 describe("ApplyPayment", () => {
   beforeEach(() => consoleApplyPayment.mockReset());
 
+  test("scope line shows the outstanding balance formatted (RT-399), ref LTR-isolated", () => {
+    renderApply();
+    const balance = screen.getByText("120.00 EGP");
+    expect(balance.tagName).toBe("BDI");
+    expect(balance.getAttribute("dir")).toBe("ltr");
+    expect(screen.getByText("r1").getAttribute("dir")).toBe("ltr");
+  });
+
   test("zero amount -> client validation, wrapper NOT called (apply requires >0)", async () => {
     renderApply();
     fillAndApply("0");
@@ -76,12 +85,16 @@ describe("ApplyPayment", () => {
     );
     const { onApplied } = renderApply();
     fillAndApply("50.00");
-    expect(await screen.findByText(/70\.00/)).toBeDefined();
-    expect(screen.getByText(/partially_applied/i)).toBeDefined();
+    expect(await screen.findByText("70.00 EGP")).toBeDefined();
+    // The state renders as its catalog label, not the raw `partially_applied` code.
+    expect(screen.getByText("Partially applied")).toBeDefined();
+    expect(screen.queryByText(/partially_applied/)).toBeNull();
     await waitFor(() => expect(onApplied).toHaveBeenCalled());
     const [receivableRef, body, key] = consoleApplyPayment.mock.calls[0];
     expect(receivableRef).toBe("r1");
     expect((body as { version: number }).version).toBe(0);
+    // The typed amount goes to the API unchanged (inputs are never formatted).
+    expect((body as { amount: string }).amount).toBe("50.00");
     expect(String(key)).toMatch(/^[\x21-\x7E]{16,128}$/);
   });
 
@@ -97,5 +110,23 @@ describe("ApplyPayment", () => {
     renderApply();
     fillAndApply();
     await waitFor(() => expect(screen.getByText(/permission/i)).toBeDefined());
+  });
+
+  test("Arabic: title, labels, actions and result render in Arabic only", async () => {
+    setLocale("ar");
+    consoleApplyPayment.mockResolvedValue(
+      result(200, { receivableRef: "r1", outstandingBalance: "0.0000", state: "settled" }),
+    );
+    renderApply();
+    expect(screen.getByRole("heading", { name: "تخصيص دفعة" })).toBeDefined();
+    expect(screen.getByLabelText("المبلغ")).toBeDefined();
+    expect(screen.getByRole("button", { name: "إلغاء" })).toBeDefined();
+    fireEvent.change(screen.getByLabelText("المبلغ"), { target: { value: "120.00" } });
+    fireEvent.click(screen.getByRole("button", { name: "تخصيص دفعة" }));
+    expect(await screen.findByText("مسددة")).toBeDefined();
+    expect(screen.getByText("0.00 EGP")).toBeDefined();
+    expect(screen.getByRole("button", { name: "تم" })).toBeDefined();
+    expect(screen.queryByText(/apply payment/i)).toBeNull();
+    expect(screen.queryByText(/payment applied/i)).toBeNull();
   });
 });

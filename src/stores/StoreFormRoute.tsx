@@ -1,5 +1,6 @@
 import { Banner } from "@/components/Banner";
 import { ListState } from "@/components/ListState";
+import { useT } from "@/i18n";
 /**
  * Route wrapper for the store form (T028). Bridges the router (params) to the
  * presentational StoreForm: edit mode reads the store id and prefills from
@@ -25,12 +26,13 @@ export function StoreFormRoute({ mode }: StoreFormRouteProps): React.JSX.Element
 }
 
 function EditStoreForm({ storeId }: { storeId: string | undefined }): React.JSX.Element {
+  const t = useT();
   const { result, isLoading } = useStoreDetail(storeId);
 
   if (isLoading) {
     return (
       <div className="surface">
-        <ListState state="loading" label="store" />
+        <ListState state="loading" label={t("stores.detail.loadingNoun")} />
       </div>
     );
   }
@@ -40,7 +42,7 @@ function EditStoreForm({ storeId }: { storeId: string | undefined }): React.JSX.
     }
     return (
       <div className="surface">
-        <Banner variant="danger" message={result.render.message} />
+        <Banner variant="danger" message={t(result.render.messageKey)} />
       </div>
     );
   }

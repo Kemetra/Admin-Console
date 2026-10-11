@@ -1,4 +1,5 @@
 import { useActiveContextValue } from "@/context/ActiveContextProvider";
+import { useT } from "@/i18n";
 /**
  * RT-268 (UX-09): deep links never silently change scope. When a route names a
  * store other than the active one, say so and offer an explicit switch; "Stay"
@@ -26,6 +27,7 @@ function storeMismatch(
 export function ScopeMismatchBanner({
   storeId,
 }: { storeId: string | undefined }): React.JSX.Element | null {
+  const t = useT();
   const { context, switchStore } = useActiveContextValue();
   const guard = useDirtyGuard();
   const [dismissed, setDismissed] = useState(false);
@@ -33,10 +35,12 @@ export function ScopeMismatchBanner({
   if (!mismatch) return null;
 
   return (
-    <section className="rtc-alert rtc-alert--info scope-mismatch" aria-label="Scope">
+    <section
+      className="rtc-alert rtc-alert--info scope-mismatch"
+      aria-label={t("shell.mismatch.label")}
+    >
       <span className="rtc-alert__msg">
-        This link is for a different store. You are working in <bdi>{mismatch.activeName}</bdi>, and
-        your scope was not changed.
+        {t.rich("shell.mismatch.message", { store: <bdi>{mismatch.activeName}</bdi> })}
       </span>
       <span className="scope-mismatch__actions">
         <button
@@ -46,10 +50,10 @@ export function ScopeMismatchBanner({
             if (await guard.confirmLeave()) await switchStore(mismatch.routeStoreId);
           }}
         >
-          Switch to this store
+          {t("shell.mismatch.switch")}
         </button>
         <button type="button" className="btn-ghost" onClick={() => setDismissed(true)}>
-          Stay in <bdi>{mismatch.activeName}</bdi>
+          {t.rich("shell.mismatch.stay", { store: <bdi>{mismatch.activeName}</bdi> })}
         </button>
       </span>
     </section>

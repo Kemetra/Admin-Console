@@ -1,5 +1,6 @@
 import { AcceptInvitation } from "@/auth/AcceptInvitation";
 import { ActiveContextProvider } from "@/context/ActiveContextProvider";
+import { DocumentLocale } from "@/i18n";
 import { createQueryClient } from "@/lib/query";
 import { Overview } from "@/shell/Overview";
 import { ProtectedArea } from "@/shell/ProtectedArea";
@@ -48,6 +49,8 @@ const queryClient = createQueryClient();
 function RootLayout(): React.JSX.Element {
   return (
     <ActiveContextProvider>
+      {/* RT-399: <html lang/dir> and the title follow the active locale. */}
+      <DocumentLocale />
       <DirtyGuardProvider>
         <NavigationBlocker />
         <Outlet />

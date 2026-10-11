@@ -1,4 +1,4 @@
-import { type Page, expect, test } from "@playwright/test";
+import { type Page, expect, test } from "./fixtures";
 
 /**
  * RF-2 tenant roster E2E (VG-2, Scenarios S1/S2 tenant). Drives the built SPA
@@ -35,7 +35,7 @@ async function mockBase(page: Page): Promise<void> {
   );
 }
 
-test("S1: tenant roster renders the backend-scoped set and opens a detail", async ({ page }) => {
+test("S1: tenant roster renders the backend-scoped set and opens a detail", async ({ page, t }) => {
   await mockBase(page);
   await page.route("**/api/v1/tenants", (r) =>
     r.fulfill({
@@ -56,7 +56,9 @@ test("S1: tenant roster renders the backend-scoped set and opens a detail", asyn
   );
 
   await page.goto("/tenants");
-  await expect(page.getByRole("heading", { name: "Tenants" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: t("tenants.list.title"), exact: true }),
+  ).toBeVisible();
   // Scope to table cells: "Northstar Retail" also appears in the scope header.
   await expect(page.getByRole("cell", { name: "Northstar Retail" })).toBeVisible();
   await expect(page.getByRole("cell", { name: "Helios Markets" })).toBeVisible();
@@ -64,11 +66,14 @@ test("S1: tenant roster renders the backend-scoped set and opens a detail", asyn
   // Row → detail
   await page.getByRole("cell", { name: "Helios Markets" }).click();
   await expect(page.getByRole("heading", { name: "Helios Markets" })).toBeVisible();
-  await expect(page.getByText("active")).toBeVisible();
+  // The status code drives a catalog label; the raw code is never the copy.
+  await expect(page.getByText(t("tenants.status.active"), { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: t("tenants.detail.back") })).toBeVisible();
 });
 
 test("empty roster renders a successful zero-row state with a create entry point", async ({
   page,
+  t,
 }) => {
   await mockBase(page);
   await page.route("**/api/v1/tenants", (r) =>
@@ -76,8 +81,8 @@ test("empty roster renders a successful zero-row state with a create entry point
   );
 
   await page.goto("/tenants");
-  await expect(page.getByText(/no tenants yet/i)).toBeVisible();
-  await expect(page.getByRole("link", { name: /new tenant/i })).toBeVisible();
+  await expect(page.getByText(t("tenants.list.empty"))).toBeVisible();
+  await expect(page.getByRole("link", { name: t("tenants.list.add") })).toBeVisible();
 });
 
 test("T034 a11y: a table row is keyboard-focusable and Enter opens its detail", async ({

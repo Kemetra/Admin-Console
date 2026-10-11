@@ -6,20 +6,19 @@
  * (the scope bar above this content), so this prompt points there rather than
  * duplicating the chooser.
  */
+import { useT } from "@/i18n";
 import "../shell/surface.css";
 
 export function ScopePrompt(): React.JSX.Element {
+  const t = useT();
   return (
     <div className="surface">
       <header className="surface__head">
         <div>
-          <h1 className="content__title">Stores</h1>
+          <h1 className="content__title">{t("stores.list.title")}</h1>
         </div>
       </header>
-      <p className="scope-prompt">
-        Select a tenant before managing stores. Use the tenant selector in the scope bar above to
-        choose where you are working.
-      </p>
+      <p className="scope-prompt">{t("stores.scope.prompt")}</p>
     </div>
   );
 }
