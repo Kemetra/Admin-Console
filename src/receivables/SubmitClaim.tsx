@@ -1,6 +1,7 @@
 import { Banner } from "@/components/Banner";
 import { Drawer } from "@/components/Drawer";
 import { InlineError } from "@/components/InlineError";
+import { type MessageKey, formatNumber, useT } from "@/i18n";
 import { type ClaimCreateBody, consoleSubmitClaim } from "@/lib/client";
 /**
  * 018 SubmitClaim drawer. Submits the selected receivables as a claim for a payer
@@ -8,10 +9,21 @@ import { type ClaimCreateBody, consoleSubmitClaim } from "@/lib/client";
  * (validateClaimDraft — wrapper NOT called on invalid), sends a per-submit
  * Idempotency-Key, routes the outcome via classifyWriteOutcome. Mirrors 017's
  * PayerCreate.
+ *
+ * RT-399: state keeps message KEYS (from the classifier / validator), never
+ * translated strings; copy is resolved with `t()` at render.
  */
 import { useState } from "react";
-import { validateClaimDraft } from "./receivableForms";
-import { classifyWriteOutcome, newIdempotencyKey } from "./settlementWriteOutcome";
+import { type ReceivableFieldError, validateClaimDraft } from "./receivableForms";
+import { type WriteCopy, classifyWriteOutcome, newIdempotencyKey } from "./settlementWriteOutcome";
+
+const CLAIM_COPY: WriteCopy = {
+  validation: "receivables.claim.errors.validation",
+  unauthenticated: "receivables.errors.sessionExpired",
+  forbidden: "receivables.claim.errors.forbidden",
+  conflict: "receivables.claim.errors.conflict",
+  error: "receivables.claim.errors.generic",
+};
 
 export interface SubmitClaimProps {
   activeTenant: { id: string; name: string };
@@ -22,7 +34,7 @@ export interface SubmitClaimProps {
   onSubmitted: (claimRef?: string) => void;
 }
 
-type BannerState = { variant: "danger" | "warning"; message: string; requestId?: string };
+type BannerState = { variant: "danger" | "warning"; messageKey: MessageKey; requestId?: string };
 
 export function SubmitClaim({
   activeTenant,
@@ -31,17 +43,21 @@ export function SubmitClaim({
   onClose,
   onSubmitted,
 }: SubmitClaimProps): React.JSX.Element {
-  const [fieldError, setFieldError] = useState<string | undefined>();
+  const t = useT();
+  const [fieldError, setFieldError] = useState<ReceivableFieldError | undefined>();
   const [banner, setBanner] = useState<BannerState | undefined>();
   const [pending, setPending] = useState(false);
 
   async function submitWithKey(body: ClaimCreateBody, key: string): Promise<void> {
     const res = await consoleSubmitClaim(body, key);
-    const outcome = classifyWriteOutcome({
-      status: res.status,
-      headers: res.headers,
-      error: res.error as { error?: { code?: string; request_id?: string } } | undefined,
-    });
+    const outcome = classifyWriteOutcome(
+      {
+        status: res.status,
+        headers: res.headers,
+        error: res.error as { error?: { code?: string; request_id?: string } } | undefined,
+      },
+      CLAIM_COPY,
+    );
     switch (outcome.kind) {
       case "ok":
       case "replayed": {
@@ -50,33 +66,19 @@ export function SubmitClaim({
         return;
       }
       case "validation":
-        setFieldError("Check the claim and try again.");
+        setFieldError({ messageKey: outcome.messageKey });
         return;
       case "regenerate-key":
         await submitWithKey(body, newIdempotencyKey());
         return;
       case "unauthenticated":
-        setBanner({ variant: "warning", message: "Your session has expired. Sign in again." });
-        return;
-      case "forbidden":
-        setBanner({
-          variant: "danger",
-          message: "You do not have permission to submit claims for this tenant.",
-          requestId: outcome.requestId,
-        });
-        return;
-      case "key-conflict":
-      case "conflict":
-        setBanner({
-          variant: "danger",
-          message: "That claim could not be submitted. Please try again.",
-          requestId: outcome.requestId,
-        });
+        setBanner({ variant: "warning", messageKey: outcome.messageKey });
         return;
       default:
+        // forbidden / key-conflict / conflict / error: each carries its own copy.
         setBanner({
           variant: "danger",
-          message: "Something went wrong submitting the claim. Try again.",
+          messageKey: outcome.messageKey,
           requestId: outcome.requestId,
         });
     }
@@ -102,26 +104,39 @@ export function SubmitClaim({
   }
 
   return (
-    <Drawer title="Submit claim" onClose={onClose}>
+    <Drawer title={t("receivables.claim.title")} onClose={onClose}>
       {banner ? (
-        <Banner variant={banner.variant} message={banner.message} requestId={banner.requestId} />
+        <Banner
+          variant={banner.variant}
+          message={t(banner.messageKey)}
+          requestId={banner.requestId}
+        />
       ) : null}
 
       <form className="surface__form" onSubmit={onSubmit} noValidate>
         <p className="surface__scope-line">
-          Submitting a claim for <strong>{receivableRefs.length}</strong> receivable
-          {receivableRefs.length === 1 ? "" : "s"} in <strong>{activeTenant.name}</strong>.
+          {t.rich("receivables.claim.scopeLine", {
+            count: receivableRefs.length,
+            total: <strong>{formatNumber(receivableRefs.length, t.locale)}</strong>,
+            tenant: (
+              <strong>
+                <bdi>{activeTenant.name}</bdi>
+              </strong>
+            ),
+          })}
         </p>
         <span id="claim-error">
-          <InlineError message={fieldError} />
+          <InlineError
+            message={fieldError ? t(fieldError.messageKey, fieldError.params) : undefined}
+          />
         </span>
         <div className="surface__actions">
           <button type="submit" className="btn-primary" disabled={pending}>
             {pending ? <span className="spinner" aria-hidden="true" /> : null}
-            Submit claim
+            {t("receivables.claim.submit")}
           </button>
           <button type="button" className="btn-secondary" onClick={onClose} disabled={pending}>
-            Cancel
+            {t("common.cancel")}
           </button>
         </div>
       </form>

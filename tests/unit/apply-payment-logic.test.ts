@@ -27,7 +27,10 @@ describe("validateApplyPaymentDraft", () => {
     expect(validateApplyPaymentDraft(draft())).toEqual({});
   });
   test("zero amount -> error (apply requires >0, unlike remittance)", () => {
-    expect(validateApplyPaymentDraft(draft({ amount: "0" })).amount).toBeDefined();
+    // RT-399: a message key, translated at render; never a copy string.
+    expect(validateApplyPaymentDraft(draft({ amount: "0" })).amount).toBe(
+      "settlement.form.amountInvalid",
+    );
   });
   test("negative amount -> error", () => {
     expect(validateApplyPaymentDraft(draft({ amount: "-5.00" })).amount).toBeDefined();
@@ -43,7 +46,7 @@ describe("validateApplyPaymentDraft", () => {
     expect(
       validateApplyPaymentDraft({ amount: "50.00", version: undefined as unknown as number })
         .version,
-    ).toBeDefined();
+    ).toBe("settlement.form.versionInvalid");
   });
 });
 

@@ -19,7 +19,12 @@
  * No new dependency: the key is a v4 UUID from `crypto.randomUUID` (36 chars,
  * inside the contract format `^[\x21-\x7E]{16,128}$`). Mirrors the proven
  * inviteIdempotency shape — pure functions, no React, no fetch.
+ *
+ * RT-399: each operator-facing outcome carries the catalog `messageKey` for its
+ * copy; the drawer renders `t(outcome.messageKey)` at display time, so no
+ * translated string is ever held in component state.
  */
+import type { MessageKey } from "@/i18n";
 
 /** Backend error envelope: { error: { code, message, request_id } }. */
 interface BackendError {
@@ -35,13 +40,13 @@ export interface PayerCreateResult {
 export type PayerCreateOutcome =
   | { kind: "created"; replayed: false }
   | { kind: "replayed" }
-  | { kind: "validation"; requestId?: string }
+  | { kind: "validation"; messageKey: MessageKey; requestId?: string }
   | { kind: "regenerate-key" }
-  | { kind: "unauthenticated" }
-  | { kind: "forbidden"; requestId?: string }
-  | { kind: "key-conflict"; requestId?: string }
-  | { kind: "conflict"; requestId?: string }
-  | { kind: "error"; requestId?: string };
+  | { kind: "unauthenticated"; messageKey: MessageKey }
+  | { kind: "forbidden"; messageKey: MessageKey; requestId?: string }
+  | { kind: "key-conflict"; messageKey: MessageKey; requestId?: string }
+  | { kind: "conflict"; messageKey: MessageKey; requestId?: string }
+  | { kind: "error"; messageKey: MessageKey; requestId?: string };
 
 /** Generate an Idempotency-Key (v4 UUID; satisfies `^[\x21-\x7E]{16,128}$`). */
 export function newIdempotencyKey(): string {
@@ -73,15 +78,15 @@ export function classifyPayerCreateOutcome(result: PayerCreateResult): PayerCrea
     if (code === "idempotency_key_required" || code === "idempotency_key_malformed") {
       return { kind: "regenerate-key" };
     }
-    return { kind: "validation", requestId };
+    return { kind: "validation", messageKey: "payers.create.errors.validation", requestId };
   }
 
   if (result.status === 401) {
-    return { kind: "unauthenticated" };
+    return { kind: "unauthenticated", messageKey: "payers.create.errors.sessionExpired" };
   }
 
   if (result.status === 403) {
-    return { kind: "forbidden", requestId };
+    return { kind: "forbidden", messageKey: "payers.create.errors.forbidden", requestId };
   }
 
   if (result.status === 409) {
@@ -89,9 +94,9 @@ export function classifyPayerCreateOutcome(result: PayerCreateResult): PayerCrea
     // with the same one). Any other 409 is a non-disclosing conflict — never
     // reveal whether a cross-tenant resource exists.
     return codeOf(result) === "idempotency_key_conflict"
-      ? { kind: "key-conflict", requestId }
-      : { kind: "conflict", requestId };
+      ? { kind: "key-conflict", messageKey: "payers.create.errors.keyConflict", requestId }
+      : { kind: "conflict", messageKey: "payers.create.errors.conflict", requestId };
   }
 
-  return { kind: "error", requestId };
+  return { kind: "error", messageKey: "payers.create.errors.generic", requestId };
 }

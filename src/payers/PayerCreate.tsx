@@ -1,6 +1,7 @@
 import { Banner } from "@/components/Banner";
 import { Drawer } from "@/components/Drawer";
 import { InlineError } from "@/components/InlineError";
+import { type MessageKey, useT } from "@/i18n";
 import { type PayerAccountCreateBody, consoleCreatePayerAccount } from "@/lib/client";
 /**
  * 017 SF2 — Create-payer drawer. Uncontrolled native form (category /
@@ -19,14 +20,23 @@ import { type PayerAccountCreateBody, consoleCreatePayerAccount } from "@/lib/cl
  *
  * No status/version field — v1 is create-only (OQ-CON-EDIT deferred). Mirrors
  * the InviteMember drawer, minus the 425/auth-disambiguation (payer create has none).
+ *
+ * RT-399: state keeps message KEYS (from the classifier / validator), never
+ * translated strings; copy is resolved with `t()` at render.
  */
 import { useState } from "react";
-import { type PayerCategory, type PayerCreateDraft, validatePayerDraft } from "./payerCreateForm";
+import {
+  type PayerCategory,
+  type PayerCreateDraft,
+  type PayerFieldError,
+  validatePayerDraft,
+} from "./payerCreateForm";
 import {
   type PayerCreateOutcome,
   classifyPayerCreateOutcome,
   newIdempotencyKey,
 } from "./payerIdempotency";
+import { payerCategoryKey } from "./payerListLogic";
 
 export interface PayerCreateProps {
   activeTenant: { id: string; name: string };
@@ -34,14 +44,15 @@ export interface PayerCreateProps {
   onCreated: () => void;
 }
 
-type BannerState = { variant: "danger" | "warning"; message: string; requestId?: string };
+type BannerState = { variant: "danger" | "warning"; messageKey: MessageKey; requestId?: string };
 
 export function PayerCreate({
   activeTenant,
   onClose,
   onCreated,
 }: PayerCreateProps): React.JSX.Element {
-  const [nameError, setNameError] = useState<string | undefined>();
+  const t = useT();
+  const [nameError, setNameError] = useState<PayerFieldError | undefined>();
   const [banner, setBanner] = useState<BannerState | undefined>();
   const [pending, setPending] = useState(false);
 
@@ -59,39 +70,19 @@ export function PayerCreate({
         onCreated();
         return;
       case "validation":
-        setNameError("Check the payer details and try again.");
+        setNameError({ messageKey: classified.messageKey });
         return;
       case "regenerate-key":
         await submitWithKey(body, newIdempotencyKey());
         return;
       case "unauthenticated":
-        setBanner({ variant: "warning", message: "Your session has expired. Sign in again." });
-        return;
-      case "forbidden":
-        setBanner({
-          variant: "danger",
-          message: "You do not have permission to create payer accounts for this tenant.",
-          requestId: classified.requestId,
-        });
-        return;
-      case "key-conflict":
-        setBanner({
-          variant: "danger",
-          message: "That payer could not be created. Please try again.",
-          requestId: classified.requestId,
-        });
-        return;
-      case "conflict":
-        setBanner({
-          variant: "danger",
-          message: "That payer account could not be created.",
-          requestId: classified.requestId,
-        });
+        setBanner({ variant: "warning", messageKey: classified.messageKey });
         return;
       default:
+        // forbidden / key-conflict / conflict / error: each carries its own copy.
         setBanner({
           variant: "danger",
-          message: "Something went wrong creating the payer. Try again.",
+          messageKey: classified.messageKey,
           requestId: classified.requestId,
         });
     }
@@ -129,32 +120,42 @@ export function PayerCreate({
   }
 
   return (
-    <Drawer title="Create payer account" onClose={onClose}>
+    <Drawer title={t("payers.create.title")} onClose={onClose}>
       {banner ? (
-        <Banner variant={banner.variant} message={banner.message} requestId={banner.requestId} />
+        <Banner
+          variant={banner.variant}
+          message={t(banner.messageKey)}
+          requestId={banner.requestId}
+        />
       ) : null}
 
       <form className="surface__form" onSubmit={onSubmit} noValidate>
         <p className="surface__scope-line">
-          Creating a payer in tenant <strong>{activeTenant.name}</strong>.
+          {t.rich("payers.create.scopeLine", {
+            tenant: (
+              <strong>
+                <bdi>{activeTenant.name}</bdi>
+              </strong>
+            ),
+          })}
         </p>
 
         <div className="field">
-          <label htmlFor="payer-category">Category</label>
+          <label htmlFor="payer-category">{t("payers.create.category")}</label>
           <select
             id="payer-category"
             name="category"
             className="input"
             defaultValue="credit_customer"
           >
-            <option value="credit_customer">Credit customer</option>
-            <option value="corporate">Corporate</option>
-            <option value="insurer">Insurer</option>
+            <option value="credit_customer">{t(payerCategoryKey("credit_customer"))}</option>
+            <option value="corporate">{t(payerCategoryKey("corporate"))}</option>
+            <option value="insurer">{t(payerCategoryKey("insurer"))}</option>
           </select>
         </div>
 
         <div className="field">
-          <label htmlFor="payer-name">Display name</label>
+          <label htmlFor="payer-name">{t("payers.create.displayName")}</label>
           <input
             id="payer-name"
             name="displayName"
@@ -164,17 +165,19 @@ export function PayerCreate({
             autoComplete="off"
           />
           <span id="payer-name-error">
-            <InlineError message={nameError} />
+            <InlineError
+              message={nameError ? t(nameError.messageKey, nameError.params) : undefined}
+            />
           </span>
         </div>
 
         <div className="field">
-          <label htmlFor="payer-external-ref">External reference (optional)</label>
+          <label htmlFor="payer-external-ref">{t("payers.create.externalRef")}</label>
           <input
             id="payer-external-ref"
             name="externalRef"
             className="input"
-            placeholder="e.g. insurer code"
+            placeholder={t("payers.create.externalRefPlaceholder")}
             autoComplete="off"
           />
         </div>
@@ -182,10 +185,10 @@ export function PayerCreate({
         <div className="surface__actions">
           <button type="submit" className="btn-primary" disabled={pending}>
             {pending ? <span className="spinner" aria-hidden="true" /> : null}
-            Create payer
+            {t("payers.create.submit")}
           </button>
           <button type="button" className="btn-secondary" onClick={onClose} disabled={pending}>
-            Cancel
+            {t("common.cancel")}
           </button>
         </div>
       </form>

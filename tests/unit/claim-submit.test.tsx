@@ -10,10 +10,14 @@ vi.mock("@/lib/client", async (importOriginal) => {
   return { ...actual, consoleSubmitClaim: (...a: unknown[]) => consoleSubmitClaim(...a) };
 });
 
+import { setLocale } from "@/i18n/locale";
 import { createQueryClient } from "@/lib/query";
 import { SubmitClaim } from "@/receivables/SubmitClaim";
 
-function renderSubmit(onSubmitted = vi.fn()): { onSubmitted: typeof onSubmitted } {
+function renderSubmit(
+  onSubmitted = vi.fn(),
+  receivableRefs: string[] = ["r1", "r2"],
+): { onSubmitted: typeof onSubmitted } {
   const qc = createQueryClient();
   function Tree({ children }: { children: ReactNode }) {
     return (
@@ -27,7 +31,7 @@ function renderSubmit(onSubmitted = vi.fn()): { onSubmitted: typeof onSubmitted 
       <SubmitClaim
         activeTenant={{ id: "t1", name: "Northstar Retail" }}
         payerRef="p1"
-        receivableRefs={["r1", "r2"]}
+        receivableRefs={receivableRefs}
         onClose={vi.fn()}
         onSubmitted={onSubmitted}
       />
@@ -97,5 +101,52 @@ describe("SubmitClaim", () => {
     renderSubmit();
     fireEvent.click(screen.getByRole("button", { name: /submit claim/i }));
     await waitFor(() => expect(screen.getByRole("alert")).toBeDefined());
+    expect(screen.getByText("That claim could not be submitted. Please try again.")).toBeDefined();
+  });
+
+  test("scope line pluralizes the receivable count as a whole sentence", () => {
+    const line = (refs: string[]) => {
+      const { unmount } = render(
+        <QueryClientProvider client={createQueryClient()}>
+          <SubmitClaim
+            activeTenant={{ id: "t1", name: "Northstar Retail" }}
+            payerRef="p1"
+            receivableRefs={refs}
+            onClose={vi.fn()}
+            onSubmitted={vi.fn()}
+          />
+        </QueryClientProvider>,
+      );
+      const text = document.querySelector(".surface__scope-line")?.textContent;
+      unmount();
+      return text;
+    };
+    expect(line(["r1"])).toBe("Submitting a claim for 1 receivable in Northstar Retail.");
+    expect(line(["r1", "r2"])).toBe("Submitting a claim for 2 receivables in Northstar Retail.");
+  });
+
+  test("Arabic: title, plural scope line and actions render in Arabic only", async () => {
+    setLocale("ar");
+    consoleSubmitClaim.mockResolvedValue(result(403));
+    renderSubmit();
+    expect(screen.getByRole("heading", { name: "تقديم مطالبة" })).toBeDefined();
+    expect(document.querySelector(".surface__scope-line")?.textContent).toBe(
+      "تقديم مطالبة تشمل ذمتين مدينتين في Northstar Retail.",
+    );
+    expect(screen.getByRole("button", { name: "إلغاء" })).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "تقديم مطالبة" }));
+    expect(
+      await screen.findByText("ليست لديك صلاحية لتقديم مطالبات في هذه المؤسسة."),
+    ).toBeDefined();
+    expect(screen.queryByText(/submit claim/i)).toBeNull();
+    expect(screen.queryByText(/permission/i)).toBeNull();
+  });
+
+  test("Arabic: a few receivables use the «few» plural form with Western digits", () => {
+    setLocale("ar");
+    renderSubmit(vi.fn(), ["r1", "r2", "r3"]);
+    expect(document.querySelector(".surface__scope-line")?.textContent).toBe(
+      "تقديم مطالبة تشمل 3 ذمم مدينة في Northstar Retail.",
+    );
   });
 });

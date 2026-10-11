@@ -1,4 +1,5 @@
-import { type Page, expect, test } from "@playwright/test";
+import { formatMoney } from "../../src/i18n/format";
+import { type Page, expect, test } from "./fixtures";
 
 /**
  * 018 receivables E2E (VG-2). Active tenant → receivable table; Submit-claim
@@ -6,6 +7,10 @@ import { type Page, expect, test } from "@playwright/test";
  * RF-1 ScopeGate (list wrapper never reached). Mocked DP2 (C-5). Applies the
  * 017 E2E lessons: scope the submit click to the drawer dialog; ScopeGate needs
  * a membership present.
+ *
+ * RT-399: runs in both locales; every copy selector comes from the catalog via
+ * `t()`, and Money values are asserted in their formatted form (`120.00 EGP`).
+ * Mocked data (names, IDs) stays as authored.
  */
 const user = {
   id: "u1",
@@ -44,7 +49,7 @@ function receivable(over: Record<string, unknown> = {}) {
   };
 }
 
-test("S1: active tenant → receivable table renders (balance verbatim)", async ({ page }) => {
+test("S1: active tenant → receivable table renders (balance formatted)", async ({ page, t }) => {
   await mockBase(page, withTenant);
   await page.route("**/api/v1/settlement/receivables**", (r) =>
     r.fulfill({
@@ -55,11 +60,19 @@ test("S1: active tenant → receivable table renders (balance verbatim)", async 
   );
 
   await page.goto("/receivables");
-  await expect(page.getByRole("heading", { name: "Receivables" })).toBeVisible();
-  await expect(page.getByRole("cell", { name: "120.00" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: t("receivables.list.title"), exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("cell", { name: formatMoney("120.00"), exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("cell", { name: t("receivables.state.open"), exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("cell", { name: t("receivables.list.notPosted"), exact: true }),
+  ).toBeVisible();
 });
 
-test("S2: submit-claim journey → drawer → 201 → closes", async ({ page }) => {
+test("S2: submit-claim journey → drawer → 201 → closes", async ({ page, t }) => {
   await mockBase(page, withTenant);
   await page.route("**/api/v1/settlement/claims", (r) =>
     r.fulfill({
@@ -82,15 +95,16 @@ test("S2: submit-claim journey → drawer → 201 → closes", async ({ page }) 
   );
 
   await page.goto("/receivables");
-  await page.getByRole("button", { name: /submit claim/i }).click();
+  await page.getByRole("button", { name: t("receivables.list.submitClaim") }).click();
   const drawer = page.getByRole("dialog");
-  await expect(page.getByRole("heading", { name: /submit claim/i })).toBeVisible();
-  await drawer.getByRole("button", { name: /submit claim/i }).click();
-  await expect(page.getByRole("heading", { name: /submit claim/i })).toBeHidden();
+  await expect(page.getByRole("heading", { name: t("receivables.claim.title") })).toBeVisible();
+  await drawer.getByRole("button", { name: t("receivables.claim.submit") }).click();
+  await expect(page.getByRole("heading", { name: t("receivables.claim.title") })).toBeHidden();
 });
 
 test("S4: apply-payment journey → drawer → 200 → renders updated balance/state", async ({
   page,
+  t,
 }) => {
   await mockBase(page, withTenant);
   // Single route over the whole receivables namespace; branch by method/path so
@@ -117,17 +131,20 @@ test("S4: apply-payment journey → drawer → 200 → renders updated balance/s
   });
 
   await page.goto("/receivables");
-  await page.getByRole("button", { name: /apply payment/i }).click();
+  await page.getByRole("button", { name: t("receivables.list.applyPayment") }).click();
   const drawer = page.getByRole("dialog");
-  await expect(page.getByRole("heading", { name: /apply payment/i })).toBeVisible();
-  await drawer.getByLabel(/amount/i).fill("50.00");
-  await drawer.getByRole("button", { name: /apply payment/i }).click();
-  // Drawer shows the updated receivable (new outstanding + state).
-  await expect(drawer.getByText("70.00")).toBeVisible();
-  await expect(drawer.getByText(/partially_applied/i)).toBeVisible();
+  await expect(page.getByRole("heading", { name: t("settlement.apply.title") })).toBeVisible();
+  // The typed amount stays a raw decimal string (inputs are never formatted).
+  await drawer.getByLabel(t("settlement.apply.amount"), { exact: true }).fill("50.00");
+  await drawer.getByRole("button", { name: t("settlement.apply.submit") }).click();
+  // Drawer shows the updated receivable (new outstanding + state label).
+  await expect(drawer.getByText(formatMoney("70.00"))).toBeVisible();
+  await expect(
+    drawer.getByText(t("receivables.state.partially_applied"), { exact: true }),
+  ).toBeVisible();
 });
 
-test("S3: no active tenant → RF-1 ScopeGate; list wrapper never called", async ({ page }) => {
+test("S3: no active tenant → RF-1 ScopeGate; list wrapper never called", async ({ page, t }) => {
   let listed = false;
   await mockBase(page, {
     user,
@@ -142,6 +159,6 @@ test("S3: no active tenant → RF-1 ScopeGate; list wrapper never called", async
   });
 
   await page.goto("/receivables");
-  await expect(page.getByRole("heading", { name: /select your context/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: t("shell.gate.title") })).toBeVisible();
   expect(listed).toBe(false);
 });

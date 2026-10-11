@@ -6,7 +6,10 @@
  * meaningless no-op (distinct from a remittance, which may be 0 = full rejection).
  * version is the optimistic-concurrency carrier (stale → 409). Server stays
  * authoritative; this is a fail-fast UX guard.
+ *
+ * RT-399: errors are message keys, translated at render time.
  */
+import type { MessageKey } from "@/i18n";
 
 export interface ApplyPaymentDraft {
   amount: string;
@@ -14,7 +17,7 @@ export interface ApplyPaymentDraft {
   note?: string | null;
 }
 
-export type ApplyPaymentDraftErrors = Partial<Record<"amount" | "version", string>>;
+export type ApplyPaymentDraftErrors = Partial<Record<"amount" | "version", MessageKey>>;
 
 /** Strictly-positive exact-decimal money, up to 4 fractional digits. */
 const POSITIVE_MONEY = /^\d{1,15}(\.\d{1,4})?$/;
@@ -24,11 +27,11 @@ export function validateApplyPaymentDraft(draft: ApplyPaymentDraft): ApplyPaymen
 
   const v = (draft.amount ?? "").trim();
   if (!POSITIVE_MONEY.test(v) || Number(v) <= 0) {
-    errors.amount = "Enter an amount greater than zero (e.g. 50.00).";
+    errors.amount = "settlement.form.amountInvalid";
   }
 
   if (typeof draft.version !== "number" || !Number.isInteger(draft.version) || draft.version < 0) {
-    errors.version = "A valid receivable version is required.";
+    errors.version = "settlement.form.versionInvalid";
   }
 
   return errors;
