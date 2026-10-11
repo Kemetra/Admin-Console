@@ -1,0 +1,107 @@
+import { type Page, expect, test } from "@playwright/test";
+
+/**
+ * RT-398 — opt-in dark theme. The top-bar toggle switches <html data-theme>,
+ * the choice survives a reload, and the inline pre-paint script restores it
+ * before the app bundle runs (no light flash). Forced colours keep the toggle's
+ * state and focus visible. Mocked DP2 (C-5).
+ */
+
+const context = {
+  user: {
+    id: "u1",
+    email: "amal@northstar.eg",
+    display_name: "Amal Saleh",
+    is_platform_admin: true,
+  },
+  active_tenant: { id: "t1", name: "Northstar Retail" },
+  active_store: null,
+  active_role_code: "platform_admin",
+  memberships: [{ tenant_id: "t1", tenant_name: "Northstar Retail", role_code: "platform_admin" }],
+};
+
+async function mockApi(page: Page): Promise<void> {
+  await page.route("**/api/v1/**", (r) =>
+    r.fulfill({ status: 200, contentType: "application/json", body: "{}" }),
+  );
+  await page.route("**/api/v1/context/me", (r) =>
+    r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(context) }),
+  );
+}
+
+const theme = (page: Page) => page.evaluate(() => document.documentElement.dataset.theme ?? "");
+const bodyBackground = (page: Page) =>
+  page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+
+test("toggle on, reload: still dark, restored before the app bundle runs", async ({ page }) => {
+  await mockApi(page);
+  await page.goto("/");
+  const toggle = page.getByRole("button", { name: "Dark mode" });
+  await expect(toggle).toHaveAttribute("aria-pressed", "false");
+  expect(await theme(page)).toBe("");
+  expect(await bodyBackground(page)).toBe("rgb(247, 249, 250)"); // light canvas
+
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  expect(await theme(page)).toBe("dark");
+  expect(await bodyBackground(page)).toBe("rgb(14, 22, 31)"); // dark canvas #0e161f
+
+  // With every script bundle blocked, only the inline pre-paint script can set it.
+  await page.route("**/assets/*.js", (r) => r.abort());
+  await page.reload();
+  expect(await theme(page)).toBe("dark");
+  expect(await bodyBackground(page)).toBe("rgb(14, 22, 31)");
+
+  // And with the app running again, the toggle reflects the stored choice.
+  await page.unroute("**/assets/*.js");
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Dark mode" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  expect(await theme(page)).toBe("dark");
+});
+
+test("toggle off returns to the light default and persists it", async ({ page }) => {
+  await mockApi(page);
+  await page.addInitScript(() => {
+    localStorage.setItem("rt.theme.v1:user:u1", "dark");
+    localStorage.setItem("rt.theme.v1:last", "dark");
+  });
+  await page.goto("/");
+  const toggle = page.getByRole("button", { name: "Dark mode" });
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-pressed", "false");
+  expect(await theme(page)).toBe("");
+  expect(await page.evaluate(() => localStorage.getItem("rt.theme.v1:user:u1"))).toBe("light");
+});
+
+test.describe("forced-colors: active", () => {
+  test("dark + forced colours: the on toggle keeps a 2px edge and a real focus outline", async ({
+    page,
+  }) => {
+    await page.emulateMedia({ forcedColors: "active" });
+    await mockApi(page);
+    await page.addInitScript(() => {
+      localStorage.setItem("rt.theme.v1:user:u1", "dark");
+      localStorage.setItem("rt.theme.v1:last", "dark");
+    });
+    await page.goto("/");
+    const toggle = page.getByRole("button", { name: "Dark mode" });
+    await expect(toggle).toHaveAttribute("aria-pressed", "true");
+    const edge = await toggle.evaluate((el) => getComputedStyle(el).borderTopWidth);
+    expect(edge).toBe("2px");
+
+    await toggle.focus();
+    await page.keyboard.press("Shift+Tab");
+    await page.keyboard.press("Tab");
+    await expect(toggle).toBeFocused();
+    const outline = await toggle.evaluate((el) => {
+      const cs = getComputedStyle(el);
+      return { style: cs.outlineStyle, width: Number.parseFloat(cs.outlineWidth) };
+    });
+    expect(outline.style).toBe("solid");
+    expect(outline.width).toBeGreaterThanOrEqual(2);
+  });
+});

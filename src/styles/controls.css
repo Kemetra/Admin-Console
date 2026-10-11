@@ -49,6 +49,18 @@
   border-color: var(--color-primary);
   background-color: var(--color-primary-soft);
 }
+/* Toggle button (aria-pressed, e.g. the dark-mode switch, RT-398). On reads as a
+ * selection: teal wash and a 2px teal edge (border + inset), kept on hover. Off
+ * hovers neutral, so hovering never looks like "on". Enabled buttons only. */
+.btn-secondary[aria-pressed="false"]:not(:disabled):hover {
+  border-color: var(--color-control-border);
+  background-color: var(--color-surface-sunken);
+}
+.btn-secondary[aria-pressed="true"]:not(:disabled) {
+  border-color: var(--color-primary);
+  background-color: var(--color-primary-soft);
+  box-shadow: inset 0 0 0 1px var(--color-primary);
+}
 
 .btn-ghost {
   display: inline-flex;

@@ -27,24 +27,24 @@ function block(css: string, selector: string): Record<string, string> {
   );
 }
 
-const shipped = block(
-  stripComments(readFileSync(join(root, "src/styles/tokens.css"), "utf8")),
-  ":root",
+const shippedCss = stripComments(readFileSync(join(root, "src/styles/tokens.css"), "utf8"));
+const approvedCss = stripComments(
+  readFileSync(join(root, "design/claude-design-system/colors_and_type.css"), "utf8"),
 );
-const approved = block(
-  stripComments(
-    readFileSync(join(root, "design/claude-design-system/colors_and_type.css"), "utf8"),
-  ),
-  ':root,\n[data-theme="light"]',
-);
+const shipped = block(shippedCss, ":root");
+const approved = block(approvedCss, ':root,\n[data-theme="light"]');
+const DARK = '[data-theme="dark"]';
+const shippedDark = block(shippedCss, DARK);
+const approvedDark = block(approvedCss, DARK);
 
 const shippedColours = Object.keys(shipped).filter((k) => k.startsWith("--color-"));
 
-function resolve(name: string): string {
-  const v = shipped[`--color-${name}`];
+/** A role's hex in a palette; an alias resolves within the same palette. */
+function resolve(name: string, palette: Record<string, string> = shipped): string {
+  const v = palette[`--color-${name}`];
   if (v === undefined) throw new Error(`--color-${name} is not defined`);
   const alias = /^var\(--color-([a-z-]+)\)$/.exec(v);
-  return alias ? resolve(alias[1]) : v;
+  return alias ? resolve(alias[1], palette) : v;
 }
 
 function luminance(hex: string): number {
@@ -54,8 +54,10 @@ function luminance(hex: string): number {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
-function ratio(fg: string, bg: string): number {
-  const [hi, lo] = [luminance(resolve(fg)), luminance(resolve(bg))].sort((a, b) => b - a);
+function ratio(fg: string, bg: string, palette: Record<string, string> = shipped): number {
+  const [hi, lo] = [luminance(resolve(fg, palette)), luminance(resolve(bg, palette))].sort(
+    (a, b) => b - a,
+  );
   return (hi + 0.05) / (lo + 0.05);
 }
 
@@ -197,5 +199,24 @@ describe("RT-397 Dubai type", () => {
         expect({ file, numericWeight }).toEqual({ file, numericWeight: false });
       }
     }
+  });
+});
+
+describe("RT-398 dark theme", () => {
+  test("the dark block equals the approved dark block, every value", () => {
+    expect(Object.keys(approvedDark).length).toBeGreaterThan(0);
+    expect(shippedDark).toEqual(approvedDark);
+  });
+
+  test("the dark block comes after :root, so it wins at equal specificity", () => {
+    expect(shippedCss.indexOf(`${DARK} {`)).toBeGreaterThan(shippedCss.indexOf(":root {"));
+  });
+
+  test("on-primary is the dark background in dark (text on a teal fill is dark)", () => {
+    expect(resolve("on-primary", shippedDark)).toBe(resolve("background", shippedDark));
+  });
+
+  test.each(CONTRAST_PAIRS)("dark: %s on %s passes WCAG AA (>= %s:1)", (fg, bg, min) => {
+    expect(ratio(fg, bg, shippedDark)).toBeGreaterThanOrEqual(min);
   });
 });

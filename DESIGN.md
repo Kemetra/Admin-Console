@@ -9,8 +9,8 @@ description: >-
 status: current-shipped-tokens
 # CURRENT SHIPPED TOKENS — a SUBSET of src/styles/tokens.css on main (colors, type, radius,
 # spacing); tokens.css is authoritative and also holds the scrim, overlay shadow, motion and
-# shell tokens. One light token set (RT-396): the approved dark theme (RT-392) is not built
-# yet (RT-398), so there is no [data-theme] switch in production.
+# shell tokens. Light is the default (RT-396); the approved dark theme (RT-392) ships as a
+# [data-theme="dark"] block with a top-bar switch (RT-398). The colors below are the light set.
 colors:
   background: "#f7f9fa"
   surface: "#ffffff"
@@ -119,7 +119,10 @@ focus, copy, status and border/icon feedback stay intact.
 
 - **Theme.** The Admin Console defaults to **light**. An opt-in dark theme was approved on
   2026-10-11 (RT-392): the same thirteen roles with dark values, switched by the user from the
-  top bar (values in `design/claude-design-system/README.md`); it is not built in the app yet.
+  top bar (values in `design/claude-design-system/README.md`). Shipped by RT-398: a "Dark mode"
+  toggle (`.btn-secondary` + `aria-pressed`, constant label) sets `data-theme="dark"` on
+  `<html>`; the choice is kept per user in browser storage (no Backend-Core preference contract
+  exists), and an inline script in `index.html` restores it before first paint.
   No forced dark sidebar or dark shell to create personality. Components consume semantic
   role tokens, so the dark theme (and any future high-contrast theme) remaps roles without
   changing what a component means.
@@ -338,6 +341,7 @@ Each debt is tracked separately. Do not fold them into feature work.
 | Remove RF-* dev-gated entries from production navigation | UX-09 | **RT-270** |
 | Semantic icon registry + Fluent System Icons fit / licensing / bundle PoC | UX-03 | **RT-263** |
 | Light-first token migration: Mineral Daylight neutrals + Tower Teal roles; retire Tower Gold, navy action and the dark default | UX-02, UX-04 (radius 8/12/16) | **RT-396** |
+| Opt-in dark theme: `[data-theme="dark"]` roles, top-bar switch, per-user persistence, no light flash | UX-02, UX-11 | **RT-398** |
 | Admin type migration Inter → Dubai (with Arabic line-height and the 12px floor) | UX-03 | **RT-397** |
 | Reconcile `PRODUCT.md` Principle 6 and the anti-reference note with light-first | UX-02 | **No ticket — owner to decide** (docs-only) |
 
