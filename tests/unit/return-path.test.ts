@@ -1,5 +1,5 @@
-import { describe, expect, test } from "vitest";
 import { returnPathOf, safeReturnPath } from "@/shell/return-path";
+import { describe, expect, test } from "vitest";
 
 /**
  * RT-355: the path a signed-out user asked for is kept across sign-in, and only

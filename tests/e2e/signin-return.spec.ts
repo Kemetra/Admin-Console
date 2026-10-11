@@ -14,7 +14,13 @@ const user = { id: "u1", email: "amal@northstar.eg", display_name: "Amal Saleh" 
 async function mockSignIn(page: Page, memberships: (typeof t1)[]): Promise<void> {
   let signedIn = false;
   const active = memberships.length === 1 ? { id: "t1", name: "Northstar Retail" } : null;
-  const ctx = { user, active_tenant: active, active_store: null, active_role_code: "tenant_admin", memberships };
+  const ctx = {
+    user,
+    active_tenant: active,
+    active_store: null,
+    active_role_code: "tenant_admin",
+    memberships,
+  };
   await page.route("**/api/v1/**", (r) => r.fulfill({ status: 200, json: {} }));
   await page.route("**/api/v1/auth/refresh", (r) => r.fulfill({ status: 401, json: {} }));
   await page.route("**/api/v1/context/me", (r) =>
