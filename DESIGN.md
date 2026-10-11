@@ -119,7 +119,10 @@ focus, copy, status and border/icon feedback stay intact.
 
 **Target direction: Mineral Daylight + Tower Teal, light-first.**
 
-- **Theme.** The Admin Console defaults to **light**. A dark theme is **deferred**: no forced
+- **Theme.** The Admin Console defaults to **light**. An opt-in dark theme was approved on
+  2026-10-11 (RT-392): the same thirteen roles with dark values, switched by the user from the
+  top bar (values in `design/claude-design-system/README.md`); it is not built in the app yet.
+  Still: no forced
   dark sidebar or dark shell to create personality. Components consume semantic role tokens
   so a future dark or high-contrast theme can remap roles without changing what a component
   means.

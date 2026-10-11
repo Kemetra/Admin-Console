@@ -1,7 +1,8 @@
 /* Retail Tower — target design tokens for Claude Design (RT-392).
  *
  * TARGET identity from the UX/UI Constitution (UX-01…UX-13): light-first
- * Mineral Daylight + Tower Teal, Arabic-first, RTL by structure. This is NOT the
+ * Mineral Daylight + Tower Teal (with an approved dark alternate below),
+ * Arabic-first, RTL by structure. This is NOT the
  * shipped Admin-Console token set (src/styles/tokens.css, dark/navy/gold/Inter).
  *
  * Colour values: owner-approved 2026-10-11 (RT-392) — seeded from the POS
@@ -104,6 +105,36 @@
   --shell-scope-h: 40px;
   --shell-sidebar-w: 240px;
   --signal-line-w: 3px;
+}
+
+/* ── Dark theme (owner-approved 2026-10-11, RT-392) ──────────────────
+ * Light stays the default. A user's choice sets data-theme="dark" on <html>
+ * (or on any container); the same thirteen roles take dark values, so no
+ * component changes. Contrast: 31/31 text and boundary pairings pass WCAG AA.
+ * Layers lighten as they rise; Tower Teal is brighter so it reads on dark, and
+ * text on a primary or danger fill is dark, not white. */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --color-background: #0e161f;
+  --color-surface: #16212d;
+  --color-surface-sunken: #111a24;
+  --color-text: #e7edf3;
+  --color-text-muted: #9fb0c2;
+  --color-border: #2a3846;
+
+  --color-primary: #3fb8a8;
+  --color-primary-emphasis: #6fd0c2;
+  --color-primary-soft: #12322f;
+
+  --color-success: #5cc995;
+  --color-warning: #e9a84a;
+  --color-danger: #ff8b7f;
+  --color-info: #6db3ea;
+
+  --color-on-primary: var(--color-background);
+  --color-scrim: rgb(0 0 0 / 0.6);
+  --shadow-overlay: 0 12px 32px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.4);
 }
 
 @media (prefers-reduced-motion: reduce) {

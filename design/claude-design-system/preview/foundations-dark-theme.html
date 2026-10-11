@@ -1,0 +1,71 @@
+<!-- @dsCard group="Foundations" name="Dark theme" subtitle="Approved dark alternate: the same 13 roles, data-theme=dark; light stays the default" viewport="1040x1200" -->
+<!doctype html>
+<html lang="ar" dir="rtl" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dark theme</title>
+<link rel="stylesheet" href="_card.css">
+<style>
+  .roles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--space-3); }
+  .role { display: grid; grid-template-rows: 48px auto; border: 1px solid var(--color-border); border-radius: var(--radius-object); overflow: hidden; background: var(--color-surface); }
+  .role__chip { border-block-end: 1px solid var(--color-border); }
+  .role__meta { display: grid; gap: 2px; padding: var(--space-2) var(--space-3); font-size: var(--text-meta); }
+  .role__meta b { font-size: var(--text-control); }
+  .role__meta span { color: var(--color-text-muted); }
+</style>
+</head>
+<body>
+  <header class="ds-head">
+    <h1>الوضع الليلي</h1>
+    <p>بديل معتمد (RT-392). الفاتح هو الافتراضي، واختيار المستخدم يضع <span class="machine">data-theme="dark"</span> على <span class="machine">&lt;html&gt;</span>. نفس الأدوار الثلاثة عشر بقيم غامقة، فلا يتغير أي مكوّن. كل أزواج النص والحدود تجتاز WCAG AA.</p>
+  </header>
+
+  <section class="ds-section">
+    <h2>الأدوار بقيمها الغامقة</h2>
+    <div class="roles">
+      <div class="role"><div class="role__chip" style="background: var(--color-background)"></div><div class="role__meta"><b>الخلفية</b><span class="machine">#0e161f</span></div></div>
+      <div class="role"><div class="role__chip" style="background: var(--color-surface)"></div><div class="role__meta"><b>سطح العمل</b><span class="machine">#16212d</span></div></div>
+      <div class="role"><div class="role__chip" style="background: var(--color-surface-sunken)"></div><div class="role__meta"><b>سطح غائر</b><span class="machine">#111a24</span></div></div>
+      <div class="role"><div class="role__chip" style="background: var(--color-text)"></div><div class="role__meta"><b>النص</b><span class="machine">#e7edf3</span></div></div>
+      <div class="role"><div class="role__chip" style="background: var(--color-text-muted)"></div><div class="role__meta"><b>نص ثانوي وحدود الحقول</b><span class="machine">#9fb0c2</span></div></div>
+      <div class="role"><div class="role__chip" style="background: var(--color-border)"></div><div class="role__meta"><b>فواصل فقط</b><span class="machine">#2a3846</span></div></div>
+      <div class="role"><div class="role__chip" style="background: var(--color-primary)"></div><div class="role__meta"><b>Tower Teal</b><span class="machine">#3fb8a8</span></div></div>
+      <div class="role"><div class="role__chip" style="background: var(--color-primary-emphasis)"></div><div class="role__meta"><b>تأكيد التيل</b><span class="machine">#6fd0c2</span></div></div>
+      <div class="role"><div class="role__chip" style="background: var(--color-primary-soft)"></div><div class="role__meta"><b>خلفية التحديد</b><span class="machine">#12322f</span></div></div>
+      <div class="role"><div class="role__chip" style="background: var(--color-success)"></div><div class="role__meta"><b>نجاح مؤكد</b><span class="machine">#5cc995</span></div></div>
+      <div class="role"><div class="role__chip" style="background: var(--color-warning)"></div><div class="role__meta"><b>تحذير</b><span class="machine">#e9a84a</span></div></div>
+      <div class="role"><div class="role__chip" style="background: var(--color-danger)"></div><div class="role__meta"><b>خطر وغير مؤكد</b><span class="machine">#ff8b7f</span></div></div>
+      <div class="role"><div class="role__chip" style="background: var(--color-info)"></div><div class="role__meta"><b>معلومة وانتظار</b><span class="machine">#6db3ea</span></div></div>
+    </div>
+  </section>
+
+  <section class="ds-section">
+    <h2>شاشة عمل بالوضع الليلي</h2>
+    <div class="banner is-warning" role="status">
+      <span class="banner__title">تعذّر تحديث فروق المخزون من ERPNext.</span>
+      <span class="banner__body">آخر بيانات مؤكدة معروضة أدناه، ويمكنك متابعة العمل.</span>
+      <span class="banner__evidence">المرجع: <span class="machine">req_7f3a91</span></span>
+      <button class="btn btn--secondary banner__action">تحديث البيانات</button>
+    </div>
+    <table class="table" style="margin-block-start: var(--space-4)">
+      <thead><tr><th>المتجر</th><th>الرمز</th><th>الحالة</th><th class="col-num">قيمة المخزون</th></tr></thead>
+      <tbody>
+        <tr class="is-selected"><td><b>متجر الواحة</b></td><td><span class="machine">WAH-01</span></td><td><span class="badge is-success"><span class="dot"></span>متصل</span></td><td class="col-num"><span class="num">98,410.50 EGP</span></td></tr>
+        <tr><td><b>متجر النيل</b></td><td><span class="machine">NIL-02</span></td><td><span class="badge is-warning"><span class="dot"></span>بيانات قديمة</span></td><td class="col-num"><span class="num">41,200.00 EGP</span></td></tr>
+        <tr><td><b>متجر الشروق</b></td><td><span class="machine">SHR-03</span></td><td><span class="badge is-danger"><span class="dot"></span>نتيجة غير مؤكدة</span></td><td class="col-num"><span class="num">12,075.25 EGP</span></td></tr>
+        <tr><td><b>متجر المعادي</b></td><td><span class="machine">MAD-04</span></td><td><span class="badge is-neutral"><span class="dot dot--hollow"></span>لا توجد إشارة</span></td><td class="col-num"><span class="num">7,930.00 EGP</span></td></tr>
+        <tr><td><b>متجر الدلتا</b></td><td><span class="machine">DLT-05</span></td><td><span class="badge is-info"><span class="dot"></span>جارٍ المزامنة</span></td><td class="col-num"><span class="num">63,118.40 EGP</span></td></tr>
+      </tbody>
+    </table>
+    <div class="ds-row" style="margin-block-start: var(--space-4)">
+      <button class="btn btn--primary">حفظ المتجر</button>
+      <button class="btn btn--secondary">إلغاء التعديل</button>
+      <button class="btn btn--quiet">عرض التفاصيل</button>
+      <button class="btn btn--danger">إيقاف المتجر</button>
+      <button class="btn btn--danger-commit">حذف المتجر</button>
+    </div>
+    <p class="ds-note" style="margin-block-start: var(--space-3)">في الغامق: الطبقات تفتح كلما ارتفعت، والتيل أفتح ليظهر، ونص الزر الأساسي وزر الحذف غامق على اللون بدل الأبيض.</p>
+  </section>
+</body>
+</html>

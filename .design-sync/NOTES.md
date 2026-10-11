@@ -76,8 +76,13 @@
   - In-page positioned layers in `components.css` stay below 100.
   - Do not split the overlay layer (for example 100/101): an open drawer would then stay above a later confirm's scrim.
 - **Card viewports** are hard-coded in each marker. A content change that grows a card needs its `viewport` height raised (the check reports `size=…/WxH`).
-- **Colour values** are the RT-392 approved table only. Any new value needs a new owner decision.
+- **Colour values** are the RT-392 approved light and dark tables only. Any new value needs a new owner decision.
+  - The dark set lives in `[data-theme="dark"]` in `colors_and_type.css`.
+  - A new component pairing needs its contrast checked in **both** themes. The 2026-10-11 check covered 31 pairings in each, all passing WCAG AA.
 - **Owner decisions, 2026-10-11:**
   - A steady healthy connection shows a green dot beside «متصل». The cards already did this; conventions.md now says it.
+  - **Language:** Arabic default, with English as a second locale (`lang="en" dir="ltr"`), one at a time. Card: `patterns-locale-english.html`.
+  - **Theme:** light default, with an opt-in dark theme (`data-theme="dark"`). The owner approved the palette from a side-by-side review page. Card: `foundations-dark-theme.html`.
+  - **Switch placement:** both switches sit in the shell top bar, as shown in the two shell cards.
   - Store time zone is set per store and stays editable after creation (owner: «يغير براحته بعد كده»). This is a design rule only; the Backend-Core contract owns whether the API allows it.
 - The **Platform Console frame** is an RT-391 concept. Its navigation is illustrative; re-check it when RT-391 decides the IA.
