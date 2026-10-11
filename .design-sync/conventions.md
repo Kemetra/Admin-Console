@@ -12,7 +12,7 @@ This is the target identity from the Retail Tower UX/UI Constitution: light-firs
 
 ## Styling idiom: tokens + classes
 
-- **Colours:** `--color-background`, `--color-surface`, `--color-surface-sunken`, `--color-text`, `--color-text-muted`, `--color-border` (dividers only), `--color-primary` / `-emphasis` / `-soft` (Tower Teal = intent), `--color-info`, `--color-success`, `--color-warning`, `--color-danger`.
+- **Colours:** `--color-background`, `--color-surface`, `--color-surface-sunken`, `--color-text`, `--color-text-muted`, `--color-border` (dividers only), `--color-primary`, `--color-primary-emphasis`, `--color-primary-soft` (Tower Teal = intent), `--color-info`, `--color-success`, `--color-warning`, `--color-danger`.
 - **Space:** `--space-1`…`--space-9` (4–96px).
 - **Radius:** `--radius-control` (8), `--radius-object` (12), `--radius-overlay` (16), `--radius-pill`.
 - **Type:** `--text-display`, `--text-screen-title`, `--text-section-title`, `--text-body`, `--text-control`, `--text-meta`, `--text-money-total`.
@@ -26,7 +26,7 @@ This is the target identity from the Retail Tower UX/UI Constitution: light-firs
 | States | `notice`; `banner` (`banner__title`, `banner__body`, `banner__evidence`, `banner__action`); `blocking`. |
 | Tables | `table` (full-bleed, never inside a card), `col-num`, `tr.is-selected`, `table__continuation`, `table-meta`, `skeleton`. |
 | Shell | `shell` > `shell__top` (`shell__product`), `shell__scope` (`scope-item`), `shell__nav` (`nav-item` + `signal` on `aria-current="page"`), `shell__main`. |
-| Overlays | `scrim`, `drawer` (`drawer__head`, `drawer__body`, `drawer__foot`), `dialog` (`dialog__actions`), `menu` / `menu__item` (radio group). |
+| Overlays | `scrim`, `drawer` (`drawer__head`, `drawer__body`, `drawer__foot`), `dialog` (`dialog__actions`), `menu` / `menu__item` (radio group). Place each `scrim` directly before its `drawer` or `dialog`, after the page content; a later overlay covers an earlier one. |
 | Forms | `form`, `form__section`, `form__row`, `form__actions`, `form__dirty`, `error-summary`. |
 | Data | `num` (money, quantities), `machine` (IDs, codes), `ledger` / `ledger__total`, `sr-only`. |
 

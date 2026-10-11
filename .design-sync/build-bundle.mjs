@@ -27,6 +27,8 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = join(ROOT, 'design', 'claude-design-system');
 const OUT = join(ROOT, 'ds-bundle');
 const readLF = (p) => readFileSync(p, 'utf8').replace(/\r\n/g, '\n');
+const stripComments = (css) => css.replace(/\/\*[\s\S]*?\*\//g, '');
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const cfg = JSON.parse(readLF(join(ROOT, '.design-sync', 'config.json')));
 
 // A code span names a class when it is `.x` or `element.x`, or a bare identifier
@@ -44,16 +46,27 @@ function classesNamedIn(md) {
   return new Set([...fromSpans, ...fromAttrs].filter(Boolean));
 }
 
+// Every token named in full; a `--x-1`…`--x-9` range names each step in between.
+function tokensNamedIn(md) {
+  const tokens = new Set([...md.matchAll(/(?<![\w-])--[a-z][a-z0-9-]*/g)].map((m) => m[0]));
+  for (const [, stem, from, to] of md.matchAll(/`(--[a-z-]+-)(\d+)`…`\1(\d+)`/g)) {
+    for (let i = Number(from); i <= Number(to); i++) tokens.add(`${stem}${i}`);
+  }
+  return tokens;
+}
+
 // Every token and class conventions.md names must exist in the CSS designs receive.
 // Without this, a rename in components.css ships a README that teaches the design
-// agent a class that no longer styles anything.
+// agent a class that no longer styles anything. Comments are stripped first, so a
+// name that survives only in a comment does not count as defined.
 function checkConventionNames(md, tokensCss, componentsCss) {
-  const defined = new Set([...tokensCss.matchAll(/(--[a-z0-9-]+)\s*:/g)].map((m) => m[1]));
-  const tokens = new Set([...md.matchAll(/(?<![\w-])--[a-z][a-z0-9-]*/g)].map((m) => m[0]));
+  const defined = new Set([...stripComments(tokensCss).matchAll(/(--[a-z0-9-]+)\s*:/g)].map((m) => m[1]));
+  const selectors = stripComments(componentsCss);
+  const tokens = tokensNamedIn(md);
   const classes = classesNamedIn(md);
   const missing = [
     ...[...tokens].filter((t) => !defined.has(t)),
-    ...[...classes].filter((c) => !new RegExp(`\\.${c}(?![\\w-])`).test(componentsCss)).map((c) => `.${c}`),
+    ...[...classes].filter((c) => !new RegExp(`\\.${escapeRe(c)}(?![\\w-])`).test(selectors)).map((c) => `.${c}`),
   ];
   if (missing.length) throw new Error(`conventions.md names undefined token(s)/class(es): ${missing.join(', ')}`);
   return { tokens: tokens.size, classes: classes.size };
