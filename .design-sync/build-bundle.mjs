@@ -29,22 +29,28 @@ const OUT = join(ROOT, 'ds-bundle');
 const readLF = (p) => readFileSync(p, 'utf8').replace(/\r\n/g, '\n');
 const cfg = JSON.parse(readLF(join(ROOT, '.design-sync', 'config.json')));
 
+// A code span names a class when it is `.x` or `element.x`, or a bare identifier
+// in the class table (table rows only; `aria-*` spans are attributes).
+function classInSpan(span, tableRow) {
+  const m = /^\.([a-z][\w-]*)$/.exec(span) ?? /^(?:label|input|select|tr)\.([a-z][\w-]*)$/.exec(span);
+  if (m) return m[1];
+  return tableRow && /^(?!aria-)[a-z][\w-]*$/.test(span) ? span : null;
+}
+
+function classesNamedIn(md) {
+  const fromSpans = md.split('\n').flatMap((line) =>
+    [...line.matchAll(/`([^`]+)`/g)].map(([, span]) => classInSpan(span, line.startsWith('| '))));
+  const fromAttrs = [...md.matchAll(/class="([^"]+)"/g)].flatMap(([, list]) => list.split(/\s+/));
+  return new Set([...fromSpans, ...fromAttrs].filter(Boolean));
+}
+
 // Every token and class conventions.md names must exist in the CSS designs receive.
 // Without this, a rename in components.css ships a README that teaches the design
 // agent a class that no longer styles anything.
 function checkConventionNames(md, tokensCss, componentsCss) {
   const defined = new Set([...tokensCss.matchAll(/(--[a-z0-9-]+)\s*:/g)].map((m) => m[1]));
   const tokens = new Set([...md.matchAll(/(?<![\w-])--[a-z][a-z0-9-]*/g)].map((m) => m[0]));
-  const classes = new Set();
-  for (const line of md.split('\n')) {
-    const tableRow = line.startsWith('| ');
-    for (const [, span] of line.matchAll(/`([^`]+)`/g)) {
-      const m = /^\.([a-z][\w-]*)$/.exec(span) ?? /^(?:label|input|select|tr)\.([a-z][\w-]*)$/.exec(span);
-      if (m) classes.add(m[1]);
-      else if (tableRow && /^(?!aria-)[a-z][\w-]*$/.test(span)) classes.add(span);
-    }
-  }
-  for (const [, list] of md.matchAll(/class="([^"]+)"/g)) for (const c of list.split(/\s+/)) classes.add(c);
+  const classes = classesNamedIn(md);
   const missing = [
     ...[...tokens].filter((t) => !defined.has(t)),
     ...[...classes].filter((c) => !new RegExp(`\\.${c}(?![\\w-])`).test(componentsCss)).map((c) => `.${c}`),
