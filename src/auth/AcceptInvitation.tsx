@@ -1,5 +1,6 @@
 import { Banner } from "@/components/Banner";
 import { TowerMark } from "@/components/TowerMark";
+import { type MessageKey, useT } from "@/i18n";
 import { queryKeys } from "@/lib/query";
 import { useAcceptInvitation } from "@/operators/useMembers";
 /**
@@ -14,6 +15,9 @@ import { useAcceptInvitation } from "@/operators/useMembers";
  * query (so the shell does not render a stale session-lost state from cache),
  * then navigate to `/` where ProtectedArea resolves the new context. On 400 the
  * token is invalid/expired — rendered generically, with a path back to sign-in.
+ *
+ * RT-399: copy comes from the `auth.acceptInvitation.*` catalog; the error state
+ * keeps a message key, never translated text.
  */
 import { useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
@@ -26,7 +30,8 @@ export function AcceptInvitation(): React.JSX.Element {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const accept = useAcceptInvitation();
-  const [error, setError] = useState<string | undefined>();
+  const t = useT();
+  const [error, setError] = useState<MessageKey | undefined>();
 
   const invalidToken = token.length === 0;
 
@@ -43,7 +48,7 @@ export function AcceptInvitation(): React.JSX.Element {
       display_name: displayName || undefined,
     });
     if (res.status >= 400) {
-      setError("This invitation link is invalid or has expired.");
+      setError("auth.acceptInvitation.errors.invalidLink");
       return;
     }
     // Session established: drop the cached context so the shell re-fetches it.
@@ -60,30 +65,32 @@ export function AcceptInvitation(): React.JSX.Element {
             <span className="tower-lockup__word">Retail Tower OS</span>
           </span>
           <h1 className="signin-head__sub">
-            {invalidToken ? "Invitation" : "Accept your invitation"}
+            {invalidToken
+              ? t("auth.acceptInvitation.titleInvalid")
+              : t("auth.acceptInvitation.title")}
           </h1>
         </div>
 
         {invalidToken ? (
           <>
             <div className="signin-banner">
-              <Banner variant="danger" message="This invitation link is invalid or has expired." />
+              <Banner variant="danger" message={t("auth.acceptInvitation.errors.invalidLink")} />
             </div>
             <p className="signin-foot">
-              <Link to="/signin">Go to sign in</Link>
+              <Link to="/signin">{t("auth.acceptInvitation.goToSignIn")}</Link>
             </p>
           </>
         ) : (
           <>
             {error ? (
               <div className="signin-banner">
-                <Banner variant="danger" message={error} />
+                <Banner variant="danger" message={t(error)} />
               </div>
             ) : null}
 
             <form className="signin-form" onSubmit={handleSubmit} noValidate>
               <div className="field">
-                <label htmlFor="display_name">Display name</label>
+                <label htmlFor="display_name">{t("auth.acceptInvitation.displayName.label")}</label>
                 <input
                   className="input"
                   id="display_name"
@@ -93,14 +100,14 @@ export function AcceptInvitation(): React.JSX.Element {
                 />
               </div>
               <div className="field">
-                <label htmlFor="password">Password</label>
+                <label htmlFor="password">{t("auth.acceptInvitation.password.label")}</label>
                 <input
                   className="input"
                   id="password"
                   name="password"
                   type="password"
                   autoComplete="new-password"
-                  placeholder="Required for a new account"
+                  placeholder={t("auth.acceptInvitation.password.placeholder")}
                   disabled={accept.isPending}
                 />
               </div>
@@ -111,16 +118,19 @@ export function AcceptInvitation(): React.JSX.Element {
               >
                 {accept.isPending ? (
                   <>
-                    <span className="spinner" aria-hidden="true" /> Accepting
+                    <span className="spinner" aria-hidden="true" />{" "}
+                    {t("auth.acceptInvitation.submitting")}
                   </>
                 ) : (
-                  "Accept invitation"
+                  t("auth.acceptInvitation.submit")
                 )}
               </button>
             </form>
 
             <p className="signin-foot">
-              Already have access? <Link to="/signin">Sign in</Link>
+              {t.rich("auth.acceptInvitation.haveAccess", {
+                signIn: <Link to="/signin">{t("auth.acceptInvitation.signInLink")}</Link>,
+              })}
             </p>
           </>
         )}

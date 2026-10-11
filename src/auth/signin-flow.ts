@@ -5,7 +5,11 @@
  * show a generic error (401/5xx — never leak account existence), a rate-limit
  * state (429), or, on success, branch on membership count:
  *   0 → no-access (S7) · 1 → auto-select that tenant (OQ-4) · >1 → chooser (S2).
+ *
+ * RT-399: the error outcome carries a catalog `MessageKey`, never copy; SF-1
+ * translates it at render, so a locale switch re-renders it.
  */
+import type { MessageKey } from "@/i18n";
 
 /** Backend error envelope: { error: { code, message, request_id } } (schema Error). */
 interface BackendError {
@@ -24,9 +28,9 @@ export type SignInResolution =
   | { kind: "choose" }
   | { kind: "no-access" }
   | { kind: "rate-limited"; retryAfterSeconds: number; requestId?: string }
-  | { kind: "error"; message: string; requestId?: string };
+  | { kind: "error"; messageKey: MessageKey; requestId?: string };
 
-const GENERIC_SIGNIN_ERROR = "Sign-in failed. Check your email and password, then try again.";
+const GENERIC_SIGNIN_ERROR: MessageKey = "auth.signIn.errors.failed";
 
 export function resolveSignIn(input: SignInInput): SignInResolution {
   if (input.status === 429) {
@@ -42,7 +46,7 @@ export function resolveSignIn(input: SignInInput): SignInResolution {
     // leak, FR-003-007). request_id is surfaced for support (VD-4).
     return {
       kind: "error",
-      message: GENERIC_SIGNIN_ERROR,
+      messageKey: GENERIC_SIGNIN_ERROR,
       requestId: input.error?.error?.request_id,
     };
   }
