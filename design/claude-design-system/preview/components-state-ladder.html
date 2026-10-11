@@ -1,0 +1,63 @@
+<!-- @dsCard group="Components" name="State ladder" subtitle="Indicator → inline notice → banner → outcome → blocking; What → Safety → Action → Evidence" viewport="1040x1130" -->
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>State ladder</title>
+<link rel="stylesheet" href="_card.css">
+</head>
+<body>
+  <header class="ds-head">
+    <h1>سلّم الحالات</h1>
+    <p>كل حالة تقول أولًا ما هو صحيح، ثم هل المتابعة آمنة، ثم ما الخطوة التالية، والدليل قريب. الإلحاح = الخطورة × الصلة بالمهمة الحالية.</p>
+  </header>
+
+  <section class="ds-section">
+    <h2>مؤشر</h2>
+    <div class="ds-row"><span class="ds-row is-success"><span class="dot"></span></span><span>الاتصال بالخادم: متصل</span></div>
+  </section>
+
+  <section class="ds-section">
+    <h2>تنبيه داخلي</h2>
+    <div class="notice" role="status">
+      <span><b class="is-info">قيد الانتظار:</b> طُلبت لقطة مخزون جديدة. البيانات المعروضة من 7 أكتوبر 2026، 13:42.</span>
+    </div>
+  </section>
+
+  <section class="ds-section">
+    <h2>شريط على مستوى الصفحة</h2>
+    <div class="banner is-warning" role="status">
+      <span class="banner__title">تعذّر تحديث فروق المخزون من ERPNext.</span>
+      <span class="banner__body">آخر بيانات مؤكدة معروضة أدناه، ويمكنك متابعة العمل.</span>
+      <span class="banner__evidence">المرجع: <span class="machine">req_7f3a91c2</span> · 7 أكتوبر 2026، 13:42</span>
+      <button class="btn btn--secondary banner__action">تحديث البيانات</button>
+    </div>
+    <div class="banner is-danger" role="alert">
+      <span class="banner__title">نتيجة الترحيل إلى ERPNext غير مؤكدة.</span>
+      <span class="banner__body">البيع محفوظ في Retail Tower. لا تُعِد الإرسال قبل التحقق من الحالة، حتى لا يُرحَّل مرتين.</span>
+      <span class="banner__evidence">رقم البيع: <span class="machine">sale_01J9ZB2M4R</span></span>
+      <button class="btn btn--secondary banner__action">تحديث حالة الترحيل</button>
+    </div>
+  </section>
+
+  <section class="ds-section">
+    <h2>نتيجة مُثبتة</h2>
+    <div class="banner is-success" role="status">
+      <span class="banner__title">تم حفظ المتجر.</span>
+      <span class="banner__body">«متجر الواحة» متاح الآن لنقاط البيع المقترنة.</span>
+    </div>
+    <p class="ds-note">نقول ما الذي نجح بالضبط، لا «تمت العملية بنجاح». النجاح يظهر فقط بعد ثبوته.</p>
+  </section>
+
+  <section class="ds-section">
+    <h2>سطح حاجب</h2>
+    <div class="blocking" role="alert">
+      <h3>انتهت جلسة الدخول.</h3>
+      <p>لم يُحفظ أي تعديل بعد آخر حفظ. سجّل الدخول مرة أخرى للمتابعة من الصفحة نفسها.</p>
+      <button class="btn btn--primary">تسجيل الدخول</button>
+    </div>
+    <p class="ds-note">لا نوصي بـ «حاول مرة أخرى» عندما لا تحل الإعادة المشكلة. الحالات المتزامنة تُدمج وتُرتَّب، ولا تتراكم الأشرطة فوق مساحة العمل.</p>
+  </section>
+</body>
+</html>

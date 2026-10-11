@@ -1,0 +1,66 @@
+<!-- @dsCard group="Components" name="Fields" subtitle="Required, focus, inline error with repair, read-only vs disabled, machine input" viewport="960x820" -->
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fields</title>
+<link rel="stylesheet" href="_card.css">
+<style>
+  .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 360px)); gap: var(--space-5) var(--space-6); }
+</style>
+</head>
+<body>
+  <header class="ds-head">
+    <h1>الحقول</h1>
+    <p>لكل حقل عقد: صيغة الإدخال، والتطبيع، ومصدر التحقق، وموضع الخطأ. التحرير يُسمح أن يكون غير مكتمل، والحفظ يكون دقيقًا.</p>
+  </header>
+
+  <section class="ds-section">
+    <div class="fields">
+      <div class="field">
+        <label class="field__label" for="f-name">اسم المتجر <span class="field__req">(إلزامي)</span></label>
+        <input id="f-name" class="input" value="متجر الواحة" aria-describedby="f-name-hint">
+        <span id="f-name-hint" class="field__hint">يظهر للكاشير وفي التقارير.</span>
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="f-city">المدينة <span class="field__req">(اختياري)</span></label>
+        <input id="f-city" class="input is-focus" value="الإسكندرية" aria-describedby="f-city-hint">
+        <span id="f-city-hint" class="field__hint">حالة التركيز: حد خارجي واضح، لا ظل.</span>
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="f-code">رمز المتجر <span class="field__req">(إلزامي)</span></label>
+        <input id="f-code" class="input machine" style="text-align: start" value="OAS-01" aria-invalid="true" aria-describedby="f-code-err" spellcheck="false" autocomplete="off">
+        <span id="f-code-err" class="field__error">الرمز OAS-01 مستخدم لمتجر آخر. اختر رمزًا مختلفًا.</span>
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="f-price">السعر <span class="field__req">(إلزامي)</span></label>
+        <input id="f-price" class="input num" style="text-align: start" value="1250.005" inputmode="decimal" aria-invalid="true" aria-describedby="f-price-err">
+        <span id="f-price-err" class="field__error">المبلغ يقبل خانتين عشريتين فقط. مثال: 1250.00</span>
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="f-tenant">معرّف المؤسسة</label>
+        <input id="f-tenant" class="input machine" style="text-align: start" value="ten_01J9Z4K7QX" readonly aria-describedby="f-tenant-hint">
+        <span id="f-tenant-hint" class="field__hint">للقراءة فقط: لا يتغير، ويمكن نسخه.</span>
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="f-store">المتجر</label>
+        <select id="f-store" class="select" disabled aria-describedby="f-store-hint">
+          <option>جارٍ التحميل…</option>
+        </select>
+        <span id="f-store-hint" class="field__hint">غير متاح مؤقتًا: يكتمل بعد تحميل المتاجر المصرَّح لك بها.</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="ds-section">
+    <h2>قواعد</h2>
+    <p class="ds-note">العنوان وحده داخل <span class="machine">label</span>، والتلميح والخطأ مرتبطان بالحقل عبر <span class="machine">aria-describedby</span>. لا خطأ قبل أن يلمس المستخدم الحقل. الخطأ يسمّي المشكلة ويعطي طريقة الإصلاح، بجوار الحقل. القيمة الصحيحة التي تفشل بسبب تغيّر السياق تُعرض على مستوى النموذج، لا الحقل. المال يُحلَّل ولا يُخمَّن، ولا تقريب صامت. الأرقام العربية الهندية في حقل رقمي تُطبَّع إلى 0–9، والرموز والمعرّفات تبقى معزولة LTR. «للقراءة فقط» قيمة ثابتة تُقرأ وتُنسخ؛ «غير متاح» عنصر محجوب الآن لسبب مكتوب.</p>
+  </section>
+</body>
+</html>

@@ -1,0 +1,42 @@
+<!-- @dsCard group="Patterns" name="No access and blocked" subtitle="Hidden vs blocked-with-reason; no-access says who can grant it" viewport="960x620" -->
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>No access and blocked</title>
+<link rel="stylesheet" href="_card.css">
+<style>
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-6); align-items: start; }
+  .panel { display: grid; gap: var(--space-3); justify-items: start; padding: var(--space-5); background: var(--color-surface); border-block: 1px solid var(--color-border); }
+</style>
+</head>
+<body>
+  <header class="ds-head">
+    <h1>لا صلاحية، ومحجوب</h1>
+    <p>ما لا يخص الدور مخفي. ما يخصه ومحجوب مؤقتًا يبقى ظاهرًا مع سببه. الرسالة تقول ما الصحيح، ومن يستطيع المساعدة، وما الخطوة التالية.</p>
+  </header>
+
+  <div class="pair">
+    <section class="ds-section">
+      <h2>صفحة بلا صلاحية</h2>
+      <div class="panel">
+        <h3 style="font-size: var(--text-section-title)">ليست لديك صلاحية لعرض فروق المخزون.</h3>
+        <p>يمكن لمالك المؤسسة أو مسؤوليها منحك الصلاحية.</p>
+        <button class="btn btn--secondary">العودة إلى نظرة عامة</button>
+      </div>
+    </section>
+
+    <section class="ds-section">
+      <h2>إجراء محجوب مع السبب</h2>
+      <div class="panel">
+        <div class="ds-row">
+          <button class="btn btn--primary" aria-disabled="true" aria-describedby="r1">طلب لقطة مخزون جديدة</button>
+        </div>
+        <p id="r1" class="ds-note">يوجد طلب قيد التنفيذ منذ 13:40. يمكنك طلب لقطة جديدة بعد اكتماله.</p>
+      </div>
+    </section>
+  </div>
+  <p class="ds-note" style="margin-block-start: var(--space-3)">هذه حالات عرض فقط. الحماية الحقيقية على الخادم؛ إخفاء عنصر في الواجهة ليس أمانًا.</p>
+</body>
+</html>

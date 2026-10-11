@@ -1,0 +1,22 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": ["design/claude-design-system/preview/components-state-ladder.html"],
+        "createdAt": "2026-10-11T16:42:12.945Z",
+        "reason": "Claude (not user): detector does not resolve _card.css @import of ../colors_and_type.css, so .banner padding var(--space-3)/var(--space-4) reads as 0; in-browser iframe check 2026-10-11 confirmed tokens resolve (12px/16px). Note: value \"*\" suppresses ALL cramped-padding findings in this file; the finding carried no narrower value"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": ["design/claude-design-system/preview/foundations-content.html"],
+        "createdAt": "2026-10-11T16:57:14.168Z",
+        "reason": "Claude (not user): same detector artifact as state-ladder; .banner padding uses var(--space-*) from the @import the detector does not resolve; headless Chromium render 2026-10-11 shows 12px/16px inset. Note: value \"*\" suppresses ALL cramped-padding findings in this file; the finding carried no narrower value"
+      }
+    ]
+  }
+}

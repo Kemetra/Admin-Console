@@ -1,0 +1,78 @@
+<!-- @dsCard group="Patterns" name="Platform Console frame" subtitle="Concept (RT-391, planning): same system, no default tenant, explicit selected-tenant context" viewport="1280x1190" -->
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Platform Console frame</title>
+<link rel="stylesheet" href="_card.css">
+<style>
+  .concept { display: inline-flex; gap: var(--space-2); align-items: center; }
+  .shell { min-block-size: 400px; }
+  .placeholder { display: grid; gap: var(--space-2); padding: var(--space-4); background: var(--color-surface); border-block: 1px solid var(--color-border); }
+</style>
+</head>
+<body>
+  <header class="ds-head">
+    <h1>لوحة المنصة</h1>
+    <p>نفس نظام التصميم، بإطار مختلف. الفرق في الهوية والنطاق والنص، لا في اللون. هذا هيكل فقط: عناصر التنقل توضيحية إلى أن تحسمها RT-391.</p>
+    <p class="concept"><span class="badge is-info"><span class="dot dot--hollow"></span>مفهوم — قيد التخطيط</span><span class="machine">RT-391</span></p>
+  </header>
+
+  <section class="ds-section">
+    <h2>بلا مؤسسة محددة</h2>
+    <div class="shell">
+      <header class="shell__top">
+        <div class="shell__product">Retail Tower<small>لوحة المنصة</small></div>
+        <div class="ds-row"><span>مشغّل المنصة</span><button class="btn btn--quiet">تسجيل الخروج</button></div>
+      </header>
+      <div class="shell__scope" role="region" aria-label="النطاق الحالي">
+        <span class="scope-item"><span>النطاق: </span><b>المنصة — لا توجد مؤسسة محددة</b></span>
+        <button class="btn btn--quiet">اختيار مؤسسة</button>
+      </div>
+      <nav class="shell__nav" aria-label="التنقل الرئيسي (توضيحي)">
+        <a class="nav-item signal" href="#" aria-current="page">صحة المنصة</a>
+        <a class="nav-item" href="#">بحث الدعم</a>
+        <a class="nav-item" href="#">يتطلب الانتباه</a>
+        <a class="nav-item" href="#">المؤسسات</a>
+      </nav>
+      <main class="shell__main">
+        <h2>صحة المنصة</h2>
+        <div class="placeholder">
+          <span class="ds-row"><span class="ds-row is-success"><span class="dot"></span></span>الخادم الرئيسي: سليم · آخر فحص 13:42</span>
+          <span class="ds-row"><span class="ds-row is-neutral"><span class="dot dot--hollow"></span></span>موصل ERPNext: لا توجد إشارة موثوقة</span>
+        </div>
+      </main>
+    </div>
+  </section>
+
+  <section class="ds-section">
+    <h2>بعد اختيار مؤسسة: انتقال سياق صريح</h2>
+    <div class="shell">
+      <header class="shell__top">
+        <div class="shell__product">Retail Tower<small>لوحة المنصة</small></div>
+        <div class="ds-row"><span>مشغّل المنصة</span><button class="btn btn--quiet">تسجيل الخروج</button></div>
+      </header>
+      <div class="shell__scope" role="region" aria-label="النطاق الحالي">
+        <span class="badge is-neutral">وصول دعم</span>
+        <span class="scope-item"><span>تعمل الآن داخل: </span><b>النخبة للتجزئة</b></span>
+        <span class="scope-item"><span>الغرض: </span><b>دعم</b></span>
+        <button class="btn btn--quiet">الخروج من المؤسسة</button>
+      </div>
+      <nav class="shell__nav" aria-label="التنقل الرئيسي (توضيحي)">
+        <a class="nav-item" href="#">صحة المنصة</a>
+        <a class="nav-item signal" href="#" aria-current="page">بحث الدعم</a>
+        <a class="nav-item" href="#">يتطلب الانتباه</a>
+        <a class="nav-item" href="#">المؤسسات</a>
+      </nav>
+      <div class="shell__main">
+        <h2>بحث الدعم</h2>
+        <div class="placeholder">
+          <span>رقم البيع <span class="machine">sale_01J9ZB2M4R</span>: محفوظ في Retail Tower · <span class="badge is-danger"><span class="dot dot--hollow"></span>الترحيل إلى ERPNext غير مؤكد</span></span>
+        </div>
+      </div>
+    </div>
+  </section>
+  <p class="ds-note">مشغّل المنصة ليس مالك مؤسسة. اختيار المؤسسة انتقال سياق صريح، لا عامل تصفية، وتفرضه جلسة إدارة المنصة على الخادم، لا حارس في المتصفح. الغرض والتدقيق وسياسة الوصول تحددها RT-391؛ الإطار هنا يوفّر مكانها فقط.</p>
+</body>
+</html>

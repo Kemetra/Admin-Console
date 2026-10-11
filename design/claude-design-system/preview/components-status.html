@@ -1,0 +1,43 @@
+<!-- @dsCard group="Components" name="Status and Pulse Dot" subtitle="Text-first status badges; Pulse Dot static unless real activity" viewport="960x640" -->
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Status and Pulse Dot</title>
+<link rel="stylesheet" href="_card.css">
+</head>
+<body>
+  <header class="ds-head">
+    <h1>الحالة ونقطة النبض</h1>
+    <p>الحالة بيانات، لا زخرفة. الحالة الصحية العادية هادئة. كل شارة تحمل نصًّا، فلا يعتمد المعنى على اللون وحده.</p>
+  </header>
+
+  <section class="ds-section">
+    <h2>شارات الحالة</h2>
+    <div class="ds-row">
+      <span class="badge is-neutral"><span class="dot"></span>نشط</span>
+      <span class="badge is-neutral"><span class="dot dot--hollow"></span>موقوف</span>
+      <span class="badge is-info"><span class="dot"></span>قيد الانتظار</span>
+      <span class="badge is-success"><span class="dot"></span>تم الترحيل</span>
+      <span class="badge is-warning"><span class="dot"></span>بيانات قديمة</span>
+      <span class="badge is-danger"><span class="dot"></span>فشل الترحيل</span>
+      <span class="badge is-danger"><span class="dot dot--hollow"></span>غير مؤكد</span>
+    </div>
+    <p class="ds-note">«نشط» محايد عمدًا: الحالة العادية لا تحتاج لونًا. «غير مؤكد» ليس «فشل»: الفرق مكتوب، والنقطة المفرغة شكل إضافي.</p>
+  </section>
+
+  <section class="ds-section">
+    <h2>نقطة النبض</h2>
+    <table class="ds-spec">
+      <thead><tr><th>العيّنة</th><th>المعنى</th><th>الحركة</th></tr></thead>
+      <tbody>
+        <tr><td><span class="ds-row is-success"><span class="dot"></span><span style="color: var(--color-text)">متصل</span></span></td><td>الاتصال بالخادم سليم.</td><td>ثابتة. «حي» لا يعني «متحرك».</td></tr>
+        <tr><td><span class="ds-row is-info"><span class="dot dot--live"></span><span style="color: var(--color-text)">جارٍ المزامنة</span></span></td><td>نشاط حقيقي يحدث الآن.</td><td>تنبض فقط أثناء النشاط، وتتوقف عند انتهائه أو مع تقليل الحركة.</td></tr>
+        <tr><td><span class="ds-row is-warning"><span class="dot"></span><span style="color: var(--color-text)">يتطلب الانتباه</span></span></td><td>حالة متدهورة لها إجراء.</td><td>ثابتة.</td></tr>
+        <tr><td><span class="ds-row is-neutral"><span class="dot dot--hollow"></span><span style="color: var(--color-text)">لا توجد إشارة</span></span></td><td>لم تصل إشارة موثوقة بعد. ليست «سليم»، وليست نتيجة غير مؤكدة.</td><td>ثابتة. لا نخترع «متصل» لإكمال الواجهة.</td></tr>
+      </tbody>
+    </table>
+  </section>
+</body>
+</html>

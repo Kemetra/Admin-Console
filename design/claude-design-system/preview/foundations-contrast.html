@@ -1,0 +1,44 @@
+<!-- @dsCard group="Foundations" name="Contrast" subtitle="Computed WCAG 2.x ratios for the text and boundary pairings the cards use" viewport="960x1070" -->
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contrast</title>
+<link rel="stylesheet" href="_card.css">
+<style>
+  .pair { display: inline-flex; align-items: center; justify-content: center; min-inline-size: 120px; padding-block: var(--space-1); padding-inline: var(--space-3); border-radius: var(--radius-control); border: 1px solid var(--color-border); font-weight: var(--weight-strong); }
+</style>
+</head>
+<body>
+  <header class="ds-head">
+    <h1>التباين</h1>
+    <p>نسب محسوبة (WCAG 2.x) لتركيبات النص والحدود المستخدمة في البطاقات. أي تركيبة جديدة تُحسب قبل استخدامها. النص يحتاج 4.5:1 على الأقل، وحدود عناصر التحكم 3:1.</p>
+  </header>
+
+  <section class="ds-section">
+    <table class="ds-spec">
+      <thead><tr><th>العيّنة</th><th>اللون الأمامي</th><th>الخلفية</th><th>النسبة</th><th>النتيجة</th></tr></thead>
+      <tbody>
+        <tr><td><span class="pair" style="color: var(--color-text); background: var(--color-surface)">نص</span></td><td class="machine">text #0f1d2e</td><td class="machine">surface #ffffff</td><td class="num">17.00:1</td><td><span class="badge is-success"><span class="dot"></span>AAA</span></td></tr>
+        <tr><td><span class="pair" style="color: var(--color-text); background: var(--color-surface-sunken)">نص</span></td><td class="machine">text</td><td class="machine">sunken #eef2f6</td><td class="num">15.11:1</td><td><span class="badge is-success"><span class="dot"></span>AAA</span></td></tr>
+        <tr><td><span class="pair" style="color: var(--color-text-muted); background: var(--color-surface)">ثانوي</span></td><td class="machine">text-muted #53647a</td><td class="machine">surface</td><td class="num">6.05:1</td><td><span class="badge is-success"><span class="dot"></span>AA</span></td></tr>
+        <tr><td><span class="pair" style="color: var(--color-text-muted); background: var(--color-surface-sunken)">ثانوي</span></td><td class="machine">text-muted</td><td class="machine">sunken</td><td class="num">5.38:1</td><td><span class="badge is-success"><span class="dot"></span>AA</span></td></tr>
+        <tr><td><span class="pair" style="color: var(--color-on-primary); background: var(--color-primary)">حفظ</span></td><td class="machine">surface</td><td class="machine">primary #0f766e</td><td class="num">5.47:1</td><td><span class="badge is-success"><span class="dot"></span>AA</span></td></tr>
+        <tr><td><span class="pair" style="color: var(--color-on-primary); background: var(--color-primary-emphasis)">حفظ</span></td><td class="machine">surface</td><td class="machine">primary-emphasis #0b5b55</td><td class="num">7.95:1</td><td><span class="badge is-success"><span class="dot"></span>AAA</span></td></tr>
+        <tr><td><span class="pair" style="color: var(--color-primary-emphasis); background: var(--color-primary-soft)">محدد</span></td><td class="machine">primary-emphasis</td><td class="machine">primary-soft #e6f4f1</td><td class="num">7.03:1</td><td><span class="badge is-success"><span class="dot"></span>AAA</span></td></tr>
+        <tr><td><span class="pair" style="color: var(--color-info); background: var(--color-surface)">قيد الانتظار</span></td><td class="machine">info #1b6ca8</td><td class="machine">surface</td><td class="num">5.59:1</td><td><span class="badge is-success"><span class="dot"></span>AA</span></td></tr>
+        <tr><td><span class="pair" style="color: var(--color-success); background: var(--color-surface)">تم الحفظ</span></td><td class="machine">success #15774d</td><td class="machine">surface</td><td class="num">5.56:1</td><td><span class="badge is-success"><span class="dot"></span>AA</span></td></tr>
+        <tr><td><span class="pair" style="color: var(--color-warning); background: var(--color-surface)">متدهور</span></td><td class="machine">warning #a35a00</td><td class="machine">surface</td><td class="num">5.22:1</td><td><span class="badge is-success"><span class="dot"></span>AA</span></td></tr>
+        <tr><td><span class="pair" style="color: var(--color-danger); background: var(--color-surface)">غير مؤكد</span></td><td class="machine">danger #b3261e</td><td class="machine">surface</td><td class="num">6.54:1</td><td><span class="badge is-success"><span class="dot"></span>AA</span></td></tr>
+        <tr><td><span class="pair" style="color: var(--color-text-muted); background: var(--color-background)">ملاحظة</span></td><td class="machine">text-muted</td><td class="machine">background #f7f9fa</td><td class="num">5.73:1</td><td><span class="badge is-success"><span class="dot"></span>AA</span></td></tr>
+        <tr><td><span class="pair" style="color: var(--color-info); background: var(--color-surface-sunken)">قيد الانتظار</span></td><td class="machine">info</td><td class="machine">sunken</td><td class="num">4.97:1</td><td><span class="badge is-success"><span class="dot"></span>AA</span></td></tr>
+        <tr><td><span class="pair" style="color: var(--color-warning); background: var(--color-surface-sunken)">متدهور</span></td><td class="machine">warning</td><td class="machine">sunken</td><td class="num">4.64:1</td><td><span class="badge is-success"><span class="dot"></span>AA</span></td></tr>
+        <tr><td><span class="pair" style="background: var(--color-surface); border-color: var(--color-control-border)">حد الحقل</span></td><td class="machine">control-border = text-muted</td><td class="machine">surface</td><td class="num">6.05:1</td><td><span class="badge is-success"><span class="dot"></span>≥ 3:1</span></td></tr>
+        <tr><td><span class="pair" style="background: var(--color-surface); border-color: var(--color-border)">فاصل</span></td><td class="machine">border #d8dfe7</td><td class="machine">surface</td><td class="num">1.34:1</td><td><span class="badge is-warning"><span class="dot dot--hollow"></span>زخرفي فقط</span></td></tr>
+      </tbody>
+    </table>
+    <p class="ds-note">لون الفاصل لا يكفي حدًّا لعنصر تحكم، لذلك تستخدم الحقول والأزرار الثانوية لون النص الثانوي حدًّا لها. في وضع الألوان القسرية (Windows) يحل لون النظام محل ألوان العلامة، ويبقى المعنى في النص والحدود.</p>
+  </section>
+</body>
+</html>

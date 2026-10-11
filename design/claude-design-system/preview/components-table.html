@@ -1,0 +1,117 @@
+<!-- @dsCard group="Components" name="Table work surface" subtitle="Full-bleed semantic table, tabular numbers, selection ≠ navigation, kept rows on continuation failure" viewport="1120x940" -->
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Table work surface</title>
+<link rel="stylesheet" href="_card.css">
+<style>
+  .surface { background: var(--color-surface); border-block: 1px solid var(--color-border); }
+  .toolbar { display: flex; gap: var(--space-3); align-items: center; justify-content: space-between; padding-block: var(--space-3); }
+  .empties { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); }
+  .empty { display: grid; gap: var(--space-2); align-content: start; padding: var(--space-4); background: var(--color-surface); border-block: 1px solid var(--color-border); }
+</style>
+</head>
+<body>
+  <header class="ds-head">
+    <h1>سطح الجدول</h1>
+    <p>الجداول أسطح عمل، لا حاويات. الصف يحمل البيانات، وعناصر التحكم تحمل الإجراءات. التحديد ليس فتحًا للتفاصيل.</p>
+  </header>
+
+  <section class="ds-section">
+    <div class="toolbar">
+      <div class="ds-row">
+        <input class="input" style="min-inline-size: 260px" placeholder="ابحث باسم المتجر أو رمزه" aria-label="بحث في المتاجر">
+        <button class="btn btn--secondary">تطبيق عوامل التصفية</button>
+      </div>
+      <div class="ds-row">
+        <span class="ds-note">محدد: <span class="num">1</span> من الصفحة الحالية</span>
+        <button class="btn btn--secondary">إيقاف المحدد</button>
+      </div>
+    </div>
+    <div class="surface">
+      <table class="table">
+        <thead>
+          <tr>
+            <th style="inline-size: 40px"><input type="checkbox" aria-label="تحديد كل صفوف الصفحة"></th>
+            <th>المتجر</th>
+            <th>الرمز</th>
+            <th>الحالة</th>
+            <th class="col-num">الأصناف</th>
+            <th class="col-num">قيمة المخزون</th>
+            <th>آخر تحديث</th>
+            <th><span class="sr-only">إجراءات</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><input type="checkbox" aria-label="تحديد متجر الواحة"></td>
+            <td><b>متجر الواحة</b></td>
+            <td><span class="machine">OAS-01</span></td>
+            <td><span class="badge is-neutral"><span class="dot"></span>نشط</span></td>
+            <td class="col-num"><span class="num">1,284</span></td>
+            <td class="col-num"><span class="num">98,410.50 EGP</span></td>
+            <td>7 أكتوبر 2026، 13:42</td>
+            <td><button class="btn btn--quiet" aria-label="عرض تفاصيل متجر الواحة">عرض</button></td>
+          </tr>
+          <tr class="is-selected">
+            <td><input type="checkbox" checked aria-label="تحديد متجر النيل"></td>
+            <td><b>متجر النيل</b></td>
+            <td><span class="machine">NIL-02</span></td>
+            <td><span class="badge is-warning"><span class="dot"></span>بيانات قديمة</span></td>
+            <td class="col-num"><span class="num">962</span></td>
+            <td class="col-num"><span class="num">71,005.00 EGP</span></td>
+            <td>6 أكتوبر 2026، 09:15</td>
+            <td><button class="btn btn--quiet" aria-label="عرض تفاصيل متجر النيل">عرض</button></td>
+          </tr>
+          <tr>
+            <td><input type="checkbox" aria-label="تحديد متجر الشاطئ"></td>
+            <td><b>متجر الشاطئ</b></td>
+            <td><span class="machine">SHT-03</span></td>
+            <td><span class="badge is-neutral"><span class="dot dot--hollow"></span>موقوف</span></td>
+            <td class="col-num"><span class="num">0</span></td>
+            <td class="col-num"><span class="num">0.00 EGP</span></td>
+            <td>2 أكتوبر 2026، 18:03</td>
+            <td><button class="btn btn--quiet" aria-label="عرض تفاصيل متجر الشاطئ">عرض</button></td>
+          </tr>
+          <tr class="table__continuation">
+            <td colspan="8">
+              <div class="ds-row">
+                <span class="is-danger"><b>تعذّر تحميل الصفحة التالية.</b></span>
+                <span>الصفوف المعروضة مؤكدة ولم تتغير.</span>
+                <button class="btn btn--secondary">إعادة تحميل الصفحة التالية</button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="table-meta"><span>المعروض: <span class="num">3</span> · يوجد المزيد</span></div>
+    <p class="ds-note">نعرض العدد المحمّل فقط، لأن واجهة المؤشر (cursor) لا تعرف العدد الكلي. لا نخترع «صفحة 1 من 12».</p>
+  </section>
+
+  <section class="ds-section">
+    <h2>تحميل ≠ فارغ ≠ لا نتائج</h2>
+    <div class="empties">
+      <div class="empty" aria-busy="true">
+        <b>جارٍ التحميل…</b>
+        <span class="skeleton" style="inline-size: 80%"></span>
+        <span class="skeleton" style="inline-size: 64%"></span>
+        <span class="skeleton" style="inline-size: 72%"></span>
+      </div>
+      <div class="empty">
+        <b>لا توجد نتائج تطابق عوامل التصفية.</b>
+        <span class="ds-note">البحث: «الزهراء» · الحالة: موقوف</span>
+        <button class="btn btn--secondary" style="justify-self: start">مسح عوامل التصفية</button>
+      </div>
+      <div class="empty">
+        <b>لا توجد متاجر في هذه المؤسسة بعد.</b>
+        <span class="ds-note">أضف أول متجر لتتمكن من إقران نقاط البيع.</span>
+        <button class="btn btn--primary" style="justify-self: start">إضافة متجر</button>
+      </div>
+    </div>
+    <p class="ds-note">الترتيب والتصفية على مستوى البيانات كلها، لا الصفوف المحمّلة فقط. تغيير النطاق يمسح التحديد وعوامل التصفية غير الصالحة.</p>
+  </section>
+</body>
+</html>

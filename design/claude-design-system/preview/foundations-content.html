@@ -1,0 +1,95 @@
+<!-- @dsCard group="Foundations" name="Content and terminology" subtitle="Arabic-first voice (UX-12): domain terms, stable verbs, numbers, plurals, message grammar" viewport="1040x1620" -->
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Content and terminology</title>
+<link rel="stylesheet" href="_card.css">
+<style>
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-6); align-items: start; }
+  .ds-spec td:first-child { font-weight: var(--weight-strong); }
+  .avoid { color: var(--color-text-muted); text-decoration: line-through; text-decoration-thickness: 1px; }
+</style>
+</head>
+<body>
+  <header class="ds-head">
+    <h1>المحتوى والمصطلحات</h1>
+    <p>العربية هي لغة المنتج الأولى، ولغة واحدة في كل مرة: لا «عربي (English)» على الأزرار. النص جزء من الحقيقة التشغيلية؛ لا يبالغ في النجاح ولا يخفي عدم اليقين.</p>
+  </header>
+
+  <div class="cols">
+    <section class="ds-section">
+      <h2>المصطلحات</h2>
+      <table class="ds-spec">
+        <thead><tr><th>في الواجهة</th><th>المصطلح الداخلي</th><th>ملاحظة</th></tr></thead>
+        <tbody>
+          <tr><td>المؤسسة</td><td class="machine">Tenant</td><td>حدود العميل والعقد والأمان.</td></tr>
+          <tr><td>الكيان القانوني</td><td class="machine">Legal Entity</td><td>ليس «المؤسسة».</td></tr>
+          <tr><td>المتجر</td><td class="machine">Store</td><td>ليس «الفرع». الأسماء التي يكتبها العميل تبقى كما هي.</td></tr>
+          <tr><td>الصنف</td><td class="machine">Retail Item</td><td>هوية المنتج في البيع.</td></tr>
+          <tr><td>الكتالوج</td><td class="machine">Catalog</td><td></td></tr>
+          <tr><td>موقع المخزون</td><td class="machine">Stock Location</td><td></td></tr>
+          <tr><td>الإيصال</td><td class="machine">Receipt</td><td>ليس «فاتورة مبيعات».</td></tr>
+          <tr><td>الوردية</td><td class="machine">Shift</td><td></td></tr>
+          <tr><td>المستخدم</td><td class="machine">operator</td><td>ما لم يكن الدور معروفًا.</td></tr>
+        </tbody>
+      </table>
+      <p class="ds-note">أسماء الكود مثل <span class="machine">tenant_product</span> لا تظهر في النص العادي. ERPNext يظهر كمرجع ودليل فقط، لا كمصدر لهوية المنتج.</p>
+    </section>
+
+    <section class="ds-section">
+      <h2>الأفعال الثابتة</h2>
+      <table class="ds-spec">
+        <thead><tr><th>الفعل</th><th>معناه فقط</th></tr></thead>
+        <tbody>
+          <tr><td>حفظ</td><td>تثبيت تعديل.</td></tr>
+          <tr><td>إضافة</td><td>إنشاء أو إضافة عنصر.</td></tr>
+          <tr><td>تأكيد</td><td>عبور حد عاقبة.</td></tr>
+          <tr><td>إلغاء</td><td>إلغاء مسار عمل جارٍ.</td></tr>
+          <tr><td>حذف</td><td>حذف كيان محفوظ.</td></tr>
+          <tr><td>إزالة</td><td>فك ارتباط أو إزالة من قائمة.</td></tr>
+          <tr><td>تحديث</td><td>إعادة قراءة الحقيقة، لا إعادة تنفيذ الإجراء.</td></tr>
+        </tbody>
+      </table>
+      <p class="ds-note">الزر يسمّي الإجراء: «إعادة الطباعة»، «تحديث حالة الدفع». لا «موافق» ولا «متابعة».</p>
+    </section>
+  </div>
+
+  <section class="ds-section">
+    <h2>الأرقام والمال والوقت</h2>
+    <table class="ds-spec">
+      <thead><tr><th>النوع</th><th>الصيغة</th><th>القاعدة</th></tr></thead>
+      <tbody>
+        <tr><td>المال</td><td><span class="num">1,250.00 EGP</span></td><td>أرقام غربية، فاصل آلاف، خانتان عشريتان، معزول LTR. الحساب يبقى بالوحدات الصغرى.</td></tr>
+        <tr><td>العدّادات</td><td>الأصناف: <span class="num">11</span> · الوحدات: <span class="num">23</span></td><td>الاسم أولًا في البيانات الكثيفة.</td></tr>
+        <tr><td>الجمع في الجمل</td><td>لا توجد أصناف · صنف واحد · صنفان · <span class="num">3</span> أصناف · <span class="num">11</span> صنفًا · <span class="num">100</span> صنف</td><td>نص كامل لكل فئة جمع (صفر، واحد، اثنان، قليل، كثير، غير ذلك)، لا رقم يُلصق قبل كلمة «أصناف».</td></tr>
+        <tr><td>وقت تشغيلي</td><td>7 أكتوبر 2026، 13:42</td><td>بالمنطقة الزمنية للمتجر، 24 ساعة.</td></tr>
+        <tr><td>وقت كدليل</td><td><span class="machine">2026-10-07 10:42:00 UTC</span></td><td>في التدقيق والدعم: دقيق وبمنطقة صريحة.</td></tr>
+        <tr><td>وقت نسبي</td><td>منذ 3 دقائق</td><td>للتوجيه فقط؛ الوقت الدقيق متاح بجواره.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="ds-section">
+    <h2>صيغة الرسالة: ماذا حدث ← ما الآمن ← ماذا تفعل ← الدليل</h2>
+    <div class="banner is-warning">
+      <span class="banner__title">تعذّر ترحيل البيع إلى ERPNext.</span>
+      <span class="banner__body">البيع محفوظ في Retail Tower ولم يتأثر. سيُعاد الترحيل تلقائيًا، أو اطلبه الآن من صفحة المزامنة.</span>
+      <span class="banner__evidence">المرجع: <span class="machine">req_7f3a91c2</span></span>
+      <button class="btn btn--secondary banner__action">فتح صفحة المزامنة</button>
+    </div>
+    <table class="ds-spec">
+      <thead><tr><th>بدلًا من</th><th>استخدم</th><th>السبب</th></tr></thead>
+      <tbody>
+        <tr><td class="avoid">تمت العملية بنجاح</td><td>تم حفظ المتجر.</td><td>قل ما الذي نجح بالضبط.</td></tr>
+        <tr><td class="avoid">حدث خطأ، حاول مرة أخرى</td><td>انتهت جلسة الدخول. سجّل الدخول مرة أخرى للمتابعة.</td><td>لا تقترح إعادة لا تحل المشكلة.</td></tr>
+        <tr><td class="avoid">طُبع الإيصال</td><td>أُرسل الإيصال للطابعة.</td><td>الفعل لا يتجاوز الدليل المتاح.</td></tr>
+        <tr><td class="avoid">فشل الدفع</td><td>نتيجة الدفع غير مؤكدة. لا تُعِد التحصيل قبل التحقق.</td><td>غير المؤكد يُسمّى غير مؤكد.</td></tr>
+        <tr><td class="avoid">أدخلت مبلغًا خاطئًا!</td><td>المبلغ غير صالح. يقبل خانتين عشريتين فقط.</td><td>صِف الحالة لا الشخص، وبلا علامات تعجب.</td></tr>
+      </tbody>
+    </table>
+    <p class="ds-note">رموز الخادم مثل <span class="machine">store_code_conflict</span> تختار الرسالة ولا تكون هي الرسالة. الترجمة الناقصة لا تُظهر مفتاحًا خامًا ولا نصًّا إنجليزيًّا من الخادم.</p>
+  </section>
+</body>
+</html>

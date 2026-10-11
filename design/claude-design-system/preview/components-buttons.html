@@ -1,0 +1,73 @@
+<!-- @dsCard group="Components" name="Buttons" subtitle="Primary / secondary / quiet / danger × rest, hover, focus, pressed, busy, disabled" viewport="1040x760" -->
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Buttons</title>
+<link rel="stylesheet" href="_card.css">
+<style>
+  .matrix { display: grid; grid-template-columns: 120px repeat(5, auto); gap: var(--space-3) var(--space-4); align-items: center; justify-content: start; }
+  .matrix > .h { font-size: var(--text-meta); font-weight: var(--weight-strong); color: var(--color-text-muted); }
+</style>
+</head>
+<body>
+  <header class="ds-head">
+    <h1>الأزرار</h1>
+    <p>إجراء أساسي واحد لكل حالة أو منطقة. الزر يسمّي الإجراء، لا نوع الزر: «حفظ المتجر» وليس «موافق». الحالات المؤقتة تُحَسّ، والحالات الدائمة تُقرأ.</p>
+  </header>
+
+  <section class="ds-section">
+    <div class="matrix">
+      <span></span><span class="h">عادي</span><span class="h">تمرير</span><span class="h">تركيز</span><span class="h">قيد التنفيذ</span><span class="h">غير متاح</span>
+
+      <span class="h">أساسي</span>
+      <button class="btn btn--primary">حفظ المتجر</button>
+      <button class="btn btn--primary is-hover">حفظ المتجر</button>
+      <button class="btn btn--primary is-focus">حفظ المتجر</button>
+      <button class="btn btn--primary" aria-busy="true"><span class="spinner" aria-hidden="true"></span>جارٍ الحفظ…</button>
+      <button class="btn btn--primary" disabled>حفظ المتجر</button>
+
+      <span class="h">ثانوي</span>
+      <button class="btn btn--secondary">إضافة متجر</button>
+      <button class="btn btn--secondary is-hover">إضافة متجر</button>
+      <button class="btn btn--secondary is-focus">إضافة متجر</button>
+      <button class="btn btn--secondary" aria-busy="true"><span class="spinner" aria-hidden="true"></span>جارٍ الإضافة…</button>
+      <button class="btn btn--secondary" disabled>إضافة متجر</button>
+
+      <span class="h">هادئ</span>
+      <button class="btn btn--quiet">تحديث البيانات</button>
+      <button class="btn btn--quiet is-hover">تحديث البيانات</button>
+      <button class="btn btn--quiet is-focus">تحديث البيانات</button>
+      <button class="btn btn--quiet" aria-busy="true"><span class="spinner" aria-hidden="true"></span>جارٍ التحديث…</button>
+      <button class="btn btn--quiet" disabled>تحديث البيانات</button>
+
+      <span class="h">خطر</span>
+      <button class="btn btn--danger">حذف المتجر</button>
+      <button class="btn btn--danger is-hover">حذف المتجر</button>
+      <button class="btn btn--danger is-focus">حذف المتجر</button>
+      <button class="btn btn--danger" aria-busy="true"><span class="spinner" aria-hidden="true"></span>جارٍ الحذف…</button>
+      <button class="btn btn--danger" disabled>حذف المتجر</button>
+    </div>
+    <p class="ds-note">الضغط: إزاحة 1px بمدة Contact (80ms) تظهر عند النقر، ولا تُعرض كحالة ثابتة. أثناء التنفيذ يبقى الزر في مكانه ويملك تقدّمه، ولا يُستبدل بمؤشر تحميل عام؛ احجز عرض الزر حتى لا تتحرك العناصر المجاورة.</p>
+  </section>
+
+  <section class="ds-section">
+    <h2>تأكيد الإجراء المدمّر</h2>
+    <div class="ds-row">
+      <button class="btn btn--secondary">الإبقاء على المتجر</button>
+      <button class="btn btn--danger-commit">حذف المتجر نهائيًا</button>
+    </div>
+    <p class="ds-note">الزر الأحمر الممتلئ يظهر فقط داخل حوار التأكيد، بجوار خيار آمن يأخذ التركيز أولًا.</p>
+  </section>
+
+  <section class="ds-section">
+    <h2>الإجراء غير المتاح يشرح السبب</h2>
+    <div class="ds-row">
+      <button class="btn btn--primary" aria-disabled="true" aria-describedby="why">إضافة متجر</button>
+      <span id="why" class="ds-note">يتطلب صلاحية على كل المتاجر داخل المؤسسة.</span>
+    </div>
+    <p class="ds-note">الإجراء الذي لا يخص الدور يُخفى. الإجراء المهم غير المتاح مؤقتًا يبقى ظاهرًا مع سببه مكتوبًا، لا في تلميح يظهر بالتمرير. الإجراء المدمّر لا يكون الاختيار الافتراضي أبدًا، ولا يحتل مكان زر التأكيد.</p>
+  </section>
+</body>
+</html>

@@ -1,0 +1,41 @@
+<!-- @dsCard group="Foundations" name="Type roles" subtitle="Dubai, Arabic-first: semantic roles, tabular money, machine data isolated LTR" viewport="960x1230" -->
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Type roles</title>
+<link rel="stylesheet" href="_card.css">
+<style>
+  .role { display: grid; grid-template-columns: 180px 1fr; gap: var(--space-4); align-items: baseline; padding-block: var(--space-3); border-block-end: 1px solid var(--color-border); }
+  .role__meta { display: grid; gap: 2px; }
+  .role__meta b { font-size: var(--text-control); }
+  .role__meta span { font-size: var(--text-meta); color: var(--color-text-muted); }
+</style>
+</head>
+<body>
+  <header class="ds-head">
+    <h1>أدوار الخط</h1>
+    <p>صوت واحد للواجهة مشترك مع نقطة البيع: خط Dubai. الهرمية تأتي من الموضع والمسافة والوزن قبل الحجم. أصغر نص يقرؤه المشغّل 12px.</p>
+  </header>
+
+  <section class="ds-section">
+    <div class="role"><div class="role__meta"><b>display</b><span class="machine">30 / 700</span></div><p style="font-size: var(--text-display); font-weight: 700; line-height: var(--leading-tight)">نظرة عامة على المؤسسة</p></div>
+    <div class="role"><div class="role__meta"><b>screen-title</b><span class="machine">20 / 700</span></div><p style="font-size: var(--text-screen-title); font-weight: 700; line-height: var(--leading-title)">المتاجر</p></div>
+    <div class="role"><div class="role__meta"><b>section-title</b><span class="machine">16 / 700</span></div><p style="font-size: var(--text-section-title); font-weight: 700; line-height: var(--leading-title)">بيانات المتجر</p></div>
+    <div class="role"><div class="role__meta"><b>body</b><span class="machine">14 / 400 / 1.7</span></div><p style="max-inline-size: 62ch">يعرض هذا الجدول المتاجر التي يمكنك إدارتها داخل المؤسسة. تغيير المتجر من شريط النطاق يغيّر معنى الصفحة كلها، لذلك يُطلب منك حفظ أي تعديل قبل الانتقال.</p></div>
+    <div class="role"><div class="role__meta"><b>body-strong</b><span class="machine">14 / 700</span></div><p style="font-weight: 700">انتهت جلسة الدخول. سجّل الدخول مرة أخرى للمتابعة.</p></div>
+    <div class="role"><div class="role__meta"><b>control</b><span class="machine">13 / 700</span></div><p><span class="btn btn--secondary">إعادة الطباعة</span></p></div>
+    <div class="role"><div class="role__meta"><b>meta</b><span class="machine">12 / 400</span></div><p style="font-size: var(--text-meta); color: var(--color-text-muted)">آخر تحديث: 7 أكتوبر 2026، 13:42</p></div>
+    <div class="role"><div class="role__meta"><b>money-total</b><span class="machine">20 / 700 / tabular</span></div><p style="font-size: var(--text-money-total); font-weight: 700"><span class="num">1,250.00 EGP</span></p></div>
+    <div class="role"><div class="role__meta"><b>numeric-row</b><span class="machine">14 / tabular</span></div><p>الأصناف: <span class="num">11</span> · الوحدات: <span class="num">23</span> · القيمة: <span class="num">98,410.50 EGP</span></p></div>
+    <div class="role"><div class="role__meta"><b>machine</b><span class="machine">13 / mono / LTR</span></div><p>المرجع: <span class="machine">req_7f3a91c2</span> · رمز المتجر: <span class="machine">OAS-01</span></p></div>
+    <div class="role"><div class="role__meta"><b>kbd</b><span class="machine">12 / mono</span></div><p>للبحث اضغط <kbd>Ctrl</kbd> + <kbd>K</kbd></p></div>
+  </section>
+
+  <section class="ds-section">
+    <h2>قواعد</h2>
+    <p class="ds-note">الأرقام في الواجهة العربية أرقام غربية 0–9. المال بصيغة ثابتة: <span class="num">1,250.00 EGP</span>، معزولًا باتجاه LTR. الخط أحادي المسافة للمعرّفات والمراجع فقط، وليس مظهرًا «تقنيًا». أحجام الأدوار مؤقتة وتساوي المقياس الحالي إلى أن تعتمدها شريحة الانتقال إلى Dubai.</p>
+  </section>
+</body>
+</html>

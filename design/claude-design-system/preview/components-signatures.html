@@ -1,0 +1,43 @@
+<!-- @dsCard group="Components" name="Signatures" subtitle="Signal Line, Precision Ledger, Mineral Layering — identity through behavior" viewport="1040x720" -->
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Signatures</title>
+<link rel="stylesheet" href="_card.css">
+<style>
+  .sig { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-6); align-items: start; }
+  .navdemo { display: grid; gap: 2px; padding: var(--space-3); background: var(--color-surface); border-block: 1px solid var(--color-border); max-inline-size: 260px; }
+</style>
+</head>
+<body>
+  <header class="ds-head">
+    <h1>البصمات</h1>
+    <p>Retail Tower تُعرف من سلوكها: التعامل مع الحالة، وقواعد التحديد، وهندسة البيانات، وطبقات الأسطح. لا شعارات زخرفية ولا لون ثانٍ. كل بصمة قواعد، لا ورق حائط.</p>
+  </header>
+
+  <div class="sig">
+    <section class="ds-section">
+      <h2>خط الإشارة</h2>
+      <nav class="navdemo" aria-label="مثال">
+        <a class="nav-item" href="#">نظرة عامة</a>
+        <a class="nav-item signal" href="#" aria-current="page">المتاجر</a>
+        <a class="nav-item" href="#">المستخدمون</a>
+      </nav>
+      <p class="ds-note">مؤشر صغير على بداية السطر يحدد السياق الحالي في التنقل أو الصفوف. يستخدم موضعًا منطقيًا فينقلب تلقائيًا في LTR. لا نكدّس معه أيقونة مملوءة وخلفية قوية ونصًّا عريضًا بلا حاجة.</p>
+    </section>
+
+    <section class="ds-section">
+      <h2>دفتر الدقة</h2>
+      <dl class="ledger">
+        <dt>صافي المبيعات</dt><dd><span class="num">48,920.00 EGP</span></dd>
+        <dt>المرتجعات</dt><dd><span class="num">−1,310.50 EGP</span></dd>
+        <dt>الخصومات</dt><dd><span class="num">−2,004.00 EGP</span></dd>
+        <dt class="ledger__total">الإجمالي</dt><dd class="ledger__total"><span class="num">45,605.50 EGP</span></dd>
+      </dl>
+      <p class="ds-note">العلاقات المالية بمحاذاة تسمية/قيمة وأرقام جدولية وإجمالي مثبّت، بدل بطاقة لكل رقم.</p>
+    </section>
+  </div>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!-- @dsCard group="Patterns" name="Scope transition" subtitle="Store chooser lists authorized stores; unsaved work gets save / discard / stay" viewport="1040x720" -->
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scope transition</title>
+<link rel="stylesheet" href="_card.css">
+<style>
+  .pair { display: grid; grid-template-columns: 280px 1fr; gap: var(--space-6); align-items: start; }
+</style>
+</head>
+<body>
+  <header class="ds-head">
+    <h1>تغيير النطاق</h1>
+    <p>تغيير المتجر انتقال سياق، لا نقرة تصفية: قد يغيّر معنى الصفحة كلها وصلاحياتها. لا يضيع عمل غير محفوظ بصمت.</p>
+  </header>
+
+  <div class="pair">
+    <section class="ds-section">
+      <h2>اختيار المتجر</h2>
+      <fieldset class="menu">
+        <legend class="sr-only">المتاجر المتاحة</legend>
+        <label class="menu__item"><input type="radio" name="scope-store" value="all"> كل المتاجر</label>
+        <label class="menu__item"><input type="radio" name="scope-store" value="OAS-01" checked> متجر الواحة</label>
+        <label class="menu__item"><input type="radio" name="scope-store" value="NIL-02"> متجر النيل</label>
+      </fieldset>
+      <p class="ds-note">القائمة تعرض المتاجر المصرَّح لك بها فقط. اختيار «كل المتاجر» يتطلب صلاحية على كل المتاجر.</p>
+    </section>
+
+    <section class="ds-section">
+      <h2>عمل غير محفوظ</h2>
+      <div class="stage" style="min-block-size: 300px">
+        <div class="scrim"></div>
+        <div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="t" aria-describedby="d">
+          <h3 id="t">لديك تغييرات غير محفوظة على «متجر الواحة».</h3>
+          <p id="d">الانتقال إلى «متجر النيل» سيغلق هذا النموذج.</p>
+          <div class="dialog__actions">
+            <button class="btn btn--secondary is-focus">البقاء في الصفحة</button>
+            <button class="btn btn--primary">حفظ ثم الانتقال</button>
+            <button class="btn btn--danger">تجاهل التغييرات والانتقال</button>
+          </div>
+        </div>
+      </div>
+      <p class="ds-note">الرابط المباشر لا يغيّر النطاق بصمت: إذا كان الكيان في نطاق آخر، نعرض انتقالًا صريحًا أو نفشل بأمان. تغيير النطاق يمسح عوامل التصفية والتحديد التي فقدت معناها.</p>
+    </section>
+  </div>
+</body>
+</html>

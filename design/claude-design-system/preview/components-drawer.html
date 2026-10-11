@@ -1,0 +1,47 @@
+<!-- @dsCard group="Components" name="Drawer" subtitle="Attached inspect surface at inline-end; table stays in place; exact values copyable" viewport="1040x690" -->
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drawer</title>
+<link rel="stylesheet" href="_card.css">
+</head>
+<body>
+  <header class="ds-head">
+    <h1>الدرج</h1>
+    <p>نفحص دون أن نفقد مكاننا: الجدول وعوامل التصفية والتركيز تبقى كما هي، والدرج ملتصق بطرف مساحة العمل.</p>
+  </header>
+
+  <div class="stage" style="min-block-size: 460px">
+    <div style="padding: var(--space-4); display: grid; gap: var(--space-2)">
+      <b>سجل التدقيق</b>
+      <span class="skeleton" style="inline-size: 50%"></span>
+      <span class="skeleton" style="inline-size: 42%"></span>
+      <span class="skeleton" style="inline-size: 46%"></span>
+    </div>
+    <div class="scrim"></div>
+    <div class="drawer" role="dialog" aria-modal="true" aria-labelledby="dh">
+      <div class="drawer__head">
+        <h2 id="dh" style="font-size: var(--text-section-title)">تفاصيل الحدث</h2>
+        <button class="btn btn--quiet">إغلاق</button>
+      </div>
+      <div class="drawer__body">
+        <dl class="ledger" style="max-inline-size: none">
+          <dt>الحدث</dt><dd>تعديل سعر صنف</dd>
+          <dt>المستخدم</dt><dd>سارة محمود</dd>
+          <dt>المتجر</dt><dd>متجر الواحة</dd>
+          <dt>السعر السابق</dt><dd><span class="num">1,150.00 EGP</span></dd>
+          <dt>السعر الجديد</dt><dd><span class="num">1,250.00 EGP</span></dd>
+          <dt>الوقت</dt><dd><span class="machine">2026-10-07 10:42:00 UTC</span></dd>
+          <dt>المرجع</dt><dd><span class="machine">evt_01J9ZC8P1T</span></dd>
+        </dl>
+      </div>
+      <div class="drawer__foot">
+        <button class="btn btn--secondary">نسخ المرجع</button>
+      </div>
+    </div>
+  </div>
+  <p class="ds-note" style="margin-block-start: var(--space-3)">يُفتح الدرج بحركة استمرارية 220ms من نقطة التصاقه المنطقية. التركيز محصور داخله، و Escape يغلقه، ثم يعود التركيز إلى الزر الذي فتحه. السجل يعرض وقتًا دقيقًا بمنطقة زمنية صريحة.</p>
+</body>
+</html>

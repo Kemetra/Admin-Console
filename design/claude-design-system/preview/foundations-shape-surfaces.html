@@ -1,0 +1,47 @@
+<!-- @dsCard group="Foundations" name="Shape and surfaces" subtitle="Radius 8 / 12 / 16, borders before shadows, the six-step surface grammar" viewport="1040x860" -->
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shape and surfaces</title>
+<link rel="stylesheet" href="_card.css">
+<style>
+  .radii { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4); }
+  .radii > div { display: grid; gap: var(--space-2); }
+  .shape { block-size: 72px; background: var(--color-surface); border: 1px solid var(--color-control-border); }
+  .grammar { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); }
+  .g { display: grid; gap: var(--space-2); align-content: start; }
+  .g__demo { block-size: 120px; position: relative; background: var(--color-background); border: 1px dashed var(--color-border); border-radius: var(--radius-control); overflow: hidden; }
+  .g__demo > * { position: absolute; }
+</style>
+</head>
+<body>
+  <header class="ds-head">
+    <h1>الشكل والأسطح</h1>
+    <p>نُدوِّر الكائن، لا الصفحة. الحدود والدرجات قبل الظلال. أسطح البيانات الكبيرة مسطحة بلا حواف دائرية.</p>
+  </header>
+
+  <section class="ds-section">
+    <h2>الحواف</h2>
+    <div class="radii">
+      <div><div class="shape" style="border-radius: var(--radius-control)"></div><b>8px</b><span class="ds-note">عناصر التحكم: أزرار وحقول.</span></div>
+      <div><div class="shape" style="border-radius: var(--radius-object)"></div><b>12px</b><span class="ds-note">كائن مستقل فعلًا: بطاقة متجر أو جهاز.</span></div>
+      <div><div class="shape" style="border-radius: var(--radius-overlay)"></div><b>16px</b><span class="ds-note">الطبقات المستقلة: حوار أو درج.</span></div>
+      <div><div class="shape" style="border-radius: var(--radius-pill); block-size: 32px; margin-block: 20px"></div><b>كبسولة</b><span class="ds-note">الحالات والأعداد والوسوم فقط، لا الأزرار.</span></div>
+    </div>
+  </section>
+
+  <section class="ds-section">
+    <h2>قواعد الأسطح</h2>
+    <div class="grammar">
+      <div class="g"><div class="g__demo"><div style="inset: 12px; background: var(--color-surface); border-block: 1px solid var(--color-border)"></div></div><b>سطح عمل</b><span class="ds-note">جدول أو شبكة. مسطح، بلا ظل، بلا حاوية بطاقة.</span></div>
+      <div class="g"><div class="g__demo"><div style="inset: 12px; border-block-start: 1px solid var(--color-border); padding-block-start: 8px"><b style="font-size: var(--text-control)">قسم</b></div></div><b>قسم</b><span class="ds-note">عنوان ومسافة وفاصل اختياري. ليس حاوية.</span></div>
+      <div class="g"><div class="g__demo"><div style="inset: 12px; background: var(--color-surface-sunken)"></div></div><b>لوحة</b><span class="ds-note">منطقة سياقية. الدرجة تكفي، والإطار اختياري.</span></div>
+      <div class="g"><div class="g__demo"><div style="inset: 20px 24%; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-object)"></div></div><b>بطاقة</b><span class="ds-note">لكائن قابل للتحديد أو الإجراء فقط. لا بطاقات داخل بطاقات.</span></div>
+      <div class="g"><div class="g__demo"><div style="inset-block: 0; inset-inline-end: 0; inline-size: 45%; background: var(--color-surface); box-shadow: var(--shadow-overlay); border-start-start-radius: var(--radius-overlay); border-end-start-radius: var(--radius-overlay)"></div></div><b>درج</b><span class="ds-note">ملتصق بطرف الشاشة، بارتفاع حقيقي. التدوير على الطرف المكشوف فقط.</span></div>
+      <div class="g"><div class="g__demo"><div style="inset: 0; background: var(--color-scrim)"></div><div style="inset: 24px 22%; background: var(--color-surface); border-radius: var(--radius-overlay); box-shadow: var(--shadow-overlay)"></div></div><b>حوار</b><span class="ds-note">أقوى ارتفاع مسموح، مع ستار.</span></div>
+    </div>
+  </section>
+</body>
+</html>

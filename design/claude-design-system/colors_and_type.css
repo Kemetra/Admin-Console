@@ -1,0 +1,115 @@
+/* Retail Tower — target design tokens for Claude Design (RT-392).
+ *
+ * TARGET identity from the UX/UI Constitution (UX-01…UX-13): light-first
+ * Mineral Daylight + Tower Teal, Arabic-first, RTL by structure. This is NOT the
+ * shipped Admin-Console token set (src/styles/tokens.css, dark/navy/gold/Inter).
+ *
+ * Colour values: owner-approved 2026-10-11 (RT-392) — seeded from the POS
+ * main@543688f light set. Every colour below is either one of those values or an
+ * alias/alpha of one; nothing else may be introduced without a new decision.
+ * Names follow the POS/Admin role vocabulary so a later migration slice can map
+ * them one-to-one.
+ */
+
+:root {
+  color-scheme: light;
+
+  /* ── Approved colour values (RT-392) ─────────────────────────────── */
+  --color-background: #f7f9fa;     /* canvas — mineral layer 0 */
+  --color-surface: #ffffff;        /* work surface / panel — layer 1 */
+  --color-surface-sunken: #eef2f6; /* recessed: headers, read-only, wells */
+  --color-text: #0f1d2e;           /* ink */
+  --color-text-muted: #53647a;     /* secondary text; also control boundary */
+  --color-border: #d8dfe7;         /* hairline dividers ONLY (1.34:1 — decorative) */
+
+  --color-primary: #0f766e;          /* Tower Teal — intent: action, selection, focus */
+  --color-primary-emphasis: #0b5b55; /* hover / pressed / text on soft */
+  --color-primary-soft: #e6f4f1;     /* selected-row / current-context wash */
+
+  --color-success: #15774d; /* proven success only */
+  --color-warning: #a35a00; /* caution / degraded */
+  --color-danger: #b3261e;  /* danger / consequence / UNKNOWN */
+  --color-info: #1b6ca8;    /* information / pending */
+
+  /* ── Derived roles (aliases or alpha of approved values only) ────── */
+  --color-on-primary: var(--color-surface);
+  --color-control-border: var(--color-text-muted); /* >= 3:1 boundary (6.05:1) */
+  --color-focus-ring: var(--color-primary);
+  --color-scrim: rgb(15 29 46 / 0.45);             /* --color-text at 45% */
+  --shadow-overlay: 0 12px 32px rgb(15 29 46 / 0.16), 0 2px 6px rgb(15 29 46 / 0.08);
+
+  /* ── Type (UX-03) ────────────────────────────────────────────────── */
+  /* Dubai is the one Arabic-first UI voice shared with POS. It is loaded as an
+   * installed font (Windows ships it); embedding is pending the licence check in
+   * RT-392, so non-Windows viewers see the fallback. */
+  --font-sans: "Dubai", "Segoe UI", Tahoma, system-ui, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", "Consolas", monospace;
+
+  /* Semantic type roles. Sizes are provisional: they equal the current shipped
+   * Admin scale until the Inter -> Dubai slice ratifies them. Floor: 12px. */
+  --text-display: 1.875rem;      /* 30px — rare */
+  --text-screen-title: 1.25rem;  /* 20px */
+  --text-section-title: 1rem;    /* 16px */
+  --text-body: 0.875rem;         /* 14px */
+  --text-control: 0.8125rem;     /* 13px */
+  --text-meta: 0.75rem;          /* 12px — floor */
+  --text-money-total: 1.25rem;   /* 20px, tabular */
+  --text-numeric-row: 0.875rem;  /* 14px, tabular */
+  --text-machine: 0.8125rem;     /* 13px, mono, LTR-isolated */
+  --text-kbd: 0.75rem;           /* 12px, mono */
+
+  --leading-body: 1.7;   /* Arabic body needs room */
+  --leading-title: 1.35;
+  --leading-tight: 1.2;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-strong: 700;
+
+  /* ── Space (UX-04) — 4px rhythm, shipped = target ────────────────── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --space-9: 96px;
+
+  /* Density modes (UX-04): context-driven, not a user preference. */
+  --row-comfortable: 48px;
+  --row-operational: 40px;
+  --row-compact: 32px;
+  --control-height: 36px; /* Admin desktop control; POS keeps its 44px floor */
+
+  /* ── Shape (UX-04): round the object, not the page ───────────────── */
+  --radius-control: 8px;
+  --radius-object: 12px;
+  --radius-overlay: 16px;
+  --radius-pill: 9999px; /* status / count / tag only */
+
+  /* ── Motion (UX-06) ──────────────────────────────────────────────── */
+  --duration-contact: 80ms;     /* press */
+  --duration-signal: 150ms;     /* local acknowledgement */
+  --duration-continuity: 220ms; /* drawer / dialog / attached overlay */
+  --ease-standard: cubic-bezier(0.2, 0.7, 0.25, 1);
+
+  /* ── Focus (UX-11): an outline, never a shadow alone ─────────────── */
+  --focus-width: 2px;
+  --focus-offset: 2px;
+
+  /* ── Shell (UX-09) ───────────────────────────────────────────────── */
+  --shell-topbar-h: 56px;
+  --shell-scope-h: 40px;
+  --shell-sidebar-w: 240px;
+  --signal-line-w: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-contact: 0ms;
+    --duration-signal: 0ms;
+    --duration-continuity: 0ms;
+  }
+}

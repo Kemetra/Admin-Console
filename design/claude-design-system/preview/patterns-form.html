@@ -1,0 +1,68 @@
+<!-- @dsCard group="Patterns" name="Edit form" subtitle="Constrained reading width, error summary + inline errors, one commit bar, dirty state" viewport="1040x1080" -->
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Edit form</title>
+<link rel="stylesheet" href="_card.css">
+</head>
+<body>
+  <header class="ds-head">
+    <h1>نموذج التعديل</h1>
+    <p>البيانات تتمدد، والقراءة تُقيَّد: النموذج بعرض محدود. بعد محاولة حفظ فيها أكثر من خطأ يظهر ملخص في الأعلى يأخذ التركيز، وكل خطأ يبقى أيضًا بجوار حقله.</p>
+  </header>
+
+  <form class="form" novalidate>
+    <div class="error-summary" role="alert" tabindex="-1" aria-labelledby="sum-title">
+      <h2 id="sum-title">لم يُحفظ المتجر: يوجد خطآن.</h2>
+      <ul>
+        <li><a href="#store-name">أدخل اسم المتجر.</a></li>
+        <li><a href="#store-code">رمز المتجر مستخدم لمتجر آخر.</a></li>
+      </ul>
+    </div>
+
+    <fieldset class="form__section">
+      <legend>بيانات المتجر</legend>
+      <div class="form__row">
+        <div class="field">
+          <label class="field__label" for="store-name">اسم المتجر <span class="field__req">(إلزامي)</span></label>
+          <input id="store-name" class="input" value="" aria-invalid="true" aria-describedby="name-err">
+          <span id="name-err" class="field__error">أدخل اسم المتجر.</span>
+        </div>
+        <div class="field">
+          <label class="field__label" for="store-code">رمز المتجر <span class="field__req">(إلزامي)</span></label>
+          <input id="store-code" class="input machine" style="text-align: start" value="NIL-02" aria-invalid="true" aria-describedby="code-err" spellcheck="false" autocomplete="off">
+          <span id="code-err" class="field__error">الرمز NIL-02 مستخدم لـ «متجر النيل». اختر رمزًا مختلفًا.</span>
+        </div>
+      </div>
+      <div class="field">
+        <label class="field__label" for="store-id">معرّف المتجر</label>
+        <input id="store-id" class="input machine" style="text-align: start" value="sto_01J9Z5A2KD" readonly aria-describedby="id-hint">
+        <span id="id-hint" class="field__hint">للقراءة فقط. استخدمه عند التواصل مع الدعم.</span>
+      </div>
+    </fieldset>
+
+    <fieldset class="form__section">
+      <legend>الموقع</legend>
+      <div class="form__row">
+        <div class="field">
+          <label class="field__label" for="store-city">المدينة <span class="field__req">(اختياري)</span></label>
+          <input id="store-city" class="input" value="الإسكندرية">
+        </div>
+        <div class="field">
+          <label class="field__label" for="store-address">العنوان <span class="field__req">(اختياري)</span></label>
+          <input id="store-address" class="input" value="شارع البحر، مبنى 14">
+        </div>
+      </div>
+    </fieldset>
+
+    <div class="form__actions">
+      <button class="btn btn--primary" type="button">حفظ المتجر</button>
+      <button class="btn btn--secondary" type="button">إلغاء التعديل</button>
+      <span class="form__dirty">تغييرات غير محفوظة</span>
+    </div>
+  </form>
+  <p class="ds-note" style="margin-block-start: var(--space-4)">الحذف لا يسكن في شريط الحفظ؛ مكانه منطقة منفصلة في صفحة التفاصيل مع حوار تأكيد. القيم الصحيحة تبقى بعد فشل الحفظ، وخطأ التعارض مع نسخة أحدث يظهر على مستوى النموذج لا الحقل. أي الحقول قابلة للتعديل بعد الإنشاء يحدده عقد الحقل في Backend-Core، لا هذا النمط.</p>
+</body>
+</html>
