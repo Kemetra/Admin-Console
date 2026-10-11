@@ -3,12 +3,14 @@
  * data-theme="dark" on <html>, which remaps the colour roles in tokens.css.
  *
  * Storage is browser-local (there is no Backend-Core user-preference contract):
- *  - `rt.theme.v1:user:<id>` holds each user's own choice, so a shared admin PC
- *    keeps one operator's preference from leaking to the next;
+ *  - `rt.theme.v1:user:<id>` holds each user's own choice, so inside the shell a
+ *    shared admin PC keeps one operator's preference from leaking to the next.
+ *    Screens before the shell (sign-in, scope gate, no-access) follow the
+ *    browser's last choice until the shell mounts;
  *  - `rt.theme.v1:last` mirrors the most recent choice on this browser. The inline
  *    pre-paint script in index.html reads it before the bundle loads, so a dark
  *    user does not see a light flash on reload. Keep THEME_LAST_KEY in step with
- *    that script (tests/unit/theme.test.ts checks it).
+ *    that script (tests/unit/theme.test.tsx checks it).
  *
  * Every storage access is guarded: private windows and blocked site data throw,
  * and the theme then simply stays light.

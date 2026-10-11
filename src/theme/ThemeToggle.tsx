@@ -10,7 +10,7 @@ export function ThemeToggle({ userId }: { userId: string | undefined }): React.J
   return (
     <button
       type="button"
-      className="btn-secondary theme-toggle"
+      className="btn-secondary"
       aria-pressed={theme === "dark"}
       onClick={toggle}
     >
