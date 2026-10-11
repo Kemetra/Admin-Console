@@ -81,6 +81,14 @@ test("toggle off returns to the light default and persists it across a reload", 
   await toggle.click();
   await expect(toggle).toHaveAttribute("aria-pressed", "false");
   expect(await theme(page)).toBe("");
+  // The pre-paint mirror must say light too, or the next load flashes dark.
+  expect(await page.evaluate(() => localStorage.getItem("rt.theme.v1:last"))).toBe("light");
+
+  // With the bundles blocked, only the pre-paint script paints: it must stay light.
+  await page.route("**/assets/*.js", (r) => r.abort());
+  await page.reload();
+  expect(await theme(page)).toBe("");
+  await page.unroute("**/assets/*.js");
 
   await page.reload();
   await expect(page.getByRole("button", { name: "Dark mode" })).toHaveAttribute(
