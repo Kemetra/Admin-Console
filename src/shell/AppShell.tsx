@@ -5,7 +5,8 @@ import { TowerMark } from "@/components/TowerMark";
  * scope header + sidebar + content (DESIGN.md layout). The frame every RF-2..RF-7
  * family attaches to. The content area renders `children` — the routed surface
  * (an <Outlet/> from the layout route). Sidebar entries beyond what is built are
- * shown gated to mark scope, not to claim they are built.
+ * shown gated to mark scope, not to claim they are built — in dev builds only.
+ * RT-270 (UX-09: no dead destinations): a production build never lists them.
  *
  * Console v4.0 visual adoption: each nav entry leads with a decorative line icon
  * (aria-hidden, so labels stay the sole accessible name) and the topbar carries
@@ -29,7 +30,10 @@ const LIVE_NAV: { label: string; to: string; icon: IconName }[] = [
   { label: "Audit", to: "/audit", icon: "audit" },
 ];
 
-/** Families not yet built — shown gated to mark scope, not to claim built. */
+/**
+ * Families not yet built — shown gated to mark scope, not to claim built. Dev
+ * builds only (RT-270): in production they would be dead destinations.
+ */
 const GATED_NAV: { label: string; gate: string; icon: IconName }[] = [
   { label: "Catalog", gate: "RF-3", icon: "catalog" },
   { label: "Unknown items", gate: "RF-4", icon: "unknown" },
@@ -38,9 +42,15 @@ const GATED_NAV: { label: string; gate: string; icon: IconName }[] = [
 export interface AppShellProps {
   onSignOut: () => void | Promise<void>;
   children?: React.ReactNode;
+  /** Show the gated placeholders. Defaults to Vite's `DEV`: false in a production build. */
+  showGatedNav?: boolean;
 }
 
-export function AppShell({ onSignOut, children }: AppShellProps): React.JSX.Element {
+export function AppShell({
+  onSignOut,
+  children,
+  showGatedNav = import.meta.env.DEV,
+}: AppShellProps): React.JSX.Element {
   const { context } = useActiveContextValue();
   const user = context?.user;
   const initials = (user?.display_name ?? user?.email ?? "?")
@@ -116,13 +126,15 @@ export function AppShell({ onSignOut, children }: AppShellProps): React.JSX.Elem
             </NavLink>
           </>
         ) : null}
-        {GATED_NAV.map((item) => (
-          <span key={item.gate} className="nav-entry nav-entry--disabled" aria-disabled="true">
-            <Icon name={item.icon} className="nav-entry__icon" />
-            <span className="nav-entry__label">{item.label}</span>
-            <span className="nav-gate">{item.gate}</span>
-          </span>
-        ))}
+        {showGatedNav
+          ? GATED_NAV.map((item) => (
+              <span key={item.gate} className="nav-entry nav-entry--disabled" aria-disabled="true">
+                <Icon name={item.icon} className="nav-entry__icon" />
+                <span className="nav-entry__label">{item.label}</span>
+                <span className="nav-gate">{item.gate}</span>
+              </span>
+            ))
+          : null}
         <div className="topbar__spacer" />
         <button type="button" className="nav-entry nav-signout" onClick={() => void onSignOut()}>
           <Icon name="sign-out" className="nav-entry__icon" />
