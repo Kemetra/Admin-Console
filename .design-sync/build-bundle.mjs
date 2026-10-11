@@ -1,7 +1,7 @@
 // Off-script design-sync layout builder for the Retail Tower Design System (RT-392).
 //
-// This repo is an app, not a component library, and its shipped React components
-// still carry the retired dark/navy/gold identity, so the converter's
+// This repo is an app, not a component library, and its shipped components use
+// their own class vocabulary (and, until RT-397, Inter), so the converter's
 // compiled-components path does not apply (owner decision, 2026-10-11). This
 // script assembles the upload contract from the hand-authored source bundle in
 // design/claude-design-system/ instead: a tokens + CSS-vocabulary design system
@@ -23,6 +23,7 @@
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { CONTRAST_PAIRS } from './contrast-pairs.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = join(ROOT, 'design', 'claude-design-system');
@@ -73,19 +74,9 @@ function checkConventionNames(md, tokensCss, componentsCss) {
   return { tokens: tokens.size, classes: classes.size };
 }
 
-// WCAG AA gate over every text (4.5) and boundary (3) pairing the components use,
-// in both themes. Values are read from colors_and_type.css, so a new colour that
-// fails cannot ship.
-const LAYERS = ['background', 'surface', 'surface-sunken'];
-const CONTRAST_PAIRS = [
-  ...LAYERS.flatMap((bg) => [
-    ['text', bg, 4.5], ['text-muted', bg, 4.5], ['control-border', bg, 3], ['focus-ring', bg, 3],
-    ...['success', 'warning', 'danger', 'info'].map((s) => [s, bg, 4.5]),
-  ]),
-  ['text', 'primary-soft', 4.5], ['text-muted', 'primary-soft', 4.5], ['primary-emphasis', 'primary-soft', 4.5],
-  ['primary-emphasis', 'surface', 4.5], ['primary', 'primary-soft', 3],
-  ['on-primary', 'primary', 4.5], ['on-primary', 'primary-emphasis', 4.5], ['on-primary', 'danger', 4.5],
-];
+// WCAG AA gate over every text (4.5) and boundary (3) pairing the components use
+// (CONTRAST_PAIRS, shared with the shipped-token test), in both themes. Values are
+// read from colors_and_type.css, so a new colour that fails cannot ship.
 
 function paletteOf(css, selector) {
   const start = css.indexOf(`${selector} {`);

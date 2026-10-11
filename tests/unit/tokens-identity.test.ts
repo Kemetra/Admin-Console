@@ -1,6 +1,7 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
+import { CONTRAST_PAIRS } from "../../.design-sync/contrast-pairs.mjs";
 
 /**
  * RT-396 light-first token migration. The shipped colour tokens must trace to
@@ -56,27 +57,6 @@ function ratio(fg: string, bg: string): number {
   return (hi + 0.05) / (lo + 0.05);
 }
 
-// Same list as CONTRAST_PAIRS in .design-sync/build-bundle.mjs (that module runs
-// the bundle build on import, so it is copied here; keep the two in step).
-const LAYERS = ["background", "surface", "surface-sunken"];
-const CONTRAST_PAIRS: [string, string, number][] = [
-  ...LAYERS.flatMap((bg): [string, string, number][] => [
-    ["text", bg, 4.5],
-    ["text-muted", bg, 4.5],
-    ["control-border", bg, 3],
-    ["focus-ring", bg, 3],
-    ...["success", "warning", "danger", "info"].map((s): [string, string, number] => [s, bg, 4.5]),
-  ]),
-  ["text", "primary-soft", 4.5],
-  ["text-muted", "primary-soft", 4.5],
-  ["primary-emphasis", "primary-soft", 4.5],
-  ["primary-emphasis", "surface", 4.5],
-  ["primary", "primary-soft", 3],
-  ["on-primary", "primary", 4.5],
-  ["on-primary", "primary-emphasis", 4.5],
-  ["on-primary", "danger", 4.5],
-];
-
 // Retired identity values from the pre-RT-396 tokens.css (dark default, navy, gold).
 const RETIRED = [
   "#0d1520",
@@ -100,6 +80,11 @@ const RETIRED = [
   "200, 162, 74",
   "31, 78, 122",
 ];
+
+// CSS: any hex or rgb(). TS/TSX: only a quoted hex (an inline style), so an
+// href="#id" or a "#123" label is not a false hit.
+const rawColour = (file: string): RegExp =>
+  file.endsWith(".css") ? /#[0-9a-fA-F]{3,8}\b|rgba?\(/ : /["'`]#[0-9a-fA-F]{3,8}["'`]|rgba?\(/;
 
 function cssFiles(dir: string, acc: string[] = []): string[] {
   for (const entry of readdirSync(dir)) {
@@ -162,7 +147,7 @@ describe("RT-396 light-first tokens", () => {
       for (const value of RETIRED)
         expect({ file, has: code.includes(value) }).toEqual({ file, has: false });
       if (file !== tokensFile) {
-        expect({ file, raw: /#[0-9a-fA-F]{3,8}\b|rgba?\(/.test(code) }).toEqual({
+        expect({ file, raw: rawColour(file).test(code) }).toEqual({
           file,
           raw: false,
         });
