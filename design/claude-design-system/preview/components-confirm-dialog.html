@@ -1,0 +1,32 @@
+<!-- @dsCard group="Components" name="Confirm dialog" subtitle="States action, scope and consequence; safe option focused first" viewport="960x600" -->
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Confirm dialog</title>
+<link rel="stylesheet" href="_card.css">
+</head>
+<body>
+  <header class="ds-head">
+    <h1>حوار التأكيد</h1>
+    <p>أصغر سطح التزام آمن. الحوار فقط حيث العاقبة تستحق المقاطعة، ويذكر ما سيحدث ونطاقه، لا «هل أنت متأكد؟».</p>
+  </header>
+
+  <div class="stage">
+    <div class="scrim"></div>
+    <div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="t" aria-describedby="d">
+      <h2 id="t">حذف «متجر الشاطئ»؟</h2>
+      <div id="d" style="display: grid; gap: var(--space-2)">
+        <p>سيُلغى اقتران نقطتي البيع المرتبطتين بهذا المتجر، ولن يتمكن الكاشير من تسجيل الدخول عليهما.</p>
+        <p class="ds-note">المبيعات المسجلة سابقًا تبقى في التقارير وسجل التدقيق. لا يمكن التراجع عن الحذف.</p>
+      </div>
+      <div class="dialog__actions">
+        <button class="btn btn--secondary is-focus">الإبقاء على المتجر</button>
+        <button class="btn btn--danger-commit">حذف المتجر</button>
+      </div>
+    </div>
+  </div>
+  <p class="ds-note" style="margin-block-start: var(--space-3)">التركيز الأول على الخيار الآمن. لا «تراجع» إلا إذا كان النطاق يدعم الاستعادة فعلًا. الإجراءات الجماعية تعرض العدد والنطاق قبل العاقبة.</p>
+</body>
+</html>

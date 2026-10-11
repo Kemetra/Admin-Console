@@ -1,0 +1,54 @@
+<!-- @dsCard group="Foundations" name="Motion" subtitle="Contact 80 / Signal 150 / Continuity 220 ms, one easing, truth never animates" viewport="960x780" -->
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Motion</title>
+<link rel="stylesheet" href="_card.css">
+<style>
+  .curve { display: grid; grid-template-columns: 200px 1fr; gap: var(--space-5); align-items: center; }
+  .curve svg { inline-size: 200px; block-size: 200px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-control); }
+  .track { position: relative; block-size: 36px; background: var(--color-surface-sunken); border-radius: var(--radius-control); }
+  .puck { position: absolute; inset-block: 6px; inset-inline-start: 6px; inline-size: 24px; border-radius: 6px; background: var(--color-primary); transition: inset-inline-start var(--duration-continuity) var(--ease-standard); }
+  .track:hover .puck, .track:focus-within .puck { inset-inline-start: calc(100% - 30px); }
+</style>
+</head>
+<body>
+  <header class="ds-head">
+    <h1>الحركة</h1>
+    <p>استجابة سريعة وهبوط ناعم. الحركة تشرح التغيير ولا تحمل المعنى وحدها. بلا ارتداد، بلا مرونة، بلا حركة محيطة.</p>
+  </header>
+
+  <section class="ds-section">
+    <table class="ds-spec">
+      <thead><tr><th>الدور</th><th>المدة</th><th>الاستخدام</th></tr></thead>
+      <tbody>
+        <tr><td><b>Contact</b></td><td class="num">80ms</td><td>استجابة الضغط على عنصر التحكم.</td></tr>
+        <tr><td><b>Signal</b></td><td class="num">150ms</td><td>إقرار محلي: وميض الصف المُضاف، تحديث حالة محلية.</td></tr>
+        <tr><td><b>Continuity</b></td><td class="num">220ms</td><td>الأدراج والحوارات والطبقات الملتصقة، من نقطة التصاقها المنطقية.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="ds-section">
+    <h2>منحنى واحد</h2>
+    <div class="curve">
+      <svg viewBox="0 0 100 100" role="img" aria-label="cubic-bezier(0.2, 0.7, 0.25, 1)">
+        <line x1="0" y1="100" x2="100" y2="0" style="stroke: var(--color-border)" stroke-width="0.6"/>
+        <path d="M0,100 C20,30 25,0 100,0" fill="none" style="stroke: var(--color-primary)" stroke-width="2.4"/>
+      </svg>
+      <div style="display: grid; gap: var(--space-3)">
+        <p class="machine">cubic-bezier(0.2, 0.7, 0.25, 1)</p>
+        <div class="track" tabindex="0" aria-label="مرّر أو ركّز لتشغيل حركة الاستمرارية"><span class="puck"></span></div>
+        <p class="ds-note">مرّر المؤشر فوق المسار أو ركّز عليه. في وضع تقليل الحركة تصبح كل المدد صفرًا ويظهر التغيير فورًا، دون فقدان التركيز أو النص أو الحالة.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="ds-section">
+    <h2>الحقيقة لا تتحرك</h2>
+    <p>المال والإجماليات والمخزون تظهر بقيمتها الصحيحة فورًا: لا عدّاد تصاعدي، لا أرقام تتدحرج، لا أعمدة تنمو. الحالة الحية ثابتة ما لم يكن هناك نشاط حقيقي، والحالات غير المؤكدة شبه ساكنة.</p>
+  </section>
+</body>
+</html>

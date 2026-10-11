@@ -1,0 +1,65 @@
+<!-- @dsCard group="Foundations" name="Color roles" subtitle="Mineral Daylight + Tower Teal — 13 approved values and their jurisdiction" viewport="1040x1140" -->
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Color roles</title>
+<link rel="stylesheet" href="_card.css">
+<style>
+  .swatch { display: grid; grid-template-rows: 72px auto; border: 1px solid var(--color-border); border-radius: var(--radius-object); overflow: hidden; background: var(--color-surface); }
+  .swatch__chip { border-block-end: 1px solid var(--color-border); }
+  .swatch__meta { display: grid; gap: 2px; padding: var(--space-3); }
+  .swatch__meta b { font-size: var(--text-control); }
+  .swatch__meta span { color: var(--color-text-muted); font-size: var(--text-meta); line-height: var(--leading-title); }
+  .layers { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--color-border); border-radius: var(--radius-object); overflow: hidden; }
+  .layers > div { padding: var(--space-4); min-block-size: 96px; display: grid; align-content: end; gap: 2px; }
+  .layers > div + div { border-inline-start: 1px solid var(--color-border); }
+</style>
+</head>
+<body>
+  <header class="ds-head">
+    <h1>أدوار الألوان</h1>
+    <p>هوية فاتحة أولًا: درجات «Mineral Daylight» المحايدة، ولون «Tower Teal» للنيّة. معظم البكسلات محايدة، واللون المشبع نادر ليحتفظ بمعناه.</p>
+  </header>
+
+  <section class="ds-section">
+    <h2>الطبقات المعدنية</h2>
+    <div class="layers">
+      <div style="background: var(--color-background)"><b>الخلفية</b><span class="machine">--color-background #f7f9fa</span></div>
+      <div style="background: var(--color-surface)"><b>سطح العمل</b><span class="machine">--color-surface #ffffff</span></div>
+      <div style="background: var(--color-surface-sunken)"><b>السطح الغائر</b><span class="machine">--color-surface-sunken #eef2f6</span></div>
+    </div>
+    <p class="ds-note">العمق يأتي من الدرجات والحدود قبل الظلال. الظل محجوز للطبقات العائمة فعلًا: القوائم المنبثقة والأدراج والحوارات.</p>
+  </section>
+
+  <section class="ds-section">
+    <h2>الحبر والحدود</h2>
+    <div class="ds-grid">
+      <div class="swatch"><div class="swatch__chip" style="background: var(--color-text)"></div><div class="swatch__meta"><b>النص</b><span class="machine">#0f1d2e</span><span>كل النصوص الأساسية.</span></div></div>
+      <div class="swatch"><div class="swatch__chip" style="background: var(--color-text-muted)"></div><div class="swatch__meta"><b>النص الثانوي</b><span class="machine">#53647a</span><span>البيانات الوصفية، وحدود عناصر التحكم (6.05:1).</span></div></div>
+      <div class="swatch"><div class="swatch__chip" style="background: var(--color-border)"></div><div class="swatch__meta"><b>الفاصل</b><span class="machine">#d8dfe7</span><span>فواصل زخرفية فقط. لا يُستخدم حدًّا لحقل إدخال.</span></div></div>
+    </div>
+  </section>
+
+  <section class="ds-section">
+    <h2>النيّة: Tower Teal</h2>
+    <div class="ds-grid">
+      <div class="swatch"><div class="swatch__chip" style="background: var(--color-primary)"></div><div class="swatch__meta"><b>الأساسي</b><span class="machine">#0f766e</span><span>الإجراء الأساسي، التحديد، التركيز. ليس زخرفة، وليس لون النجاح.</span></div></div>
+      <div class="swatch"><div class="swatch__chip" style="background: var(--color-primary-emphasis)"></div><div class="swatch__meta"><b>الأساسي المؤكَّد</b><span class="machine">#0b5b55</span><span>التمرير والضغط، والنص فوق الخلفية الفاتحة.</span></div></div>
+      <div class="swatch"><div class="swatch__chip" style="background: var(--color-primary-soft)"></div><div class="swatch__meta"><b>الأساسي الهادئ</b><span class="machine">#e6f4f1</span><span>الصف المحدد والسياق الحالي.</span></div></div>
+    </div>
+  </section>
+
+  <section class="ds-section">
+    <h2>الحقيقة التشغيلية</h2>
+    <div class="ds-grid">
+      <div class="swatch"><div class="swatch__chip" style="background: var(--color-info)"></div><div class="swatch__meta"><b>معلومة / قيد الانتظار</b><span class="machine">#1b6ca8</span><span>الحقيقة لم تكتمل بعد.</span></div></div>
+      <div class="swatch"><div class="swatch__chip" style="background: var(--color-success)"></div><div class="swatch__meta"><b>نجاح مُثبت</b><span class="machine">#15774d</span><span>فقط بعد ثبوت النتيجة.</span></div></div>
+      <div class="swatch"><div class="swatch__chip" style="background: var(--color-warning)"></div><div class="swatch__meta"><b>تنبيه / متدهور</b><span class="machine">#a35a00</span><span>يمكن المتابعة بحذر.</span></div></div>
+      <div class="swatch"><div class="swatch__chip" style="background: var(--color-danger)"></div><div class="swatch__meta"><b>خطر / غير معروف</b><span class="machine">#b3261e</span><span>العواقب، والنتيجة غير المؤكدة. لا يُخفَّف إلى محايد.</span></div></div>
+    </div>
+    <p class="ds-note">الأولوية: الحقيقة الحرجة ← الإجراء الأساسي ← السياق الحالي ← الهوية ← الزخرفة. اللون لا يحمل المعنى وحده أبدًا؛ النص أو الشكل يرافقه دائمًا. ألوان الرسوم البيانية عائلة منفصلة لم تُعتمد بعد.</p>
+  </section>
+</body>
+</html>
