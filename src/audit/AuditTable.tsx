@@ -6,7 +6,13 @@
  * `<button>` in the first cell (keyboard-activable, a11y), not an onClick on
  * `<tr>` (design-brief §5). No brand color anywhere; severity (if shown) is a contained
  * status badge, never a side-stripe.
+ *
+ * RT-399: the time is EVIDENCE — the exact recorded instant in UTC, unchanged
+ * by locale (`formatEvidenceTime`), and the column header names UTC. Action
+ * codes, IDs and request refs are machine data: never translated, LTR-isolated
+ * so an RTL page can't reorder them.
  */
+import { formatEvidenceTime, useT } from "@/i18n";
 import type { AuditRow } from "./useAuditSearch";
 import "./audit.css";
 
@@ -20,40 +26,52 @@ function shortId(id?: string | null): string {
   return id.length > 8 ? `${id.slice(0, 8)}…` : id;
 }
 
-function formatTime(iso: string): string {
-  // Stable, locale-independent absolute time (tabular). No Date.now relative.
-  return iso.replace("T", " ").replace("Z", " UTC");
-}
-
 export function AuditTable({ rows, onInspect }: AuditTableProps): React.JSX.Element {
+  const t = useT();
   return (
     <table className="audit-table">
-      <caption className="audit-table__caption">Audit events</caption>
+      <caption className="audit-table__caption">{t("audit.table.caption")}</caption>
       <thead>
         <tr>
-          <th scope="col">Time</th>
-          <th scope="col">Action</th>
-          <th scope="col">Actor</th>
-          <th scope="col">Target</th>
-          <th scope="col">Store</th>
-          <th scope="col">Req</th>
+          <th scope="col">{t("audit.field.time")}</th>
+          <th scope="col">{t("audit.field.action")}</th>
+          <th scope="col">{t("audit.field.actor")}</th>
+          <th scope="col">{t("audit.field.target")}</th>
+          <th scope="col">{t("audit.field.store")}</th>
+          <th scope="col">{t("audit.table.requestShort")}</th>
         </tr>
       </thead>
       <tbody>
         {rows.map((row) => (
           <tr key={row.id}>
-            <td className="audit-table__time">{formatTime(row.occurred_at)}</td>
+            <td className="audit-table__time">
+              <bdi dir="ltr">{formatEvidenceTime(row.occurred_at)}</bdi>
+            </td>
             <td>
               <button type="button" className="audit-table__action" onClick={() => onInspect(row)}>
-                {row.action}
+                <bdi dir="ltr">{row.action}</bdi>
               </button>
             </td>
-            <td className="audit-table__muted">{row.actor_label ?? shortId(row.actor_user_id)}</td>
             <td className="audit-table__muted">
-              {row.target_type ? `${row.target_type} · ${shortId(row.target_id)}` : "—"}
+              {row.actor_label != null ? (
+                <bdi>{row.actor_label}</bdi>
+              ) : (
+                <bdi dir="ltr">{shortId(row.actor_user_id)}</bdi>
+              )}
             </td>
-            <td className="audit-table__mono">{shortId(row.store_id)}</td>
-            <td className="audit-table__mono">{shortId(row.request_id)}</td>
+            <td className="audit-table__muted">
+              {row.target_type ? (
+                <bdi dir="ltr">{`${row.target_type} · ${shortId(row.target_id)}`}</bdi>
+              ) : (
+                "—"
+              )}
+            </td>
+            <td className="audit-table__mono">
+              <bdi dir="ltr">{shortId(row.store_id)}</bdi>
+            </td>
+            <td className="audit-table__mono">
+              <bdi dir="ltr">{shortId(row.request_id)}</bdi>
+            </td>
           </tr>
         ))}
       </tbody>

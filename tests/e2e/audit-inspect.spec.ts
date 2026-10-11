@@ -1,4 +1,4 @@
-import { type Page, expect, test } from "@playwright/test";
+import { type Page, expect, test } from "./fixtures";
 
 /**
  * RF-6 row inspect E2E (VG-2, S3). Open the inspect drawer from a row → full
@@ -52,19 +52,22 @@ async function mockContext(page: Page): Promise<() => number> {
   return () => auditCalls;
 }
 
-test("S3: row inspect opens read-only detail; no extra fetch; Esc closes", async ({ page }) => {
+test("S3: row inspect opens read-only detail; no extra fetch; Esc closes", async ({ page, t }) => {
   const auditCalls = await mockContext(page);
   await page.goto("/audit");
-  await page.getByRole("button", { name: /apply/i }).click();
+  await page.getByRole("button", { name: t("audit.filters.apply"), exact: true }).click();
   await expect(page.getByText("shift.forced_close")).toBeVisible();
   const callsAfterSearch = auditCalls();
 
   await page.getByText("shift.forced_close").click();
-  const drawer = page.getByRole("dialog", { name: /audit event/i });
+  const drawer = page.getByRole("dialog", { name: t("audit.inspect.title") });
   await expect(drawer).toBeVisible();
   // full detail incl. metadata
   await expect(drawer.getByText("till_discrepancy")).toBeVisible();
   await expect(drawer.getByText("11111111-1111-1111-1111-111111111111")).toBeVisible();
+  // RT-399: the evidence time is exact UTC in both locales, under a UTC label.
+  await expect(drawer.getByText(t("audit.field.time"), { exact: true })).toBeVisible();
+  await expect(drawer.getByText("2026-06-01 21:14:03 UTC", { exact: true })).toBeVisible();
   // no extra listAuditEvents call (reads the already-fetched row)
   expect(auditCalls()).toBe(callsAfterSearch);
 

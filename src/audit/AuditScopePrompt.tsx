@@ -3,20 +3,19 @@
  * precedes this; defensive). A precondition, not an error. Named *Like to avoid
  * implying it is the RF-5 OperatorScopePrompt.
  */
+import { useT } from "@/i18n";
 import "../shell/surface.css";
 
 export function OperatorScopePromptLike(): React.JSX.Element {
+  const t = useT();
   return (
     <div className="surface">
       <header className="surface__head">
         <div>
-          <h1 className="content__title">Audit</h1>
+          <h1 className="content__title">{t("audit.title")}</h1>
         </div>
       </header>
-      <p className="scope-prompt">
-        Select a tenant to search its audit activity. Use the tenant selector in the scope bar above
-        to choose where you are working.
-      </p>
+      <p className="scope-prompt">{t("audit.scopePrompt")}</p>
     </div>
   );
 }
