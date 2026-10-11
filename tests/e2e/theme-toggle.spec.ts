@@ -62,18 +62,41 @@ test("toggle on, reload: still dark, restored before the app bundle runs", async
   expect(await theme(page)).toBe("dark");
 });
 
-test("toggle off returns to the light default and persists it", async ({ page }) => {
+test("toggle off returns to the light default and persists it across a reload", async ({
+  page,
+}) => {
   await mockApi(page);
-  await page.addInitScript(() => {
+  // Seed dark once, through the app's own origin, not on every navigation (an
+  // init script would re-seed dark on the reload and hide a persistence bug).
+  await page.goto("/");
+  await page.evaluate(() => {
     localStorage.setItem("rt.theme.v1:user:u1", "dark");
     localStorage.setItem("rt.theme.v1:last", "dark");
   });
-  await page.goto("/");
+  await page.reload();
   const toggle = page.getByRole("button", { name: "Dark mode" });
   await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  expect(await theme(page)).toBe("dark");
+
   await toggle.click();
   await expect(toggle).toHaveAttribute("aria-pressed", "false");
   expect(await theme(page)).toBe("");
+  // The pre-paint mirror must say light too, or the next load flashes dark.
+  expect(await page.evaluate(() => localStorage.getItem("rt.theme.v1:last"))).toBe("light");
+
+  // With the bundles blocked, only the pre-paint script paints: it must stay light.
+  await page.route("**/assets/*.js", (r) => r.abort());
+  await page.reload();
+  expect(await theme(page)).toBe("");
+  await page.unroute("**/assets/*.js");
+
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Dark mode" })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+  expect(await theme(page)).toBe("");
+  expect(await bodyBackground(page)).toBe("rgb(247, 249, 250)"); // light canvas
   expect(await page.evaluate(() => localStorage.getItem("rt.theme.v1:user:u1"))).toBe("light");
 });
 
