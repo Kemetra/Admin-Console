@@ -1,4 +1,4 @@
-<!-- @dsCard group="Components" name="Buttons" subtitle="Primary / secondary / quiet / danger × rest, hover, focus, pressed, busy, disabled" viewport="1040x760" -->
+<!-- @dsCard group="Components" name="Buttons" subtitle="Primary / secondary / quiet / danger × rest, hover, focus, pressed, busy, disabled; toggle off / on" viewport="1040x860" -->
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
@@ -50,6 +50,15 @@
       <button class="btn btn--danger" disabled>حذف المتجر</button>
     </div>
     <p class="ds-note">الضغط: إزاحة 1px بمدة Contact (80ms) تظهر عند النقر، ولا تُعرض كحالة ثابتة. أثناء التنفيذ يبقى الزر في مكانه ويملك تقدّمه، ولا يُستبدل بمؤشر تحميل عام؛ احجز عرض الزر حتى لا تتحرك العناصر المجاورة.</p>
+  </section>
+
+  <section class="ds-section">
+    <h2>زر التبديل</h2>
+    <div class="ds-row">
+      <button class="btn btn--secondary" aria-pressed="false">الوضع الليلي</button>
+      <button class="btn btn--secondary" aria-pressed="true">الوضع الليلي</button>
+    </div>
+    <p class="ds-note">زر يبقى نصه ثابتًا ويتغير وضعه: <span class="machine">aria-pressed="true"</span> يعطيه خلفية تيل خفيفة وحدًّا تيل أعرض. لا يُبدَّل النص بين «الوضع الليلي» و«الوضع الفاتح».</p>
   </section>
 
   <section class="ds-section">
