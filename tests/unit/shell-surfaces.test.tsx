@@ -70,8 +70,10 @@ describe("ProtectedArea surface selection (rendering backend truth)", () => {
       memberships: [{ tenant_id: "t1", tenant_name: "Northstar Retail" }],
     });
     expect(await screen.findByRole("heading", { name: "Overview" })).toBeDefined();
-    expect(screen.getByText("Northstar Retail")).toBeDefined();
-    expect(screen.getByText("Cairo Festival City")).toBeDefined();
+    // The scope header names tenant and store (the Overview subtitle repeats them).
+    const scope = screen.getByRole("button", { name: /Northstar Retail/ });
+    expect(scope.getAttribute("aria-haspopup")).toBe("menu");
+    expect(scope.textContent).toContain("Cairo Festival City");
   });
 
   test("zero memberships -> no access", async () => {

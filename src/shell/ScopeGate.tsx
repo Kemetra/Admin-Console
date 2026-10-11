@@ -1,5 +1,6 @@
 import { TowerMark } from "@/components/TowerMark";
 import { useActiveContextValue } from "@/context/ActiveContextProvider";
+import { roleKey, useT } from "@/i18n";
 /**
  * Full-screen scope gate (SF-2, T029, Scenario S2). Multi-membership actors
  * pick a tenant here before any RF-2..RF-7 route is reachable (VD-2). Driven by
@@ -10,6 +11,7 @@ import { useMemo, useState } from "react";
 import "./scope-gate.css";
 
 export function ScopeGate(): React.JSX.Element {
+  const t = useT();
   const { context, switchTenant } = useActiveContextValue();
   const [query, setQuery] = useState("");
 
@@ -28,8 +30,8 @@ export function ScopeGate(): React.JSX.Element {
             <TowerMark className="tower-mark" />
             <span className="tower-lockup__word">Retail Tower OS</span>
           </span>
-          <h1 className="gate__title">Select your context</h1>
-          <p className="gate__sub">Choose a tenant to continue.</p>
+          <h1 className="gate__title">{t("shell.gate.title")}</h1>
+          <p className="gate__sub">{t("shell.gate.sub")}</p>
         </div>
 
         {memberships.length > 6 ? (
@@ -37,15 +39,15 @@ export function ScopeGate(): React.JSX.Element {
             <input
               className="input"
               type="search"
-              placeholder="Search tenants…"
+              placeholder={t("shell.gate.searchPlaceholder")}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              aria-label="Search tenants"
+              aria-label={t("shell.gate.searchLabel")}
             />
           </div>
         ) : null}
 
-        <ul className="pick-list" aria-label="Available tenants">
+        <ul className="pick-list" aria-label={t("shell.gate.listLabel")}>
           {filtered.map((m) => (
             <li key={m.tenant_id}>
               <button
@@ -57,10 +59,14 @@ export function ScopeGate(): React.JSX.Element {
                   {(m.tenant_name ?? "?").slice(0, 2).toUpperCase()}
                 </span>
                 <span className="pick__body">
-                  <span className="pick__name">{m.tenant_name ?? m.tenant_id}</span>
-                  <span className="pick__meta">{m.tenant_id}</span>
+                  <span className="pick__name">
+                    <bdi>{m.tenant_name ?? m.tenant_id}</bdi>
+                  </span>
+                  <bdi className="pick__meta" dir="ltr">
+                    {m.tenant_id}
+                  </bdi>
                 </span>
-                {m.role_code ? <span className="pick__role">{m.role_code}</span> : null}
+                {m.role_code ? <span className="pick__role">{t(roleKey(m.role_code))}</span> : null}
               </button>
             </li>
           ))}

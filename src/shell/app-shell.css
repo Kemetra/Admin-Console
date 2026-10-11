@@ -76,7 +76,7 @@
  * identity); a later slice can drive it from real session liveness. */
 .topbar__online {
   position: absolute;
-  right: -1px;
+  inset-inline-end: -1px;
   bottom: -1px;
   width: 9px;
   height: 9px;
@@ -99,7 +99,7 @@
 .sidebar {
   grid-area: sidebar;
   background: var(--color-surface);
-  border-right: 1px solid var(--color-border);
+  border-inline-end: 1px solid var(--color-border);
   padding: var(--space-4) var(--space-3);
   display: flex;
   flex-direction: column;
@@ -122,7 +122,7 @@
   border-radius: var(--radius-control);
   color: var(--color-text-muted);
   font-size: var(--text-body);
-  text-align: left;
+  text-align: start;
   background: transparent;
   border: none;
   cursor: pointer;
@@ -179,7 +179,7 @@
   cursor: default;
 }
 .nav-gate {
-  margin-left: auto;
+  margin-inline-start: auto;
   font: var(--weight-strong) var(--text-kbd) / var(--leading-tight) var(--font-mono);
   color: var(--color-text-muted);
   border: 1px solid var(--color-border);

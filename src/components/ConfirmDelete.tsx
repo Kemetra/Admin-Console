@@ -4,6 +4,7 @@
  * resource before a soft-delete. Single destructive primary + a cancel
  * (single-primary rule). Used by SF-T3 / SF-S3 (design-brief §7).
  */
+import { useT } from "@/i18n";
 import "./confirm-delete.css";
 
 export interface ConfirmDeleteProps {
@@ -24,10 +25,21 @@ export function ConfirmDelete({
   onConfirm,
   onCancel,
 }: ConfirmDeleteProps): React.JSX.Element {
+  const t = useT();
   return (
-    <section className="confirm-delete" aria-label={`Confirm: ${confirmLabel}`}>
+    <section
+      className="confirm-delete"
+      aria-label={t("components.confirmDelete.label", { action: confirmLabel })}
+    >
       <p className="confirm-delete__msg">
-        {confirmLabel} <strong>{resourceName}</strong>? It can be restored by an administrator.
+        {t.rich("components.confirmDelete.prompt", {
+          action: confirmLabel,
+          name: (
+            <strong>
+              <bdi>{resourceName}</bdi>
+            </strong>
+          ),
+        })}
       </p>
       <div className="confirm-delete__actions">
         <button type="button" className="btn-destructive" onClick={onConfirm} disabled={pending}>
@@ -35,7 +47,7 @@ export function ConfirmDelete({
           {confirmLabel}
         </button>
         <button type="button" className="btn-secondary" onClick={onCancel} disabled={pending}>
-          Cancel
+          {t("common.cancel")}
         </button>
       </div>
     </section>

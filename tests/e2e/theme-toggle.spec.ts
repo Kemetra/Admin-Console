@@ -1,4 +1,4 @@
-import { type Page, expect, test } from "@playwright/test";
+import { type Page, expect, test } from "./fixtures";
 
 /**
  * RT-398 — opt-in dark theme. The top-bar toggle switches <html data-theme>,
@@ -33,10 +33,10 @@ const theme = (page: Page) => page.evaluate(() => document.documentElement.datas
 const bodyBackground = (page: Page) =>
   page.evaluate(() => getComputedStyle(document.body).backgroundColor);
 
-test("toggle on, reload: still dark, restored before the app bundle runs", async ({ page }) => {
+test("toggle on, reload: still dark, restored before the app bundle runs", async ({ page, t }) => {
   await mockApi(page);
   await page.goto("/");
-  const toggle = page.getByRole("button", { name: "Dark mode" });
+  const toggle = page.getByRole("button", { name: t("theme.darkMode") });
   await expect(toggle).toHaveAttribute("aria-pressed", "false");
   expect(await theme(page)).toBe("");
   expect(await bodyBackground(page)).toBe("rgb(247, 249, 250)"); // light canvas
@@ -55,7 +55,7 @@ test("toggle on, reload: still dark, restored before the app bundle runs", async
   // And with the app running again, the toggle reflects the stored choice.
   await page.unroute("**/assets/*.js");
   await page.reload();
-  await expect(page.getByRole("button", { name: "Dark mode" })).toHaveAttribute(
+  await expect(page.getByRole("button", { name: t("theme.darkMode") })).toHaveAttribute(
     "aria-pressed",
     "true",
   );
@@ -64,6 +64,7 @@ test("toggle on, reload: still dark, restored before the app bundle runs", async
 
 test("toggle off returns to the light default and persists it across a reload", async ({
   page,
+  t,
 }) => {
   await mockApi(page);
   // Seed dark once, through the app's own origin, not on every navigation (an
@@ -74,7 +75,7 @@ test("toggle off returns to the light default and persists it across a reload", 
     localStorage.setItem("rt.theme.v1:last", "dark");
   });
   await page.reload();
-  const toggle = page.getByRole("button", { name: "Dark mode" });
+  const toggle = page.getByRole("button", { name: t("theme.darkMode") });
   await expect(toggle).toHaveAttribute("aria-pressed", "true");
   expect(await theme(page)).toBe("dark");
 
@@ -91,7 +92,7 @@ test("toggle off returns to the light default and persists it across a reload", 
   await page.unroute("**/assets/*.js");
 
   await page.reload();
-  await expect(page.getByRole("button", { name: "Dark mode" })).toHaveAttribute(
+  await expect(page.getByRole("button", { name: t("theme.darkMode") })).toHaveAttribute(
     "aria-pressed",
     "false",
   );
@@ -103,6 +104,7 @@ test("toggle off returns to the light default and persists it across a reload", 
 test.describe("forced-colors: active", () => {
   test("dark + forced colours: the on toggle keeps a 2px edge and a real focus outline", async ({
     page,
+    t,
   }) => {
     await page.emulateMedia({ forcedColors: "active" });
     await mockApi(page);
@@ -111,7 +113,7 @@ test.describe("forced-colors: active", () => {
       localStorage.setItem("rt.theme.v1:last", "dark");
     });
     await page.goto("/");
-    const toggle = page.getByRole("button", { name: "Dark mode" });
+    const toggle = page.getByRole("button", { name: t("theme.darkMode") });
     await expect(toggle).toHaveAttribute("aria-pressed", "true");
     const edge = await toggle.evaluate((el) => getComputedStyle(el).borderTopWidth);
     expect(edge).toBe("2px");

@@ -275,8 +275,14 @@ focus, copy, status and border/icon feedback stay intact.
 ## 8. Content and localization (UX-12)
 
 - **Arabic is the primary authored product language. One locale at a time**: never duplicate
-  "Arabic (English)" on controls. English may exist as a separate locale and as
+  "Arabic (English)" on controls. English is the second locale (owner decision 2026-10-11,
+  RT-399), chosen with the top-bar switch (a quiet button named in the other language,
+  «English» / «العربية») and remembered per user. Latin text otherwise appears only as
   machine/proper terminology (ERPNext, EGP, SKU, API, IDs).
+- **Copy lives in the catalog** (`src/i18n/messages/{ar,en}/`): flat dotted keys, whole
+  sentences with named params, CLDR plurals. The Arabic catalog is the key set; a missing
+  English key is a compile error. Components read copy with `useT()`; state keeps message
+  keys, never translated strings.
 - **Terminology (UI ← internal):**
 
   | UI term | Internal / evidence term | Note |
@@ -334,7 +340,7 @@ Each debt is tracked separately. Do not fold them into feature work.
 
 | Debt | Constitution rule | Ticket |
 | --- | --- | --- |
-| Arabic-first locale + RTL: `lang`/`dir`, logical CSS, message catalog, UX-12 terminology, formatters | UX-11, UX-12 | **RT-266** (planning), then sliced implementation |
+| Arabic-first locale + RTL: `lang`/`dir`, logical CSS, message catalog, UX-12 terminology, formatters | UX-11, UX-12 | **RT-266** (planning) → **RT-399** (Arabic default + English second locale). Still open: Store time zone (RT-401), owner-approved Admin role labels (RT-266 Q4), `error.code`-first error copy (RT-266 §3.3) |
 | Forced-colors support and outline-based focus baseline | UX-11 | **RT-267** |
 | Complete Store scope switcher (All Stores → authorized Store) + dirty-context guard | UX-09 | **RT-268** (with RT-354 — scope menu cannot switch store) |
 | Audit search keeps loaded rows when a later page fails + inline continuation retry | UX-10 | **RT-269** |

@@ -1,4 +1,5 @@
 import { useActiveContextValue } from "@/context/ActiveContextProvider";
+import { type T, useT } from "@/i18n";
 import { useStoreList } from "@/stores/useStoreQueries";
 /**
  * Persistent scope header (SF-2, T028): a recessed bar under the top bar,
@@ -43,6 +44,7 @@ function ScopeMenu({
   onChooseStore,
   onAllStores,
 }: ScopeMenuProps): React.JSX.Element {
+  const t = useT();
   const { result, isLoading, refetch } = useStoreList(tenant.id);
   // The shell must survive a malformed list: anything but an array lists nothing.
   const rows = result?.kind === "rows" && Array.isArray(result.rows) ? result.rows : [];
@@ -50,7 +52,9 @@ function ScopeMenu({
 
   return (
     <div className="scope-menu" role="menu">
-      <div className="scope-menu__group">STORE · {tenant.name}</div>
+      <div className="scope-menu__group">
+        {t.rich("shell.scope.menuGroup", { tenant: <bdi>{tenant.name}</bdi> })}
+      </div>
       <button
         type="button"
         role="menuitem"
@@ -58,7 +62,7 @@ function ScopeMenu({
         aria-current={activeStore ? undefined : "true"}
         onClick={onAllStores}
       >
-        All stores
+        {t("shell.scope.allStores")}
         {activeStore ? null : <ActiveCheck />}
       </button>
       {stores.map((s) => {
@@ -72,40 +76,56 @@ function ScopeMenu({
             aria-current={active ? "true" : undefined}
             onClick={() => onChooseStore(s.id)}
           >
-            {s.name ?? s.id}
+            <bdi>{s.name ?? s.id}</bdi>
             {active ? <ActiveCheck /> : null}
           </button>
         );
       })}
-      {isLoading ? <div className="scope-menu__note">Loading stores…</div> : null}
+      {isLoading ? <div className="scope-menu__note">{t("shell.scope.loading")}</div> : null}
       {result?.kind === "error" ? (
         <>
-          <div className="scope-menu__note">Couldn't load stores.</div>
+          <div className="scope-menu__note">{t("shell.scope.loadFailed")}</div>
           <button type="button" role="menuitem" className="scope-menu__item" onClick={refetch}>
-            Try again
+            {t("common.tryAgain")}
           </button>
         </>
       ) : null}
       {result?.kind === "rows" && stores.length === 0 ? (
-        <div className="scope-menu__note">No stores you can open in this tenant.</div>
+        <div className="scope-menu__note">{t("shell.scope.noStores")}</div>
       ) : null}
     </div>
   );
 }
 
-/** Polite announcement of a scope change for screen-reader users (RT-268). */
-function useScopeAnnouncement(scopeKey: string, label: string): string {
-  const [announcement, setAnnouncement] = useState("");
+interface ScopeNames {
+  tenant: string;
+  /** The active store's name, or null for "All stores". */
+  store: string | null;
+}
+
+/**
+ * Polite announcement of a scope change for screen-reader users (RT-268). The
+ * announced scope is kept, not the sentence, so it is spoken in the current
+ * locale (RT-399).
+ */
+function useScopeAnnouncement(scopeKey: string, names: ScopeNames, t: T): string {
+  const [announced, setAnnounced] = useState<ScopeNames | null>(null);
   const previous = useRef(scopeKey);
+  const { tenant, store } = names;
   useEffect(() => {
     if (previous.current === scopeKey) return;
     previous.current = scopeKey;
-    setAnnouncement(`Now working in ${label}.`);
-  }, [scopeKey, label]);
-  return announcement;
+    setAnnounced({ tenant, store });
+  }, [scopeKey, tenant, store]);
+  if (!announced) return "";
+  return t("shell.scope.announce", {
+    tenant: announced.tenant,
+    store: announced.store ?? t("shell.scope.allStores"),
+  });
 }
 
 export function ScopeHeader(): React.JSX.Element | null {
+  const t = useT();
   const { context, switchStore, clearStore } = useActiveContextValue();
   const guard = useDirtyGuard();
   const [open, setOpen] = useState(false);
@@ -115,7 +135,8 @@ export function ScopeHeader(): React.JSX.Element | null {
   const store = context?.active_store;
   const announcement = useScopeAnnouncement(
     `${tenant?.id ?? ""}/${store?.id ?? "all"}`,
-    `${tenant?.name ?? ""}, ${store?.name ?? "all stores"}`,
+    { tenant: tenant?.name ?? "", store: store ? (store.name ?? "") : null },
+    t,
   );
   if (!tenant?.id) {
     return null; // no header until a tenant is resolved (chooser handles that)
@@ -147,11 +168,17 @@ export function ScopeHeader(): React.JSX.Element | null {
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
       >
-        <span className="scope__crumb">{tenant.name}</span>
+        {/* Names are isolated so a Latin-only name can't turn the Bidi_Mirrored
+            separator: › reads ‹ in Arabic with no code change (RT-266 §2.1). */}
+        <span className="scope__crumb">
+          <bdi>{tenant.name}</bdi>
+        </span>
         <span className="scope__sep" aria-hidden="true">
           ›
         </span>
-        <span className="scope__current">{store ? store.name : "All stores"}</span>
+        <span className="scope__current">
+          {store ? <bdi>{store.name}</bdi> : t("shell.scope.allStores")}
+        </span>
         <svg
           className="scope__caret"
           viewBox="0 0 24 24"

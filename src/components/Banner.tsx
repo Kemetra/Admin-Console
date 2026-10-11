@@ -1,8 +1,10 @@
 /**
  * Persistent status banner (T011, FR-003-007, VD-4). DESIGN.md rule 4:
  * persistent banners, not toasts. Surfaces the backend `request_id` so an
- * operator can quote it to support. Never auto-dismisses.
+ * operator can quote it to support (exact and LTR-isolated, RT-399). Never
+ * auto-dismisses. `message` is already-translated copy.
  */
+import { useT } from "@/i18n";
 import "./banner.css";
 
 export type BannerVariant = "danger" | "warning" | "success" | "info";
@@ -21,10 +23,15 @@ export interface BannerProps {
 }
 
 export function Banner({ variant, message, requestId, action }: BannerProps): React.JSX.Element {
+  const t = useT();
   return (
     <div className={`rtc-alert rtc-alert--${variant}`} role="alert">
       <span className="rtc-alert__msg">{message}</span>
-      {requestId ? <span className="rtc-alert__req">request_id: {requestId}</span> : null}
+      {requestId ? (
+        <span className="rtc-alert__req">
+          {t.rich("components.banner.requestRef", { id: <bdi dir="ltr">{requestId}</bdi> })}
+        </span>
+      ) : null}
       {action ? <span className="rtc-alert__action">{action}</span> : null}
     </div>
   );

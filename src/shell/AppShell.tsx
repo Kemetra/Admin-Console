@@ -10,7 +10,8 @@ import { TowerMark } from "@/components/TowerMark";
  *
  * Console v4.0 visual adoption: each nav entry leads with a decorative line icon
  * (aria-hidden, so labels stay the sole accessible name) and the topbar carries
- * the Console product label, and the dark-mode switch (RT-398) before the user.
+ * the Console product label, the language switch (RT-399) and the dark-mode
+ * switch (RT-398) before the user.
  * Operational chrome with no backing yet (search, notifications, system
  * status) is intentionally NOT rendered — a
  * dead control reads as a fake to an operator (PRODUCT.md P4/P5); each arrives as
@@ -18,6 +19,8 @@ import { TowerMark } from "@/components/TowerMark";
  * announce it explicitly with a gate badge (RF-3 / RF-4).
  */
 import { useActiveContextValue } from "@/context/ActiveContextProvider";
+import { type MessageKey, roleKey, useT } from "@/i18n";
+import { LocaleSwitch } from "@/i18n/LocaleSwitch";
 import { canReadStockDiscrepancies } from "@/stock-discrepancies/stockDiscrepancyLogic";
 import { ThemeToggle } from "@/theme/ThemeToggle";
 import { NavLink } from "react-router";
@@ -25,20 +28,20 @@ import { ScopeHeader } from "./ScopeHeader";
 import "./app-shell.css";
 
 /** Live nav: RF-2 (Tenants/Stores), RF-5 (Operators), RF-6 (Audit). */
-const LIVE_NAV: { label: string; to: string; icon: IconName }[] = [
-  { label: "Tenants", to: "/tenants", icon: "tenants" },
-  { label: "Stores", to: "/stores", icon: "stores" },
-  { label: "Operators", to: "/operators", icon: "operators" },
-  { label: "Audit", to: "/audit", icon: "audit" },
+const LIVE_NAV: { label: MessageKey; to: string; icon: IconName }[] = [
+  { label: "shell.nav.tenants", to: "/tenants", icon: "tenants" },
+  { label: "shell.nav.stores", to: "/stores", icon: "stores" },
+  { label: "shell.nav.operators", to: "/operators", icon: "operators" },
+  { label: "shell.nav.audit", to: "/audit", icon: "audit" },
 ];
 
 /**
  * Families not yet built — shown gated to mark scope, not to claim built. Dev
  * builds only (RT-270): in production they would be dead destinations.
  */
-const GATED_NAV: { label: string; gate: string; icon: IconName }[] = [
-  { label: "Catalog", gate: "RF-3", icon: "catalog" },
-  { label: "Unknown items", gate: "RF-4", icon: "unknown" },
+const GATED_NAV: { label: MessageKey; gate: string; icon: IconName }[] = [
+  { label: "shell.nav.catalog", gate: "RF-3", icon: "catalog" },
+  { label: "shell.nav.unknownItems", gate: "RF-4", icon: "unknown" },
 ];
 
 export interface AppShellProps {
@@ -53,8 +56,10 @@ export function AppShell({
   children,
   showGatedNav = import.meta.env.DEV,
 }: AppShellProps): React.JSX.Element {
+  const t = useT();
   const { context } = useActiveContextValue();
   const user = context?.user;
+  const roleCode = context?.active_role_code;
   const initials = (user?.display_name ?? user?.email ?? "?")
     .split(/[\s@.]+/)
     .slice(0, 2)
@@ -67,10 +72,11 @@ export function AppShell({
         <span className="tower-lockup">
           <TowerMark className="tower-mark" />
           <span className="tower-lockup__word">Retail Tower OS</span>
-          <span className="tower-lockup__tag">Console</span>
+          <span className="tower-lockup__tag">{t("app.productTag")}</span>
         </span>
 
         <div className="topbar__spacer" />
+        <LocaleSwitch userId={user?.id} />
         <ThemeToggle userId={user?.id} />
         {user ? (
           <span className="topbar__user">
@@ -82,7 +88,7 @@ export function AppShell({
             </span>
             <span className="topbar__name">
               {user.display_name ?? user.email}
-              <small>{context?.active_role_code ?? ""}</small>
+              <small>{roleCode ? t(roleKey(roleCode)) : ""}</small>
             </span>
           </span>
         ) : null}
@@ -90,7 +96,7 @@ export function AppShell({
 
       <ScopeHeader />
 
-      <nav className="sidebar" aria-label="Primary">
+      <nav className="sidebar" aria-label={t("shell.nav.label")}>
         <NavLink
           to="/"
           end
@@ -99,9 +105,9 @@ export function AppShell({
           }
         >
           <Icon name="overview" className="nav-entry__icon" />
-          <span className="nav-entry__label">Overview</span>
+          <span className="nav-entry__label">{t("shell.nav.overview")}</span>
         </NavLink>
-        <div className="nav-section">Management</div>
+        <div className="nav-section">{t("shell.nav.section.management")}</div>
         {LIVE_NAV.map((item) => (
           <NavLink
             key={item.to}
@@ -111,13 +117,13 @@ export function AppShell({
             }
           >
             <Icon name={item.icon} className="nav-entry__icon" />
-            <span className="nav-entry__label">{item.label}</span>
+            <span className="nav-entry__label">{t(item.label)}</span>
           </NavLink>
         ))}
         {canReadStockDiscrepancies(context?.active_role_code) ? (
           <>
             {/* RT-178: shown only for the roles the API lets read this surface. */}
-            <div className="nav-section">Inventory</div>
+            <div className="nav-section">{t("shell.nav.section.inventory")}</div>
             <NavLink
               to="/stock-discrepancies"
               className={({ isActive }) =>
@@ -125,7 +131,7 @@ export function AppShell({
               }
             >
               <Icon name="stock" className="nav-entry__icon" />
-              <span className="nav-entry__label">Stock discrepancies</span>
+              <span className="nav-entry__label">{t("shell.nav.stockDiscrepancies")}</span>
             </NavLink>
           </>
         ) : null}
@@ -133,7 +139,7 @@ export function AppShell({
           ? GATED_NAV.map((item) => (
               <span key={item.gate} className="nav-entry nav-entry--disabled" aria-disabled="true">
                 <Icon name={item.icon} className="nav-entry__icon" />
-                <span className="nav-entry__label">{item.label}</span>
+                <span className="nav-entry__label">{t(item.label)}</span>
                 <span className="nav-gate">{item.gate}</span>
               </span>
             ))
@@ -141,7 +147,7 @@ export function AppShell({
         <div className="topbar__spacer" />
         <button type="button" className="nav-entry nav-signout" onClick={() => void onSignOut()}>
           <Icon name="sign-out" className="nav-entry__icon" />
-          <span className="nav-entry__label">Sign out</span>
+          <span className="nav-entry__label">{t("shell.signOut")}</span>
         </button>
       </nav>
 

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 /**
  * RT-270 (UX-09: no dead destinations) against the BUILT SPA (production
@@ -13,7 +13,7 @@ const ctx = {
   memberships: [{ tenant_id: "t1", tenant_name: "Northstar Retail", role_code: "owner" }],
 };
 
-test("production sidebar shows no RF-* placeholder entries", async ({ page }) => {
+test("production sidebar shows no RF-* placeholder entries", async ({ page, t }) => {
   await page.route("**/api/v1/**", (r) =>
     r.fulfill({ status: 200, contentType: "application/json", body: "{}" }),
   );
@@ -22,16 +22,16 @@ test("production sidebar shows no RF-* placeholder entries", async ({ page }) =>
   );
 
   await page.goto("/");
-  const nav = page.getByRole("navigation", { name: "Primary" });
-  await expect(nav.getByRole("link", { name: "Audit" })).toBeVisible();
+  const nav = page.getByRole("navigation", { name: t("shell.nav.label") });
+  await expect(nav.getByRole("link", { name: t("shell.nav.audit") })).toBeVisible();
   await expect(nav.locator(".nav-entry__label")).toHaveText([
-    "Overview",
-    "Tenants",
-    "Stores",
-    "Operators",
-    "Audit",
-    "Stock discrepancies",
-    "Sign out",
+    t("shell.nav.overview"),
+    t("shell.nav.tenants"),
+    t("shell.nav.stores"),
+    t("shell.nav.operators"),
+    t("shell.nav.audit"),
+    t("shell.nav.stockDiscrepancies"),
+    t("shell.signOut"),
   ]);
   await expect(nav.locator("[aria-disabled='true']")).toHaveCount(0);
   await expect(nav.getByText(/^RF-/)).toHaveCount(0);

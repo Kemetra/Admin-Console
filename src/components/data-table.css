@@ -21,7 +21,7 @@
   border: 0;
 }
 .data-table thead th {
-  text-align: left;
+  text-align: start;
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--color-border);
   color: var(--color-text-muted);

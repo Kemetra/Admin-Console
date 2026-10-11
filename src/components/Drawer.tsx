@@ -1,6 +1,7 @@
 /**
  * Side-panel drawer (RF-5 SF5-2/SF5-3). A new shared primitive: invite + edit
- * mount over the member list as a right-side panel (`--shadow-overlay`, DESIGN.md
+ * mount over the member list as a side panel at the inline end (right in English,
+ * left in Arabic, RT-399) (`--shadow-overlay`, DESIGN.md
  * rule 8). Not a modal-as-first-thought — it is the intent-driven editing
  * surface for a row/action, with the list still visible behind it.
  *
@@ -8,6 +9,7 @@
  * Tab/Shift+Tab are trapped within the panel so `aria-modal` is honest. No
  * nested cards (rule 5); internal grouping uses ruled sections.
  */
+import { useT } from "@/i18n";
 import { useEffect, useRef } from "react";
 import "./drawer.css";
 
@@ -21,6 +23,7 @@ const FOCUSABLE =
   'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
 export function Drawer({ title, onClose, children }: DrawerProps): React.JSX.Element {
+  const t = useT();
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -75,7 +78,12 @@ export function Drawer({ title, onClose, children }: DrawerProps): React.JSX.Ele
       >
         <header className="drawer__head">
           <h2 className="drawer__title">{title}</h2>
-          <button type="button" className="btn-ghost" onClick={onClose} aria-label="Close">
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={onClose}
+            aria-label={t("common.close")}
+          >
             ✕
           </button>
         </header>
