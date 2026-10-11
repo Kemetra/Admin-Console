@@ -4,8 +4,7 @@
   display: grid;
   place-items: center;
   padding: var(--space-8) var(--space-6);
-  background: radial-gradient(120% 70% at 50% -10%, rgba(31, 78, 122, 0.12), transparent 55%),
-    var(--color-bg);
+  background: var(--color-background);
 }
 .gate {
   width: 100%;
@@ -53,7 +52,7 @@
   cursor: pointer;
   padding: var(--space-3) var(--space-4);
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-control-border);
   border-radius: var(--radius-control);
   color: var(--color-text);
   transition: border-color var(--duration-2) var(--ease-out), background-color var(--duration-2)
@@ -61,7 +60,7 @@
 }
 .pick:hover {
   border-color: var(--color-primary);
-  background: var(--color-surface-raised);
+  background: var(--color-surface-sunken);
 }
 /* Inset ring: .pick-list scrolls (overflow:auto, 2px padding) and would clip
  * the global outside ring (RT-267). */
@@ -71,11 +70,11 @@
 .pick__avatar {
   width: 32px;
   height: 32px;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-control);
   flex-shrink: 0;
   display: grid;
   place-items: center;
-  background: var(--color-surface-raised);
+  background: var(--color-surface-sunken);
   color: var(--color-text-muted);
   font: 700 var(--text-label) / 1 var(--font-sans);
 }

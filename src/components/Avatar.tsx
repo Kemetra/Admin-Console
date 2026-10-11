@@ -4,7 +4,7 @@
  * so it never competes with the adjacent name/email text for the accessible name
  * (member-list rows are located by name text in the test contract).
  *
- * Mirrors the prototype: navy-subtle ground, accent initials, circular.
+ * Teal-wash ground, teal initials, circular (RT-396).
  */
 
 export interface AvatarProps {

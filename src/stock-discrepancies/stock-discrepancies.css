@@ -7,7 +7,7 @@
   padding: var(--space-5);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-card);
+  border-radius: var(--radius-object);
 }
 .snapshot-panel__head {
   display: flex;
@@ -40,15 +40,15 @@
 }
 .snapshot-panel__overdue {
   margin: var(--space-2) 0 0;
-  color: var(--color-warning-on-dark);
+  color: var(--color-warning);
 }
 
 .desk-guidance {
   max-width: 75ch;
   padding: var(--space-4) var(--space-5);
-  background: var(--color-surface-raised);
+  background: var(--color-surface-sunken);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-control);
   color: var(--color-text-muted);
   font-size: var(--text-label);
   line-height: 1.6;
@@ -95,7 +95,7 @@
   color: var(--color-text);
   font-weight: 600;
   text-decoration: underline;
-  text-decoration-color: var(--color-border-strong);
+  text-decoration-color: var(--color-control-border);
   text-underline-offset: 3px;
 }
 .stock-table a:hover,

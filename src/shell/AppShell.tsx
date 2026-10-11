@@ -1,7 +1,7 @@
 import { Icon, type IconName } from "@/components/Icon";
 import { TowerMark } from "@/components/TowerMark";
 /**
- * SF-2 authenticated app shell (T027; RF-2 T009/T010). top-bar + persistent gold
+ * SF-2 authenticated app shell (T027; RF-2 T009/T010). top-bar + persistent
  * scope header + sidebar + content (DESIGN.md layout). The frame every RF-2..RF-7
  * family attaches to. The content area renders `children` — the routed surface
  * (an <Outlet/> from the layout route). Sidebar entries beyond what is built are

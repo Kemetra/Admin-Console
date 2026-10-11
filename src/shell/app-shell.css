@@ -1,7 +1,7 @@
 /* SF-2 app shell layout (DESIGN.md App Shell; Console v4.0 visual adoption).
- * The frame: 56px topbar / 40px gold scope bar / sidebar + content. Gold appears
- * in exactly two places — the scope bar and the active-nav marker — and nowhere
- * else, so authority stays legible (PRODUCT.md scope-before-action). */
+ * The frame: 56px topbar / 40px recessed scope bar / sidebar + content. Tower
+ * Teal marks intent only: the active nav entry (wash + Signal Line), actions and
+ * focus (RT-396). */
 .shell {
   min-height: 100dvh;
   display: grid;
@@ -11,7 +11,7 @@
     "topbar topbar"
     "scope scope"
     "sidebar content";
-  background: var(--color-bg);
+  background: var(--color-background);
 }
 
 /* ---- Topbar ------------------------------------------------------------- */
@@ -35,13 +35,13 @@
   flex-shrink: 0;
 }
 .tower-mark {
-  color: var(--color-gold);
+  color: var(--color-primary);
 }
 .tower-lockup__word {
   font: 700 var(--text-title) / 1 var(--font-sans);
   letter-spacing: -0.01em;
 }
-/* "Console" is a product label, not a control — a quiet pill, never gold. */
+/* "Console" is a product label, not a control — a quiet pill, never teal. */
 .tower-lockup__tag {
   font: 600 var(--text-caption) / 1 var(--font-sans);
   letter-spacing: 0.06em;
@@ -72,7 +72,7 @@
   display: grid;
   place-items: center;
   font: 700 var(--text-caption) / 1 var(--font-sans);
-  color: #fff;
+  color: var(--color-on-primary);
 }
 /* Presence dot — a truthful signal about the viewing operator (they are here,
  * now), not a claim about external systems. Decorative to AT (the name carries
@@ -101,7 +101,7 @@
 /* ---- Sidebar ------------------------------------------------------------ */
 .sidebar {
   grid-area: sidebar;
-  background: var(--color-surface-sunken);
+  background: var(--color-surface);
   border-right: 1px solid var(--color-border);
   padding: var(--space-4) var(--space-3);
   display: flex;
@@ -124,7 +124,7 @@
   width: 100%;
   height: 40px;
   padding: 0 var(--space-3);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-control);
   color: var(--color-text-muted);
   font-size: var(--text-body);
   text-align: left;
@@ -136,7 +136,7 @@
 }
 .nav-entry__icon {
   flex-shrink: 0;
-  color: var(--color-text-disabled);
+  color: var(--color-text-muted);
   transition: color var(--duration-2) var(--ease-out);
 }
 .nav-entry__label {
@@ -149,7 +149,7 @@
   text-decoration: none;
 }
 .nav-entry--link:hover {
-  background: var(--color-surface-raised);
+  background: var(--color-surface-sunken);
   color: var(--color-text);
 }
 .nav-entry--link:hover .nav-entry__icon {
@@ -159,14 +159,14 @@
   outline-offset: -2px; /* inset: entries fill the sidebar width */
 }
 .nav-entry--active {
-  background: var(--color-primary-subtle);
-  color: var(--color-text);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-emphasis);
   text-decoration: none;
 }
 .nav-entry--active .nav-entry__icon {
-  color: var(--color-gold);
+  color: var(--color-primary-emphasis);
 }
-/* The active marker — one of only two gold surfaces in the shell. */
+/* The active marker: the Signal Line, in Tower Teal. */
 .nav-entry--active::before {
   content: "";
   position: absolute;
@@ -177,7 +177,7 @@
   height: 20px;
   border-start-end-radius: 2px;
   border-end-end-radius: 2px;
-  background: var(--color-gold);
+  background: var(--color-primary);
 }
 .nav-entry--disabled {
   opacity: 0.45;
@@ -186,13 +186,13 @@
 .nav-gate {
   margin-left: auto;
   font: 600 10px / 1 var(--font-mono);
-  color: var(--color-text-disabled);
+  color: var(--color-text-muted);
   border: 1px solid var(--color-border);
   padding: 2px 5px;
   border-radius: var(--radius-sm);
 }
 .nav-signout:hover {
-  background: var(--color-surface-raised);
+  background: var(--color-surface-sunken);
   color: var(--color-text);
 }
 .nav-signout:hover .nav-entry__icon {

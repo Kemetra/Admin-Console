@@ -4,7 +4,7 @@
  * (`shift.*`, `operator.session.takeover`) render IDENTICALLY to others — no
  * POS-special styling at this slice (R6-6). The row-inspect trigger is a real
  * `<button>` in the first cell (keyboard-activable, a11y), not an onClick on
- * `<tr>` (design-brief §5). No gold anywhere; severity (if shown) is a contained
+ * `<tr>` (design-brief §5). No brand color anywhere; severity (if shown) is a contained
  * status badge, never a side-stripe.
  */
 import type { AuditRow } from "./useAuditSearch";

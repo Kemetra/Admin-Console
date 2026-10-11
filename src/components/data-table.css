@@ -1,5 +1,5 @@
 /* Shared list-table (T006). DESIGN.md tables-over-cards (rule 7): dense,
- * quiet rows, keyboard-first, AA contrast on the dark command-room surface. */
+ * quiet rows, keyboard-first, AA contrast on the light work surface. */
 
 .data-table {
   width: 100%;
@@ -38,12 +38,12 @@
   color: var(--color-text);
 }
 .data-table__row:hover {
-  background-color: var(--color-surface-raised);
+  background-color: var(--color-surface-sunken);
 }
 /* Row focus: the global outline, inset so the table edge doesn't clip it. */
 .data-table__row:focus-visible {
   outline-offset: -2px;
-  background-color: var(--color-surface-raised);
+  background-color: var(--color-surface-sunken);
 }
 .data-table__cell--mono {
   font-family: var(--font-mono);

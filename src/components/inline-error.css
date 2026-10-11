@@ -2,7 +2,7 @@
 .rtc-inline-error {
   display: block;
   margin-top: var(--space-1);
-  color: var(--color-danger-on-dark);
+  color: var(--color-danger);
   font-size: var(--text-caption);
   font-weight: 500;
 }

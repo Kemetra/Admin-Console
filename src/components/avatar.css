@@ -1,12 +1,12 @@
-/* Initials avatar (Console v4.0). Navy-subtle disc, accent initials. The disc
+/* Initials avatar (Console v4.0). Teal-wash disc, teal initials. The disc
  * dimensions/font-size are set inline (dynamic per use); the look lives here. */
 .avatar {
   display: grid;
   place-items: center;
   flex-shrink: 0;
   border-radius: var(--radius-pill);
-  background: var(--color-primary-subtle);
-  color: var(--color-accent);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-emphasis);
   font-weight: 700;
   line-height: 1;
   font-family: var(--font-sans);

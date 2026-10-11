@@ -10,7 +10,7 @@
 .noaccess__icon {
   width: 40px;
   height: 40px;
-  color: var(--color-text-disabled);
+  color: var(--color-text-muted);
 }
 .noaccess__title {
   margin: 0;

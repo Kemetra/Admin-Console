@@ -1,4 +1,4 @@
-/* Gold scope header (DESIGN.md Scope Header Bar). */
+/* Scope header bar (DESIGN.md §6): a recessed bar under the top bar. */
 .scope {
   grid-area: scope;
   position: relative;
@@ -7,8 +7,8 @@
   gap: var(--space-2);
   height: var(--shell-scope-h);
   padding: 0 var(--space-5);
-  background-color: var(--color-gold-soft);
-  border-bottom: 1px solid rgba(200, 162, 74, 0.18);
+  background-color: var(--color-surface-sunken);
+  border-bottom: 1px solid var(--color-border);
 }
 .scope__btn {
   display: inline-flex;
@@ -19,14 +19,14 @@
   border: none;
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
-  color: var(--color-gold);
+  color: var(--color-text);
   font: 600 var(--text-label) / 1 var(--font-sans);
 }
 .scope__btn:hover {
-  background: rgba(200, 162, 74, 0.1);
+  background: var(--color-primary-soft);
 }
 .scope__btn:focus-visible {
-  outline-offset: 1px; /* focus color from the global baseline, not gold */
+  outline-offset: 1px; /* focus color from the global baseline */
 }
 /* Hierarchy by weight, not opacity: 0.7 opacity scored 3.99:1 (axe, RT-267). */
 .scope__crumb {
@@ -48,10 +48,10 @@
   left: var(--space-5);
   z-index: 20;
   min-width: 280px;
-  background: var(--color-surface-overlay);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-dialog);
-  box-shadow: var(--shadow-pane);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  box-shadow: var(--shadow-overlay);
   padding: var(--space-3);
 }
 .scope-menu__group {
@@ -65,7 +65,7 @@
   width: 100%;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-control);
   cursor: pointer;
   color: var(--color-text);
   font-size: var(--text-body);
@@ -74,11 +74,11 @@
   text-align: left;
 }
 .scope-menu__item:hover {
-  background: var(--color-surface-raised);
+  background: var(--color-surface-sunken);
 }
 .scope-menu__item--active {
-  background: var(--color-gold-soft);
-  color: var(--color-gold);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-emphasis);
 }
 /* Non-color cue for the active scope (RT-267): a check that survives forced
  * colors and color-vision loss. aria-current carries it for assistive tech. */

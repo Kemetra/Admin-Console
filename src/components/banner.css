@@ -4,7 +4,7 @@
   flex-direction: column;
   gap: var(--space-1);
   padding: var(--space-3) var(--space-5);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-control);
   font-size: var(--text-body);
   border: 1px solid transparent;
 }
@@ -16,7 +16,7 @@
 .rtc-alert__req {
   font-family: var(--font-mono);
   font-size: var(--text-mono);
-  opacity: 0.75;
+  color: var(--color-text-muted);
 }
 
 .rtc-alert__action {
@@ -24,25 +24,25 @@
 }
 
 .rtc-alert--danger {
-  background: var(--color-danger-surface);
-  color: var(--color-danger-on-dark);
-  border-color: rgba(179, 46, 54, 0.3);
+  background: var(--color-surface);
+  color: var(--color-danger);
+  border-color: currentColor;
 }
 
 .rtc-alert--warning {
-  background: var(--color-warning-surface);
-  color: var(--color-warning-on-dark);
-  border-color: rgba(184, 118, 0, 0.3);
+  background: var(--color-surface);
+  color: var(--color-warning);
+  border-color: currentColor;
 }
 
 .rtc-alert--success {
-  background: var(--color-success-surface);
-  color: var(--color-success-on-dark);
-  border-color: rgba(31, 138, 91, 0.3);
+  background: var(--color-surface);
+  color: var(--color-success);
+  border-color: currentColor;
 }
 
 .rtc-alert--info {
-  background: var(--color-info-surface);
-  color: var(--color-info-on-dark);
-  border-color: rgba(30, 111, 140, 0.3);
+  background: var(--color-surface);
+  color: var(--color-info);
+  border-color: currentColor;
 }

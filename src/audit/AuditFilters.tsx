@@ -2,7 +2,7 @@
  * SF-6-1 filter bar (T019). Uncontrolled native inputs (no form library, R6-5):
  * action prefix, actor id, store id (shown only when a store dimension is in
  * scope — scope-driven, never role-driven, FR-006-004), from/to date-time. One
- * navy Apply; a quiet Clear. Serializes to the contract's query params.
+ * primary Apply; a quiet Clear. Serializes to the contract's query params.
  */
 import { Icon } from "@/components/Icon";
 import { useRef } from "react";

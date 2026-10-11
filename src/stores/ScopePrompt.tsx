@@ -3,7 +3,7 @@
  * active tenant (pre-gate) or on a residual scope-`401`. It is a scope
  * precondition, NOT a session-expiry: it must never trigger RF-1's sign-out.
  * The operator resolves scope by switching tenant via the RF-1 scope header
- * (the gold bar above this content), so this prompt points there rather than
+ * (the scope bar above this content), so this prompt points there rather than
  * duplicating the chooser.
  */
 import "../shell/surface.css";
