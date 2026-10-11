@@ -1,0 +1,754 @@
+/* Retail Tower — component class vocabulary (RT-392).
+ *
+ * The CSS half of the design system: every class here is part of the shipped
+ * vocabulary that generated designs may use, alongside the tokens in
+ * colors_and_type.css (load that first). Logical properties only: designs are
+ * authored lang="ar" dir="rtl" and must also hold in LTR. Preview-card chrome
+ * (padding, .ds-* helpers, .stage) lives in preview/_card.css, never here. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--color-background);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  caret-color: var(--color-primary);
+  accent-color: var(--color-primary); /* native checkbox/radio: never the browser default */
+  scrollbar-color: var(--color-text-muted) var(--color-surface-sunken);
+}
+
+body {
+  margin: 0;
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--color-primary-soft);
+  color: var(--color-text);
+}
+
+:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+/* ── Machine data and numbers (UX-03, UX-11, UX-12) ──────────────────── */
+.num {
+  font-variant-numeric: tabular-nums lining-nums;
+  unicode-bidi: isolate;
+  direction: ltr;
+  white-space: nowrap;
+}
+.machine {
+  font-family: var(--font-mono);
+  font-size: var(--text-machine);
+  unicode-bidi: isolate;
+  direction: ltr;
+  white-space: nowrap;
+}
+kbd {
+  font-family: var(--font-mono);
+  font-size: var(--text-kbd);
+  padding-inline: var(--space-1);
+  border: 1px solid var(--color-control-border);
+  border-radius: 4px;
+  background: var(--color-surface);
+}
+
+/* ── Buttons (UX-05) ─────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-block-size: var(--control-height);
+  padding-inline: var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  font: var(--weight-strong) var(--text-control) / var(--leading-tight) var(--font-sans);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-contact) var(--ease-standard),
+    transform var(--duration-contact) var(--ease-standard);
+}
+.btn--primary {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+.btn--primary:hover,
+.btn--primary.is-hover {
+  background: var(--color-primary-emphasis);
+}
+.btn--secondary {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-color: var(--color-control-border);
+}
+.btn--secondary:hover,
+.btn--secondary.is-hover {
+  background: var(--color-surface-sunken);
+}
+.btn--quiet {
+  background: transparent;
+  color: var(--color-primary-emphasis);
+}
+.btn--quiet:hover,
+.btn--quiet.is-hover {
+  background: var(--color-primary-soft);
+}
+.btn--danger {
+  background: var(--color-surface);
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+.btn--danger:hover,
+.btn--danger.is-hover {
+  background: var(--color-surface-sunken);
+}
+.btn--danger-commit {
+  background: var(--color-danger);
+  color: var(--color-on-primary);
+}
+.btn:active,
+.btn.is-pressed {
+  transform: translateY(1px);
+}
+.btn--primary.is-pressed {
+  background: var(--color-primary-emphasis);
+}
+.btn.is-focus {
+  outline: var(--focus-width) solid var(--color-focus-ring);
+  outline-offset: var(--focus-offset);
+}
+.btn:disabled,
+.btn.is-disabled,
+.btn[aria-disabled="true"] {
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+  border-color: var(--color-border);
+  border-style: dashed;
+  cursor: not-allowed;
+  transform: none;
+}
+.btn[aria-busy="true"] {
+  cursor: progress;
+}
+.spinner {
+  inline-size: 14px;
+  block-size: 14px;
+  border: 2px solid currentColor;
+  border-block-start-color: transparent;
+  border-radius: 50%;
+  animation: spin 800ms linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+    border-block-start-color: currentColor;
+    border-inline-end-color: transparent;
+  }
+}
+
+/* ── Fields (UX-08) ──────────────────────────────────────────────────── */
+.field {
+  display: grid;
+  align-content: start; /* a taller neighbour (error text) must not stretch the input */
+  gap: var(--space-1);
+  max-inline-size: 360px;
+}
+.field__label {
+  font-size: var(--text-control);
+  font-weight: var(--weight-strong);
+}
+.field__req {
+  color: var(--color-text-muted);
+  font-weight: var(--weight-regular);
+}
+.field__hint,
+.field__error {
+  font-size: var(--text-meta);
+  line-height: var(--leading-title);
+}
+.field__hint {
+  color: var(--color-text-muted);
+}
+.field__error {
+  color: var(--color-danger);
+  font-weight: var(--weight-strong);
+}
+.input {
+  min-block-size: var(--control-height);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: var(--weight-regular) var(--text-body) / var(--leading-title) var(--font-sans);
+}
+.input.is-focus {
+  outline: var(--focus-width) solid var(--color-focus-ring);
+  outline-offset: var(--focus-offset);
+}
+.input[aria-invalid="true"] {
+  border-color: var(--color-danger);
+  border-width: 2px;
+}
+/* Read-only stays an active, copyable control: it keeps the >= 3:1 boundary. */
+.input[readonly] {
+  background: var(--color-surface-sunken);
+}
+.input:disabled {
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+  border-style: dashed;
+}
+.select:disabled {
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+  border-style: dashed;
+}
+
+/* ── Status badge + Pulse Dot (UX-02, UX-07) ─────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-block: 2px;
+  padding-inline: var(--space-2) var(--space-3);
+  border: 1px solid currentColor;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  font-size: var(--text-meta);
+  font-weight: var(--weight-strong);
+  line-height: var(--leading-title);
+  white-space: nowrap;
+}
+.dot {
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+.dot--hollow {
+  background: transparent;
+  border: 2px solid currentColor;
+}
+.dot--live {
+  /* Activity pulse, not a state transition: deliberately outside the motion roles,
+   * slow enough to never flash, and only while real activity runs. */
+  animation: live 900ms var(--ease-standard) infinite alternate;
+}
+@keyframes live {
+  to {
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dot--live {
+    animation: none;
+  }
+}
+.is-neutral {
+  color: var(--color-text-muted);
+}
+.is-success {
+  color: var(--color-success);
+}
+.is-warning {
+  color: var(--color-warning);
+}
+.is-danger {
+  color: var(--color-danger);
+}
+.is-info {
+  color: var(--color-info);
+}
+.is-intent {
+  color: var(--color-primary-emphasis);
+}
+
+/* ── State surfaces (UX-07 ladder) ───────────────────────────────────── */
+.notice {
+  display: grid;
+  gap: var(--space-1);
+  padding-block: var(--space-3);
+  padding-inline: var(--space-4);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+  font-size: var(--text-control);
+}
+.banner {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-1) var(--space-4);
+  align-items: center;
+  padding-block: var(--space-3);
+  padding-inline: var(--space-4);
+  border: 1px solid currentColor;
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+}
+.banner__title {
+  font-weight: var(--weight-strong);
+}
+.banner__body {
+  grid-column: 1;
+  color: var(--color-text);
+}
+.banner__evidence {
+  grid-column: 1;
+  color: var(--color-text-muted);
+  font-size: var(--text-meta);
+}
+.banner__action {
+  grid-column: 2;
+  grid-row: 1 / span 3;
+}
+.blocking {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+  padding: var(--space-6);
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-object);
+  background: var(--color-surface);
+  max-inline-size: 520px;
+}
+.blocking h3 {
+  font-size: var(--text-section-title);
+  color: var(--color-danger);
+}
+
+/* ── Table work surface (UX-10) ──────────────────────────────────────── */
+.table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  background: var(--color-surface);
+  font-size: var(--text-body);
+}
+.table th,
+.table td {
+  block-size: var(--row-operational);
+  padding-inline: var(--space-3);
+  text-align: start;
+  border-block-end: 1px solid var(--color-border);
+}
+.table thead th {
+  position: sticky;
+  inset-block-start: 0;
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+  font-size: var(--text-meta);
+  font-weight: var(--weight-strong);
+}
+.table td.col-num,
+.table th.col-num {
+  text-align: end;
+}
+.table tbody tr.is-selected {
+  background: var(--color-primary-soft);
+}
+.table tbody tr.is-selected td:first-child {
+  position: relative;
+}
+/* Signal Line on the selected row: a real element, not a box-shadow, so it
+ * survives forced-colors and flips with direction. */
+.table tbody tr.is-selected td:first-child::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  inline-size: var(--signal-line-w);
+  background: var(--color-primary);
+}
+.table__continuation td {
+  background: var(--color-surface);
+  block-size: auto;
+  padding-block: var(--space-3);
+}
+.table-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  padding-block: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--text-meta);
+}
+.skeleton {
+  display: block;
+  block-size: 10px;
+  border-radius: 4px;
+  background: var(--color-surface-sunken);
+}
+
+/* ── Signal Line (UX-02): current context, inline-start ──────────────── */
+.signal {
+  position: relative;
+}
+.signal::before {
+  content: "";
+  position: absolute;
+  inset-block: var(--space-1);
+  inset-inline-start: 0;
+  inline-size: var(--signal-line-w);
+  border-radius: var(--radius-pill);
+  background: var(--color-primary);
+}
+
+/* ── Precision Ledger (UX-02) ────────────────────────────────────────── */
+.ledger {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  max-inline-size: 360px;
+  row-gap: var(--space-2);
+}
+.ledger dt {
+  color: var(--color-text-muted);
+}
+.ledger dd {
+  margin: 0;
+  text-align: end;
+}
+.ledger__total {
+  border-block-start: 1px solid var(--color-text);
+  padding-block-start: var(--space-2);
+  font-weight: var(--weight-strong);
+}
+.ledger dd.ledger__total {
+  font-size: var(--text-money-total);
+  color: var(--color-text);
+}
+
+/* ── Overlays (UX-04 surface grammar) ────────────────────────────────── */
+.scrim {
+  position: fixed;
+  inset: 0;
+  background: var(--color-scrim);
+}
+.drawer {
+  position: fixed;
+  inset-block: 0;
+  inset-inline-end: 0;
+  inline-size: min(380px, 70%);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-overlay);
+  border-start-start-radius: var(--radius-overlay);
+  border-end-start-radius: var(--radius-overlay);
+}
+.drawer__head,
+.drawer__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+.drawer__head {
+  border-block-end: 1px solid var(--color-border);
+}
+.drawer__foot {
+  border-block-start: 1px solid var(--color-border);
+  justify-content: flex-start;
+}
+.drawer__body {
+  padding: var(--space-4);
+  overflow: auto;
+}
+.dialog {
+  position: fixed;
+  inset-block-start: 50%;
+  inset-inline: 0;
+  margin-inline: auto;
+  translate: 0 -50%;
+  inline-size: min(440px, 88%);
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  background: var(--color-surface);
+  border-radius: var(--radius-overlay);
+  box-shadow: var(--shadow-overlay);
+}
+.dialog h2,
+.dialog h3 {
+  font-size: var(--text-section-title);
+  line-height: var(--leading-title);
+}
+.dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* ── Shell (UX-09) ───────────────────────────────────────────────────── */
+.shell {
+  display: grid;
+  grid-template-columns: var(--shell-sidebar-w) 1fr;
+  grid-template-rows: var(--shell-topbar-h) var(--shell-scope-h) 1fr;
+  grid-template-areas:
+    "top top"
+    "scope scope"
+    "nav main";
+  min-block-size: 100dvh;
+  background: var(--color-background);
+}
+.shell__top {
+  grid-area: top;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-inline: var(--space-5);
+  background: var(--color-surface);
+  border-block-end: 1px solid var(--color-border);
+}
+.shell__product {
+  font-weight: var(--weight-strong);
+  font-size: var(--text-section-title);
+}
+.shell__product small {
+  display: block;
+  font-size: var(--text-meta);
+  font-weight: var(--weight-regular);
+  color: var(--color-text-muted);
+}
+.shell__scope {
+  grid-area: scope;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding-inline: var(--space-5);
+  background: var(--color-surface-sunken);
+  border-block-end: 1px solid var(--color-border);
+  font-size: var(--text-control);
+}
+.scope-item b {
+  font-weight: var(--weight-strong);
+}
+.scope-item span {
+  color: var(--color-text-muted);
+}
+.shell__nav {
+  grid-area: nav;
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  padding: var(--space-3);
+  background: var(--color-surface);
+  border-inline-end: 1px solid var(--color-border);
+}
+.nav-item {
+  display: block;
+  padding-block: var(--space-2);
+  padding-inline: var(--space-4);
+  border-radius: var(--radius-control);
+  color: var(--color-text);
+  text-decoration: none;
+  font-size: var(--text-body);
+}
+.nav-item:hover {
+  background: var(--color-surface-sunken);
+}
+/* Current location: teal ink + wash, plus the .signal class for the Signal Line. No bold on top (UX-03
+ * "enough selection signals"), which also keeps the label from reflowing. */
+.nav-item[aria-current="page"] {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-emphasis);
+}
+.nav-group {
+  padding-block: var(--space-3) var(--space-1);
+  padding-inline: var(--space-4);
+  font-size: var(--text-meta);
+  color: var(--color-text-muted);
+}
+.shell__main {
+  grid-area: main;
+  display: grid;
+  align-content: start;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  overflow: auto;
+}
+.shell__main h2 {
+  font-size: var(--text-screen-title);
+  line-height: var(--leading-title);
+}
+.menu {
+  display: grid;
+  margin: 0;
+  min-inline-size: 240px;
+  padding: var(--space-1);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  box-shadow: var(--shadow-overlay);
+}
+.menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  padding-block: var(--space-2);
+  padding-inline: var(--space-3);
+  border-radius: 6px;
+}
+.menu__item:has(input:checked) {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-emphasis);
+  font-weight: var(--weight-strong);
+}
+
+/* ── Form pattern (UX-08): reading constrains, one commit bar ────────── */
+.form {
+  display: grid;
+  gap: var(--space-6);
+  max-inline-size: 640px;
+}
+.form__section {
+  display: grid;
+  gap: var(--space-4);
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+.form__section > legend,
+.form__section > h2 {
+  padding: 0;
+  margin-block-end: var(--space-1);
+  font-size: var(--text-section-title);
+  font-weight: var(--weight-strong);
+  line-height: var(--leading-title);
+}
+.form__row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+.form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding-block: var(--space-4);
+  border-block-start: 1px solid var(--color-border);
+  background: var(--color-background);
+}
+.form__dirty {
+  margin-inline-start: auto;
+  color: var(--color-text-muted);
+  font-size: var(--text-meta);
+}
+/* Native select keeps its platform arrow (no gradient-drawn chevrons: UX-02
+ * bans gradients on forms). */
+.select {
+  min-block-size: var(--control-height);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: var(--weight-regular) var(--text-body) / var(--leading-title) var(--font-sans);
+}
+.error-summary {
+  display: grid;
+  gap: var(--space-2);
+  padding-block: var(--space-4);
+  padding-inline: var(--space-5);
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+}
+.error-summary h2 {
+  font-size: var(--text-section-title);
+  color: var(--color-danger);
+}
+.error-summary ul {
+  margin: 0;
+  padding-inline-start: var(--space-5);
+  display: grid;
+  gap: var(--space-1);
+}
+.error-summary a {
+  color: var(--color-danger);
+  font-weight: var(--weight-strong);
+  text-underline-offset: 3px;
+}
+
+.sr-only {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── Forced colors (UX-11): an operating environment, not a brand theme ── */
+@media (forced-colors: active) {
+  :focus-visible,
+  .btn.is-focus,
+  .input.is-focus {
+    outline-color: Highlight;
+  }
+  .btn {
+    border: 1px solid ButtonText;
+  }
+  /* Keep the action hierarchy when fills are gone: the commit action gets the
+   * heavier edge. */
+  .btn--primary,
+  .btn--danger-commit {
+    border-width: 2px;
+  }
+  .dot:not(.dot--hollow) {
+    background: CanvasText;
+  }
+  .btn:disabled,
+  .btn.is-disabled,
+  .btn[aria-disabled="true"] {
+    border-color: GrayText;
+    color: GrayText;
+  }
+  .badge,
+  .banner,
+  .blocking,
+  .drawer,
+  .dialog,
+  .menu {
+    border: 1px solid CanvasText;
+  }
+  .signal::before,
+  .table tbody tr.is-selected td:first-child::before {
+    background: Highlight;
+  }
+  .nav-item[aria-current="page"],
+  .menu__item:has(input:checked) {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+}

@@ -69,9 +69,10 @@ If this bundle and the Constitution disagree, the Constitution wins. Fix the bun
 ```
 design/claude-design-system/
   README.md
-  colors_and_type.css        tokens: the single source for every card
+  colors_and_type.css        tokens: the single source for every card and design
+  components.css             the shipped class vocabulary (btn, field, badge, banner, table, shell, ...)
   preview/
-    _card.css                shared card styles (@imports ../colors_and_type.css)
+    _card.css                card chrome only (@imports ../colors_and_type.css and ../components.css)
     foundations-*.html       color roles, contrast, type, content/terminology, space/density, shape/surfaces, motion
     components-*.html        buttons, fields, status, state ladder, table, drawer, confirm dialog, signatures
     patterns-*.html          Tenant Console shell, Platform Console frame, edit form, scope transition, no-access
@@ -151,7 +152,8 @@ pairing before using it.
    - every hex value is in the approved table;
    - no near-empty cards;
    - every variant is visibly distinct.
-3. Run `/design-sync`:
+3. Run `/design-sync`. This repo syncs off-script: `node .design-sync/build-bundle.mjs` builds `./ds-bundle`,
+   then `node .ds-sync/package-validate.mjs ./ds-bundle` must exit 0 (see `.design-sync/NOTES.md`). Upload steps:
    1. `list_projects`.
    2. `get_project` must report `PROJECT_TYPE_DESIGN_SYSTEM`.
    3. `finalize_plan` with `localDir` set to this folder. The owner reviews the path

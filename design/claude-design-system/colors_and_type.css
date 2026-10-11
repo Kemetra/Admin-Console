@@ -43,7 +43,7 @@
    * installed font (Windows ships it); embedding is pending the licence check in
    * RT-392, so non-Windows viewers see the fallback. */
   --font-sans: "Dubai", "Segoe UI", Tahoma, system-ui, sans-serif;
-  --font-mono: ui-monospace, "Cascadia Code", "Consolas", monospace;
+  --font-mono: ui-monospace, "Consolas", monospace;
 
   /* Semantic type roles. Sizes are provisional: they equal the current shipped
    * Admin scale until the Inter -> Dubai slice ratifies them. Floor: 12px. */
