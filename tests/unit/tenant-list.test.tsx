@@ -1,5 +1,5 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -11,6 +11,7 @@ vi.mock("@/lib/rf2-queries", async (importOriginal) => {
   return { ...actual, listTenants: (...a: unknown[]) => listTenants(...a) };
 });
 
+import { setLocale } from "@/i18n/locale";
 import { createQueryClient } from "@/lib/query";
 import { TenantList } from "@/tenants/TenantList";
 
@@ -100,5 +101,43 @@ describe("TenantList state matrix", () => {
     fireEvent.click(retry);
     expect(await screen.findByText("Northstar Retail")).toBeDefined();
     expect(listTenants).toHaveBeenCalledTimes(2);
+  });
+
+  test("Arabic: heading, primary and headers render in Arabic; data stays as authored", async () => {
+    setLocale("ar");
+    listTenants.mockResolvedValue({
+      status: 200,
+      data: [{ id: "t1", slug: "northstar", name: "Northstar Retail" }],
+    });
+    renderList();
+    expect(await screen.findByText("Northstar Retail")).toBeDefined();
+    expect(screen.getByRole("heading", { name: "المؤسسات" })).toBeDefined();
+    expect(screen.getByText("كل المؤسسات التي يمكنك إدارتها.")).toBeDefined();
+    expect(screen.getByRole("link", { name: "إضافة مؤسسة" })).toBeDefined();
+    expect(screen.getByRole("columnheader", { name: "الاسم" })).toBeDefined();
+    expect(screen.getByRole("columnheader", { name: "المعرّف المختصر" })).toBeDefined();
+    expect(screen.queryByText("Tenants")).toBeNull();
+    expect(screen.queryByRole("link", { name: /new tenant/i })).toBeNull();
+    expect(screen.queryByRole("columnheader", { name: "Slug" })).toBeNull();
+  });
+
+  test("Arabic: empty state renders in Arabic", async () => {
+    setLocale("ar");
+    listTenants.mockResolvedValue({ status: 200, data: [] });
+    renderList();
+    expect(await screen.findByText("لا توجد مؤسسات بعد.")).toBeDefined();
+    expect(screen.getByRole("link", { name: "إضافة مؤسسة" })).toBeDefined();
+  });
+
+  test("a cached error re-renders in the new locale on a switch (key, not copy, is cached)", async () => {
+    listTenants.mockResolvedValue({ status: 503, error: { error: { request_id: "req-503" } } });
+    renderList();
+    expect(await screen.findByText("Something went wrong. Try again.")).toBeDefined();
+    expect(screen.getByRole("button", { name: "Retry" })).toBeDefined();
+    act(() => setLocale("ar"));
+    expect(await screen.findByText("حدث خطأ ما. حاول مرة أخرى.")).toBeDefined();
+    expect(screen.getByRole("button", { name: "إعادة المحاولة" })).toBeDefined();
+    expect(screen.queryByText("Something went wrong. Try again.")).toBeNull();
+    expect(listTenants).toHaveBeenCalledTimes(1);
   });
 });

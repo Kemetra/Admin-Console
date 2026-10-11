@@ -1,5 +1,6 @@
 import { Banner } from "@/components/Banner";
 import { InlineError } from "@/components/InlineError";
+import { type MessageKey, useT } from "@/i18n";
 import { type Rf2ErrorRender, mapRf2Error } from "@/lib/rf2-queries";
 import { SAVED_NAVIGATION } from "@/shell/dirty-guard";
 /**
@@ -32,10 +33,12 @@ export interface StoreFormProps {
 }
 
 export function StoreForm({ mode, storeId, initial }: StoreFormProps): React.JSX.Element {
+  const t = useT();
   const navigate = useNavigate();
   const { activeTenantId, activeTenantName } = useStoreScope();
   const { create, update } = useStoreMutations(activeTenantId, storeId);
-  const [codeError, setCodeError] = useState<string | undefined>();
+  // The catalog key, never a translated string, so a locale switch re-renders it.
+  const [codeError, setCodeError] = useState<MessageKey | undefined>();
   const [banner, setBanner] = useState<Rf2ErrorRender | undefined>();
   const [scopeLost, setScopeLost] = useState(false);
 
@@ -53,7 +56,7 @@ export function StoreForm({ mode, storeId, initial }: StoreFormProps): React.JSX
       return;
     }
     if (render.kind === "conflict" && render.field === "code") {
-      setCodeError(render.message);
+      setCodeError(render.messageKey);
       return;
     }
     setBanner(render);
@@ -87,8 +90,8 @@ export function StoreForm({ mode, storeId, initial }: StoreFormProps): React.JSX
     if (storeId) navigate(`/stores/${storeId}`, { state: SAVED_NAVIGATION });
   }
 
-  const title = mode === "create" ? "New store" : "Edit store";
-  const submitLabel = mode === "create" ? "Create store" : "Save changes";
+  const title = t(mode === "create" ? "stores.form.createTitle" : "stores.form.editTitle");
+  const submitLabel = t(mode === "create" ? "stores.form.create" : "stores.form.saveChanges");
 
   return (
     <div className="surface">
@@ -101,19 +104,25 @@ export function StoreForm({ mode, storeId, initial }: StoreFormProps): React.JSX
       {banner && (banner.kind === "banner" || banner.kind === "not-found") ? (
         <Banner
           variant="danger"
-          message={banner.message}
+          message={t(banner.messageKey)}
           requestId={banner.kind === "banner" ? banner.requestId : undefined}
         />
       ) : null}
 
       {/* Scope is fixed to the active tenant — shown, not selectable (FR-004-005). */}
       <p className="surface__scope-line">
-        Creating in tenant <strong>{activeTenantName}</strong>.
+        {t.rich("stores.form.scopeLine", {
+          tenant: (
+            <strong>
+              <bdi>{activeTenantName}</bdi>
+            </strong>
+          ),
+        })}
       </p>
 
       <form className="surface__form" onSubmit={onSubmit} noValidate>
         <div className="field">
-          <label htmlFor="store-code">Code</label>
+          <label htmlFor="store-code">{t("stores.field.code")}</label>
           <input
             id="store-code"
             name="code"
@@ -125,12 +134,12 @@ export function StoreForm({ mode, storeId, initial }: StoreFormProps): React.JSX
             autoComplete="off"
           />
           <span id="store-code-error">
-            <InlineError message={codeError} />
+            <InlineError message={codeError ? t(codeError) : undefined} />
           </span>
         </div>
 
         <div className="field">
-          <label htmlFor="store-name">Name</label>
+          <label htmlFor="store-name">{t("stores.field.name")}</label>
           <input
             id="store-name"
             name="name"
@@ -143,7 +152,7 @@ export function StoreForm({ mode, storeId, initial }: StoreFormProps): React.JSX
         {mode === "edit" ? (
           <label className="field-checkbox">
             <input type="checkbox" name="is_active" defaultChecked={initial?.is_active ?? true} />
-            Active
+            {t("stores.form.active")}
           </label>
         ) : null}
 
@@ -158,7 +167,7 @@ export function StoreForm({ mode, storeId, initial }: StoreFormProps): React.JSX
             onClick={() => navigate(mode === "edit" && storeId ? `/stores/${storeId}` : "/stores")}
             disabled={pending}
           >
-            Cancel
+            {t("common.cancel")}
           </button>
         </div>
       </form>

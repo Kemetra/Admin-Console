@@ -1,6 +1,7 @@
 import { Banner } from "@/components/Banner";
 import { DataTable } from "@/components/DataTable";
 import { ListState } from "@/components/ListState";
+import { useT } from "@/i18n";
 /**
  * SF-T1 — Tenant roster (T016). The backend-scoped set rendered as a table
  * (DESIGN.md tables-over-cards); no client-side authorization filter (OQ-2).
@@ -17,30 +18,36 @@ import "../shell/surface.css";
 
 type TenantRow = { id: string; slug: string; name: string };
 
-const COLUMNS = [
-  { key: "name", header: "Name", cell: (t: TenantRow) => t.name },
-  { key: "slug", header: "Slug", cell: (t: TenantRow) => t.slug, mono: true },
-];
-
 export function TenantList(): React.JSX.Element {
+  const t = useT();
   const { result, isLoading, refetch } = useTenantList();
   const navigate = useNavigate();
 
   const rows = result?.kind === "rows" ? result.rows : [];
   const error = result?.kind === "error" ? result.render : undefined;
 
+  const columns = [
+    { key: "name", header: t("tenants.field.name"), cell: (row: TenantRow) => row.name },
+    {
+      key: "slug",
+      header: t("tenants.field.slug"),
+      cell: (row: TenantRow) => <bdi dir="ltr">{row.slug}</bdi>,
+      mono: true,
+    },
+  ];
+
   return (
     <div className="surface">
       <header className="surface__head">
         <div>
-          <h1 className="content__title">Tenants</h1>
-          <p className="content__sub">Every tenant you can administer.</p>
+          <h1 className="content__title">{t("tenants.list.title")}</h1>
+          <p className="content__sub">{t("tenants.list.sub")}</p>
         </div>
         {/* Single-primary rule (DESIGN.md 6): the header primary shows only when
             there is a roster to act on; the empty state carries its own primary. */}
         {!isLoading && !error && rows.length > 0 ? (
           <Link to="/tenants/new" className="btn-primary">
-            New tenant
+            {t("tenants.list.add")}
           </Link>
         ) : null}
       </header>
@@ -48,27 +55,27 @@ export function TenantList(): React.JSX.Element {
       {error && error.kind === "banner" ? (
         <Banner
           variant="danger"
-          message={error.message}
+          message={t(error.messageKey)}
           requestId={error.requestId}
           action={
             error.retryable ? (
               <button type="button" className="btn-ghost" onClick={refetch}>
-                Retry
+                {t("tenants.list.retry")}
               </button>
             ) : undefined
           }
         />
       ) : null}
 
-      {isLoading ? <ListState state="loading" label="tenants" /> : null}
+      {isLoading ? <ListState state="loading" label={t("tenants.list.loadingNoun")} /> : null}
 
       {!isLoading && !error && rows.length === 0 ? (
         <ListState
           state="empty"
-          emptyMessage="No tenants yet."
+          emptyMessage={t("tenants.list.empty")}
           action={
             <Link to="/tenants/new" className="btn-primary">
-              New tenant
+              {t("tenants.list.add")}
             </Link>
           }
         />
@@ -76,11 +83,11 @@ export function TenantList(): React.JSX.Element {
 
       {!isLoading && !error && rows.length > 0 ? (
         <DataTable
-          caption="Tenants"
-          columns={COLUMNS}
+          caption={t("tenants.list.caption")}
+          columns={columns}
           rows={rows}
-          rowKey={(t) => t.id}
-          onRowActivate={(t) => navigate(`/tenants/${t.id}`)}
+          rowKey={(row) => row.id}
+          onRowActivate={(row) => navigate(`/tenants/${row.id}`)}
         />
       ) : null}
     </div>

@@ -16,6 +16,7 @@ vi.mock("@/context/ActiveContextProvider", () => ({
   useActiveContextValue: () => activeContext(),
 }));
 
+import { setLocale } from "@/i18n/locale";
 import { createQueryClient } from "@/lib/query";
 import { StoreList } from "@/stores/StoreList";
 
@@ -96,5 +97,66 @@ describe("StoreList pre-gate + state matrix", () => {
     renderList();
     await waitFor(() => expect(screen.getByRole("alert")).toBeDefined());
     expect(screen.getByText(/req-403/)).toBeDefined();
+  });
+
+  test("state badges come from the catalog and keep their CSS classes", async () => {
+    activeContext.mockReturnValue(withActiveTenant);
+    listStores.mockResolvedValue({
+      status: 200,
+      data: [
+        { id: "s1", code: "CFC", name: "Cairo Festival City", is_active: true },
+        { id: "s2", code: "NCM", name: "New Cairo Mall", is_active: false },
+      ],
+    });
+    renderList();
+    expect(await screen.findByText("Cairo Festival City")).toBeDefined();
+    expect(screen.getByText("active").className).toContain("badge--active");
+    expect(screen.getByText("inactive").className).toContain("badge--suspended");
+    expect(screen.getByText("Northstar Retail")).toBeDefined();
+  });
+
+  test("Arabic: heading, scope sub, headers, badges and primary render in Arabic", async () => {
+    setLocale("ar");
+    activeContext.mockReturnValue(withActiveTenant);
+    listStores.mockResolvedValue({
+      status: 200,
+      data: [
+        { id: "s1", code: "CFC", name: "Cairo Festival City", is_active: true },
+        { id: "s2", code: "NCM", name: "New Cairo Mall", is_active: false },
+      ],
+    });
+    renderList();
+    expect(await screen.findByText("Cairo Festival City")).toBeDefined();
+    expect(screen.getByRole("heading", { name: "المتاجر" })).toBeDefined();
+    // the tenant name stays as authored, isolated inside the Arabic sentence
+    const tenant = screen.getByText("Northstar Retail");
+    expect(tenant.tagName).toBe("BDI");
+    expect(tenant.parentElement?.textContent).toBe("المتاجر في Northstar Retail.");
+    expect(screen.getByRole("columnheader", { name: "الرمز" })).toBeDefined();
+    expect(screen.getByRole("columnheader", { name: "الحالة" })).toBeDefined();
+    expect(screen.getByText("نشط").className).toContain("badge--active");
+    expect(screen.getByText("غير نشط").className).toContain("badge--suspended");
+    expect(screen.getByRole("link", { name: "إضافة متجر" })).toBeDefined();
+    expect(screen.queryByText("Stores")).toBeNull();
+    expect(screen.queryByText("active")).toBeNull();
+    expect(screen.queryByRole("link", { name: /new store/i })).toBeNull();
+  });
+
+  test("Arabic: empty state and scope prompt render in Arabic", async () => {
+    setLocale("ar");
+    activeContext.mockReturnValue(withActiveTenant);
+    listStores.mockResolvedValue({ status: 200, data: [] });
+    renderList();
+    expect(await screen.findByText(/^لا توجد متاجر في .*Northstar Retail.* بعد\.$/)).toBeDefined();
+    expect(screen.getByRole("link", { name: "إضافة متجر" })).toBeDefined();
+  });
+
+  test("Arabic: no active tenant -> Arabic scope prompt", async () => {
+    setLocale("ar");
+    activeContext.mockReturnValue(noActiveTenant);
+    renderList();
+    expect(await screen.findByText(/^اختر مؤسسة قبل إدارة المتاجر\./)).toBeDefined();
+    expect(screen.getByRole("heading", { name: "المتاجر" })).toBeDefined();
+    expect(screen.queryByText(/select a tenant/i)).toBeNull();
   });
 });

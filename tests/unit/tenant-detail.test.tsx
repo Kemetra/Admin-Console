@@ -20,6 +20,7 @@ vi.mock("react-router", async (importOriginal) => {
   return { ...actual, useNavigate: () => navigate, useParams: () => ({ tenantId: "t1" }) };
 });
 
+import { setLocale } from "@/i18n/locale";
 import { createQueryClient } from "@/lib/query";
 import { TenantDetail } from "@/tenants/TenantDetail";
 
@@ -69,7 +70,8 @@ describe("TenantDetail", () => {
     readTenant.mockResolvedValue({ status: 404 });
     renderDetail();
     expect(await screen.findByText(/not available/i)).toBeDefined();
-    expect(screen.getByRole("link", { name: /back to tenants/i })).toBeDefined();
+    // The back arrow is decorative (aria-hidden): the accessible name is the label.
+    expect(screen.getByRole("link", { name: "Back to tenants" })).toBeDefined();
   });
 
   test("soft-delete -> confirm names the resource, then routes back on success", async () => {
@@ -88,5 +90,33 @@ describe("TenantDetail", () => {
     const confirmBtns = screen.getAllByRole("button", { name: /soft-delete/i });
     fireEvent.click(confirmBtns[confirmBtns.length - 1]);
     await waitFor(() => expect(navigate).toHaveBeenCalledWith("/tenants"));
+  });
+
+  test("Arabic: labels, status badge and actions render in Arabic", async () => {
+    setLocale("ar");
+    readTenant.mockResolvedValue({
+      status: 200,
+      data: { id: "t1", slug: "northstar", name: "Northstar Retail", status: "suspended" },
+    });
+    renderDetail();
+    expect(await screen.findByRole("heading", { name: "Northstar Retail" })).toBeDefined();
+    expect(screen.getByText("المعرّف المختصر")).toBeDefined();
+    expect(screen.getByText("الحالة")).toBeDefined();
+    expect(screen.getByText("معرّف المؤسسة")).toBeDefined();
+    // the status code drives the label; the badge keeps its CSS class
+    const badge = screen.getByText("معلّقة");
+    expect(badge.className).toContain("badge--suspended");
+    expect(screen.queryByText("suspended")).toBeNull();
+    expect(screen.getByRole("link", { name: "تعديل" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "حذف" })).toBeDefined();
+    expect(screen.queryByRole("button", { name: /soft-delete/i })).toBeNull();
+  });
+
+  test("Arabic: 404 renders the uniform not-available copy with an Arabic back link", async () => {
+    setLocale("ar");
+    readTenant.mockResolvedValue({ status: 404 });
+    renderDetail();
+    expect(await screen.findByText("هذا العنصر غير متاح.")).toBeDefined();
+    expect(screen.getByRole("link", { name: "العودة إلى المؤسسات" })).toBeDefined();
   });
 });

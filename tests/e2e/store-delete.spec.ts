@@ -1,4 +1,4 @@
-import { type Page, expect, test } from "@playwright/test";
+import { type Page, expect, test } from "./fixtures";
 
 /**
  * RF-2 store soft-delete E2E (VG-2, Scenario S8). Soft-delete behind the inline
@@ -28,7 +28,7 @@ async function mockBase(page: Page): Promise<void> {
   );
 }
 
-test("S8: soft-delete a store behind a confirm, then return to the list", async ({ page }) => {
+test("S8: soft-delete a store behind a confirm, then return to the list", async ({ page, t }) => {
   await mockBase(page);
   await page.route("**/api/v1/stores", (r) =>
     r.fulfill({
@@ -52,13 +52,18 @@ test("S8: soft-delete a store behind a confirm, then return to the list", async 
 
   await page.goto("/stores/s1");
   await expect(page.getByRole("heading", { name: "Cairo Festival City" })).toBeVisible();
-  await page.getByRole("button", { name: /soft-delete/i }).click();
+  const softDelete = t("stores.detail.softDelete");
+  await page.getByRole("button", { name: softDelete, exact: true }).click();
 
   // inline confirm names the store
-  const confirm = page.getByRole("region", { name: /confirm: soft-delete/i });
+  const confirm = page.getByRole("region", {
+    name: t("components.confirmDelete.label", { action: softDelete }),
+  });
   await expect(confirm).toContainText("Cairo Festival City");
-  await confirm.getByRole("button", { name: /soft-delete/i }).click();
+  await confirm.getByRole("button", { name: softDelete, exact: true }).click();
 
   // routed back to the store list
-  await expect(page.getByRole("heading", { name: "Stores" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: t("stores.list.title"), exact: true }),
+  ).toBeVisible();
 });

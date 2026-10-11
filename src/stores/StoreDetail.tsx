@@ -1,6 +1,8 @@
+import { BackArrow } from "@/components/BackArrow";
 import { Banner } from "@/components/Banner";
 import { ConfirmDelete } from "@/components/ConfirmDelete";
 import { ListState } from "@/components/ListState";
+import { useT } from "@/i18n";
 import { type Rf2ErrorRender, mapRf2Error } from "@/lib/rf2-queries";
 /**
  * SF-S2 — Store detail (T027). Read-first field rows + active-state badge; edit
@@ -17,6 +19,7 @@ import { useStoreScope } from "./useStoreScope";
 import "../shell/surface.css";
 
 export function StoreDetail(): React.JSX.Element {
+  const t = useT();
   const { storeId } = useParams();
   const navigate = useNavigate();
   const { activeTenantId } = useStoreScope();
@@ -28,7 +31,7 @@ export function StoreDetail(): React.JSX.Element {
   if (isLoading) {
     return (
       <div className="surface">
-        <ListState state="loading" label="store" />
+        <ListState state="loading" label={t("stores.detail.loadingNoun")} />
       </div>
     );
   }
@@ -41,11 +44,11 @@ export function StoreDetail(): React.JSX.Element {
       <div className="surface">
         <Banner
           variant="danger"
-          message={result.render.message}
+          message={t(result.render.messageKey)}
           requestId={result.render.kind === "banner" ? result.render.requestId : undefined}
         />
         <Link to="/stores" className="surface__back">
-          ← Back to stores
+          <BackArrow /> {t("stores.detail.back")}
         </Link>
       </div>
     );
@@ -71,43 +74,51 @@ export function StoreDetail(): React.JSX.Element {
   return (
     <div className="surface">
       <Link to="/stores" className="surface__back">
-        ← Back to stores
+        <BackArrow /> {t("stores.detail.back")}
       </Link>
       <header className="surface__head">
         <h1 className="content__title">{store.name}</h1>
       </header>
 
       {deleteError && deleteError.kind === "banner" ? (
-        <Banner variant="danger" message={deleteError.message} requestId={deleteError.requestId} />
+        <Banner
+          variant="danger"
+          message={t(deleteError.messageKey)}
+          requestId={deleteError.requestId}
+        />
       ) : null}
 
       <dl className="surface__detail">
         <div className="field-row">
-          <dt className="field-row__label">Code</dt>
-          <dd className="field-row__value field-row__value--mono">{store.code}</dd>
+          <dt className="field-row__label">{t("stores.field.code")}</dt>
+          <dd className="field-row__value field-row__value--mono">
+            <bdi dir="ltr">{store.code}</bdi>
+          </dd>
         </div>
         <div className="field-row">
-          <dt className="field-row__label">State</dt>
+          <dt className="field-row__label">{t("stores.field.state")}</dt>
           <dd className="field-row__value">
             <span
               className={
                 store.is_active === false ? "badge badge--suspended" : "badge badge--active"
               }
             >
-              {store.is_active === false ? "inactive" : "active"}
+              {t(store.is_active === false ? "stores.state.inactive" : "stores.state.active")}
             </span>
           </dd>
         </div>
         <div className="field-row">
-          <dt className="field-row__label">Store ID</dt>
-          <dd className="field-row__value field-row__value--mono">{store.id}</dd>
+          <dt className="field-row__label">{t("stores.field.id")}</dt>
+          <dd className="field-row__value field-row__value--mono">
+            <bdi dir="ltr">{store.id}</bdi>
+          </dd>
         </div>
       </dl>
 
       {confirming ? (
         <ConfirmDelete
           resourceName={store.name}
-          confirmLabel="Soft-delete"
+          confirmLabel={t("stores.detail.softDelete")}
           pending={del.isPending}
           onConfirm={onConfirmDelete}
           onCancel={() => setConfirming(false)}
@@ -115,10 +126,10 @@ export function StoreDetail(): React.JSX.Element {
       ) : (
         <div className="surface__actions">
           <Link to={`/stores/${store.id}/edit`} className="btn-secondary">
-            Edit
+            {t("stores.detail.edit")}
           </Link>
           <button type="button" className="btn-destructive" onClick={() => setConfirming(true)}>
-            Soft-delete
+            {t("stores.detail.softDelete")}
           </button>
         </div>
       )}

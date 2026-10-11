@@ -1,5 +1,6 @@
 import { Banner } from "@/components/Banner";
 import { InlineError } from "@/components/InlineError";
+import { type MessageKey, useT } from "@/i18n";
 import { type Rf2ErrorRender, mapRf2Error } from "@/lib/rf2-queries";
 import { SAVED_NAVIGATION } from "@/shell/dirty-guard";
 /**
@@ -30,16 +31,18 @@ export interface TenantFormProps {
 }
 
 export function TenantForm({ mode, tenantId, initial }: TenantFormProps): React.JSX.Element {
+  const t = useT();
   const navigate = useNavigate();
   const { create, update } = useTenantMutations(tenantId);
-  const [slugError, setSlugError] = useState<string | undefined>();
+  // The catalog key, never a translated string, so a locale switch re-renders it.
+  const [slugError, setSlugError] = useState<MessageKey | undefined>();
   const [banner, setBanner] = useState<Rf2ErrorRender | undefined>();
 
   const pending = create.isPending || update.isPending;
 
   function handleRender(render: Rf2ErrorRender): void {
     if (render.kind === "conflict" && render.field === "slug") {
-      setSlugError(render.message);
+      setSlugError(render.messageKey);
       return;
     }
     setBanner(render);
@@ -72,8 +75,8 @@ export function TenantForm({ mode, tenantId, initial }: TenantFormProps): React.
     if (tenantId) navigate(`/tenants/${tenantId}`, { state: SAVED_NAVIGATION });
   }
 
-  const title = mode === "create" ? "New tenant" : "Edit tenant";
-  const submitLabel = mode === "create" ? "Create tenant" : "Save changes";
+  const title = t(mode === "create" ? "tenants.form.createTitle" : "tenants.form.editTitle");
+  const submitLabel = t(mode === "create" ? "tenants.form.create" : "tenants.form.saveChanges");
 
   return (
     <div className="surface">
@@ -86,14 +89,14 @@ export function TenantForm({ mode, tenantId, initial }: TenantFormProps): React.
       {banner && (banner.kind === "banner" || banner.kind === "not-found") ? (
         <Banner
           variant="danger"
-          message={banner.message}
+          message={t(banner.messageKey)}
           requestId={banner.kind === "banner" ? banner.requestId : undefined}
         />
       ) : null}
 
       <form className="surface__form" onSubmit={onSubmit} noValidate>
         <div className="field">
-          <label htmlFor="tenant-slug">Slug</label>
+          <label htmlFor="tenant-slug">{t("tenants.field.slug")}</label>
           <input
             id="tenant-slug"
             name="slug"
@@ -105,12 +108,12 @@ export function TenantForm({ mode, tenantId, initial }: TenantFormProps): React.
             autoComplete="off"
           />
           <span id="tenant-slug-error">
-            <InlineError message={slugError} />
+            <InlineError message={slugError ? t(slugError) : undefined} />
           </span>
         </div>
 
         <div className="field">
-          <label htmlFor="tenant-name">Name</label>
+          <label htmlFor="tenant-name">{t("tenants.field.name")}</label>
           <input
             id="tenant-name"
             name="name"
@@ -133,7 +136,7 @@ export function TenantForm({ mode, tenantId, initial }: TenantFormProps): React.
             }
             disabled={pending}
           >
-            Cancel
+            {t("common.cancel")}
           </button>
         </div>
       </form>

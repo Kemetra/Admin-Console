@@ -1,6 +1,8 @@
 import { ConfirmDelete } from "@/components/ConfirmDelete";
 import { DataTable } from "@/components/DataTable";
 import { ListState } from "@/components/ListState";
+import { translate } from "@/i18n";
+import { setLocale } from "@/i18n/locale";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, test, vi } from "vitest";
 
@@ -144,5 +146,48 @@ describe("ConfirmDelete", () => {
       />,
     );
     expect(screen.getByRole("button", { name: "Soft-delete" }).hasAttribute("disabled")).toBe(true);
+  });
+});
+
+describe("RF-2 presenters in Arabic (RT-399)", () => {
+  // The RF-2 surfaces pass catalog copy into the shared presenters' string props.
+  const ar = (key: Parameters<typeof translate>[1]) => translate("ar", key);
+
+  test("the soft-delete confirm reads in Arabic and names the resource as authored", () => {
+    setLocale("ar");
+    render(
+      <ConfirmDelete
+        resourceName="Northstar Retail"
+        confirmLabel={ar("tenants.detail.softDelete")}
+        onConfirm={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+    expect(screen.getByRole("region", { name: "تأكيد: حذف" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "حذف" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "إلغاء" })).toBeDefined();
+    expect(screen.getByText("Northstar Retail")).toBeDefined();
+  });
+
+  test("the roster table and loading state take Arabic catalog copy", () => {
+    setLocale("ar");
+    render(
+      <>
+        <DataTable
+          caption={ar("tenants.list.caption")}
+          columns={[
+            { key: "name", header: ar("tenants.field.name"), cell: (r: Row) => r.name },
+            { key: "slug", header: ar("tenants.field.slug"), cell: (r: Row) => r.slug },
+          ]}
+          rows={rows}
+          rowKey={(r) => r.id}
+          onRowActivate={() => {}}
+        />
+        <ListState state="loading" label={ar("stores.list.loadingNoun")} />
+      </>,
+    );
+    expect(screen.getByRole("table", { name: "المؤسسات" })).toBeDefined();
+    expect(screen.getByRole("columnheader", { name: "المعرّف المختصر" })).toBeDefined();
+    expect(screen.getByText("جارٍ تحميل المتاجر…")).toBeDefined();
   });
 });

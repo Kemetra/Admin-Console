@@ -1,5 +1,5 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -22,6 +22,7 @@ vi.mock("react-router", async (importOriginal) => {
   return { ...actual, useNavigate: () => navigate };
 });
 
+import { setLocale } from "@/i18n/locale";
 import { createQueryClient } from "@/lib/query";
 import { TenantForm } from "@/tenants/TenantForm";
 
@@ -131,5 +132,45 @@ describe("TenantForm edit", () => {
       initial: { slug: "northstar", name: "Northstar Retail" },
     });
     expect((screen.getByLabelText(/name/i) as HTMLInputElement).value).toBe("Northstar Retail");
+  });
+});
+
+describe("TenantForm Arabic", () => {
+  beforeEach(() => {
+    createTenant.mockReset();
+    updateTenant.mockReset();
+    navigate.mockReset();
+  });
+
+  test("create form renders in Arabic; the inline slug conflict follows a locale switch", async () => {
+    setLocale("ar");
+    createTenant.mockResolvedValue({ status: 409, error: { error: { request_id: "r1" } } });
+    renderForm({ mode: "create" });
+    expect(screen.getByRole("heading", { name: "مؤسسة جديدة" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "إلغاء" })).toBeDefined();
+    expect(screen.queryByRole("button", { name: /create tenant/i })).toBeNull();
+    fireEvent.change(screen.getByLabelText("المعرّف المختصر"), { target: { value: "taken" } });
+    fireEvent.change(screen.getByLabelText("الاسم"), { target: { value: "Dup" } });
+    fireEvent.click(screen.getByRole("button", { name: "إضافة المؤسسة" }));
+    expect(
+      await screen.findByText("هذا المعرّف المختصر مستخدم بالفعل. اختر معرّفًا آخر."),
+    ).toBeDefined();
+    // the error is held as a catalog key, so a switch re-renders it
+    act(() => setLocale("en"));
+    expect(
+      await screen.findByText("That slug is already in use. Choose a different one."),
+    ).toBeDefined();
+    expect(screen.getByRole("heading", { name: "New tenant" })).toBeDefined();
+  });
+
+  test("edit form renders its Arabic title and save action", () => {
+    setLocale("ar");
+    renderForm({
+      mode: "edit",
+      tenantId: "t1",
+      initial: { slug: "northstar", name: "Northstar Retail" },
+    });
+    expect(screen.getByRole("heading", { name: "تعديل المؤسسة" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "حفظ التغييرات" })).toBeDefined();
   });
 });
