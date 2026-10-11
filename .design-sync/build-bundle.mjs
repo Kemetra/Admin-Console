@@ -15,11 +15,12 @@
 // .ds-sync/ is gitignored: `/design-sync` stages the validator there at the start
 // of each run, so the gate exists only during a sync.
 //
-// Deterministic: same source in, same bytes out. Every text input is read with its
+// Deterministic: same source in, same bytes out (the source includes the untracked
+// Dubai TTFs in .design-sync/fonts/). Every text input is read with its
 // line endings normalised to LF, so a CRLF checkout (core.autocrlf=true) builds the
 // same bundle as an LF one. Nothing here is uploaded by itself; DesignSync uploads
 // ./ds-bundle.
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -86,8 +87,24 @@ const tokensCss = readLF(join(SRC, 'colors_and_type.css'));
 const componentsCss = readLF(join(SRC, 'components.css'));
 writeFileSync(join(OUT, 'tokens', 'colors_and_type.css'), tokensCss);
 writeFileSync(join(OUT, 'tokens', 'components.css'), componentsCss);
+// Fonts: the Dubai TTFs are not committed (© Dubai Executive Council, all rights
+// reserved, and this repo is public). Copy them from dubaifont.com into
+// .design-sync/fonts/ (gitignored) before building; they go only to the private
+// Claude Design project.
+const FONT_FACES = [['Light', 300], ['Regular', 400], ['Medium', 500], ['Bold', 700]];
+mkdirSync(join(OUT, 'fonts'), { recursive: true });
+for (const [style] of FONT_FACES) {
+  const ttf = join(ROOT, '.design-sync', 'fonts', `Dubai-${style}.ttf`);
+  if (!existsSync(ttf)) throw new Error(`missing ${ttf}: copy the Dubai TTFs into .design-sync/fonts/ (not committed)`);
+  cpSync(ttf, join(OUT, 'fonts', `Dubai-${style}.ttf`));
+}
+writeFileSync(join(OUT, 'tokens', 'fonts.css'),
+  '/* Dubai, the Arabic-first UI voice (UX-03). Files live in ../fonts/. */\n' +
+  FONT_FACES.map(([style, weight]) => `@font-face {\n  font-family: "Dubai";\n  src: url("../fonts/Dubai-${style}.ttf") format("truetype");\n  font-weight: ${weight};\n  font-style: normal;\n  font-display: swap;\n}\n`).join(''));
+
 writeFileSync(join(OUT, 'styles.css'),
   '/* Retail Tower Design System: the closure every generated design receives. */\n' +
+  '@import "./tokens/fonts.css";\n' +
   '@import "./tokens/colors_and_type.css";\n' +
   '@import "./tokens/components.css";\n');
 
@@ -135,4 +152,4 @@ writeFileSync(join(OUT, 'README.md'), conventions + '\n' + body);
 writeFileSync(join(OUT, '_ds_needs_recompile'), JSON.stringify({ by: 'design-sync-cli' }) + '\n');
 writeFileSync(join(OUT, '.ds-build-meta.json'), JSON.stringify({ componentCount: 0, cardCount: cards.length, shape: 'package', offScript: true }, null, 2) + '\n');
 
-console.log(`[OK] ds-bundle: ${cards.length} cards in ${groups.length} groups, styles.css + 2 token files, README ${conventions.length} char header (${named.tokens} tokens + ${named.classes} classes checked)`);
+console.log(`[OK] ds-bundle: ${cards.length} cards in ${groups.length} groups, styles.css + 3 token files, ${FONT_FACES.length} Dubai faces, README ${conventions.length} char header (${named.tokens} tokens + ${named.classes} classes checked)`);
