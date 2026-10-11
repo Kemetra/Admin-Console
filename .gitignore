@@ -29,3 +29,6 @@ pnpm-debug.log*
 
 # Local tool output (not part of the repo)
 graphify-out/
+
+# tester-army/e2e run output (RT-299): reports, results, replay cache, logs
+.e2e/
