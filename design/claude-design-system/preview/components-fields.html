@@ -18,47 +18,49 @@
 
   <section class="ds-section">
     <div class="fields">
-      <label class="field">
-        <span class="field__label">اسم المتجر <span class="field__req">(إلزامي)</span></span>
-        <input class="input" value="متجر الواحة">
-        <span class="field__hint">يظهر للكاشير وفي التقارير.</span>
-      </label>
+      <div class="field">
+        <label class="field__label" for="f-name">اسم المتجر <span class="field__req">(إلزامي)</span></label>
+        <input id="f-name" class="input" value="متجر الواحة" aria-describedby="f-name-hint">
+        <span id="f-name-hint" class="field__hint">يظهر للكاشير وفي التقارير.</span>
+      </div>
 
-      <label class="field">
-        <span class="field__label">المدينة <span class="field__req">(اختياري)</span></span>
-        <input class="input is-focus" value="الإسكندرية">
-        <span class="field__hint">حالة التركيز: حد خارجي واضح، لا ظل.</span>
-      </label>
+      <div class="field">
+        <label class="field__label" for="f-city">المدينة <span class="field__req">(اختياري)</span></label>
+        <input id="f-city" class="input is-focus" value="الإسكندرية" aria-describedby="f-city-hint">
+        <span id="f-city-hint" class="field__hint">حالة التركيز: حد خارجي واضح، لا ظل.</span>
+      </div>
 
-      <label class="field">
-        <span class="field__label">رمز المتجر <span class="field__req">(إلزامي)</span></span>
-        <input class="input machine" style="text-align: start" value="OAS-01" aria-invalid="true" aria-describedby="code-err" spellcheck="false" autocomplete="off">
-        <span id="code-err" class="field__error">الرمز OAS-01 مستخدم لمتجر آخر. اختر رمزًا مختلفًا.</span>
-      </label>
+      <div class="field">
+        <label class="field__label" for="f-code">رمز المتجر <span class="field__req">(إلزامي)</span></label>
+        <input id="f-code" class="input machine" style="text-align: start" value="OAS-01" aria-invalid="true" aria-describedby="f-code-err" spellcheck="false" autocomplete="off">
+        <span id="f-code-err" class="field__error">الرمز OAS-01 مستخدم لمتجر آخر. اختر رمزًا مختلفًا.</span>
+      </div>
 
-      <label class="field">
-        <span class="field__label">السعر <span class="field__req">(إلزامي)</span></span>
-        <input class="input num" style="text-align: start" value="1250.005" inputmode="decimal" aria-invalid="true" aria-describedby="price-err">
-        <span id="price-err" class="field__error">المبلغ يقبل خانتين عشريتين فقط. مثال: 1250.00</span>
-      </label>
+      <div class="field">
+        <label class="field__label" for="f-price">السعر <span class="field__req">(إلزامي)</span></label>
+        <input id="f-price" class="input num" style="text-align: start" value="1250.005" inputmode="decimal" aria-invalid="true" aria-describedby="f-price-err">
+        <span id="f-price-err" class="field__error">المبلغ يقبل خانتين عشريتين فقط. مثال: 1250.00</span>
+      </div>
 
-      <label class="field">
-        <span class="field__label">معرّف المؤسسة</span>
-        <input class="input machine" style="text-align: start" value="ten_01J9Z4K7QX" readonly>
-        <span class="field__hint">للقراءة فقط: لا يتغير، ويمكن نسخه.</span>
-      </label>
+      <div class="field">
+        <label class="field__label" for="f-tenant">معرّف المؤسسة</label>
+        <input id="f-tenant" class="input machine" style="text-align: start" value="ten_01J9Z4K7QX" readonly aria-describedby="f-tenant-hint">
+        <span id="f-tenant-hint" class="field__hint">للقراءة فقط: لا يتغير، ويمكن نسخه.</span>
+      </div>
 
-      <label class="field">
-        <span class="field__label">المنطقة الزمنية للمتجر</span>
-        <input class="input" value="Africa/Cairo" disabled>
-        <span class="field__hint">غير متاح الآن: تُضبط عند إنشاء المتجر فقط.</span>
-      </label>
+      <div class="field">
+        <label class="field__label" for="f-store">المتجر</label>
+        <select id="f-store" class="select" disabled aria-describedby="f-store-hint">
+          <option>جارٍ التحميل…</option>
+        </select>
+        <span id="f-store-hint" class="field__hint">غير متاح مؤقتًا: يكتمل بعد تحميل المتاجر المصرَّح لك بها.</span>
+      </div>
     </div>
   </section>
 
   <section class="ds-section">
     <h2>قواعد</h2>
-    <p class="ds-note">لا خطأ قبل أن يلمس المستخدم الحقل. الخطأ يسمّي المشكلة ويعطي طريقة الإصلاح، بجوار الحقل. القيمة الصحيحة التي تفشل بسبب تغيّر السياق تُعرض على مستوى النموذج، لا الحقل. المال يُحلَّل ولا يُخمَّن، ولا تقريب صامت. الأرقام العربية الهندية في حقل رقمي تُطبَّع إلى 0–9، والرموز والمعرّفات تبقى معزولة LTR.</p>
+    <p class="ds-note">العنوان وحده داخل <span class="machine">label</span>، والتلميح والخطأ مرتبطان بالحقل عبر <span class="machine">aria-describedby</span>. لا خطأ قبل أن يلمس المستخدم الحقل. الخطأ يسمّي المشكلة ويعطي طريقة الإصلاح، بجوار الحقل. القيمة الصحيحة التي تفشل بسبب تغيّر السياق تُعرض على مستوى النموذج، لا الحقل. المال يُحلَّل ولا يُخمَّن، ولا تقريب صامت. الأرقام العربية الهندية في حقل رقمي تُطبَّع إلى 0–9، والرموز والمعرّفات تبقى معزولة LTR. «للقراءة فقط» قيمة ثابتة تُقرأ وتُنسخ؛ «غير متاح» عنصر محجوب الآن لسبب مكتوب.</p>
   </section>
 </body>
 </html>

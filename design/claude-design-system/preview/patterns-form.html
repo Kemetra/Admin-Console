@@ -17,46 +17,43 @@
     <div class="error-summary" role="alert" tabindex="-1" aria-labelledby="sum-title">
       <h2 id="sum-title">لم يُحفظ المتجر: يوجد خطآن.</h2>
       <ul>
+        <li><a href="#store-name">أدخل اسم المتجر.</a></li>
         <li><a href="#store-code">رمز المتجر مستخدم لمتجر آخر.</a></li>
-        <li><a href="#store-city">أدخل المدينة.</a></li>
       </ul>
     </div>
 
     <fieldset class="form__section">
       <legend>بيانات المتجر</legend>
       <div class="form__row">
-        <label class="field">
-          <span class="field__label">اسم المتجر <span class="field__req">(إلزامي)</span></span>
-          <input class="input" value="متجر الواحة">
-        </label>
-        <label class="field">
-          <span class="field__label">رمز المتجر <span class="field__req">(إلزامي)</span></span>
+        <div class="field">
+          <label class="field__label" for="store-name">اسم المتجر <span class="field__req">(إلزامي)</span></label>
+          <input id="store-name" class="input" value="" aria-invalid="true" aria-describedby="name-err">
+          <span id="name-err" class="field__error">أدخل اسم المتجر.</span>
+        </div>
+        <div class="field">
+          <label class="field__label" for="store-code">رمز المتجر <span class="field__req">(إلزامي)</span></label>
           <input id="store-code" class="input machine" style="text-align: start" value="NIL-02" aria-invalid="true" aria-describedby="code-err" spellcheck="false" autocomplete="off">
           <span id="code-err" class="field__error">الرمز NIL-02 مستخدم لـ «متجر النيل». اختر رمزًا مختلفًا.</span>
-        </label>
+        </div>
       </div>
-      <label class="field">
-        <span class="field__label">معرّف المتجر</span>
-        <input class="input machine" style="text-align: start" value="sto_01J9Z5A2KD" readonly>
-        <span class="field__hint">للقراءة فقط. استخدمه عند التواصل مع الدعم.</span>
-      </label>
+      <div class="field">
+        <label class="field__label" for="store-id">معرّف المتجر</label>
+        <input id="store-id" class="input machine" style="text-align: start" value="sto_01J9Z5A2KD" readonly aria-describedby="id-hint">
+        <span id="id-hint" class="field__hint">للقراءة فقط. استخدمه عند التواصل مع الدعم.</span>
+      </div>
     </fieldset>
 
     <fieldset class="form__section">
-      <legend>الموقع والوقت</legend>
+      <legend>الموقع</legend>
       <div class="form__row">
-        <label class="field">
-          <span class="field__label">المدينة <span class="field__req">(إلزامي)</span></span>
-          <input id="store-city" class="input" value="" aria-invalid="true" aria-describedby="city-err">
-          <span id="city-err" class="field__error">أدخل المدينة.</span>
-        </label>
-        <label class="field">
-          <span class="field__label">المنطقة الزمنية <span class="field__req">(إلزامي)</span></span>
-          <select class="select">
-            <option>Africa/Cairo</option>
-          </select>
-          <span class="field__hint">تحدد يوم العمل في التقارير وأوقات الورديات.</span>
-        </label>
+        <div class="field">
+          <label class="field__label" for="store-city">المدينة <span class="field__req">(اختياري)</span></label>
+          <input id="store-city" class="input" value="الإسكندرية">
+        </div>
+        <div class="field">
+          <label class="field__label" for="store-address">العنوان <span class="field__req">(اختياري)</span></label>
+          <input id="store-address" class="input" value="شارع البحر، مبنى 14">
+        </div>
       </div>
     </fieldset>
 
@@ -66,6 +63,6 @@
       <span class="form__dirty">تغييرات غير محفوظة</span>
     </div>
   </form>
-  <p class="ds-note" style="margin-block-start: var(--space-4)">الحذف لا يسكن في شريط الحفظ؛ مكانه منطقة منفصلة في صفحة التفاصيل مع حوار تأكيد. القيم الصحيحة تبقى بعد فشل الحفظ، وخطأ التعارض مع نسخة أحدث يظهر على مستوى النموذج لا الحقل.</p>
+  <p class="ds-note" style="margin-block-start: var(--space-4)">الحذف لا يسكن في شريط الحفظ؛ مكانه منطقة منفصلة في صفحة التفاصيل مع حوار تأكيد. القيم الصحيحة تبقى بعد فشل الحفظ، وخطأ التعارض مع نسخة أحدث يظهر على مستوى النموذج لا الحقل. أي الحقول قابلة للتعديل بعد الإنشاء يحدده عقد الحقل في Backend-Core، لا هذا النمط.</p>
 </body>
 </html>

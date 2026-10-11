@@ -196,7 +196,8 @@ kbd {
   outline-offset: var(--focus-offset);
 }
 .btn:disabled,
-.btn.is-disabled {
+.btn.is-disabled,
+.btn[aria-disabled="true"] {
   background: var(--color-surface-sunken);
   color: var(--color-text-muted);
   border-color: var(--color-border);
@@ -272,15 +273,19 @@ kbd {
   border-color: var(--color-danger);
   border-width: 2px;
 }
+/* Read-only stays an active, copyable control: it keeps the >= 3:1 boundary. */
 .input[readonly] {
   background: var(--color-surface-sunken);
-  border-color: var(--color-border);
 }
 .input:disabled {
   background: var(--color-surface-sunken);
   color: var(--color-text-muted);
   border-style: dashed;
-  border-color: var(--color-border);
+}
+.select:disabled {
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+  border-style: dashed;
 }
 
 /* ── Status badge + Pulse Dot (UX-02, UX-07) ─────────────────────────── */
@@ -310,8 +315,9 @@ kbd {
   border: 2px solid currentColor;
 }
 .dot--live {
-  animation: live var(--duration-continuity) var(--ease-standard) infinite alternate;
-  animation-duration: 900ms;
+  /* Activity pulse, not a state transition: deliberately outside the motion roles,
+   * slow enough to never flash, and only while real activity runs. */
+  animation: live 900ms var(--ease-standard) infinite alternate;
 }
 @keyframes live {
   to {
@@ -421,15 +427,15 @@ kbd {
 .table th.col-num {
   text-align: end;
 }
-.table tbody tr[aria-selected="true"] {
+.table tbody tr.is-selected {
   background: var(--color-primary-soft);
 }
-.table tbody tr[aria-selected="true"] td:first-child {
+.table tbody tr.is-selected td:first-child {
   position: relative;
 }
 /* Signal Line on the selected row: a real element, not a box-shadow, so it
  * survives forced-colors and flips with direction. */
-.table tbody tr[aria-selected="true"] td:first-child::before {
+.table tbody tr.is-selected td:first-child::before {
   content: "";
   position: absolute;
   inset-block: 0;
@@ -544,8 +550,9 @@ kbd {
 .dialog {
   position: absolute;
   inset-block-start: 50%;
-  inset-inline-start: 50%;
-  translate: 50% -50%;
+  inset-inline: 0;
+  margin-inline: auto;
+  translate: 0 -50%;
   inline-size: min(440px, 88%);
   display: grid;
   gap: var(--space-4);
@@ -553,9 +560,6 @@ kbd {
   background: var(--color-surface);
   border-radius: var(--radius-overlay);
   box-shadow: var(--shadow-overlay);
-}
-[dir="ltr"] .dialog {
-  translate: -50% -50%;
 }
 .dialog h2,
 .dialog h3 {
@@ -640,7 +644,7 @@ kbd {
 .nav-item:hover {
   background: var(--color-surface-sunken);
 }
-/* Current location: Signal Line + teal ink + wash. No bold on top (UX-03
+/* Current location: teal ink + wash, plus the .signal class for the Signal Line. No bold on top (UX-03
  * "enough selection signals"), which also keeps the label from reflowing. */
 .nav-item[aria-current="page"] {
   background: var(--color-primary-soft);
@@ -792,7 +796,8 @@ kbd {
     background: CanvasText;
   }
   .btn:disabled,
-  .btn.is-disabled {
+  .btn.is-disabled,
+  .btn[aria-disabled="true"] {
     border-color: GrayText;
     color: GrayText;
   }
@@ -805,7 +810,7 @@ kbd {
     border: 1px solid CanvasText;
   }
   .signal::before,
-  .table tbody tr[aria-selected="true"] td:first-child::before {
+  .table tbody tr.is-selected td:first-child::before {
     background: Highlight;
   }
   .nav-item[aria-current="page"],

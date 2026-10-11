@@ -23,6 +23,9 @@ Read these before designing any Retail Tower Admin screen from this system.
    - No new hues, no purple/indigo, no gradients, no glass, no glow.
    - Most pixels stay neutral. Teal means intent: the primary action, selection and focus.
 3. **Status is text first.**
+   - UNKNOWN outcome (payment, posting, any consequence whose result is unconfirmed) is
+     danger, never neutral. A missing signal is different: label it «لا توجد إشارة» with a
+     hollow neutral dot. It is never shown as healthy.
    - Use semantic colour only for its meaning: info = pending, success = proven, warning = degraded, danger = consequence or UNKNOWN.
    - Never use colour alone.
    - A healthy state stays quiet.
@@ -103,7 +106,8 @@ The derived roles are aliases or alpha values of the colours above:
 - `--shadow-overlay`
 
 **Do not add a colour value without a new owner decision.** The contrast card shows
-the computed ratio for every text pair.
+the computed ratio for each text and boundary pairing the cards use; compute any new
+pairing before using it.
 
 ## Provisional (not yet ratified)
 
