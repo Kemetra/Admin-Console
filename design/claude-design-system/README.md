@@ -34,12 +34,17 @@ Read these before designing any Retail Tower Admin screen from this system.
    - Use semantic colour only for its meaning: info = pending, success = proven, warning = degraded, danger = consequence or UNKNOWN.
    - Never use colour alone.
    - A healthy state stays quiet.
-   - Status words (owner decision 2026-10-12, D-AUD-08) mean one thing in every console:
+   - In status badges and status labels, each word means one thing in every console
+     (owner decision 2026-10-12, D-AUD-08):
      - «لا توجد إشارة»: no signal, neutral hollow. Never «غير معروف — لا توجد إشارة».
      - «غير معروف» / «النتيجة غير معروفة»: an unknown outcome only, danger.
      - «موقوفة»: a suspended tenant, neutral hollow.
-     - «معلّقة»: parked postings only.
+     - «معلّقة»: parked postings only, neutral hollow.
      - «بانتظار تحقق» and «قيد التحقيق»: info hollow (in progress, no consequence yet).
+   - The rule covers status badges and labels, not prose or value cells. Shipped app
+     copy that predates it (for example «غير معروف» for a missing stock snapshot,
+     required by RT-178 AC2, and «معلّقة» for a pending invite) is an owner follow-up,
+     not something to change from this bundle.
    - In a pipeline, a proven failure («رُفض») has a solid danger frame, and an unknown
      stage («النتيجة غير معروفة») has a dashed danger frame.
 4. **Tables are work surfaces.**
