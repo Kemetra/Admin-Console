@@ -4,9 +4,8 @@
 
 - **Owner decision, 2026-10-11:** sync the Constitution *target* identity as **tokens + CSS vocabulary + reference cards**, with **no React components** for now.
   - Admin-Console is a private app (`retail-tower-console`, no library entry).
-  - Its shipped components still render the retired dark/navy/gold/Inter identity.
-  - Converting them would teach the design agent the identity RT-392 replaces.
-- Revisit when the light-first token migration lands in `src/`. Then the real components render the target and can go through the standard converter (package shape, `componentSrcMap` over `src/components`).
+  - When this was decided, its shipped components still rendered the retired dark/navy/gold/Inter identity, and converting them would have taught the design agent the identity RT-392 replaces.
+- The light-first token migration has since landed in `src/` (RT-396 #87, RT-397 #88, RT-398 #89, RT-399 #92), so this can be revisited: the real components now render the target tokens and could go through the standard converter (package shape, `componentSrcMap` over `src/components`). That is a separate owner decision; this bundle stays tokens + vocabulary + cards until it is made.
 - **Builder:** `node .design-sync/build-bundle.mjs` writes `./ds-bundle` from `design/claude-design-system/`. It replaces `package-build.mjs`; do not run the converter.
   - It normalises line endings to LF on read. The repo has no `.gitattributes`, so a checkout with `core.autocrlf=true` (the Git for Windows default) has CRLF files; the output is the same either way.
   - It fails if `conventions.md` names a token or class that `colors_and_type.css` / `components.css` do not define (the name check).
@@ -87,4 +86,4 @@
   - **Switch placement:** both switches sit in the shell top bar, as shown in the two shell cards.
   - **Pressed toggle:** `.btn[aria-pressed="true"]` draws an on toggle as a selection (teal wash, 2px teal edge; `Highlight` edge in forced colours). Added after the first Claude Design screens showed the dark-mode switch looking unpressed in dark. Its colours are all gated already: `text`/`primary-soft` for the label, `primary`/`primary-soft` for the edge on the wash, and the edge against each layer through `focus-ring`/layer (the focus ring is an alias of `primary` in both themes). Disabled buttons are excluded, so a disabled toggle keeps the dashed disabled look.
   - Store time zone is set per store and stays editable after creation, except during an open shift, with an impact review before it applies (owner chose this to reconcile with decision 214; RT-401). This is a design rule only; the Backend-Core contract (RT-401) owns the API.
-- The **Platform Console frame** is an RT-391 concept. Its navigation is illustrative; re-check it when RT-391 decides the IA.
+- The **Platform Console frame** is an RT-391 concept. RT-391 closed on 2026-10-12 with owner decisions D1–D5: a `/platform` area in Admin-Console (D5), read-only support sessions with break-glass for writes (D1), purpose-bound 60-minute sessions visible to the tenant owner (D2). Its plan has text wireframes only, with no approved screen designs, so the frame's navigation is still illustrative; slice P1-a reviews a real Platform Console design before any UI is built.

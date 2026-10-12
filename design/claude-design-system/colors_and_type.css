@@ -2,8 +2,9 @@
  *
  * TARGET identity from the UX/UI Constitution (UX-01…UX-13): light-first
  * Mineral Daylight + Tower Teal (with an approved dark alternate below),
- * Arabic-first, RTL by structure. This is NOT the
- * shipped Admin-Console token set (src/styles/tokens.css, dark/navy/gold/Inter).
+ * Arabic-first, RTL by structure. Admin-Console ships the same values in
+ * src/styles/tokens.css since RT-396–RT-398; tests/unit/tokens-identity.test.ts
+ * keeps the two equal.
  *
  * Colour values: owner-approved 2026-10-11 (RT-392) — the light set seeded from
  * the POS main@543688f light set, plus the dark set below. Every colour is one of
@@ -52,8 +53,9 @@
   --font-sans: "Dubai", "Segoe UI", Tahoma, system-ui, sans-serif;
   --font-mono: ui-monospace, "Consolas", monospace;
 
-  /* Semantic type roles. Sizes are provisional: they equal the current shipped
-   * Admin scale until the Inter -> Dubai slice ratifies them. Floor: 12px. */
+  /* Semantic type roles. Sizes shipped with the Inter -> Dubai slice (RT-397,
+   * #88); the page-title size and the size of English text in Dubai are still
+   * open with the owner (#88). Floor: 12px. */
   --text-display: 1.875rem;      /* 30px — rare */
   --text-screen-title: 1.25rem;  /* 20px */
   --text-section-title: 1rem;    /* 16px */
