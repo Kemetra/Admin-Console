@@ -12,7 +12,6 @@ Static PNG exports of the screen designs made in the **Retail Tower Design Syste
 
 ## Known gaps
 
-- **39 (Needs attention, source disconnected):** this export predates the status-colour fix, so the «بانتظار تحقق» badge renders as warning. The current template renders it info hollow (D-AUD-08). A fresh export replaces these five parts before merge.
 - **Not shown:** mobile (390px) and laptop (1280px) frames, dark theme beyond the Stores family, and English beyond the Stores family. The templates support them.
 - **Re-authentication method for break-glass** (FOLLOW-UPS #11) and `perm_owner_console` (#30) are still open; the screens say «لم تُحدَّد بعد» where they apply.
 
