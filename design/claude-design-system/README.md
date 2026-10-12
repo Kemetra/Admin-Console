@@ -34,6 +34,19 @@ Read these before designing any Retail Tower Admin screen from this system.
    - Use semantic colour only for its meaning: info = pending, success = proven, warning = degraded, danger = consequence or UNKNOWN.
    - Never use colour alone.
    - A healthy state stays quiet.
+   - In status badges and status labels, each word means one thing in every console
+     (owner decision 2026-10-12, D-AUD-08):
+     - «لا توجد إشارة»: no signal, neutral hollow. Never «غير معروف — لا توجد إشارة».
+     - «غير معروف» / «النتيجة غير معروفة»: an unknown outcome only, danger.
+     - «موقوفة»: a suspended tenant, neutral hollow.
+     - «معلّقة»: parked postings only, neutral hollow.
+     - «بانتظار تحقق» and «قيد التحقيق»: info hollow (in progress, no consequence yet).
+   - The rule covers status badges and labels, not prose or value cells. Shipped app
+     copy that predates it (for example «غير معروف» for a missing stock snapshot,
+     required by RT-178 AC2, and «معلّقة» for a pending invite) is an owner follow-up,
+     not something to change from this bundle.
+   - In a pipeline, a proven failure («رُفض») has a solid danger frame, and an unknown
+     stage («النتيجة غير معروفة») has a dashed danger frame.
 4. **Tables are work surfaces.**
    - Full-bleed semantic tables, never inside rounded cards.
    - Tabular, LTR-isolated numbers.
@@ -43,6 +56,11 @@ Read these before designing any Retail Tower Admin screen from this system.
    - Buttons name the action («حفظ المتجر»).
    - Destructive actions are never the default and sit in a separate zone.
    - Confirmation dialogs state scope and consequence, with the safe option focused first.
+   - A design-only action (no service or contract yet) is `aria-disabled` with a visible
+     reason starting «تصميم فقط». A mock never shows a write that touches tenant data, a
+     sale, a posting or a device as succeeding. Platform-internal workflow steps (take
+     ownership, close with a reason) may run in a mock with an audit row (owner decision
+     2026-10-12, DS-R17).
 6. **State ladder, not toasts.**
    - Use indicator → inline notice → banner → outcome → blocking surface.
    - Messages read What → Safety → Action → Evidence.
@@ -53,7 +71,15 @@ Read these before designing any Retail Tower Admin screen from this system.
    - Navigation shows live, role-relevant destinations only.
 8. **Not yet decided: don't invent.**
    - No icon set (RT-263 pending). Use text labels; if an icon is unavoidable, mark it as a placeholder.
-   - No charts, KPI tiles or data palettes (UX-13). An overview shows attention items and next destinations, not a KPI wall.
+   - Charts (owner decision 2026-10-12, D-AUD-07; UX-13 still has no data palette):
+     - Allowed: a summary count band (numbers with labels), and status marks such as a
+       24-segment status-history strip or a status distribution bar. Status marks use
+       status colours for their status meaning only, and each has a legend, a written
+       summary and a dashed «لا توجد إشارة» segment.
+     - Not allowed until UX-13 ratifies a data palette: bar, line and sparkline charts,
+       threshold lines and deploy-marker charts. Show the same numbers in a table or ledger.
+     - Not charts: pipeline connectors and dependency maps.
+   - An overview leads with attention items and next destinations, not a KPI wall.
 
 ## Authority
 
@@ -64,7 +90,11 @@ Read these before designing any Retail Tower Admin screen from this system.
 2. **Owner decision, RT-392 (2026-10-11).** The colour values come from the POS
    `main@543688f` light token set. They are the starting values for the shared
    Mineral Daylight + Tower Teal system.
-3. **[`DESIGN.md`](../../DESIGN.md)** explains how the Constitution applies to this repo.
+3. **Owner decisions, Platform Console design review (2026-10-12).** D-AUD-07 (charts,
+   rule 8), D-AUD-08 (status words, rule 3) and DS-R17 (design-only actions, rule 5).
+   They were made in the Claude Design audit of the RT-391 screens and do not change
+   the Constitution text.
+4. **[`DESIGN.md`](../../DESIGN.md)** explains how the Constitution applies to this repo.
 
 If this bundle and the Constitution disagree, the Constitution wins. Fix the bundle.
 
@@ -174,8 +204,9 @@ pairing before using it.
 - **POS-only parts:** the POS dark rail and the POS dark theme.
 - **Icons:** Fluent System Icons are pending the RT-263 fit/licensing PoC. The
   bundle ships no icon set.
-- **Charts, KPIs and data-visualisation palettes:** UX-13 has no ratified palette,
-  and status colours must never be reused as a chart palette.
+- **Data charts and data-visualisation palettes:** UX-13 has no ratified palette,
+  and status colours must never be reused as a chart palette. Count bands and status
+  marks are allowed under rule 8.
 - **Machine-readable sources of the old identity** (DESIGN.md and
   `src/styles/tokens.css` moved to the target with RT-396–RT-398):
   - `.impeccable/design.json`;
