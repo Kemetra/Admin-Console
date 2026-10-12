@@ -3,12 +3,14 @@
 Source bundle for the **Retail Tower Design System** project in Claude Design
 (claude.ai), published with `/design-sync`. Work item: **RT-392**.
 
-> **Target, not shipped.** This bundle expresses the approved Retail Tower UX/UI
-> Constitution (UX-01…UX-13): light-first Mineral Daylight + Tower Teal, Arabic-first,
-> RTL by structure. It is **not** what Admin-Console renders today. The production
-> console still ships the retired dark / navy / Tower Gold / Inter identity in
-> `src/styles/tokens.css` until bounded migration slices change it (DESIGN.md §10).
-> Nothing in this folder is imported by the app.
+> **Target identity, now shipped as tokens.** This bundle expresses the approved Retail
+> Tower UX/UI Constitution (UX-01…UX-13): light-first Mineral Daylight + Tower Teal,
+> Arabic-first, RTL by structure. Admin-Console ships the same identity in
+> `src/styles/tokens.css` since RT-396 (#87, light tokens), RT-397 (#88, Dubai type)
+> and RT-398 (#89, opt-in dark theme), and the Arabic-first locale in `src/i18n/`
+> since RT-399 (#92). `tests/unit/tokens-identity.test.ts` keeps the shipped colour
+> and type values equal to the ones here. The screens themselves are not rebuilt on the Claude Design layouts yet
+> (Stores: RT-400). Nothing in this folder is imported by the app.
 
 ## Rules for generating new screens
 
@@ -139,20 +141,31 @@ pairing before using it.
 
 ## Provisional (not yet ratified)
 
-- **Type role sizes** equal the current shipped Admin scale until the Inter → Dubai
-  slice ratifies them. The 12px floor is fixed.
+- **Type role sizes** shipped in Admin-Console with the Inter → Dubai slice (RT-397,
+  #88). Two size questions from #88 are still open with the owner: the page title
+  size and the size of English text set in Dubai. The 12px floor is fixed.
 - **Dubai font** is embedded in the Claude Design project (owner, 2026-10-11): four
   weights from dubaifont.com under `fonts/`, wired by `tokens/fonts.css`. The TTFs
   are not committed here (© Dubai Executive Council, all rights reserved; this repo
   is public). The owner accepted the dubaifont.com terms of use on 2026-10-11 (RT-392).
   Opened straight from this folder, the cards use an installed Dubai or
   the `Segoe UI` / `Tahoma` fallbacks.
-- **Arabic role labels** for `owner` / `tenant_admin` / `store_manager` are not in
-  the UX-12 glossary yet. The shells therefore show the user's name, not a role
+- **Arabic role labels:** Admin-Console uses «المالك» (`owner`), «مسؤول المؤسسة»
+  (`tenant_admin`) and «مدير المتجر» (`store_manager`) since RT-399 (#92). They are not
+  in the UX-12 glossary yet, so the shell cards still show the user's name, not a role
   label.
-- **Platform Console** is a frame only. Its navigation items are illustrative until
-  RT-391 (Platform Control Center, Planning) decides the information architecture
-  and the platform-admin session model.
+- **Platform Console** is a frame only. RT-391 (Platform Control Center, Planning,
+  closed 2026-10-12) settled where it lives and how support access works. Its plan
+  has text wireframes only, with no approved screen designs:
+  - **D5:** a `/platform` area inside Admin-Console, on this same design system;
+  - **D1:** platform support access is read-only by default; tenant writes need a
+    separate break-glass flow (re-authentication, a reason, audit);
+  - **D2:** support sessions need a purpose from a controlled set, take an optional
+    ticket reference, expire after 60 minutes with explicit renewal, and show in the
+    tenant owner's audit history.
+
+  The navigation items stay illustrative until slice P1-a reviews a real Platform
+  Console design.
 
 ## Deliberately excluded
 
@@ -163,13 +176,12 @@ pairing before using it.
   bundle ships no icon set.
 - **Charts, KPIs and data-visualisation palettes:** UX-13 has no ratified palette,
   and status colours must never be reused as a chart palette.
-- **Machine-readable sources of the old identity:**
-  - DESIGN.md frontmatter;
+- **Machine-readable sources of the old identity** (DESIGN.md and
+  `src/styles/tokens.css` moved to the target with RT-396–RT-398):
   - `.impeccable/design.json`;
   - `PRODUCT.md` Principle 6;
   - `design_handoff_retail_tower_console/**`;
-  - `docs/design/*/tokens.css`;
-  - `src/styles/tokens.css`.
+  - `docs/design/*/tokens.css`.
 
 ## Re-sync checklist
 
