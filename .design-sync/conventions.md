@@ -56,7 +56,7 @@ This is the target identity from the Retail Tower UX/UI Constitution: light-firs
   - One meaning per word in status badges and labels: «غير معروف» / «النتيجة غير معروفة» only for an unknown outcome (danger); «موقوفة» = suspended tenant (hollow neutral); «معلّقة» = parked postings only (hollow neutral); «بانتظار تحقق» and «قيد التحقيق» are info hollow.
 - **Design-only actions:** with no service behind it yet, an action is `aria-disabled` with a visible «تصميم فقط: …» reason. A mock never shows a write to tenant data, a sale, a posting or a device as succeeding.
 - **Messages:** what happened, what is safe, what to do, then the evidence (a `.machine` reference).
-- **Charts:** a summary count band and status marks (status-history strip, status distribution bar) are allowed, each with a legend, a written summary and a dashed «لا توجد إشارة». Bar, line and sparkline charts, threshold lines and deploy markers are not: use a table.
+- **Charts:** a summary count band (numbers with labels) is allowed. Status marks (status-history strip, status distribution bar) are allowed too, each with a legend, a written summary and a dashed «لا توجد إشارة» segment. Bar, line and sparkline charts, threshold lines and deploy markers are not: use a table.
 - **Not allowed:** data charts, icons, toasts, gradients, new colours (dark mode uses the approved dark values through `data-theme`, never its own).
 - **Consoles:** the Tenant and Platform consoles share every token and differ only in copy and scope bar.
 
