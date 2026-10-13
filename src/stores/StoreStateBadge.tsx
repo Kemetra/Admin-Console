@@ -5,7 +5,7 @@ import { useT } from "@/i18n";
  * missing flag reads as active, matching the backend default. This is not a
  * lifecycle state (decisions 188/194).
  */
-export function StoreStateBadge({ isActive }: { isActive?: boolean }): React.JSX.Element {
+export function StoreStateBadge({ isActive }: Readonly<{ isActive?: boolean }>): React.JSX.Element {
   const t = useT();
   const inactive = isActive === false;
   return (

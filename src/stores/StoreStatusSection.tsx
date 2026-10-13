@@ -35,7 +35,7 @@ export function StoreStatusSection({
   disabled = false,
   onStart,
   onError,
-}: StoreStatusSectionProps): React.JSX.Element {
+}: Readonly<StoreStatusSectionProps>): React.JSX.Element {
   const t = useT();
   const { activeTenantId } = useStoreScope();
   const status = useStoreStatusMutation(activeTenantId, storeId);

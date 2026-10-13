@@ -30,7 +30,7 @@ export function Banner({
   message,
   requestId,
   action,
-}: BannerProps): React.JSX.Element {
+}: Readonly<BannerProps>): React.JSX.Element {
   const t = useT();
   return (
     <div className={`rtc-alert rtc-alert--${variant}`} role="alert">

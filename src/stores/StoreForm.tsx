@@ -42,13 +42,19 @@ function isForbidden(render: Rf2ErrorRender): boolean {
   return render.kind === "banner" && render.messageKey === "errors.forbidden";
 }
 
+/** A form field's text; a non-text entry (a File) reads as empty, never "[object File]". */
+function textField(form: FormData, name: string): string {
+  const value = form.get(name);
+  return typeof value === "string" ? value : "";
+}
+
 function FormBanner({
   render,
   mode,
-}: {
+}: Readonly<{
   render: Rf2ErrorRender;
   mode: StoreFormProps["mode"];
-}): React.JSX.Element | null {
+}>): React.JSX.Element | null {
   const t = useT();
   if (render.kind === "scope-required" || render.kind === "conflict") return null;
   const requestId = "requestId" in render ? render.requestId : undefined;
@@ -75,7 +81,81 @@ function RequiredMark(): React.JSX.Element {
   );
 }
 
-export function StoreForm({ mode, storeId, initial }: StoreFormProps): React.JSX.Element {
+/** «بيانات المتجر»: name and code, plus the read-only store ID on edit. */
+function StoreFields({
+  isEdit,
+  storeId,
+  initial,
+  codeError,
+}: Readonly<{
+  isEdit: boolean;
+  storeId?: string;
+  initial?: StoreFormProps["initial"];
+  codeError?: MessageKey;
+}>): React.JSX.Element {
+  const t = useT();
+  const codeDescribedBy = codeError ? "store-code-hint store-code-error" : "store-code-hint";
+  return (
+    <div className="surface__form-grid">
+      <div className="field">
+        <label htmlFor="store-name">
+          {t("stores.form.nameLabel")} <RequiredMark />
+        </label>
+        <input
+          id="store-name"
+          name="name"
+          className="input"
+          defaultValue={initial?.name}
+          aria-required="true"
+          autoComplete="off"
+        />
+      </div>
+
+      <div className="field">
+        <label htmlFor="store-code">
+          {t("stores.form.codeLabel")} {isEdit ? null : <RequiredMark />}
+        </label>
+        <input
+          id="store-code"
+          name="code"
+          className="input input--mono"
+          dir="ltr"
+          defaultValue={initial?.code}
+          readOnly={isEdit}
+          aria-required={isEdit ? undefined : "true"}
+          aria-invalid={codeError ? "true" : undefined}
+          aria-describedby={codeDescribedBy}
+          autoComplete="off"
+        />
+        <p id="store-code-hint" className="field__hint">
+          {t(isEdit ? "stores.form.codeHintEdit" : "stores.form.codeHintCreate")}
+        </p>
+        <span id="store-code-error">
+          <InlineError message={codeError ? t(codeError) : undefined} />
+        </span>
+      </div>
+
+      {isEdit ? (
+        <div className="field">
+          <label htmlFor="store-id">{t("stores.field.id")}</label>
+          <input
+            id="store-id"
+            className="input input--mono"
+            dir="ltr"
+            defaultValue={storeId}
+            readOnly
+            aria-describedby="store-id-hint"
+          />
+          <p id="store-id-hint" className="field__hint">
+            {t("stores.form.idHint")}
+          </p>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export function StoreForm({ mode, storeId, initial }: Readonly<StoreFormProps>): React.JSX.Element {
   const t = useT();
   const navigate = useNavigate();
   const { activeTenantId, activeTenantName } = useStoreScope();
@@ -132,7 +212,7 @@ export function StoreForm({ mode, storeId, initial }: StoreFormProps): React.JSX
     setBanner(undefined);
     const form = new FormData(e.currentTarget);
     try {
-      const to = await save(String(form.get("name") ?? ""), String(form.get("code") ?? ""));
+      const to = await save(textField(form, "name"), textField(form, "code"));
       if (to) navigate(to, { state: SAVED_NAVIGATION });
     } catch {
       // A thrown request (offline, aborted) is still a visible failure, never silent.
@@ -144,9 +224,6 @@ export function StoreForm({ mode, storeId, initial }: StoreFormProps): React.JSX
   const title = isEdit
     ? t.rich("stores.form.editTitle", { name: <bdi>{initial?.name}</bdi> })
     : t("stores.form.createTitle");
-  const codeDescribedBy = ["store-code-hint", codeError ? "store-code-error" : ""]
-    .filter(Boolean)
-    .join(" ");
 
   return (
     <div className="surface">
@@ -166,62 +243,7 @@ export function StoreForm({ mode, storeId, initial }: StoreFormProps): React.JSX
       <form className="surface__form" onSubmit={onSubmit} noValidate>
         <h2 className="surface__section-title">{t("stores.form.section")}</h2>
 
-        <div className="surface__form-grid">
-          <div className="field">
-            <label htmlFor="store-name">
-              {t("stores.form.nameLabel")} <RequiredMark />
-            </label>
-            <input
-              id="store-name"
-              name="name"
-              className="input"
-              defaultValue={initial?.name}
-              aria-required="true"
-              autoComplete="off"
-            />
-          </div>
-
-          <div className="field">
-            <label htmlFor="store-code">
-              {t("stores.form.codeLabel")} {isEdit ? null : <RequiredMark />}
-            </label>
-            <input
-              id="store-code"
-              name="code"
-              className="input input--mono"
-              dir="ltr"
-              defaultValue={initial?.code}
-              readOnly={isEdit}
-              aria-required={isEdit ? undefined : "true"}
-              aria-invalid={codeError ? "true" : undefined}
-              aria-describedby={codeDescribedBy}
-              autoComplete="off"
-            />
-            <p id="store-code-hint" className="field__hint">
-              {t(isEdit ? "stores.form.codeHintEdit" : "stores.form.codeHintCreate")}
-            </p>
-            <span id="store-code-error">
-              <InlineError message={codeError ? t(codeError) : undefined} />
-            </span>
-          </div>
-
-          {isEdit ? (
-            <div className="field">
-              <label htmlFor="store-id">{t("stores.field.id")}</label>
-              <input
-                id="store-id"
-                className="input input--mono"
-                dir="ltr"
-                defaultValue={storeId}
-                readOnly
-                aria-describedby="store-id-hint"
-              />
-              <p id="store-id-hint" className="field__hint">
-                {t("stores.form.idHint")}
-              </p>
-            </div>
-          ) : null}
-        </div>
+        <StoreFields isEdit={isEdit} storeId={storeId} initial={initial} codeError={codeError} />
 
         <div className="surface__actions surface__actions--divided">
           <button type="submit" className="btn-primary" disabled={pending || statusPending}>
