@@ -1,23 +1,17 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 const readStore = vi.fn();
-const softDeleteStore = vi.fn();
-const navigate = vi.fn();
 vi.mock("@/lib/rf2-queries", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/rf2-queries")>();
-  return {
-    ...actual,
-    readStore: (...a: unknown[]) => readStore(...a),
-    softDeleteStore: (...a: unknown[]) => softDeleteStore(...a),
-  };
+  return { ...actual, readStore: (...a: unknown[]) => readStore(...a) };
 });
 vi.mock("react-router", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-router")>();
-  return { ...actual, useNavigate: () => navigate, useParams: () => ({ storeId: "s1" }) };
+  return { ...actual, useParams: () => ({ storeId: "s1" }) };
 });
 vi.mock("@/context/ActiveContextProvider", () => ({
   useActiveContextValue: () => ({
@@ -46,18 +40,17 @@ function renderDetail(): void {
 }
 
 /**
- * Store detail (T027, VG-1). Read-first; active-state badge; edit + soft-delete
- * for all (403 on attempt). 404 uniform (FR-004-008). A scope-401 renders the
- * scope prompt, not a sign-out (OQ-4). Soft-delete behind a named inline confirm.
+ * Store detail (T027; RT-400 screen 19). Read-first; state badge; «Edit store»
+ * for everyone (403 on attempt). No delete or closure action (decision 194).
+ * 404 uniform (FR-004-008). A scope-401 renders the scope prompt, not a
+ * sign-out (OQ-4).
  */
 describe("StoreDetail", () => {
   beforeEach(() => {
     readStore.mockReset();
-    softDeleteStore.mockReset();
-    navigate.mockReset();
   });
 
-  test("success -> field rows + state badge + actions", async () => {
+  test("success -> field rows, state badge and the edit action, no delete", async () => {
     readStore.mockResolvedValue({
       status: 200,
       data: { id: "s1", code: "CFC", name: "Cairo Festival City", is_active: true },
@@ -65,9 +58,11 @@ describe("StoreDetail", () => {
     renderDetail();
     expect(await screen.findByRole("heading", { name: "Cairo Festival City" })).toBeDefined();
     expect(screen.getByText("CFC")).toBeDefined();
-    expect(screen.getByText("active")).toBeDefined();
-    expect(screen.getByRole("link", { name: /edit/i })).toBeDefined();
-    expect(screen.getByRole("button", { name: /soft-delete/i })).toBeDefined();
+    expect(screen.getByText("Active").className).toContain("badge--active");
+    expect(screen.getByRole("link", { name: "Edit store" }).getAttribute("href")).toBe(
+      "/stores/s1/edit",
+    );
+    expect(screen.queryByRole("button", { name: /delete/i })).toBeNull();
   });
 
   test("404 -> uniform not-available with a way back", async () => {
@@ -78,29 +73,20 @@ describe("StoreDetail", () => {
     expect(screen.getByRole("link", { name: "Back to stores" })).toBeDefined();
   });
 
+  test("403 -> danger banner with the request reference", async () => {
+    readStore.mockResolvedValue({ status: 403, error: { error: { request_id: "req-403" } } });
+    renderDetail();
+    expect(await screen.findByRole("alert")).toBeDefined();
+    expect(screen.getByText(/req-403/)).toBeDefined();
+  });
+
   test("scope-401 -> scope prompt, not a sign-out", async () => {
     readStore.mockResolvedValue({ status: 401 });
     renderDetail();
     expect(await screen.findByText(/select a tenant before managing stores/i)).toBeDefined();
   });
 
-  test("soft-delete -> named confirm, then routes back on success", async () => {
-    readStore.mockResolvedValue({
-      status: 200,
-      data: { id: "s1", code: "CFC", name: "Cairo Festival City", is_active: true },
-    });
-    softDeleteStore.mockResolvedValue({ status: 204 });
-    renderDetail();
-    await screen.findByRole("heading", { name: "Cairo Festival City" });
-    fireEvent.click(screen.getByRole("button", { name: /soft-delete/i }));
-    const region = await screen.findByRole("region", { name: /confirm: soft-delete/i });
-    expect(region.textContent).toMatch(/Cairo Festival City/);
-    const btns = screen.getAllByRole("button", { name: /soft-delete/i });
-    fireEvent.click(btns[btns.length - 1]);
-    await waitFor(() => expect(navigate).toHaveBeenCalledWith("/stores"));
-  });
-
-  test("Arabic: labels, state badge and actions render in Arabic", async () => {
+  test("Arabic: labels, suspended badge and the edit action render in Arabic", async () => {
     setLocale("ar");
     readStore.mockResolvedValue({
       status: 200,
@@ -110,13 +96,11 @@ describe("StoreDetail", () => {
     expect(await screen.findByRole("heading", { name: "Cairo Festival City" })).toBeDefined();
     expect(screen.getByText("الرمز")).toBeDefined();
     expect(screen.getByText("معرّف المتجر")).toBeDefined();
-    expect(screen.getByText("غير نشط").className).toContain("badge--suspended");
+    expect(screen.getByText("موقوف").className).toContain("badge--suspended");
     expect(screen.getByText("CFC")).toBeDefined();
-    expect(screen.getByRole("link", { name: "العودة إلى المتاجر" })).toBeDefined();
-    expect(screen.getByRole("link", { name: "تعديل" })).toBeDefined();
-    expect(screen.getByRole("button", { name: "حذف" })).toBeDefined();
-    expect(screen.queryByText("inactive")).toBeNull();
-    expect(screen.queryByRole("button", { name: /soft-delete/i })).toBeNull();
+    expect(screen.getByRole("link", { name: "تعديل المتجر" })).toBeDefined();
+    expect(screen.queryByRole("button", { name: /حذف/ })).toBeNull();
+    expect(screen.queryByText("Suspended")).toBeNull();
   });
 
   test("Arabic: 404 renders the uniform not-available copy", async () => {

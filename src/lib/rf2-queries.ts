@@ -106,14 +106,6 @@ export async function updateStore(storeId: string, body: StoreUpdateBody) {
   return { status: response.status, data, error };
 }
 
-/** DELETE /api/v1/stores/{store_id} */
-export async function softDeleteStore(storeId: string) {
-  const { data, error, response } = await apiClient.DELETE("/api/v1/stores/{store_id}", {
-    params: { path: { store_id: storeId } },
-  });
-  return { status: response.status, data, error };
-}
-
 // --- Query keys ---------------------------------------------------------------
 // Store keys are scoped by the active tenant id so a tenant switch re-scopes the
 // cache (S7); RF-2 holds no authoritative scope (OQ-5) — the id comes from the

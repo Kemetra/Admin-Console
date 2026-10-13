@@ -3,18 +3,21 @@ import { DataTable } from "@/components/DataTable";
 import { ListState } from "@/components/ListState";
 import { type T, useT } from "@/i18n";
 /**
- * SF-S1 — Store roster (T026). Scoped to the ACTIVE TENANT read from RF-1's
- * provider. Pre-gate (OQ-4): with no active tenant we render the scope prompt
- * and never issue `listStores` (the scope-401 is avoided, not a sign-out). With
- * an active tenant, the backend-scoped store set renders as a table (no client
- * filter, OQ-2); zero rows is a successful empty state (OQ-8).
+ * SF-S1 — Store roster (T026; RT-400 screens 01–04). Scoped to the ACTIVE
+ * TENANT read from RF-1's provider. Pre-gate (OQ-4): with no active tenant we
+ * render the scope prompt and never issue `listStores` (the scope-401 is
+ * avoided, not a sign-out). With an active tenant, the backend-scoped store set
+ * renders as a table (no client filter, OQ-2); zero rows is a successful empty
+ * state (OQ-8).
  *
- * A residual `401` (scope went stale after the gate) maps to `scope-required`
- * and renders the scope prompt, still never a sign-out. 403 → persistent banner;
- * 5xx → retryable banner.
+ * «إضافة متجر» stays in the header in every state: actions are never hidden by
+ * role or state; the server's 403 is the authority. A residual `401` maps to
+ * `scope-required` (scope prompt, still never a sign-out). 403 → danger banner;
+ * 5xx → warning banner with a reload.
  */
 import { Link, useNavigate } from "react-router";
 import { ScopePrompt } from "./ScopePrompt";
+import { StoreStateBadge } from "./StoreStateBadge";
 import { useStoreList } from "./useStoreQueries";
 import { useStoreScope } from "./useStoreScope";
 import "../shell/surface.css";
@@ -23,7 +26,7 @@ type StoreRow = { id: string; code: string; name: string; is_active?: boolean };
 
 function storeColumns(t: T) {
   return [
-    { key: "name", header: t("stores.field.name"), cell: (s: StoreRow) => s.name },
+    { key: "name", header: t("stores.list.col.store"), cell: (s: StoreRow) => s.name },
     {
       key: "code",
       header: t("stores.field.code"),
@@ -33,22 +36,9 @@ function storeColumns(t: T) {
     {
       key: "state",
       header: t("stores.field.state"),
-      cell: (s: StoreRow) => (
-        <span className={s.is_active === false ? "badge badge--suspended" : "badge badge--active"}>
-          {t(s.is_active === false ? "stores.state.inactive" : "stores.state.active")}
-        </span>
-      ),
+      cell: (s: StoreRow) => <StoreStateBadge isActive={s.is_active} />,
     },
   ];
-}
-
-/**
- * A business-authored name inside a plain-string message (a `string` prop),
- * isolated with FSI/PDI: the text equivalent of <bdi>, so a Latin name can't
- * reorder the Arabic sentence around it.
- */
-function isolate(name: string | null): string {
-  return `\u2068${name ?? ""}\u2069`;
 }
 
 export function StoreList(): React.JSX.Element {
@@ -67,8 +57,11 @@ export function StoreList(): React.JSX.Element {
   }
 
   const rows = result?.kind === "rows" ? result.rows : [];
-  const error =
-    result?.kind === "error" && result.render.kind === "banner" ? result.render : undefined;
+  // Any failure is an error render, never the zero-row empty state.
+  const error = result?.kind === "error" ? result.render : undefined;
+  const retryable = error?.kind === "banner" && error.retryable;
+  const requestId = error && "requestId" in error ? error.requestId : undefined;
+  const ready = !isLoading && !error;
 
   return (
     <div className="surface">
@@ -79,43 +72,39 @@ export function StoreList(): React.JSX.Element {
             {t.rich("stores.list.sub", { tenant: <bdi>{activeTenantName}</bdi> })}
           </p>
         </div>
-        {!isLoading && !error && rows.length > 0 ? (
-          <Link to="/stores/new" className="btn-primary">
-            {t("stores.list.add")}
-          </Link>
-        ) : null}
+        <Link to="/stores/new" className="btn-primary">
+          {t("stores.list.add")}
+        </Link>
       </header>
 
-      {error ? (
+      {retryable ? (
         <Banner
-          variant="danger"
-          message={t(error.messageKey)}
-          requestId={error.requestId}
+          variant="warning"
+          title={t("stores.list.loadFailedTitle")}
+          message={t("stores.list.loadFailedBody")}
+          requestId={requestId}
           action={
-            error.retryable ? (
-              <button type="button" className="btn-ghost" onClick={refetch}>
-                {t("stores.list.retry")}
-              </button>
-            ) : undefined
+            <button type="button" className="btn-secondary" onClick={refetch}>
+              {t("stores.list.retry")}
+            </button>
           }
         />
+      ) : null}
+      {error && !retryable ? (
+        <Banner variant="danger" message={t(error.messageKey)} requestId={requestId} />
       ) : null}
 
       {isLoading ? <ListState state="loading" label={t("stores.list.loadingNoun")} /> : null}
 
-      {!isLoading && !error && rows.length === 0 ? (
+      {ready && rows.length === 0 ? (
         <ListState
           state="empty"
-          emptyMessage={t("stores.list.empty", { tenant: isolate(activeTenantName) })}
-          action={
-            <Link to="/stores/new" className="btn-primary">
-              {t("stores.list.add")}
-            </Link>
-          }
+          emptyMessage={t("stores.list.empty")}
+          emptyHint={t("stores.list.emptyHint")}
         />
       ) : null}
 
-      {!isLoading && !error && rows.length > 0 ? (
+      {ready && rows.length > 0 ? (
         <DataTable
           caption={t("stores.list.caption")}
           columns={storeColumns(t)}

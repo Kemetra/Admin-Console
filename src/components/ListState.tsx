@@ -19,6 +19,8 @@ export interface ListStateProps {
   label?: string;
   /** Empty-state message; the zero-row success copy. */
   emptyMessage?: string;
+  /** Optional secondary line under the empty message (what to do next). */
+  emptyHint?: string;
   /** Create entry point rendered alongside the empty message. */
   action?: React.ReactNode;
 }
@@ -27,6 +29,7 @@ export function ListState({
   state,
   label,
   emptyMessage,
+  emptyHint,
   action,
 }: ListStateProps): React.JSX.Element | null {
   const t = useT();
@@ -47,6 +50,7 @@ export function ListState({
   return (
     <div className="list-state list-state--empty">
       <p className="list-state__msg">{emptyMessage}</p>
+      {emptyHint ? <p className="list-state__hint">{emptyHint}</p> : null}
       {action ? <div className="list-state__action">{action}</div> : null}
     </div>
   );

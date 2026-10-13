@@ -72,13 +72,91 @@
 .surface__form .field {
   gap: var(--space-2);
 }
-.field-checkbox {
+
+/* Sectioned form (RT-400 screens 16/17): a section title, then fields in two
+ * columns that stack below 600px, then the actions under a divider. */
+.surface__section-title {
+  margin: 0;
+  font: var(--weight-strong) var(--text-section-title) / var(--leading-tight) var(--font-sans);
+  color: var(--color-text);
+}
+.surface__form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-5) var(--space-4);
+  align-items: start;
+}
+.surface__form-grid > .field {
+  align-content: start;
+}
+@media (max-width: 600px) {
+  .surface__form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.field__required {
+  font-weight: var(--weight-regular, 400);
+}
+.field__hint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-machine);
+  line-height: var(--leading-body);
+}
+.surface__form .input--mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-machine);
+}
+.surface__form .input[readonly] {
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+}
+.surface__actions--divided {
+  margin-top: 0;
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-border);
+}
+
+/* «حالة المتجر»: the V1 is_active control, set apart from the form. */
+.surface__status {
+  display: grid;
+  gap: var(--space-4);
+  max-width: 65ch;
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-border);
+}
+.surface__status-row {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+/* Inline confirm before suspending (not a modal, DESIGN.md). */
+.surface__confirm {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+.surface__confirm-msg {
+  margin: 0;
+  color: var(--color-text);
+}
+.surface__confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+.surface__status-current {
+  display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  color: var(--color-text);
-  font-size: var(--text-body);
-  cursor: pointer;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-control);
 }
 .surface__scope-line {
   padding: var(--space-3) var(--space-4);

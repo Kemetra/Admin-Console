@@ -41,39 +41,60 @@ export const tenants = {
   "tenants.errors.slugConflict": "هذا المعرّف المختصر مستخدم بالفعل. اختر معرّفًا آخر.",
 
   // --- Stores ----------------------------------------------------------------
+  // Copy follows the approved RT-400 screens (design/screens/01–05, 16, 17, 19).
   "stores.list.title": "المتاجر",
-  "stores.list.sub": "المتاجر في {tenant}.",
+  "stores.list.sub": "المتاجر في {tenant}",
   "stores.list.add": "إضافة متجر",
   "stores.list.caption": "المتاجر",
+  "stores.list.col.store": "المتجر",
   "stores.list.loadingNoun": "المتاجر",
-  "stores.list.empty": "لا توجد متاجر في {tenant} بعد.",
-  "stores.list.retry": "إعادة المحاولة",
+  "stores.list.empty": "لا توجد متاجر في هذه المؤسسة بعد.",
+  "stores.list.emptyHint": "أضف أول متجر لتتمكن من إقران نقاط البيع.",
+  "stores.list.loadFailedTitle": "تعذّر تحميل قائمة المتاجر.",
+  "stores.list.loadFailedBody":
+    "لم يتغيّر شيء في بيانات المتاجر. أعد تحميل القائمة للمحاولة مرة أخرى.",
+  "stores.list.retry": "إعادة تحميل المتاجر",
 
-  "stores.field.name": "الاسم",
   "stores.field.code": "الرمز",
   "stores.field.state": "الحالة",
   "stores.field.id": "معرّف المتجر",
 
-  // State badges: the adjective agrees with «المتجر» (masculine).
+  // State badges: the adjective agrees with «المتجر» (masculine). Inactive is
+  // the V1 `is_active=false` state, not a closure (decisions 188/194).
   "stores.state.active": "نشط",
-  "stores.state.inactive": "غير نشط",
+  "stores.state.inactive": "موقوف",
 
   "stores.detail.loadingNoun": "المتجر",
   "stores.detail.back": "العودة إلى المتاجر",
-  "stores.detail.edit": "تعديل",
-  // Also the ConfirmDelete action, so it reads as «حذف {name}؟ …» there.
-  "stores.detail.softDelete": "حذف",
+  "stores.detail.edit": "تعديل المتجر",
 
-  "stores.form.createTitle": "متجر جديد",
-  "stores.form.editTitle": "تعديل المتجر",
-  "stores.form.create": "إضافة المتجر",
-  "stores.form.saveChanges": "حفظ التغييرات",
-  "stores.form.scopeLine": "تتم الإضافة في المؤسسة {tenant}.",
-  "stores.form.active": "نشط",
+  "stores.form.createTitle": "إضافة متجر",
+  "stores.form.editTitle": "تعديل {name}",
+  "stores.form.section": "بيانات المتجر",
+  "stores.form.nameLabel": "اسم المتجر",
+  "stores.form.codeLabel": "رمز المتجر",
+  "stores.form.required": "(إلزامي)",
+  "stores.form.codeHintCreate": "لا يمكن تغيير الرمز بعد إنشاء المتجر.",
+  "stores.form.codeHintEdit": "للقراءة فقط. لا يمكن تغيير الرمز بعد إنشاء المتجر.",
+  "stores.form.idHint": "استخدمه عند التواصل مع الدعم.",
+  "stores.form.create": "إنشاء المتجر",
+  "stores.form.saveChanges": "حفظ المتجر",
+  "stores.form.cancelEdit": "إلغاء التعديل",
+  "stores.form.scopeLine": "سيُنشأ المتجر في {tenant}.",
+
+  // The V1 `is_active` control on the edit screen (owner decision 2026-10-13).
+  "stores.status.title": "حالة المتجر",
+  "stores.status.current": "الحالة الحالية:",
+  "stores.status.suspend": "إيقاف المتجر",
+  "stores.status.activate": "تفعيل المتجر",
+  "stores.status.confirmLabel": "تأكيد: إيقاف المتجر",
+  "stores.status.confirmPrompt": "إيقاف {name}؟ يمكنك إعادة تفعيله لاحقًا من هذه الصفحة.",
 
   "stores.scope.prompt":
     "اختر مؤسسة قبل إدارة المتاجر. استخدم محدد المؤسسة في شريط النطاق أعلاه لاختيار مكان عملك.",
 
   "stores.errors.codeConflict": "رمز المتجر هذا مستخدم بالفعل في هذه المؤسسة. اختر رمزًا آخر.",
   "stores.errors.scopeRequired": "اختر مؤسسة قبل إدارة المتاجر.",
+  "stores.errors.editDeniedTitle": "ليست لديك صلاحية لتعديل هذا المتجر.",
+  "stores.errors.editDeniedBody": "لم يتغيّر شيء. يستطيع مالك المؤسسة أو مسؤولها إجراء هذا التعديل.",
 } satisfies Messages;

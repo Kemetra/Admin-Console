@@ -35,32 +35,48 @@ export const tenants: MessagesOf<typeof ar> = {
 
   // --- Stores ----------------------------------------------------------------
   "stores.list.title": "Stores",
-  "stores.list.sub": "Stores in {tenant}.",
-  "stores.list.add": "New store",
+  "stores.list.sub": "Stores in {tenant}",
+  "stores.list.add": "Add store",
   "stores.list.caption": "Stores",
+  "stores.list.col.store": "Store",
   "stores.list.loadingNoun": "stores",
-  "stores.list.empty": "No stores in {tenant} yet.",
-  "stores.list.retry": "Retry",
+  "stores.list.empty": "No stores in this tenant yet.",
+  "stores.list.emptyHint": "Add the first store so you can pair point-of-sale devices.",
+  "stores.list.loadFailedTitle": "Couldn't load the store list.",
+  "stores.list.loadFailedBody": "Nothing changed in your store data. Reload the list to try again.",
+  "stores.list.retry": "Reload stores",
 
-  "stores.field.name": "Name",
   "stores.field.code": "Code",
-  "stores.field.state": "State",
+  "stores.field.state": "Status",
   "stores.field.id": "Store ID",
 
-  "stores.state.active": "active",
-  "stores.state.inactive": "inactive",
+  "stores.state.active": "Active",
+  "stores.state.inactive": "Suspended",
 
   "stores.detail.loadingNoun": "store",
   "stores.detail.back": "Back to stores",
-  "stores.detail.edit": "Edit",
-  "stores.detail.softDelete": "Soft-delete",
+  "stores.detail.edit": "Edit store",
 
-  "stores.form.createTitle": "New store",
-  "stores.form.editTitle": "Edit store",
+  "stores.form.createTitle": "Add store",
+  "stores.form.editTitle": "Edit {name}",
+  "stores.form.section": "Store details",
+  "stores.form.nameLabel": "Store name",
+  "stores.form.codeLabel": "Store code",
+  "stores.form.required": "(required)",
+  "stores.form.codeHintCreate": "The code can't be changed after the store is created.",
+  "stores.form.codeHintEdit": "Read-only. The code can't be changed after the store is created.",
+  "stores.form.idHint": "Quote it when you contact support.",
   "stores.form.create": "Create store",
-  "stores.form.saveChanges": "Save changes",
-  "stores.form.scopeLine": "Creating in tenant {tenant}.",
-  "stores.form.active": "Active",
+  "stores.form.saveChanges": "Save store",
+  "stores.form.cancelEdit": "Cancel editing",
+  "stores.form.scopeLine": "The store will be created in {tenant}.",
+
+  "stores.status.title": "Store status",
+  "stores.status.current": "Current status:",
+  "stores.status.suspend": "Suspend store",
+  "stores.status.activate": "Activate store",
+  "stores.status.confirmLabel": "Confirm: suspend store",
+  "stores.status.confirmPrompt": "Suspend {name}? You can activate it again from this page.",
 
   "stores.scope.prompt":
     "Select a tenant before managing stores. Use the tenant selector in the scope bar above to choose where you are working.",
@@ -68,4 +84,7 @@ export const tenants: MessagesOf<typeof ar> = {
   "stores.errors.codeConflict":
     "That store code is already in use in this tenant. Choose a different one.",
   "stores.errors.scopeRequired": "Select a tenant before managing stores.",
+  "stores.errors.editDeniedTitle": "You don't have permission to edit this store.",
+  "stores.errors.editDeniedBody":
+    "Nothing changed. The tenant owner or an admin can make this change.",
 };
