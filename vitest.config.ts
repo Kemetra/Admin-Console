@@ -20,7 +20,8 @@ export default defineConfig({
     setupFiles: ["tests/unit/setup.ts"],
     coverage: {
       provider: "v8",
-      reporter: ["text", "html"],
+      // RT-461: lcov is the machine-readable report CI uploads to Codecov.
+      reporter: ["text", "html", "lcov"],
       include: ["src/**"],
       // Excluded: vendored client (D-7, generated output), the bootstrap
       // entry (main.tsx, exercised by E2E not unit), and ambient types.
