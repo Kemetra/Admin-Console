@@ -2,7 +2,7 @@
   "name": "retail-tower-console",
   "version": "0.1.0",
   "private": true,
-  "license": "UNLICENSED",
+  "license": "Apache-2.0",
   "type": "module",
   "packageManager": "pnpm@9.15.0",
   "engines": {

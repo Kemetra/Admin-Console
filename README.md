@@ -10,7 +10,7 @@
   <a href=".specify/memory/constitution.md"><img alt="Platform: frontend-only" src="https://img.shields.io/badge/platform-frontend--only-14b8a6?labelColor=0a0f24&style=flat-square"></a>
   <a href="src/generated"><img alt="API: generated client only" src="https://img.shields.io/badge/API-generated%20client%20only-60a5fa?labelColor=0a0f24&style=flat-square"></a>
   <a href="specs/001-console-foundation/api-readiness.md"><img alt="Contracts: Backend-Core authority" src="https://img.shields.io/badge/contracts-Backend--Core%20authority-f87171?labelColor=0a0f24&style=flat-square"></a>
-  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-34d399?labelColor=0a0f24&style=flat-square"></a>
+  <a href="LICENSE"><img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-34d399?labelColor=0a0f24&style=flat-square"></a>
 </p>
 
 <p align="center">
@@ -187,4 +187,4 @@ The unit of work is a Jira issue (project RT); start from `origin/main`, keep ch
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
