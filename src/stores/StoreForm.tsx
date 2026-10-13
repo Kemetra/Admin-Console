@@ -90,7 +90,7 @@ function StoreFields({
 }: Readonly<{
   isEdit: boolean;
   storeId?: string;
-  initial?: StoreFormProps["initial"];
+  initial: StoreFormProps["initial"];
   codeError?: MessageKey;
 }>): React.JSX.Element {
   const t = useT();
