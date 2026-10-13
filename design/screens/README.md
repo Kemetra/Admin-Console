@@ -8,6 +8,10 @@ Static PNG exports of the screen designs made in the **Retail Tower Design Syste
 - **Exported:** 12 October 2026, at 1440px wide. Claude Design split long screens top to bottom into parts (`-a`, `-b`, …) so each file stays under 180 KB; read the parts in order.
 - **Design system:** the screens use the bundle in [`../claude-design-system/`](../claude-design-system/) as synced after #94.
 - **Decisions applied:** RT-391 D1–D5; RT-414 decisions 1–4 as merged in Backend-Core #741 (purpose enum, renewal cap of 8 hours, owner and tenant-admin audit visibility, `ticket_ref` pattern); and the owner decisions of 12 October 2026. D-AUD-07 (charts), D-AUD-08 (status words) and DS-R17 (design-only actions) are recorded in the [design-system README](../claude-design-system/README.md). The one-action break-glass scope and the suspended-tenant rule are on RT-414 (comment 11711), where the suspended-tenant rule awaits contract confirmation. D-AUD-01 (only the platform team resolves an unknown outcome) and D-AUD-02 (the owner workspace is a role-gated group inside the Platform Console) are recorded in the audit trail: `templates/design-audit/DESIGN-AUDIT.md` and `FOLLOW-UPS.md` in the Claude Design project.
+- **RT-400 corrections (13 October 2026):** `16-store-create.png`, `17-store-edit.png` and `19-store-details-denied.png` replace their 12 October exports. They apply the corrections from RT-400 comment 11832: the edit form has an editable store name, the denial screen has no «حذف المتجر» action, and the time zone reads «القاهرة (Africa/Cairo)» with no fixed UTC offset.
+  - The project's `export/screens/` still held the old versions, so these three were rendered locally from the corrected templates listed in the index (default view, light, Arabic) at 1440×900. They used the synced design-system CSS, the Claude Design runtime (`support.js`) and Chromium.
+  - The fonts were a local Dubai copy, not the project's uploaded files.
+  - The change log is `templates/design-audit/rt-400/RT-400.md` in the project. The owner has not yet approved these three for RT-400.
 - **Status:** reviewed with the owner in Claude Design. These images are not an implementation sign-off: backend contracts that the screens depend on are listed in `FOLLOW-UPS.md`, and controls without a service are shown `aria-disabled` with a «تصميم فقط» reason.
 
 ## Known gaps
@@ -36,4 +40,4 @@ Static PNG exports of the screen designs made in the **Retail Tower Design Syste
 | `45-app-shell-owner.png` | App shell, owner role | `templates/app-shell/AppShell.dc.html` |
 | `46-support-session-cap-reached-a.png`<br>`46-support-session-cap-reached-b.png` | Support session at the 8-hour renewal cap (RT-414 decision 2) | `templates/platform-dashboard/PlatformDashboard.dc.html` |
 
-72 files, 7.6 MB in total; the largest is under 180 KB.
+72 files, 7.5 MB in total; the largest is under 180 KB.
