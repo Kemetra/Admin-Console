@@ -13,6 +13,14 @@
   font-weight: var(--weight-medium);
 }
 
+/* Titled banner: the headline carries the status colour, the body reads as text. */
+.rtc-alert__title {
+  font-weight: var(--weight-strong);
+}
+.rtc-alert__body {
+  color: var(--color-text);
+}
+
 .rtc-alert__req {
   font-family: var(--font-mono);
   font-size: var(--text-machine);

@@ -11,6 +11,8 @@ export type BannerVariant = "danger" | "warning" | "success" | "info";
 
 export interface BannerProps {
   variant: BannerVariant;
+  /** Optional one-line headline above `message` (already-translated copy). */
+  title?: string;
   message: string;
   /** Backend request_id from a 4xx response (VD-4). Rendered when present. */
   requestId?: string;
@@ -22,11 +24,18 @@ export interface BannerProps {
   action?: React.ReactNode;
 }
 
-export function Banner({ variant, message, requestId, action }: BannerProps): React.JSX.Element {
+export function Banner({
+  variant,
+  title,
+  message,
+  requestId,
+  action,
+}: Readonly<BannerProps>): React.JSX.Element {
   const t = useT();
   return (
     <div className={`rtc-alert rtc-alert--${variant}`} role="alert">
-      <span className="rtc-alert__msg">{message}</span>
+      {title ? <strong className="rtc-alert__title">{title}</strong> : null}
+      <span className={title ? "rtc-alert__body" : "rtc-alert__msg"}>{message}</span>
       {requestId ? (
         <span className="rtc-alert__req">
           {t.rich("components.banner.requestRef", { id: <bdi dir="ltr">{requestId}</bdi> })}

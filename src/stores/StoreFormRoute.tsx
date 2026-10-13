@@ -42,7 +42,11 @@ function EditStoreForm({ storeId }: { storeId: string | undefined }): React.JSX.
     }
     return (
       <div className="surface">
-        <Banner variant="danger" message={t(result.render.messageKey)} />
+        <Banner
+          variant="danger"
+          message={t(result.render.messageKey)}
+          requestId={"requestId" in result.render ? result.render.requestId : undefined}
+        />
       </div>
     );
   }

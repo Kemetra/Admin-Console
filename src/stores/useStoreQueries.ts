@@ -7,7 +7,6 @@ import {
   mapRf2Error,
   readStore,
   rf2QueryKeys,
-  softDeleteStore,
   updateStore,
 } from "@/lib/rf2-queries";
 /**
@@ -79,30 +78,66 @@ export function useStoreDetail(storeId: string | undefined) {
   return { result: query.data, isLoading: query.isLoading };
 }
 
-/** SF-S3 — create/update. Invalidates the active tenant's store list + detail. */
+type UpdateResult = Awaited<ReturnType<typeof updateStore>>;
+
+/**
+ * After a store PATCH: a 2xx returns the updated Store, which is merged over
+ * the cached detail. The generated `Store` type has every field optional, so
+ * the merge keeps `id` and `code` even if a response were partial. The edit
+ * screen then shows the new state as soon as the mutation settles: no stale
+ * badge, no refetch that could fail and replace the form. With nothing cached
+ * the detail is refetched instead. The list is refreshed and awaited.
+ */
+function useOnStoreUpdated(activeTenantId: string | null, storeId: string | undefined) {
+  const qc = useQueryClient();
+  return (res: UpdateResult) => {
+    const refreshList = qc.invalidateQueries({ queryKey: rf2QueryKeys.stores(activeTenantId) });
+    if (!storeId || res.status >= 400 || !res.data) return refreshList;
+    const key = rf2QueryKeys.store(storeId);
+    const cached = qc.getQueryData<StoreDetailResult>(key);
+    if (cached?.kind !== "store") {
+      return Promise.all([refreshList, qc.invalidateQueries({ queryKey: key })]);
+    }
+    const next: StoreDetailResult = {
+      kind: "store",
+      store: { ...cached.store, ...(res.data as Partial<Store>) },
+    };
+    qc.setQueryData(key, next);
+    return refreshList;
+  };
+}
+
+/** SF-S3 — create/update. Refreshes the active tenant's store list + detail. */
 export function useStoreMutations(activeTenantId: string | null, storeId?: string) {
   const qc = useQueryClient();
-  const invalidate = () => {
-    void qc.invalidateQueries({ queryKey: rf2QueryKeys.stores(activeTenantId) });
-    if (storeId) void qc.invalidateQueries({ queryKey: rf2QueryKeys.store(storeId) });
-  };
+  const onUpdated = useOnStoreUpdated(activeTenantId, storeId);
 
   const create = useMutation({
     mutationFn: (body: StoreCreateBody) => createStore(body),
-    onSuccess: invalidate,
+    onSuccess: () => qc.invalidateQueries({ queryKey: rf2QueryKeys.stores(activeTenantId) }),
   });
   const update = useMutation({
     mutationFn: (body: StoreUpdateBody) => updateStore(storeId as string, body),
-    onSuccess: invalidate,
+    onSuccess: onUpdated,
   });
   return { create, update };
 }
 
-/** SF-S2/S3 — soft-delete behind a confirm; re-fetches the store list (S8). */
-export function useStoreDelete(activeTenantId: string | null) {
-  const qc = useQueryClient();
+/** A store request that threw (offline, aborted) before any HTTP status. */
+export const STORE_REQUEST_FAILED: Rf2ErrorRender = {
+  kind: "generic",
+  messageKey: "errors.generic",
+};
+
+/** Mutation key of the V1 `is_active` toggle, so the name form can see it in flight. */
+export const storeStatusMutationKey = (storeId: string) => ["rf2", "store-status", storeId];
+
+/** RT-400 — the edit screen's «إيقاف / تفعيل المتجر» (`{ is_active }` only). */
+export function useStoreStatusMutation(activeTenantId: string | null, storeId: string) {
+  const onUpdated = useOnStoreUpdated(activeTenantId, storeId);
   return useMutation({
-    mutationFn: (storeId: string) => softDeleteStore(storeId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: rf2QueryKeys.stores(activeTenantId) }),
+    mutationKey: storeStatusMutationKey(storeId),
+    mutationFn: (isActive: boolean) => updateStore(storeId, { is_active: isActive }),
+    onSuccess: onUpdated,
   });
 }
