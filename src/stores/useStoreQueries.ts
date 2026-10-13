@@ -81,19 +81,29 @@ export function useStoreDetail(storeId: string | undefined) {
 type UpdateResult = Awaited<ReturnType<typeof updateStore>>;
 
 /**
- * After a store PATCH: a 2xx returns the updated Store, which is written
- * straight into the detail cache. The edit screen then shows the new state as
- * soon as the mutation settles: no stale badge, no refetch that could fail and
- * replace the form. The list is refreshed and awaited.
+ * After a store PATCH: a 2xx returns the updated Store, which is merged over
+ * the cached detail. The generated `Store` type has every field optional, so
+ * the merge keeps `id` and `code` even if a response were partial. The edit
+ * screen then shows the new state as soon as the mutation settles: no stale
+ * badge, no refetch that could fail and replace the form. With nothing cached
+ * the detail is refetched instead. The list is refreshed and awaited.
  */
 function useOnStoreUpdated(activeTenantId: string | null, storeId: string | undefined) {
   const qc = useQueryClient();
   return (res: UpdateResult) => {
-    if (storeId && res.status < 400 && res.data) {
-      const next: StoreDetailResult = { kind: "store", store: res.data as Store };
-      qc.setQueryData(rf2QueryKeys.store(storeId), next);
+    const refreshList = qc.invalidateQueries({ queryKey: rf2QueryKeys.stores(activeTenantId) });
+    if (!storeId || res.status >= 400 || !res.data) return refreshList;
+    const key = rf2QueryKeys.store(storeId);
+    const cached = qc.getQueryData<StoreDetailResult>(key);
+    if (cached?.kind !== "store") {
+      return Promise.all([refreshList, qc.invalidateQueries({ queryKey: key })]);
     }
-    return qc.invalidateQueries({ queryKey: rf2QueryKeys.stores(activeTenantId) });
+    const next: StoreDetailResult = {
+      kind: "store",
+      store: { ...cached.store, ...(res.data as Partial<Store>) },
+    };
+    qc.setQueryData(key, next);
+    return refreshList;
   };
 }
 

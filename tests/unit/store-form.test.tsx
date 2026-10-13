@@ -335,6 +335,41 @@ describe("StoreFormRoute edit: the status toggle and the detail cache", () => {
   });
 });
 
+describe("StoreFormRoute edit: a partial PATCH response", () => {
+  beforeEach(() => {
+    readStore.mockReset();
+    updateStore.mockReset();
+    activeContext.mockReturnValue(withTenant);
+  });
+
+  test("is merged over the cached store, so code and ID survive", async () => {
+    readStore.mockResolvedValue({ status: 200, data: { ...cfc, id: "s1" } });
+    // The generated Store type allows a partial body; only the flag comes back.
+    updateStore.mockResolvedValue({ status: 200, data: { is_active: false } });
+    const qc = createQueryClient();
+    render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter initialEntries={["/stores/s1/edit"]}>
+          <Routes>
+            <Route path="/stores/:storeId/edit" element={<StoreFormRoute mode="edit" />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Suspend store" }));
+    const confirm = screen.getByRole("region", { name: "Confirm: suspend store" });
+    fireEvent.click(within(confirm).getByRole("button", { name: "Suspend store" }));
+
+    expect(await screen.findByRole("button", { name: "Activate store" })).toBeDefined();
+    expect(qc.getQueryData(["rf2", "store", "s1"])).toEqual({
+      kind: "store",
+      store: { ...cfc, id: "s1", is_active: false },
+    });
+    expect((screen.getByLabelText(/store code/i) as HTMLInputElement).value).toBe("CFC");
+    expect(readStore).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("StoreForm pre-gate", () => {
   beforeEach(() => {
     activeContext.mockReturnValue({ context: { active_tenant: null } });
