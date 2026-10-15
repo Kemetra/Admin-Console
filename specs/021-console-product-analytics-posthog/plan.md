@@ -123,7 +123,7 @@ Heatmaps and exception capture fall back to **project remote config**; replay, s
 | T11 | Unauthorised access to analytics data | Low × Medium | Owner-only org; 2FA/SSO; no shared logins; access list reviewed quarterly |
 
 ### 5.1 Consent and user choice
-- Operators are B2B staff of tenant customers. Even with anonymous, cookieless, memory-only capture, the plan assumes **explicit opt-in** in the Console (Settings toggle, default **off**), plus a short privacy notice naming PostHog as a processor. Opt-out is immediate and stops the SDK; the choice is stored locally (`rt.analytics.v1:consent`, alongside the existing `rt.theme.v1` / `rt.locale.v1` keys).
+- Operators are B2B staff of tenant customers. Even with anonymous, cookieless, memory-only capture, the plan assumes **explicit opt-in** in the Console (Settings toggle, default **off**), plus a short privacy notice naming PostHog as a processor. Opt-out is immediate and stops the SDK. The choice is stored locally **per user** (`rt.analytics.v1:consent:user:<id>`, mirroring the per-user `rt.locale.v1:user:<id>` pattern in `src/i18n/locale.ts`, which exists so a shared admin PC does not carry one operator's choice over to the next). There is **no browser-wide fallback**: an absent per-user key means "declined". The user id stays in local storage only and is never sent to PostHog. On sign-out or operator switch the SDK is shut down and re-evaluated against the new operator's own consent.
 - Whether opt-in can be relaxed to notice + opt-out is a **legal question** (A4) — not decided here.
 - `respect_dnt: true`. Global Privacy Control is **not** assumed to be handled by the SDK: the Console itself checks `navigator.globalPrivacyControl` (and DNT) before init and treats either as "declined".
 
@@ -205,6 +205,7 @@ Each is blocked on the one before it.
 - AC-7 Opt-out mid-session ⇒ no further requests.
 - AC-8 (positive case) Key + consent set ⇒ the **only** hosts contacted are the ones sanctioned in the egress list (proves §7.1 is true).
 - AC-9 Key + consent set ⇒ no `ph_*` (or other PostHog) keys in cookies, localStorage or sessionStorage — memory persistence may still use sessionStorage for session/window ids (**Needs verification**); the no-cookie-banner reasoning in §4.3 depends on this.
+- AC-10 Operator A opts in on a browser; operator B then signs in on the same browser without opting in ⇒ zero requests for B's session (consent never carries over between operators, with or without a page reload).
 
 ## 9. Owner decisions required (NOT decided here)
 
