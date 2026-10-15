@@ -11,7 +11,7 @@ import "./dirty-guard.css";
 function tabEdges(panel: HTMLElement, backwards: boolean): [HTMLElement, HTMLElement] {
   const buttons = Array.from(panel.querySelectorAll<HTMLElement>("button"));
   const first = buttons[0];
-  const last = buttons[buttons.length - 1];
+  const last = buttons.at(-1) as HTMLElement;
   return backwards ? [first, last] : [last, first];
 }
 

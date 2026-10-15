@@ -66,7 +66,7 @@
 .unknown-item-detail__value {
   margin: 0;
   color: var(--color-text);
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 .unknown-item-detail__actions {
   display: flex;

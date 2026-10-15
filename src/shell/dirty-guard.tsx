@@ -44,7 +44,7 @@ export const SAVED_NAVIGATION = { dirtyGuard: "saved" } as const;
 
 const fallback: DirtyGuardValue = {
   isDirty: () => false,
-  confirmLeave: async () => true,
+  confirmLeave: () => Promise.resolve(true),
 };
 
 const DirtyGuardContext = createContext<DirtyGuardValue | null>(null);

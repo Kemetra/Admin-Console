@@ -145,5 +145,5 @@
   display: grid;
   grid-template-columns: 140px 1fr;
   gap: var(--space-3);
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }

@@ -54,7 +54,7 @@ export function TenantList(): React.JSX.Element {
         ) : null}
       </header>
 
-      {error && error.kind === "banner" ? (
+      {error?.kind === "banner" ? (
         <Banner
           variant="danger"
           message={t(error.messageKey)}
