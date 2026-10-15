@@ -1,4 +1,4 @@
-import { test as base, expect } from "@playwright/test";
+import { test as base } from "@playwright/test";
 import type { Locale } from "../../src/i18n/locale";
 import { roleKey } from "../../src/i18n/roles";
 import { type MessageKey, type Params, translate } from "../../src/i18n/translate";
@@ -55,5 +55,5 @@ export const test = base.extend<LocaleFixtures>({
   },
 });
 
-export { expect };
+export { expect } from "@playwright/test";
 export type { Page } from "@playwright/test";

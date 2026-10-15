@@ -94,7 +94,7 @@ export function TenantDetail(): React.JSX.Element {
         <h1 className="content__title">{tenant.name}</h1>
       </header>
 
-      {deleteError && deleteError.kind === "banner" ? (
+      {deleteError?.kind === "banner" ? (
         <Banner
           variant="danger"
           message={t(deleteError.messageKey)}

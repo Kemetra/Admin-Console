@@ -33,11 +33,9 @@ export function createAuthRetry(deps: AuthRetryDeps) {
   let inFlightRefresh: Promise<{ ok: boolean }> | null = null;
 
   function refreshOnce(): Promise<{ ok: boolean }> {
-    if (!inFlightRefresh) {
-      inFlightRefresh = deps.refreshSession().finally(() => {
-        inFlightRefresh = null;
-      });
-    }
+    inFlightRefresh ??= deps.refreshSession().finally(() => {
+      inFlightRefresh = null;
+    });
     return inFlightRefresh;
   }
 

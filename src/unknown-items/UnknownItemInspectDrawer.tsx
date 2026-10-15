@@ -106,9 +106,7 @@ export function UnknownItemInspectDrawer({
         <ListState state="loading" label={t("unknownItems.drawer.loadingNoun")} />
       ) : null}
 
-      {error && error.kind === "not-found" ? (
-        <Banner variant="info" message={t(error.messageKey)} />
-      ) : null}
+      {error?.kind === "not-found" ? <Banner variant="info" message={t(error.messageKey)} /> : null}
       {error && (error.kind === "banner" || error.kind === "generic") ? (
         <Banner variant="danger" message={t(error.messageKey)} requestId={error.requestId} />
       ) : null}

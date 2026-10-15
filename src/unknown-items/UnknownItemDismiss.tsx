@@ -48,16 +48,14 @@ export function UnknownItemDismiss({
 
   return (
     <div className="unknown-item-dismiss">
-      {error && error.kind === "banner" ? (
+      {error?.kind === "banner" ? (
         <Banner variant="danger" message={t(error.messageKey)} requestId={error.requestId} />
       ) : null}
-      {error && error.kind === "already-reconciled" ? (
+      {error?.kind === "already-reconciled" ? (
         <Banner variant="warning" message={t(error.messageKey)} />
       ) : null}
-      {error && error.kind === "not-found" ? (
-        <Banner variant="info" message={t(error.messageKey)} />
-      ) : null}
-      {error && error.kind === "generic" ? (
+      {error?.kind === "not-found" ? <Banner variant="info" message={t(error.messageKey)} /> : null}
+      {error?.kind === "generic" ? (
         <Banner variant="danger" message={t(error.messageKey)} requestId={error.requestId} />
       ) : null}
 

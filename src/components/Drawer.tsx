@@ -59,7 +59,7 @@ export function Drawer({ title, onClose, children }: Readonly<DrawerProps>): Rea
     );
     if (focusable.length === 0) return;
     const first = focusable[0];
-    const last = focusable[focusable.length - 1];
+    const last = focusable.at(-1) as HTMLElement;
     const active = document.activeElement;
     if (e.shiftKey && (active === first || active === panelRef.current)) {
       e.preventDefault();

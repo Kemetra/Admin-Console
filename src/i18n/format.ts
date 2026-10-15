@@ -10,9 +10,9 @@
  *  - Durations: whole phrases with plural categories from the catalog.
  */
 import { type Locale, getLocale, intlTag } from "./locale";
-import { formatNumber, translate } from "./translate";
+import { translate } from "./translate";
 
-export { formatNumber };
+export { formatNumber } from "./translate";
 
 // --- Money -------------------------------------------------------------------
 

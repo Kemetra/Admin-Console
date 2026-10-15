@@ -321,16 +321,16 @@
       var root = document.documentElement;
       var stored = null;
       try { stored = localStorage.getItem('rtc-theme'); } catch (e) {}
-      if (stored === 'light' || stored === 'dark') root.setAttribute('data-theme', stored);
+      if (stored === 'light' || stored === 'dark') root.dataset.theme = stored;
       function current() {
-        var attr = root.getAttribute('data-theme');
+        var attr = root.dataset.theme;
         if (attr) return attr;
         return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
       }
       document.querySelectorAll('[data-theme-toggle]').forEach(function (btn) {
         btn.addEventListener('click', function () {
           var next = current() === 'dark' ? 'light' : 'dark';
-          root.setAttribute('data-theme', next);
+          root.dataset.theme = next;
           try { localStorage.setItem('rtc-theme', next); } catch (e) {}
         });
       });
