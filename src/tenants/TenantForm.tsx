@@ -1,6 +1,7 @@
 import { Banner } from "@/components/Banner";
 import { InlineError } from "@/components/InlineError";
 import { type MessageKey, useT } from "@/i18n";
+import { textField } from "@/lib/form-field";
 import { type Rf2ErrorRender, mapRf2Error } from "@/lib/rf2-queries";
 import { SAVED_NAVIGATION } from "@/shell/dirty-guard";
 /**
@@ -53,10 +54,10 @@ export function TenantForm({ mode, tenantId, initial }: TenantFormProps): React.
     setSlugError(undefined);
     setBanner(undefined);
     const form = new FormData(e.currentTarget);
-    const name = String(form.get("name") ?? "");
+    const name = textField(form, "name");
 
     if (mode === "create") {
-      const slug = String(form.get("slug") ?? "");
+      const slug = textField(form, "slug");
       const res = await create.mutateAsync({ slug, name });
       if (res.status >= 400) {
         handleRender(mapRf2Error({ ...res, context: "tenant" }));

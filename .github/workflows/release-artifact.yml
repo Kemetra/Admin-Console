@@ -48,7 +48,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
 
       - name: Setup Node 22 LTS
         uses: actions/setup-node@v4
@@ -57,7 +57,7 @@ jobs:
           cache: pnpm
 
       - name: Install
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
       # No env and no secrets: VITE_* values are inlined into the bundle. The
       # guard runs in this step because Vite reads the variable here;

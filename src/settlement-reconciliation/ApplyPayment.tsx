@@ -3,6 +3,7 @@ import { Drawer } from "@/components/Drawer";
 import { InlineError } from "@/components/InlineError";
 import { type MessageKey, Money, useT } from "@/i18n";
 import { type PaymentApplicationBody, consoleApplyPayment } from "@/lib/client";
+import { textField } from "@/lib/form-field";
 import { receivableStateKey } from "@/receivables/receivableListLogic";
 import {
   type WriteCopy,
@@ -103,8 +104,8 @@ export function ApplyPayment({
     setBanner(undefined);
 
     const form = new FormData(e.currentTarget);
-    const amount = String(form.get("amount") ?? "");
-    const note = (String(form.get("note") ?? "").trim() || null) as string | null;
+    const amount = textField(form, "amount");
+    const note = (textField(form, "note").trim() || null) as string | null;
 
     const errors = validateApplyPaymentDraft({ amount, version: receivable.version });
     if (errors.amount || errors.version) {

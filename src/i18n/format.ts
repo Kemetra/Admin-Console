@@ -24,6 +24,23 @@ export const CURRENCY = "EGP";
 
 const MONEY = /^([+-])?(\d+)(?:\.(\d+))?$/;
 
+// Plain scans rather than regexes: `/0+$/` and lookahead grouping backtrack
+// quadratically on long digit runs (RT-510).
+
+function trimTrailingZeros(digits: string): string {
+  let end = digits.length;
+  while (end > 0 && digits[end - 1] === "0") end--;
+  return digits.slice(0, end);
+}
+
+/** `1234567` → `1,234,567`. */
+function groupThousands(digits: string): string {
+  const head = digits.length % 3 || 3;
+  const groups = [digits.slice(0, head)];
+  for (let i = head; i < digits.length; i += 3) groups.push(digits.slice(i, i + 3));
+  return groups.join(",");
+}
+
 /**
  * `1250.5000` → `1,250.50 EGP`; `-1250.5` → `-1,250.50 EGP`.
  *
@@ -38,9 +55,9 @@ export function formatMoney(amount: string): string {
   if (!match) return amount;
   const [, sign, intDigits, fracDigits = ""] = match;
   const int = intDigits.replace(/^0+(?=\d)/, "");
-  let frac = fracDigits.replace(/0+$/, "");
+  let frac = trimTrailingZeros(fracDigits);
   if (frac.length < 2) frac = frac.padEnd(2, "0");
-  const grouped = int.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  const grouped = groupThousands(int);
   const isZero = /^0+$/.test(int) && /^0*$/.test(fracDigits);
   const minus = sign === "-" && !isZero ? "-" : "";
   return `${minus}${grouped}.${frac} ${CURRENCY}`;

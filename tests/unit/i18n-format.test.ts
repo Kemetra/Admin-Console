@@ -41,6 +41,17 @@ describe("money: 1,250.00 EGP from the exact decimal string", () => {
     expect(formatMoney("10.0001")).toBe("10.0001 EGP");
   });
 
+  // RT-510 (Sonar S8786): grouping and zero-trimming stay linear on long input
+  // (the old regexes took several seconds here; the budget leaves CI headroom).
+  test("a very long amount is formatted in linear time", () => {
+    const zeros = "0".repeat(100_000);
+    const start = performance.now();
+    expect(formatMoney("1".repeat(100_001))).toBe(`11${",111".repeat(33_333)}.00 EGP`);
+    expect(formatMoney(`1.${zeros}1`)).toBe(`1.${zeros}1 EGP`);
+    expect(formatMoney(`1.1${zeros}`)).toBe("1.10 EGP");
+    expect(performance.now() - start).toBeLessThan(1000);
+  });
+
   test("anything that is not a plain decimal is shown as given, not guessed at", () => {
     expect(formatMoney("1e3")).toBe("1e3");
     expect(formatMoney("")).toBe("");

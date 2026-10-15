@@ -39,6 +39,13 @@ export function safeReturnPath(raw: unknown): string {
     return HOME;
   }
   if (url.origin !== PROBE_ORIGIN) return HOME;
-  if (url.pathname.replace(/\/+$/, "") === SIGN_IN) return HOME;
+  if (trimTrailingSlashes(url.pathname) === SIGN_IN) return HOME;
   return `${url.pathname}${url.search}${url.hash}`;
+}
+
+/** A plain scan: `/\/+$/` backtracks quadratically on a long run of slashes. */
+function trimTrailingSlashes(path: string): string {
+  let end = path.length;
+  while (end > 0 && path[end - 1] === "/") end--;
+  return path.slice(0, end);
 }

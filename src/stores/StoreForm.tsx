@@ -1,6 +1,7 @@
 import { Banner } from "@/components/Banner";
 import { InlineError } from "@/components/InlineError";
 import { type MessageKey, useT } from "@/i18n";
+import { textField } from "@/lib/form-field";
 import { type Rf2ErrorRender, mapRf2Error } from "@/lib/rf2-queries";
 import { SAVED_NAVIGATION } from "@/shell/dirty-guard";
 /**
@@ -40,12 +41,6 @@ export interface StoreFormProps {
 /** The 403 render, matched on its catalog copy rather than inferred. */
 function isForbidden(render: Rf2ErrorRender): boolean {
   return render.kind === "banner" && render.messageKey === "errors.forbidden";
-}
-
-/** A form field's text; a non-text entry (a File) reads as empty, never "[object File]". */
-function textField(form: FormData, name: string): string {
-  const value = form.get(name);
-  return typeof value === "string" ? value : "";
 }
 
 function FormBanner({

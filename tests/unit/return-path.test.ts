@@ -31,10 +31,19 @@ describe("safeReturnPath", () => {
     ["the sign-in page", "/signin"],
     ["the sign-in page with a query", "/signin?next=/audit"],
     ["the sign-in page with a trailing slash", "/signin/"],
+    ["the sign-in page with several trailing slashes", "/signin///"],
     ["an empty string", ""],
     ["undefined", undefined],
     ["a non-string", { pathname: "/audit" }],
   ])("falls back to / for %s", (_label, raw) => {
     expect(safeReturnPath(raw)).toBe("/");
   });
+});
+
+// RT-510 (Sonar S8786): trailing-slash trimming stays linear on long input.
+test("a path with a long run of slashes is checked in linear time", () => {
+  const path = `/a${"/".repeat(100_000)}b`;
+  const start = performance.now();
+  expect(safeReturnPath(path)).toBe(path);
+  expect(performance.now() - start).toBeLessThan(1000);
 });

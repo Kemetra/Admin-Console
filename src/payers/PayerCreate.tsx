@@ -3,6 +3,7 @@ import { Drawer } from "@/components/Drawer";
 import { InlineError } from "@/components/InlineError";
 import { type MessageKey, useT } from "@/i18n";
 import { type PayerAccountCreateBody, consoleCreatePayerAccount } from "@/lib/client";
+import { textField } from "@/lib/form-field";
 /**
  * 017 SF2 — Create-payer drawer. Uncontrolled native form (category /
  * displayName / externalRef / store scope). Client-validates via
@@ -95,9 +96,9 @@ export function PayerCreate({
 
     const form = new FormData(e.currentTarget);
     const draft: PayerCreateDraft = {
-      category: String(form.get("category") ?? "credit_customer") as PayerCategory,
-      displayName: String(form.get("displayName") ?? ""),
-      externalRef: (String(form.get("externalRef") ?? "").trim() || null) as string | null,
+      category: textField(form, "category", "credit_customer") as PayerCategory,
+      displayName: textField(form, "displayName"),
+      externalRef: (textField(form, "externalRef").trim() || null) as string | null,
     };
 
     const errors = validatePayerDraft(draft);
