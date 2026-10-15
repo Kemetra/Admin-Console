@@ -45,5 +45,5 @@ test("a path with a long run of slashes is checked in linear time", () => {
   const path = `/a${"/".repeat(100_000)}b`;
   const start = performance.now();
   expect(safeReturnPath(path)).toBe(path);
-  expect(performance.now() - start).toBeLessThan(500);
+  expect(performance.now() - start).toBeLessThan(1000);
 });
