@@ -1,5 +1,6 @@
 import { Banner } from "@/components/Banner";
 import { DataTable } from "@/components/DataTable";
+import { DataTableSkeleton } from "@/components/DataTableSkeleton";
 import { ListState } from "@/components/ListState";
 import { type T, useT } from "@/i18n";
 import type { Rf2ErrorRender } from "@/lib/rf2-queries";
@@ -103,7 +104,13 @@ export function StoreList(): React.JSX.Element {
 
       {error ? <StoreListError error={error} onRetry={refetch} /> : null}
 
-      {isLoading ? <ListState state="loading" label={t("stores.list.loadingNoun")} /> : null}
+      {isLoading ? (
+        <DataTableSkeleton
+          caption={t("stores.list.caption")}
+          columns={storeColumns(t)}
+          label={t("stores.list.loadingNoun")}
+        />
+      ) : null}
 
       {ready && rows.length === 0 ? (
         <ListState

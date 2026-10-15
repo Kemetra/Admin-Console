@@ -49,6 +49,13 @@
     border-color: GrayText;
     border-top-color: CanvasText;
   }
+
+  /* Loading skeleton (RT-549): fills are dropped, so the placeholder bars keep
+   * an outline; otherwise the loading table reads as empty. */
+  .skeleton {
+    box-sizing: border-box;
+    border: 1px solid GrayText;
+  }
 }
 
 /* Screen-reader-only text (RT-268 scope announcements). Stays in the
