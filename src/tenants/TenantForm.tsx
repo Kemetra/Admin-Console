@@ -31,7 +31,11 @@ export interface TenantFormProps {
   initial?: { slug: string; name: string; status?: "active" | "suspended" | "pending" };
 }
 
-export function TenantForm({ mode, tenantId, initial }: TenantFormProps): React.JSX.Element {
+export function TenantForm({
+  mode,
+  tenantId,
+  initial,
+}: Readonly<TenantFormProps>): React.JSX.Element {
   const t = useT();
   const navigate = useNavigate();
   const { create, update } = useTenantMutations(tenantId);

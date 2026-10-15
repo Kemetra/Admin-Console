@@ -9,7 +9,7 @@ export interface NoAccessProps {
   onSignOut: () => void | Promise<void>;
 }
 
-export function NoAccess({ onSignOut }: NoAccessProps): React.JSX.Element {
+export function NoAccess({ onSignOut }: Readonly<NoAccessProps>): React.JSX.Element {
   const t = useT();
   return (
     <div className="signin-stage">

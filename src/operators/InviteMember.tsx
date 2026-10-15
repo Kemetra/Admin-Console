@@ -40,7 +40,7 @@ export function InviteMember({
   activeTenant,
   onClose,
   onInvited,
-}: InviteMemberProps): React.JSX.Element {
+}: Readonly<InviteMemberProps>): React.JSX.Element {
   const t = useT();
   const signOut = useSignOut();
   const [emailError, setEmailError] = useState<MessageKey | undefined>();

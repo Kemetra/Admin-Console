@@ -1,7 +1,7 @@
 import { Banner } from "@/components/Banner";
 import { DataTable } from "@/components/DataTable";
 import { ListState } from "@/components/ListState";
-import { useT } from "@/i18n";
+import { type T, useT } from "@/i18n";
 /**
  * SF-T1 — Tenant roster (T016). The backend-scoped set rendered as a table
  * (DESIGN.md tables-over-cards); no client-side authorization filter (OQ-2).
@@ -18,15 +18,8 @@ import "../shell/surface.css";
 
 type TenantRow = { id: string; slug: string; name: string };
 
-export function TenantList(): React.JSX.Element {
-  const t = useT();
-  const { result, isLoading, refetch } = useTenantList();
-  const navigate = useNavigate();
-
-  const rows = result?.kind === "rows" ? result.rows : [];
-  const error = result?.kind === "error" ? result.render : undefined;
-
-  const columns = [
+function tenantColumns(t: T) {
+  return [
     { key: "name", header: t("tenants.field.name"), cell: (row: TenantRow) => row.name },
     {
       key: "slug",
@@ -35,6 +28,15 @@ export function TenantList(): React.JSX.Element {
       mono: true,
     },
   ];
+}
+
+export function TenantList(): React.JSX.Element {
+  const t = useT();
+  const { result, isLoading, refetch } = useTenantList();
+  const navigate = useNavigate();
+
+  const rows = result?.kind === "rows" ? result.rows : [];
+  const error = result?.kind === "error" ? result.render : undefined;
 
   return (
     <div className="surface">
@@ -84,7 +86,7 @@ export function TenantList(): React.JSX.Element {
       {!isLoading && !error && rows.length > 0 ? (
         <DataTable
           caption={t("tenants.list.caption")}
-          columns={columns}
+          columns={tenantColumns(t)}
           rows={rows}
           rowKey={(row) => row.id}
           onRowActivate={(row) => navigate(`/tenants/${row.id}`)}

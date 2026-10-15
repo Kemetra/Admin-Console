@@ -31,7 +31,7 @@ export function ListState({
   emptyMessage,
   emptyHint,
   action,
-}: ListStateProps): React.JSX.Element | null {
+}: Readonly<ListStateProps>): React.JSX.Element | null {
   const t = useT();
   if (state === "ready") {
     return null;

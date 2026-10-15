@@ -94,7 +94,7 @@ function RefreshButton({
   isPending,
   blockReason,
   onRequest,
-}: RefreshButtonProps): React.JSX.Element {
+}: Readonly<RefreshButtonProps>): React.JSX.Element {
   const t = useT();
   return (
     <div className="refresh-action">
@@ -112,13 +112,15 @@ function RefreshButton({
 }
 
 /** Shown after a later page came from a newer snapshot and the list reloaded. */
-function SnapshotChangedNotice({ show }: { show: boolean }): React.JSX.Element | null {
+function SnapshotChangedNotice({ show }: Readonly<{ show: boolean }>): React.JSX.Element | null {
   const t = useT();
   if (!show) return null;
   return <Banner variant="info" message={t("stock.store.snapshotChanged")} />;
 }
 
-function OutcomeBanner({ outcome }: { outcome: TriggerOutcome | null }): React.JSX.Element | null {
+function OutcomeBanner({
+  outcome,
+}: Readonly<{ outcome: TriggerOutcome | null }>): React.JSX.Element | null {
   const t = useT();
   const view = outcome ? outcomeBannerView(outcome) : null;
   if (!outcome || !view) return null;
@@ -126,7 +128,7 @@ function OutcomeBanner({ outcome }: { outcome: TriggerOutcome | null }): React.J
   return <Banner variant={view.variant} message={t(view.messageKey)} requestId={requestId} />;
 }
 
-function ProductCell({ item }: { item: NegativeOnHandItem }): React.JSX.Element {
+function ProductCell({ item }: Readonly<{ item: NegativeOnHandItem }>): React.JSX.Element {
   const t = useT();
   if (item.tenantProduct && item.mappingStatus === "mapped") {
     return <td>{item.tenantProduct.name}</td>;
@@ -140,7 +142,7 @@ function ProductCell({ item }: { item: NegativeOnHandItem }): React.JSX.Element 
   );
 }
 
-function ItemRow({ item }: { item: NegativeOnHandItem }): React.JSX.Element {
+function ItemRow({ item }: Readonly<{ item: NegativeOnHandItem }>): React.JSX.Element {
   return (
     <tr className="data-table__row">
       <ProductCell item={item} />
@@ -162,7 +164,9 @@ function ItemRow({ item }: { item: NegativeOnHandItem }): React.JSX.Element {
   );
 }
 
-function ItemsTable({ items }: { items: NegativeOnHandItem[] }): React.JSX.Element | null {
+function ItemsTable({
+  items,
+}: Readonly<{ items: NegativeOnHandItem[] }>): React.JSX.Element | null {
   const t = useT();
   if (items.length === 0) return null;
   return (
@@ -194,13 +198,13 @@ function ItemsTable({ items }: { items: NegativeOnHandItem[] }): React.JSX.Eleme
 function NoNegativeItems({
   snapshot,
   itemCount,
-}: { snapshot: StockSnapshotStatus; itemCount: number }): React.JSX.Element | null {
+}: Readonly<{ snapshot: StockSnapshotStatus; itemCount: number }>): React.JSX.Element | null {
   const t = useT();
   if (!statusView(snapshot.status).hasSnapshot || itemCount > 0) return null;
   return <ListState state="empty" emptyMessage={t("stock.items.empty")} />;
 }
 
-function StoreErrorView({ error }: { error: StockDiscrepancyError }): React.JSX.Element {
+function StoreErrorView({ error }: Readonly<{ error: StockDiscrepancyError }>): React.JSX.Element {
   const t = useT();
   return (
     <div className="surface">
@@ -237,7 +241,12 @@ interface StoreViewProps {
   showRefresh: boolean;
 }
 
-function StoreView({ storeId, snapshot, data, showRefresh }: StoreViewProps): React.JSX.Element {
+function StoreView({
+  storeId,
+  snapshot,
+  data,
+  showRefresh,
+}: Readonly<StoreViewProps>): React.JSX.Element {
   const t = useT();
   const refresh = useSnapshotRequest(storeId);
   return (
@@ -284,7 +293,7 @@ export function StockDiscrepancyStore(): React.JSX.Element {
   );
 }
 
-function StoreBody({ storeId }: { storeId: string | undefined }): React.JSX.Element {
+function StoreBody({ storeId }: Readonly<{ storeId: string | undefined }>): React.JSX.Element {
   const { scope, role } = useDiscrepancyScope();
   const data = useStoreNegativeOnHand(scope, storeId);
 

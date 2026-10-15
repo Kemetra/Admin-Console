@@ -16,7 +16,7 @@ export interface StoreFormRouteProps {
   mode: "create" | "edit";
 }
 
-export function StoreFormRoute({ mode }: StoreFormRouteProps): React.JSX.Element {
+export function StoreFormRoute({ mode }: Readonly<StoreFormRouteProps>): React.JSX.Element {
   const { storeId } = useParams();
 
   if (mode === "create") {
@@ -25,7 +25,7 @@ export function StoreFormRoute({ mode }: StoreFormRouteProps): React.JSX.Element
   return <EditStoreForm storeId={storeId} />;
 }
 
-function EditStoreForm({ storeId }: { storeId: string | undefined }): React.JSX.Element {
+function EditStoreForm({ storeId }: Readonly<{ storeId: string | undefined }>): React.JSX.Element {
   const t = useT();
   const { result, isLoading } = useStoreDetail(storeId);
 

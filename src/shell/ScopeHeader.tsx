@@ -46,7 +46,7 @@ function ScopeMenu({
   onChooseStore,
   onAllStores,
   onKeyDown,
-}: ScopeMenuProps): React.JSX.Element {
+}: Readonly<ScopeMenuProps>): React.JSX.Element {
   const t = useT();
   const { result, isLoading, refetch } = useStoreList(tenant.id);
   // The shell must survive a malformed list: anything but an array lists nothing.

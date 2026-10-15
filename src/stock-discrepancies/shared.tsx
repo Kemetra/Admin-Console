@@ -53,7 +53,7 @@ export function LoadMoreButton({
   isFetching,
   label,
   onLoadMore,
-}: LoadMoreProps): React.JSX.Element | null {
+}: Readonly<LoadMoreProps>): React.JSX.Element | null {
   const t = useT();
   if (!hasMore) return null;
   return (
@@ -71,7 +71,10 @@ export interface InlineErrorProps {
 }
 
 /** A failed "Load more" or re-read, under rows that stay on screen. */
-export function InlineLoadError({ error, onRetry }: InlineErrorProps): React.JSX.Element | null {
+export function InlineLoadError({
+  error,
+  onRetry,
+}: Readonly<InlineErrorProps>): React.JSX.Element | null {
   const t = useT();
   if (!error) return null;
   return (

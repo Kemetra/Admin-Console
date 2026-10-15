@@ -117,7 +117,9 @@ function deferred(): Deferred {
   return { promise, resolve };
 }
 
-export function DirtyGuardProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
+export function DirtyGuardProvider({
+  children,
+}: Readonly<{ children: React.ReactNode }>): React.JSX.Element {
   const forms = useRef(new Set<HTMLFormElement>());
   const pending = useRef<Deferred | null>(null);
   const [asking, setAsking] = useState(false);

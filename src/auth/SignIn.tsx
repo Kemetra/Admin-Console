@@ -47,7 +47,7 @@ function SubmitLabel({ phase }: Readonly<{ phase: Phase }>): React.JSX.Element {
   return <>{t("auth.signIn.submit")}</>;
 }
 
-export function SignIn({ onResolved }: SignInProps): React.JSX.Element {
+export function SignIn({ onResolved }: Readonly<SignInProps>): React.JSX.Element {
   const t = useT();
   const [phase, setPhase] = useState<Phase>({ status: "idle" });
 

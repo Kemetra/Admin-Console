@@ -55,7 +55,7 @@ export function ApplyPayment({
   receivable,
   onClose,
   onApplied,
-}: ApplyPaymentProps): React.JSX.Element {
+}: Readonly<ApplyPaymentProps>): React.JSX.Element {
   const t = useT();
   const [amountError, setAmountError] = useState<MessageKey | undefined>();
   const [banner, setBanner] = useState<BannerState | undefined>();

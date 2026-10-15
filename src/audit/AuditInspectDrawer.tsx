@@ -20,7 +20,11 @@ export interface AuditInspectDrawerProps {
   onClose: () => void;
 }
 
-function Field({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
+function Field({
+  label,
+  value,
+  mono,
+}: Readonly<{ label: string; value: React.ReactNode; mono?: boolean }>) {
   return (
     <div className="field-row">
       <dt className="field-row__label">{label}</dt>
@@ -37,7 +41,10 @@ function actorValue(row: AuditRow): React.ReactNode {
   return "—";
 }
 
-export function AuditInspectDrawer({ row, onClose }: AuditInspectDrawerProps): React.JSX.Element {
+export function AuditInspectDrawer({
+  row,
+  onClose,
+}: Readonly<AuditInspectDrawerProps>): React.JSX.Element {
   const t = useT();
 
   function copyRequestId(): void {

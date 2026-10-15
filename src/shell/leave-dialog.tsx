@@ -50,7 +50,7 @@ export interface LeaveDialogProps {
   onDiscard: () => void;
 }
 
-export function LeaveDialog({ onStay, onDiscard }: LeaveDialogProps): React.JSX.Element {
+export function LeaveDialog({ onStay, onDiscard }: Readonly<LeaveDialogProps>): React.JSX.Element {
   const t = useT();
   const panelRef = useRef<HTMLDialogElement>(null);
   const stayRef = useRef<HTMLButtonElement>(null);

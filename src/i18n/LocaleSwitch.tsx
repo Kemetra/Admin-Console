@@ -28,7 +28,9 @@ export function useUserLocale(userId: string | undefined): {
  * place the other language appears; everything else shows one locale at a
  * time (UX-12).
  */
-export function LocaleSwitch({ userId }: { userId: string | undefined }): React.JSX.Element {
+export function LocaleSwitch({
+  userId,
+}: Readonly<{ userId: string | undefined }>): React.JSX.Element {
   const { locale, choose } = useUserLocale(userId);
   const other: Locale = locale === "ar" ? "en" : "ar";
   return (

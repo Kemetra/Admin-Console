@@ -22,7 +22,7 @@ export interface DrawerProps {
 const FOCUSABLE =
   'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
-export function Drawer({ title, onClose, children }: DrawerProps): React.JSX.Element {
+export function Drawer({ title, onClose, children }: Readonly<DrawerProps>): React.JSX.Element {
   const t = useT();
   const panelRef = useRef<HTMLDialogElement>(null);
   const scrimRef = useRef<HTMLDivElement>(null);

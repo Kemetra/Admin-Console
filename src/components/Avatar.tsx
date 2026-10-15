@@ -27,7 +27,7 @@ function initialsOf(name: string): string {
   );
 }
 
-export function Avatar({ name, size = 32 }: AvatarProps): React.JSX.Element {
+export function Avatar({ name, size = 32 }: Readonly<AvatarProps>): React.JSX.Element {
   return (
     <span
       className="avatar"

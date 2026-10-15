@@ -55,7 +55,7 @@ export function AppShell({
   onSignOut,
   children,
   showGatedNav = import.meta.env.DEV,
-}: AppShellProps): React.JSX.Element {
+}: Readonly<AppShellProps>): React.JSX.Element {
   const t = useT();
   const { context } = useActiveContextValue();
   const user = context?.user;

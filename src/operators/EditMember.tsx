@@ -30,7 +30,7 @@ export function EditMember({
   member,
   onClose,
   onChanged,
-}: EditMemberProps): React.JSX.Element {
+}: Readonly<EditMemberProps>): React.JSX.Element {
   const t = useT();
   const update = useUpdateMembership(activeTenantId);
   const revoke = useRevokeMembership(activeTenantId);
