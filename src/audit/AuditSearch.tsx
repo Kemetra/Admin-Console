@@ -19,10 +19,51 @@ import { AuditPager } from "./AuditPager";
 import { OperatorScopePromptLike } from "./AuditScopePrompt";
 import { AuditTable } from "./AuditTable";
 import type { AuditFilters as Filters } from "./auditQueryKeys";
-import { type AuditRow, useAuditSearch } from "./useAuditSearch";
+import { type AuditError, type AuditRow, useAuditSearch } from "./useAuditSearch";
 import "./audit.css";
 
 const EMPTY_FILTERS: Filters = {};
+
+/** Header scope line: tenant alone, or tenant and store when a store is active. */
+function ScopeLine({
+  tenant,
+  store,
+}: Readonly<{ tenant: { name?: string }; store: { name?: string } | null }>): React.JSX.Element {
+  const t = useT();
+  if (!store) {
+    return <bdi>{tenant.name}</bdi>;
+  }
+  return (
+    <>
+      {t.rich("audit.header.scope", {
+        tenant: <bdi>{tenant.name}</bdi>,
+        store: <bdi>{store.name}</bdi>,
+      })}
+    </>
+  );
+}
+
+/** A failed "Load more" page, with a retry of just that page (RT-269). */
+function ContinuationBanner({
+  error,
+  onRetry,
+}: Readonly<{ error: AuditError; onRetry: () => void }>): React.JSX.Element {
+  const t = useT();
+  return (
+    <Banner
+      variant="danger"
+      message={t(
+        error.kind === "forbidden" ? "audit.continuation.forbidden" : "audit.continuation.failed",
+      )}
+      requestId={error.requestId}
+      action={
+        <button type="button" className="btn-secondary" onClick={onRetry}>
+          {t("audit.continuation.retry")}
+        </button>
+      }
+    />
+  );
+}
 
 export function AuditSearch(): React.JSX.Element {
   const t = useT();
@@ -84,14 +125,7 @@ export function AuditSearch(): React.JSX.Element {
         <div>
           <h1 className="content__title">{t("audit.title")}</h1>
           <p className="content__sub">
-            {activeStore ? (
-              t.rich("audit.header.scope", {
-                tenant: <bdi>{activeTenant.name}</bdi>,
-                store: <bdi>{activeStore.name}</bdi>,
-              })
-            ) : (
-              <bdi>{activeTenant.name}</bdi>
-            )}
+            <ScopeLine tenant={activeTenant} store={activeStore} />
           </p>
         </div>
       </header>
@@ -140,20 +174,7 @@ export function AuditSearch(): React.JSX.Element {
           {/* RT-269 (UX-10): a failed "Load more" keeps the rows above and
               offers a retry of just that page; it replaces "Load more". */}
           {continuationError ? (
-            <Banner
-              variant="danger"
-              message={t(
-                continuationError.kind === "forbidden"
-                  ? "audit.continuation.forbidden"
-                  : "audit.continuation.failed",
-              )}
-              requestId={continuationError.requestId}
-              action={
-                <button type="button" className="btn-secondary" onClick={retryContinuation}>
-                  {t("audit.continuation.retry")}
-                </button>
-              }
-            />
+            <ContinuationBanner error={continuationError} onRetry={retryContinuation} />
           ) : null}
           <AuditPager
             loadedCount={rows.length}

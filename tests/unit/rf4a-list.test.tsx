@@ -150,6 +150,30 @@ describe("UnknownItemList state matrix", () => {
     expect(screen.getByText(/req-403/)).toBeDefined();
   });
 
+  test("5xx -> banner with request_id and a Retry that re-fetches the queue", async () => {
+    listUnknownItems.mockResolvedValue({
+      status: 503,
+      error: { error: { code: "unavailable", request_id: "req-503" } },
+    });
+    renderList();
+    await waitFor(() => expect(screen.getByRole("alert")).toBeDefined());
+    expect(screen.getByText(/req-503/)).toBeDefined();
+    const calls = listUnknownItems.mock.calls.length;
+    fireEvent.click(screen.getByRole("button", { name: /retry/i }));
+    await waitFor(() => expect(listUnknownItems.mock.calls.length).toBeGreaterThan(calls));
+  });
+
+  test("400 -> generic banner with request_id and no Retry", async () => {
+    listUnknownItems.mockResolvedValue({
+      status: 400,
+      error: { error: { code: "bad_request", request_id: "req-400" } },
+    });
+    renderList();
+    await waitFor(() => expect(screen.getByRole("alert")).toBeDefined());
+    expect(screen.getByText(/req-400/)).toBeDefined();
+    expect(screen.queryByRole("button", { name: /retry/i })).toBeNull();
+  });
+
   test("changing the sort control re-fetches the queue", async () => {
     listUnknownItems.mockResolvedValue({ status: 200, data: { items: [ITEM], next_cursor: null } });
     renderList();
