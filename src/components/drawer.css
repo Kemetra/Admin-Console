@@ -18,6 +18,8 @@
   display: flex;
   flex-direction: column;
   animation: drawer-in var(--duration-3) var(--ease-out);
+  /* The panel enters from its own edge: the inline end, mirrored in RTL (RT-399). */
+  --dir-sign: 1;
 }
 /* The panel is a programmatic initial-focus target (tabindex=-1), never a Tab
  * stop, so it opts out of the global focus ring (a11y.css). Every control inside
@@ -36,10 +38,6 @@
   .drawer {
     border: 1px solid CanvasText;
   }
-}
-/* The panel enters from its own edge: the inline end, mirrored in RTL (RT-399). */
-.drawer {
-  --dir-sign: 1;
 }
 [dir="rtl"] .drawer {
   --dir-sign: -1;

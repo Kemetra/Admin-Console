@@ -6,6 +6,7 @@ import { DateTime, type T, useT } from "@/i18n";
 import {
   type ListUnknownItemsParams,
   type ReviewQueueItem,
+  type UnknownItemErrorRender,
   identifierTypeKey,
 } from "@/lib/unknown-items-queries";
 /**
@@ -65,6 +66,31 @@ function columns(t: T) {
       cell: (r: ReviewQueueItem) => <DateTime value={r.encountered_at} />,
     },
   ];
+}
+
+/** Persistent banner for a list failure; a retryable 5xx also offers a retry. */
+function UnknownItemListError({
+  error,
+  onRetry,
+}: Readonly<{ error: UnknownItemErrorRender; onRetry: () => void }>): React.JSX.Element | null {
+  const t = useT();
+  if (error.kind !== "banner" && error.kind !== "generic") {
+    return null;
+  }
+  const retry =
+    error.kind === "banner" && error.retryable ? (
+      <button type="button" className="btn-ghost" onClick={onRetry}>
+        {t("unknownItems.retry")}
+      </button>
+    ) : undefined;
+  return (
+    <Banner
+      variant="danger"
+      message={t(error.messageKey)}
+      requestId={error.requestId}
+      action={retry}
+    />
+  );
 }
 
 export function UnknownItemList(): React.JSX.Element {
@@ -138,23 +164,7 @@ export function UnknownItemList(): React.JSX.Element {
         </label>
       </fieldset>
 
-      {error && error.kind === "banner" ? (
-        <Banner
-          variant="danger"
-          message={t(error.messageKey)}
-          requestId={error.requestId}
-          action={
-            error.retryable ? (
-              <button type="button" className="btn-ghost" onClick={refetch}>
-                {t("unknownItems.retry")}
-              </button>
-            ) : undefined
-          }
-        />
-      ) : null}
-      {error && error.kind === "generic" ? (
-        <Banner variant="danger" message={t(error.messageKey)} requestId={error.requestId} />
-      ) : null}
+      {error ? <UnknownItemListError error={error} onRetry={refetch} /> : null}
 
       {isLoading ? <ListState state="loading" label={t("unknownItems.loadingNoun")} /> : null}
 

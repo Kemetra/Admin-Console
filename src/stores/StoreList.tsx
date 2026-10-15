@@ -2,6 +2,7 @@ import { Banner } from "@/components/Banner";
 import { DataTable } from "@/components/DataTable";
 import { ListState } from "@/components/ListState";
 import { type T, useT } from "@/i18n";
+import type { Rf2ErrorRender } from "@/lib/rf2-queries";
 /**
  * SF-S1 — Store roster (T026; RT-400 screens 01–04). Scoped to the ACTIVE
  * TENANT read from RF-1's provider. Pre-gate (OQ-4): with no active tenant we
@@ -41,6 +42,31 @@ function storeColumns(t: T) {
   ];
 }
 
+/** A retryable 5xx gets a warning with a reload; any other failure a danger banner. */
+function StoreListError({
+  error,
+  onRetry,
+}: Readonly<{ error: Rf2ErrorRender; onRetry: () => void }>): React.JSX.Element {
+  const t = useT();
+  const requestId = "requestId" in error ? error.requestId : undefined;
+  if (error.kind === "banner" && error.retryable) {
+    return (
+      <Banner
+        variant="warning"
+        title={t("stores.list.loadFailedTitle")}
+        message={t("stores.list.loadFailedBody")}
+        requestId={requestId}
+        action={
+          <button type="button" className="btn-secondary" onClick={onRetry}>
+            {t("stores.list.retry")}
+          </button>
+        }
+      />
+    );
+  }
+  return <Banner variant="danger" message={t(error.messageKey)} requestId={requestId} />;
+}
+
 export function StoreList(): React.JSX.Element {
   const t = useT();
   const { activeTenantId, activeTenantName } = useStoreScope();
@@ -59,8 +85,6 @@ export function StoreList(): React.JSX.Element {
   const rows = result?.kind === "rows" ? result.rows : [];
   // Any failure is an error render, never the zero-row empty state.
   const error = result?.kind === "error" ? result.render : undefined;
-  const retryable = error?.kind === "banner" && error.retryable;
-  const requestId = error && "requestId" in error ? error.requestId : undefined;
   const ready = !isLoading && !error;
 
   return (
@@ -77,22 +101,7 @@ export function StoreList(): React.JSX.Element {
         </Link>
       </header>
 
-      {retryable ? (
-        <Banner
-          variant="warning"
-          title={t("stores.list.loadFailedTitle")}
-          message={t("stores.list.loadFailedBody")}
-          requestId={requestId}
-          action={
-            <button type="button" className="btn-secondary" onClick={refetch}>
-              {t("stores.list.retry")}
-            </button>
-          }
-        />
-      ) : null}
-      {error && !retryable ? (
-        <Banner variant="danger" message={t(error.messageKey)} requestId={requestId} />
-      ) : null}
+      {error ? <StoreListError error={error} onRetry={refetch} /> : null}
 
       {isLoading ? <ListState state="loading" label={t("stores.list.loadingNoun")} /> : null}
 

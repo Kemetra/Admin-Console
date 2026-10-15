@@ -31,6 +31,22 @@ type Phase =
   | { status: "error"; messageKey: MessageKey; requestId?: string }
   | { status: "rate-limited"; retryAfterSeconds: number; requestId?: string };
 
+/** The submit button's label for the current phase. */
+function SubmitLabel({ phase }: Readonly<{ phase: Phase }>): React.JSX.Element {
+  const t = useT();
+  if (phase.status === "submitting") {
+    return (
+      <>
+        <span className="spinner" aria-hidden="true" /> {t("auth.signIn.submitting")}
+      </>
+    );
+  }
+  if (phase.status === "rate-limited") {
+    return <>{t("auth.signIn.retryIn", { count: phase.retryAfterSeconds })}</>;
+  }
+  return <>{t("auth.signIn.submit")}</>;
+}
+
 export function SignIn({ onResolved }: SignInProps): React.JSX.Element {
   const t = useT();
   const [phase, setPhase] = useState<Phase>({ status: "idle" });
@@ -138,15 +154,7 @@ export function SignIn({ onResolved }: SignInProps): React.JSX.Element {
               />
             </div>
             <button className="btn-primary signin-submit" type="submit" disabled={disabled}>
-              {submitting ? (
-                <>
-                  <span className="spinner" aria-hidden="true" /> {t("auth.signIn.submitting")}
-                </>
-              ) : rateLimited ? (
-                t("auth.signIn.retryIn", { count: phase.retryAfterSeconds })
-              ) : (
-                t("auth.signIn.submit")
-              )}
+              <SubmitLabel phase={phase} />
             </button>
           </form>
         </div>
