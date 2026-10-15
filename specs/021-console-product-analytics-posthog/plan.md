@@ -94,7 +94,7 @@ Raw or hashed customer/operator identifiers · operator email/name/avatar · ten
 | Storage | `persistence: 'memory'` (intended: nothing in cookies/local/sessionStorage ⇒ no cookie-banner obligation for PostHog itself — proven by F6 AC-9, legal to confirm) |
 | DNT | `respect_dnt: true` |
 | Defaults bundle | **do not** set the `defaults: '<date>'` option — each date silently changes defaults; pin every option explicitly |
-| Event shaping | `before_send` **rebuilds** each event from `{event, allowlisted properties, timestamp}` **plus the ingestion-required keys PostHog needs to accept the event** (e.g. project `token`, anonymous `distinct_id` — exact set to be listed and reviewed in F6); drops anything whose name is not in the union; strips all other `$`-prefixed auto-properties |
+| Event shaping | `before_send` **rebuilds** each event from `{event, allowlisted properties, timestamp}` **plus the ingestion-required keys PostHog needs to accept the event** — the public project `token` and the random anonymous per-page-load `distinct_id` (the only identifiers the §7.1 invariant permits; any further key PostHog requires is listed and reviewed in F6 and must also fit §7.1); drops anything whose name is not in the union; strips all other `$`-prefixed auto-properties |
 | External scripts | prefer no lazy-loaded scripts; `disable_external_dependency_loading` — **Needs verification** (not on the config page read) |
 | Referrer | `save_referrer: false` — **Needs verification** (not on the config page read) |
 | Init scope | SDK initialised **only inside `ProtectedArea`, after consent**; never on `/signin` or `/accept-invitation` |
@@ -172,7 +172,7 @@ With few operators, "someone on tenant X opened receivables at 09:02 in `ar`" is
 **Needs verification before F2:** whether posthog-js, with flags/surveys/replay disabled, still fetches remote config or extensions from `eu-assets.i.posthog.com`. The egress line must name every host the SDK actually contacts (F6 AC-8 proves it).
 
 And a sibling invariant, mirroring AD-TOOL-003 D5:
-> **Product-analytics egress invariant (AD-TOOL-00X).** PostHog carries **allowlisted UI-interaction events only**. **No business, catalog, inventory or sales payload, no operator or patient PII, no identifiers, no URL/query string, and no auth token** may transit it. The Console enforces this by rebuilding every event from a closed schema before send. The target is key-gated, consent-gated and default-inert, and no product behaviour may be controlled remotely through it.
+> **Product-analytics egress invariant (AD-TOOL-00X).** PostHog carries **allowlisted UI-interaction events only**. **No business, catalog, inventory or sales payload, no operator or patient PII, no business or operator identifiers, no URL/query string, and no auth or session token** may transit it. The only identifiers permitted are the ingestion metadata PostHog requires to accept an event: the public project write key (`token`) and a random, anonymous, per-page-load `distinct_id` that is never derived from or linked to any operator, tenant or store. The Console enforces this by rebuilding every event from a closed schema before send. The target is key-gated, consent-gated and default-inert, and no product behaviour may be controlled remotely through it.
 
 ### 7.2 New decision record (not an AD-TOOL-003 amendment)
 PostHog is **product analytics, not observability**; AD-TOOL-003 D1–D3 assigns observability signals to Sentry/Datadog. Proposed: a new `docs/decisions/AD-TOOL-00X-product-analytics-posthog.md` capturing §2–§6 decisions, plus a cross-reference from AD-TOOL-003 stating PostHog owns no error/replay/perf signal.
@@ -199,7 +199,7 @@ Each is blocked on the one before it.
 - AC-1 Empty/missing key ⇒ SDK module never imported, **zero** requests to any `posthog.com` host (network-level assertion in Playwright).
 - AC-2 Key set, consent absent/declined ⇒ zero requests.
 - AC-3 `/signin` and `/accept-invitation?token=x` ⇒ zero requests even with key + consent.
-- AC-4 `before_send` unit tests: output keys ⊆ allowlist (event properties **plus the explicitly listed ingestion-required keys**) for every event; unknown event ⇒ dropped; a property carrying a UUID/token-shaped/URL value ⇒ event dropped.
+- AC-4 `before_send` unit tests: output keys ⊆ allowlist (event properties **plus the explicitly listed ingestion-required keys**) for every event; unknown event ⇒ dropped; an **event property** carrying a UUID/token-shaped/URL value ⇒ event dropped (the shape check applies to event properties, not to the ingestion `token`/`distinct_id`); `distinct_id` is random per page load and differs across reloads and operators.
 - AC-5 Route on `/stores/abc-123` ⇒ emitted `route` = `/stores/:storeId`; no `$current_url`/`$pathname`/`$referrer` in payload.
 - AC-6 PostHog unreachable/blocked ⇒ sign-in and every RF screen work identically (no awaited calls, no console errors surfaced to UI).
 - AC-7 Opt-out mid-session ⇒ no further requests.
