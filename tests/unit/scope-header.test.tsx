@@ -174,4 +174,26 @@ describe("ScopeHeader store menu", () => {
     await waitFor(() => expect(listStores.mock.calls.length).toBeGreaterThan(calls));
     expect(await screen.findByRole("menuitem", { name: "New Cairo Mall" })).toBeDefined();
   });
+
+  test("Escape on a menu item closes the menu and returns focus to the trigger", async () => {
+    activeContext.mockReturnValue(value());
+    listStores.mockResolvedValue(twoStores);
+    renderHeader();
+    openMenu();
+    const item = await screen.findByRole("menuitem", { name: "New Cairo Mall" });
+    item.focus();
+    fireEvent.keyDown(item, { key: "Escape" });
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: /Northstar Retail/ }));
+  });
+
+  test("Escape on the trigger closes the open menu", async () => {
+    activeContext.mockReturnValue(value());
+    listStores.mockResolvedValue(twoStores);
+    renderHeader();
+    openMenu();
+    await screen.findByRole("menuitem", { name: "New Cairo Mall" });
+    fireEvent.keyDown(screen.getByRole("button", { name: /Northstar Retail/ }), { key: "Escape" });
+    expect(screen.queryByRole("menu")).toBeNull();
+  });
 });

@@ -35,6 +35,8 @@ interface ScopeMenuProps {
   membership: ScopeMembership | undefined;
   onChooseStore: (storeId: string) => void;
   onAllStores: () => void;
+  /** Escape inside the menu closes it back to its button (RT-268). */
+  onKeyDown: (e: React.KeyboardEvent<HTMLElement>) => void;
 }
 
 function ScopeMenu({
@@ -43,6 +45,7 @@ function ScopeMenu({
   membership,
   onChooseStore,
   onAllStores,
+  onKeyDown,
 }: ScopeMenuProps): React.JSX.Element {
   const t = useT();
   const { result, isLoading, refetch } = useStoreList(tenant.id);
@@ -51,7 +54,7 @@ function ScopeMenu({
   const stores: ScopeStore[] = scopeMenuStores(rows, membership, activeStore);
 
   return (
-    <div className="scope-menu" role="menu">
+    <div className="scope-menu" role="menu" tabIndex={-1} onKeyDown={onKeyDown}>
       <div className="scope-menu__group">
         {t.rich("shell.scope.menuGroup", { tenant: <bdi>{tenant.name}</bdi> })}
       </div>
@@ -153,13 +156,13 @@ export function ScopeHeader(): React.JSX.Element | null {
     if (await guard.confirmLeave()) await change();
   };
 
+  // Escape closes the open menu from the trigger or from inside the menu.
+  const closeOnEscape = (e: React.KeyboardEvent<HTMLElement>) => {
+    if (e.key === "Escape" && open) closeMenu();
+  };
+
   return (
-    <div
-      className="scope"
-      onKeyDown={(e) => {
-        if (e.key === "Escape" && open) closeMenu();
-      }}
-    >
+    <div className="scope">
       <button
         ref={buttonRef}
         type="button"
@@ -167,6 +170,7 @@ export function ScopeHeader(): React.JSX.Element | null {
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
+        onKeyDown={closeOnEscape}
       >
         {/* Names are isolated so a Latin-only name can't turn the Bidi_Mirrored
             separator: › reads ‹ in Arabic with no code change (RT-266 §2.1). */}
@@ -198,6 +202,7 @@ export function ScopeHeader(): React.JSX.Element | null {
           tenant={{ id: tenant.id, name: tenant.name }}
           activeStore={store}
           membership={context?.memberships?.find((m) => m.tenant_id === tenant.id)}
+          onKeyDown={closeOnEscape}
           onChooseStore={(storeId) => {
             if (storeId === store?.id) closeMenu();
             else void changeScope(() => switchStore(storeId));

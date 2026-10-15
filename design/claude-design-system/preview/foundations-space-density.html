@@ -7,6 +7,7 @@
 <title>Space and density</title>
 <link rel="stylesheet" href="_card.css">
 <style>
+  .table th[scope="row"] { font-weight: inherit; }
   .scale { display: grid; gap: var(--space-2); }
   .step { display: grid; grid-template-columns: 96px 56px 1fr; gap: var(--space-3); align-items: center; }
   .bar { block-size: 12px; border-radius: 2px; background: var(--color-primary-soft); border: 1px solid var(--color-primary); }
@@ -42,24 +43,24 @@
       <div>
         <p><b>مريح</b> <span class="num">48px</span></p>
         <table class="table"><tbody>
-          <tr><td style="block-size: var(--row-comfortable)">متجر الواحة</td></tr>
-          <tr><td style="block-size: var(--row-comfortable)">متجر النيل</td></tr>
+          <tr><th scope="row" style="block-size: var(--row-comfortable)">متجر الواحة</th></tr>
+          <tr><th scope="row" style="block-size: var(--row-comfortable)">متجر النيل</th></tr>
         </tbody></table>
         <p class="ds-note">نماذج وصفحات تفاصيل.</p>
       </div>
       <div>
         <p><b>تشغيلي</b> <span class="num">40px</span></p>
         <table class="table"><tbody>
-          <tr><td style="block-size: var(--row-operational)">متجر الواحة</td></tr>
-          <tr><td style="block-size: var(--row-operational)">متجر النيل</td></tr>
+          <tr><th scope="row" style="block-size: var(--row-operational)">متجر الواحة</th></tr>
+          <tr><th scope="row" style="block-size: var(--row-operational)">متجر النيل</th></tr>
         </tbody></table>
         <p class="ds-note">الافتراضي لجداول لوحة الإدارة.</p>
       </div>
       <div>
         <p><b>مضغوط</b> <span class="num">32px</span></p>
         <table class="table"><tbody>
-          <tr><td style="block-size: var(--row-compact)">متجر الواحة</td></tr>
-          <tr><td style="block-size: var(--row-compact)">متجر النيل</td></tr>
+          <tr><th scope="row" style="block-size: var(--row-compact)">متجر الواحة</th></tr>
+          <tr><th scope="row" style="block-size: var(--row-compact)">متجر النيل</th></tr>
         </tbody></table>
         <p class="ds-note">سجل التدقيق والبيانات الكبيرة.</p>
       </div>
