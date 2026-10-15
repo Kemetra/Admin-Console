@@ -49,7 +49,7 @@ Constitution Principle 2).
 | `readStore` | `GET /api/v1/stores/{store_id}` | SF-S2 | Read view of one store. **404** uniform. |
 | `createStore` | `POST /api/v1/stores` | SF-S3 | Create scoped to the **active tenant** (no tenant picker in the form — FR-004-005). **401** no-active-tenant → scope prompt (OQ-4); **403** insufficient role → banner; **409** store-**code** conflict within tenant → inline on the code field (OQ-9). |
 | `updateStore` | `PATCH /api/v1/stores/{store_id}` | SF-S3 | Update store fields (name, is_active). Re-fetch on success. (Contract documents 200/404 only.) |
-| `softDeleteStore` | `DELETE /api/v1/stores/{store_id}` | SF-S2/SF-S3 | Soft-delete behind a confirm step (204). **404** uniform. Re-fetch store list on success. |
+| `softDeleteStore` | `DELETE /api/v1/stores/{store_id}` | SF-S2/SF-S3 | Soft-delete behind a confirm step (204). **404** uniform. Re-fetch store list on success. **Superseded by RT-400 (decision 194): the Console does not call this op.** |
 
 ### Context — REUSED from RF-1, NOT consumed by RF-2
 

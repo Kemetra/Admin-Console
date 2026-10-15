@@ -110,14 +110,14 @@ never live DP2 (FR-004-012, slice 002 C-5).
 - [ ] T022 [P] [US4] E2E store list in the active tenant (S4), incl. empty state, in `tests/e2e/store-list.spec.ts` (VG-2, Scenario S4).
 - [ ] T023 [P] [US5] E2E store list/create with no active tenant → scope prompt (residual `401`, not a sign-out) (S5) in `tests/e2e/store-scope-prompt.spec.ts` (VG-2, Scenario S5, FR-004-006, OQ-4).
 - [ ] T024 [P] [US7] E2E tenant switch re-scopes the store list (S7) in `tests/e2e/store-rescope.spec.ts` (VG-2, Scenario S7, OQ-5).
-- [ ] T025 [P] [US8] E2E store soft-delete + uniform 404 (S8) in `tests/e2e/store-delete.spec.ts` (VG-2, Scenario S8).
+- [ ] ~~T025 [P] [US8] E2E store soft-delete + uniform 404 (S8) in `tests/e2e/store-delete.spec.ts` (VG-2, Scenario S8).~~ **Superseded by RT-400 (decision 194): store soft-delete retired; the spec was removed in PR #101.**
 
 ### Implementation for store surfaces
 
 - [ ] T026 [US4] Implement the store list (SF-S1) in `src/stores/StoreList.tsx`: **pre-gate on the active tenant** read from the **reused** `ActiveContextProvider` — if no active tenant, route to RF-1's scope chooser and do **not** issue `listStores` (research R4-2 option (a), so the scope `401` is avoided, not interpreted as a sign-out). With an active tenant, render `listStores` via the shared DataTable + ListState; a residual `401` "No active tenant" → scope prompt (FR-004-006, OQ-4), never a sign-out; zero rows → empty state.
 - [ ] T027 [US4] Implement the store detail (SF-S2) in `src/stores/StoreDetail.tsx` via `readStore`: field rows; 404 uniform (FR-004-008).
 - [ ] T028 [US6] Implement the store create/edit form (SF-S3) in `src/stores/StoreForm.tsx`: uncontrolled native form scoped to the **active tenant** with **no tenant picker** (scope shown as a read-only line — FR-004-005); pre-gate on active tenant (as T026); calls `createStore`/`updateStore`; **409 store-code conflict → inline on the code field** (OQ-9); residual **401 no-active-tenant → scope prompt** (not a sign-out; OQ-4); 403 Banner; 404 uniform on update. (No 422/429 — contracts document none; backend field errors render inline as reported.)
-- [ ] T029 [US8] Implement store soft-delete in `src/stores/useStoreDelete.ts` calling `softDeleteStore` behind ConfirmDelete; re-fetch the store list on success (S8).
+- [ ] ~~T029 [US8] Implement store soft-delete in `src/stores/useStoreDelete.ts` calling `softDeleteStore` behind ConfirmDelete; re-fetch the store list on success (S8).~~ **Superseded by RT-400 (decision 194): not implemented; `softDeleteStore` is not called from the Console.**
 - [ ] T030 [US7] Wire store-list re-scoping to the RF-1 active-tenant switch (invalidate/re-fetch `listStores` on scope change; drop store-scoped views) in `src/stores/useStoreScope.ts` (S7; RF-2 holds no authoritative scope — OQ-5).
 
 **Checkpoint**: All RF-2 surfaces functional; tenant and store management complete.
