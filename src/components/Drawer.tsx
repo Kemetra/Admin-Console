@@ -24,7 +24,8 @@ const FOCUSABLE =
 
 export function Drawer({ title, onClose, children }: DrawerProps): React.JSX.Element {
   const t = useT();
-  const panelRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDialogElement>(null);
+  const scrimRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Move focus in on open; restore it to the trigger (the row/button that
@@ -34,7 +35,19 @@ export function Drawer({ title, onClose, children }: DrawerProps): React.JSX.Ele
     return () => previouslyFocused?.focus?.();
   }, []);
 
-  function onKeyDown(e: React.KeyboardEvent<HTMLDivElement>): void {
+  // A click on the scrim itself (not the panel) closes. Keyboard close is Escape
+  // on the dialog, so the non-interactive scrim carries no JSX handler.
+  useEffect(() => {
+    const scrim = scrimRef.current;
+    if (!scrim) return;
+    const closeOnScrimClick = (e: MouseEvent): void => {
+      if (e.target === scrim) onClose();
+    };
+    scrim.addEventListener("click", closeOnScrimClick);
+    return () => scrim.removeEventListener("click", closeOnScrimClick);
+  }, [onClose]);
+
+  function onKeyDown(e: React.KeyboardEvent<HTMLDialogElement>): void {
     if (e.key === "Escape") {
       onClose();
       return;
@@ -58,22 +71,17 @@ export function Drawer({ title, onClose, children }: DrawerProps): React.JSX.Ele
   }
 
   return (
-    // Scrim click closes; keyboard close is the panel's Escape handler (below),
-    // so the scrim itself needs no key handler.
-    // biome-ignore lint/a11y/useKeyWithClickEvents: keyboard close is Escape on the dialog panel.
-    <div className="drawer-scrim" onClick={onClose} role="presentation">
-      {/* ARIA dialog on a div, not native <dialog>: the side-drawer needs custom
-          backdrop/positioning the native element does not give. Focus is moved in
-          and trapped (onKeyDown), so aria-modal is honored. */}
-      <div
+    <div ref={scrimRef} className="drawer-scrim">
+      {/* Native <dialog open>, positioned by the scrim rather than the top layer
+          (the side-drawer needs custom backdrop/placement). Focus is moved in and
+          trapped (onKeyDown), so aria-modal is honored. */}
+      <dialog
         ref={panelRef}
+        open
         className="drawer"
-        // biome-ignore lint/a11y/useSemanticElements: intentional ARIA dialog; native <dialog> is unsuitable for a side drawer.
-        role="dialog"
         aria-modal="true"
         aria-label={title}
         tabIndex={-1}
-        onClick={(e) => e.stopPropagation()}
         onKeyDown={onKeyDown}
       >
         <header className="drawer__head">
@@ -88,7 +96,7 @@ export function Drawer({ title, onClose, children }: DrawerProps): React.JSX.Ele
           </button>
         </header>
         <div className="drawer__body">{children}</div>
-      </div>
+      </dialog>
     </div>
   );
 }

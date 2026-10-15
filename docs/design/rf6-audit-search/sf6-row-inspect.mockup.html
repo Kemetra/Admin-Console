@@ -34,7 +34,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-text);font:400 var(--
 .behind .title{font:700 var(--text-display)/1.25 var(--font-sans);letter-spacing:-.015em;margin:0 0 var(--space-4)}
 .behind .ghostrow{height:34px;border-bottom:1px solid var(--color-border);display:flex;align-items:center;color:var(--color-text-disabled);font:var(--text-mono) var(--font-mono)}
 /* drawer */
-.drawer{position:fixed;top:0;right:0;height:100dvh;width:440px;background:var(--color-surface-overlay);
+.drawer{position:fixed;top:0;right:0;left:auto;margin:0;padding:0;border:0;max-width:none;max-height:none;color:inherit;height:100dvh;width:440px;background:var(--color-surface-overlay);
   border-left:1px solid var(--color-border-strong);box-shadow:var(--shadow-pane);display:flex;flex-direction:column}
 .drawer__head{display:flex;align-items:center;justify-content:space-between;padding:var(--space-4) var(--space-5);border-bottom:1px solid var(--color-border)}
 .drawer__title{font:600 var(--text-headline)/1.3 var(--font-sans);letter-spacing:-.01em;margin:0}
@@ -60,7 +60,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-text);font:400 var(--
     <div class="ghostrow">20:41:55 · cashier.pin.reset · sup@qanater · …</div>
   </div>
   <div class="backdrop"></div>
-  <aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="dt">
+  <dialog open class="drawer" aria-modal="true" aria-labelledby="dt">
     <div class="drawer__head">
       <h2 class="drawer__title" id="dt">shift.forced_close <span class="badge">POS</span></h2>
       <button class="close" aria-label="Close">&times;</button>
@@ -83,7 +83,7 @@ body{margin:0;background:var(--color-bg);color:var(--color-text);font:400 var(--
 <span class="metakey">originating_terminal_id</span>: "term_04b"</div>
       <p class="readonly-note">Read-only. Audit events are emitted by the backend (POS-originated events by a paired terminal) and cannot be edited, acknowledged, or exported here.</p>
     </div>
-  </aside>
+  </dialog>
 </div>
 </body>
 </html>

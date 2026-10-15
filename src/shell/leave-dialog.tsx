@@ -52,14 +52,15 @@ export interface LeaveDialogProps {
 
 export function LeaveDialog({ onStay, onDiscard }: LeaveDialogProps): React.JSX.Element {
   const t = useT();
-  const panelRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDialogElement>(null);
   const stayRef = useRef<HTMLButtonElement>(null);
   useFocusWhileOpen(stayRef);
 
   return (
-    <div className="leave-scrim" role="presentation">
-      <div
+    <div className="leave-scrim">
+      <dialog
         ref={panelRef}
+        open
         className="leave-dialog"
         role="alertdialog"
         aria-modal="true"
@@ -81,7 +82,7 @@ export function LeaveDialog({ onStay, onDiscard }: LeaveDialogProps): React.JSX.
             {t("shell.leave.discard")}
           </button>
         </div>
-      </div>
+      </dialog>
     </div>
   );
 }

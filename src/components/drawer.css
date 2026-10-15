@@ -10,6 +10,14 @@
   z-index: 50;
 }
 .drawer {
+  /* Reset the native <dialog> UA box: the scrim positions the panel. */
+  position: static;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  max-width: none;
+  max-height: none;
+  color: inherit;
   width: min(440px, 100vw);
   height: 100%;
   background: var(--color-surface);

@@ -493,7 +493,16 @@ kbd {
   position: fixed;
   z-index: 100;
   inset-block: 0;
+  inset-inline-start: auto;
   inset-inline-end: 0;
+  /* Reset the native <dialog> UA box so `<dialog open class="drawer">` matches the div. */
+  margin: 0;
+  padding: 0;
+  border: 0;
+  max-inline-size: none;
+  max-block-size: none;
+  block-size: auto;
+  color: inherit;
   inline-size: min(380px, 70%);
   display: grid;
   grid-template-rows: auto 1fr auto;
