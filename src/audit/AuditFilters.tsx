@@ -6,6 +6,7 @@
  */
 import { Icon } from "@/components/Icon";
 import { useT } from "@/i18n";
+import { textField } from "@/lib/form-field";
 import { useRef } from "react";
 import type { AuditFilters as Filters } from "./auditQueryKeys";
 import "./audit.css";
@@ -34,7 +35,7 @@ export function AuditFilters({
   function read(): Filters {
     const form = new FormData(formRef.current ?? undefined);
     const val = (k: string) => {
-      const v = String(form.get(k) ?? "").trim();
+      const v = textField(form, k).trim();
       return v.length > 0 ? v : undefined;
     };
     return {

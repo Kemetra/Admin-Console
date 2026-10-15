@@ -20,7 +20,10 @@
           document.documentElement.dir = "ltr";
           document.title = "Retail Tower Console";
         }
-      } catch (e) {}
+      } catch {
+        // Storage can be blocked (private mode, site-data policy). Nothing to
+        // recover: the page keeps its Arabic, light-theme defaults.
+      }
     </script>
   </head>
   <body>

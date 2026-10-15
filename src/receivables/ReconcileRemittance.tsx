@@ -3,6 +3,7 @@ import { Drawer } from "@/components/Drawer";
 import { InlineError } from "@/components/InlineError";
 import { type MessageKey, Money, useT } from "@/i18n";
 import { type RemittanceReconcileBody, consoleReconcileRemittance } from "@/lib/client";
+import { textField } from "@/lib/form-field";
 /**
  * 018 ReconcileRemittance drawer. Records a remittance against a claim
  * (RemittanceReconcile: remittedAmount Money [may be 0 = full rejection] +
@@ -97,8 +98,8 @@ export function ReconcileRemittance({
     setBanner(undefined);
 
     const form = new FormData(e.currentTarget);
-    const remittedAmount = String(form.get("remittedAmount") ?? "");
-    const remittanceRef = (String(form.get("remittanceRef") ?? "").trim() || null) as string | null;
+    const remittedAmount = textField(form, "remittedAmount");
+    const remittanceRef = (textField(form, "remittanceRef").trim() || null) as string | null;
 
     const errors = validateRemittanceDraft({ remittedAmount });
     if (errors.remittedAmount) {

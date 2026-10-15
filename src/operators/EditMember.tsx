@@ -2,6 +2,7 @@ import { Banner } from "@/components/Banner";
 import { ConfirmDelete } from "@/components/ConfirmDelete";
 import { Drawer } from "@/components/Drawer";
 import { type MessageKey, useT } from "@/i18n";
+import { textField } from "@/lib/form-field";
 /**
  * SF5-3 — Edit / revoke member drawer (T022/T023). Pre-filled role + store-access
  * (uncontrolled native form); one `.btn-primary` "Save changes" via
@@ -46,10 +47,10 @@ export function EditMember({
     const res = await update.mutateAsync({
       membershipId: member.membershipId,
       body: {
-        role_code: String(form.get("role_code") ?? ""),
+        role_code: textField(form, "role_code"),
         store_access_kind: specific ? "specific" : "all",
         store_ids: specific
-          ? String(form.get("store_ids") ?? "")
+          ? textField(form, "store_ids")
               .split(/[\s,]+/)
               .filter(Boolean)
           : undefined,

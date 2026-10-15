@@ -3,6 +3,7 @@ import { Drawer } from "@/components/Drawer";
 import { InlineError } from "@/components/InlineError";
 import { type MessageKey, useT } from "@/i18n";
 import { type InvitationCreateBody, createInvitation, refreshSession } from "@/lib/client";
+import { textField } from "@/lib/form-field";
 import { useSignOut } from "@/shell/useSignOut";
 /**
  * SF5-2 — Invite member drawer (T020/T021). Uncontrolled native form (email /
@@ -142,11 +143,11 @@ export function InviteMember({
     setBanner(undefined);
     const form = new FormData(e.currentTarget);
     const body: InvitationCreateBody = {
-      email: String(form.get("email") ?? ""),
-      role_code: String(form.get("role_code") ?? ""),
+      email: textField(form, "email"),
+      role_code: textField(form, "role_code"),
       store_access_kind: specific ? "specific" : "all",
       store_ids: specific
-        ? String(form.get("store_ids") ?? "")
+        ? textField(form, "store_ids")
             .split(/[\s,]+/)
             .filter(Boolean)
         : undefined,
