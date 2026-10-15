@@ -119,9 +119,9 @@ describe("ScopeHeader store menu", () => {
     openMenu();
     const current = await screen.findByRole("menuitem", { name: /Cairo Festival City/ });
     expect(current.getAttribute("aria-current")).toBe("true");
-    expect(screen.getByRole("menuitem", { name: "All stores" }).getAttribute("aria-current")).toBe(
-      null,
-    );
+    expect(
+      screen.getByRole("menuitem", { name: "All stores" }).getAttribute("aria-current"),
+    ).toBeNull();
     fireEvent.click(current);
     expect(switchStore).not.toHaveBeenCalled();
   });
