@@ -42,7 +42,7 @@ export function SubmitClaim({
   receivableRefs,
   onClose,
   onSubmitted,
-}: SubmitClaimProps): React.JSX.Element {
+}: Readonly<SubmitClaimProps>): React.JSX.Element {
   const t = useT();
   const [fieldError, setFieldError] = useState<ReceivableFieldError | undefined>();
   const [banner, setBanner] = useState<BannerState | undefined>();

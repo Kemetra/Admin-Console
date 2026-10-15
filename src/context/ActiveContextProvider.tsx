@@ -11,7 +11,7 @@ const ActiveContext = createContext<ActiveContextValue | null>(null);
 
 export function ActiveContextProvider({
   children,
-}: { children: React.ReactNode }): React.JSX.Element {
+}: Readonly<{ children: React.ReactNode }>): React.JSX.Element {
   const value = useActiveContext();
   return <ActiveContext.Provider value={value}>{children}</ActiveContext.Provider>;
 }

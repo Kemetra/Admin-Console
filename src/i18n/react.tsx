@@ -86,10 +86,10 @@ export function DocumentLocale(): null {
 export function Money({
   value,
   className,
-}: {
+}: Readonly<{
   value: string;
   className?: string;
-}): React.JSX.Element {
+}>): React.JSX.Element {
   return (
     <bdi dir="ltr" className={className}>
       {formatMoney(value)}
@@ -106,11 +106,11 @@ export function DateTime({
   value,
   timeZone,
   className,
-}: {
+}: Readonly<{
   value: string;
   timeZone?: string;
   className?: string;
-}): React.JSX.Element {
+}>): React.JSX.Element {
   const locale = useLocale();
   return (
     <time dateTime={value} title={value} className={className}>

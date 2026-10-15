@@ -23,7 +23,9 @@ export interface SnapshotStatusPanelProps {
   nowMs?: number;
 }
 
-function SnapshotHeading({ snapshot }: { snapshot: StockSnapshotStatus }): React.JSX.Element {
+function SnapshotHeading({
+  snapshot,
+}: Readonly<{ snapshot: StockSnapshotStatus }>): React.JSX.Element {
   const t = useT();
   const view = statusView(snapshot.status);
   const asOf = asOfTime(snapshot);
@@ -42,7 +44,7 @@ function SnapshotHeading({ snapshot }: { snapshot: StockSnapshotStatus }): React
 function MetaField({
   label,
   children,
-}: { label: string; children: React.ReactNode }): React.JSX.Element {
+}: Readonly<{ label: string; children: React.ReactNode }>): React.JSX.Element {
   return (
     <div>
       <dt>{label}</dt>
@@ -51,7 +53,9 @@ function MetaField({
   );
 }
 
-function SnapshotMeta({ snapshot }: { snapshot: StockSnapshotStatus }): React.JSX.Element {
+function SnapshotMeta({
+  snapshot,
+}: Readonly<{ snapshot: StockSnapshotStatus }>): React.JSX.Element {
   const t = useT();
   const { erpnextWarehouseRef, recordedAt, reportedEntryCount } = snapshot;
   return (
@@ -80,7 +84,7 @@ function SnapshotMeta({ snapshot }: { snapshot: StockSnapshotStatus }): React.JS
 /** The stale warning (AC3) or the explicit no-snapshot notice (AC2). */
 function SnapshotStateBanner({
   snapshot,
-}: { snapshot: StockSnapshotStatus }): React.JSX.Element | null {
+}: Readonly<{ snapshot: StockSnapshotStatus }>): React.JSX.Element | null {
   const t = useT();
   if (snapshot.status === "stale") {
     return (
@@ -107,7 +111,7 @@ function PendingRequestNote({
   pending,
   overdue,
   keepsPrevious,
-}: PendingNoteProps): React.JSX.Element {
+}: Readonly<PendingNoteProps>): React.JSX.Element {
   const t = useT();
   return (
     <div className="snapshot-panel__pending">
@@ -127,7 +131,7 @@ function PendingRequestNote({
 export function SnapshotStatusPanel({
   snapshot,
   nowMs = Date.now(),
-}: SnapshotStatusPanelProps): React.JSX.Element {
+}: Readonly<SnapshotStatusPanelProps>): React.JSX.Element {
   const t = useT();
   const pending = snapshot.pendingRequest;
   return (

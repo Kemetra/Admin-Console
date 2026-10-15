@@ -8,7 +8,7 @@ export interface InlineErrorProps {
   message?: string;
 }
 
-export function InlineError({ message }: InlineErrorProps): React.JSX.Element | null {
+export function InlineError({ message }: Readonly<InlineErrorProps>): React.JSX.Element | null {
   if (!message) {
     return null;
   }

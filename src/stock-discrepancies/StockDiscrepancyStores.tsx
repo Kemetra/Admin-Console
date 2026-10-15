@@ -36,7 +36,7 @@ function StoresHeader(): React.JSX.Element {
 function StoresErrorBanner({
   error,
   onRetry,
-}: { error: StockDiscrepancyError; onRetry: () => void }): React.JSX.Element {
+}: Readonly<{ error: StockDiscrepancyError; onRetry: () => void }>): React.JSX.Element {
   const t = useT();
   if (error.kind === "not-found") {
     return (
@@ -57,7 +57,7 @@ function StoresErrorBanner({
   );
 }
 
-function AsOfCell({ row }: { row: StoreNegativeOnHandSummary }): React.JSX.Element {
+function AsOfCell({ row }: Readonly<{ row: StoreNegativeOnHandSummary }>): React.JSX.Element {
   const t = useT();
   const asOf = asOfTime(row.snapshot);
   const reasonKey = statusView(row.snapshot.status).noSnapshotReasonKey;
@@ -72,7 +72,7 @@ function AsOfCell({ row }: { row: StoreNegativeOnHandSummary }): React.JSX.Eleme
   );
 }
 
-function PendingCell({ row }: { row: StoreNegativeOnHandSummary }): React.JSX.Element {
+function PendingCell({ row }: Readonly<{ row: StoreNegativeOnHandSummary }>): React.JSX.Element {
   const t = useT();
   return (
     <td>
@@ -85,7 +85,7 @@ function PendingCell({ row }: { row: StoreNegativeOnHandSummary }): React.JSX.El
   );
 }
 
-function StoreRow({ row }: { row: StoreNegativeOnHandSummary }): React.JSX.Element {
+function StoreRow({ row }: Readonly<{ row: StoreNegativeOnHandSummary }>): React.JSX.Element {
   const t = useT();
   const view = statusView(row.snapshot.status);
   const count = negativeCountLabel(row.snapshot.status, row.negativeItemCount);
@@ -104,7 +104,9 @@ function StoreRow({ row }: { row: StoreNegativeOnHandSummary }): React.JSX.Eleme
   );
 }
 
-function StoresTable({ stores }: { stores: StoreNegativeOnHandSummary[] }): React.JSX.Element {
+function StoresTable({
+  stores,
+}: Readonly<{ stores: StoreNegativeOnHandSummary[] }>): React.JSX.Element {
   const t = useT();
   return (
     <div className="table-scroll">
@@ -130,7 +132,7 @@ function StoresTable({ stores }: { stores: StoreNegativeOnHandSummary[] }): Reac
 }
 
 /** Loading, error, empty, or the table — exactly one of them. */
-function StoresBody({ data }: { data: StoresData }): React.JSX.Element {
+function StoresBody({ data }: Readonly<{ data: StoresData }>): React.JSX.Element {
   const t = useT();
   if (data.error) return <StoresErrorBanner error={data.error} onRetry={data.refetch} />;
   if (data.isLoading) return <ListState state="loading" label={t("stock.stores.loadingNoun")} />;

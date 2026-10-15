@@ -24,7 +24,7 @@ export function ConfirmDelete({
   pending = false,
   onConfirm,
   onCancel,
-}: ConfirmDeleteProps): React.JSX.Element {
+}: Readonly<ConfirmDeleteProps>): React.JSX.Element {
   const t = useT();
   return (
     <section

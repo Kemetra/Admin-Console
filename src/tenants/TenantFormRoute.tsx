@@ -15,7 +15,7 @@ export interface TenantFormRouteProps {
   mode: "create" | "edit";
 }
 
-export function TenantFormRoute({ mode }: TenantFormRouteProps): React.JSX.Element {
+export function TenantFormRoute({ mode }: Readonly<TenantFormRouteProps>): React.JSX.Element {
   const { tenantId } = useParams();
 
   if (mode === "create") {
@@ -25,7 +25,9 @@ export function TenantFormRoute({ mode }: TenantFormRouteProps): React.JSX.Eleme
   return <EditTenantForm tenantId={tenantId} />;
 }
 
-function EditTenantForm({ tenantId }: { tenantId: string | undefined }): React.JSX.Element {
+function EditTenantForm({
+  tenantId,
+}: Readonly<{ tenantId: string | undefined }>): React.JSX.Element {
   const t = useT();
   const { result, isLoading } = useTenantDetail(tenantId);
 

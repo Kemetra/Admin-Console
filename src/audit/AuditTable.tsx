@@ -26,7 +26,7 @@ function shortId(id?: string | null): string {
   return id.length > 8 ? `${id.slice(0, 8)}…` : id;
 }
 
-export function AuditTable({ rows, onInspect }: AuditTableProps): React.JSX.Element {
+export function AuditTable({ rows, onInspect }: Readonly<AuditTableProps>): React.JSX.Element {
   const t = useT();
   return (
     <table className="audit-table">

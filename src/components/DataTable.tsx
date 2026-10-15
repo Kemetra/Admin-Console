@@ -36,7 +36,7 @@ export function DataTable<Row>({
   rows,
   rowKey,
   onRowActivate,
-}: DataTableProps<Row>): React.JSX.Element {
+}: Readonly<DataTableProps<Row>>): React.JSX.Element {
   return (
     <table className="data-table">
       <caption className="data-table__caption">{caption}</caption>

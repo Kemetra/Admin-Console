@@ -26,7 +26,7 @@ function storeMismatch(
 
 export function ScopeMismatchBanner({
   storeId,
-}: { storeId: string | undefined }): React.JSX.Element | null {
+}: Readonly<{ storeId: string | undefined }>): React.JSX.Element | null {
   const t = useT();
   const { context, switchStore } = useActiveContextValue();
   const guard = useDirtyGuard();

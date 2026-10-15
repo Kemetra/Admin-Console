@@ -6,7 +6,9 @@ import { useTheme } from "./useTheme";
  * aria-pressed carries the state, so the label never swaps (UX-11). The label
  * comes from the catalog (RT-399).
  */
-export function ThemeToggle({ userId }: { userId: string | undefined }): React.JSX.Element {
+export function ThemeToggle({
+  userId,
+}: Readonly<{ userId: string | undefined }>): React.JSX.Element {
   const t = useT();
   const { theme, toggle } = useTheme(userId);
   return (

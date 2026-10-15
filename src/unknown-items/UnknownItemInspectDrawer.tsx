@@ -34,7 +34,10 @@ export interface UnknownItemInspectDrawerProps {
   onDismissed: () => void;
 }
 
-function Field({ label, value }: { label: string; value: React.ReactNode }): React.JSX.Element {
+function Field({
+  label,
+  value,
+}: Readonly<{ label: string; value: React.ReactNode }>): React.JSX.Element {
   return (
     <div className="unknown-item-detail__field">
       <dt className="unknown-item-detail__label">{label}</dt>
@@ -48,7 +51,7 @@ function machine(value: string | null): React.ReactNode {
   return value === null ? null : <bdi dir="ltr">{value}</bdi>;
 }
 
-function DetailBody({ item }: { item: ReviewQueueItem }): React.JSX.Element {
+function DetailBody({ item }: Readonly<{ item: ReviewQueueItem }>): React.JSX.Element {
   const t = useT();
   // An enum value outside the contract shows verbatim rather than a guess.
   const label = (key: MessageKey | null, raw: string | null): React.ReactNode =>
@@ -88,7 +91,7 @@ export function UnknownItemInspectDrawer({
   activeTenantId,
   onClose,
   onDismissed,
-}: UnknownItemInspectDrawerProps): React.JSX.Element {
+}: Readonly<UnknownItemInspectDrawerProps>): React.JSX.Element {
   const t = useT();
   const { result, isLoading } = useUnknownItemInspect(id);
   const [confirming, setConfirming] = useState(false);

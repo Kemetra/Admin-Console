@@ -28,7 +28,7 @@ export function AuditFilters({
   storeInScope,
   onApply,
   onClear,
-}: AuditFiltersProps): React.JSX.Element {
+}: Readonly<AuditFiltersProps>): React.JSX.Element {
   const t = useT();
   const formRef = useRef<HTMLFormElement>(null);
 

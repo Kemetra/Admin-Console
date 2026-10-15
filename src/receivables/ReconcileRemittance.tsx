@@ -50,7 +50,7 @@ export function ReconcileRemittance({
   claimRef,
   onClose,
   onReconciled,
-}: ReconcileRemittanceProps): React.JSX.Element {
+}: Readonly<ReconcileRemittanceProps>): React.JSX.Element {
   const t = useT();
   const [amountError, setAmountError] = useState<ReceivableFieldError | undefined>();
   const [banner, setBanner] = useState<BannerState | undefined>();

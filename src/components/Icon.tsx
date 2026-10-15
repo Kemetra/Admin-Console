@@ -144,7 +144,7 @@ export function Icon({
   title,
   strokeWidth = 1.75,
   ...rest
-}: IconProps): React.JSX.Element {
+}: Readonly<IconProps>): React.JSX.Element {
   return (
     <svg
       width={size}

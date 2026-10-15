@@ -19,7 +19,7 @@ export function AuditPager({
   hasMore,
   isFetchingNextPage,
   onLoadMore,
-}: AuditPagerProps): React.JSX.Element {
+}: Readonly<AuditPagerProps>): React.JSX.Element {
   const t = useT();
   return (
     <div className="audit-pager">

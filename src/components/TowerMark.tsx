@@ -2,7 +2,7 @@
  * Retail Tower OS shield mark. Stroke-only, currentColor (DESIGN.md icon
  * contract); the lockup colours it Tower Teal.
  */
-export function TowerMark({ className }: { className?: string }): React.JSX.Element {
+export function TowerMark({ className }: Readonly<{ className?: string }>): React.JSX.Element {
   return (
     <svg
       className={className}

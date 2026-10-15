@@ -51,7 +51,7 @@ export function PayerCreate({
   activeTenant,
   onClose,
   onCreated,
-}: PayerCreateProps): React.JSX.Element {
+}: Readonly<PayerCreateProps>): React.JSX.Element {
   const t = useT();
   const [nameError, setNameError] = useState<PayerFieldError | undefined>();
   const [banner, setBanner] = useState<BannerState | undefined>();

@@ -26,7 +26,7 @@ export function UnknownItemDismiss({
   activeTenantId,
   onDismissed,
   onCancel,
-}: UnknownItemDismissProps): React.JSX.Element {
+}: Readonly<UnknownItemDismissProps>): React.JSX.Element {
   const t = useT();
   const dismiss = useUnknownItemDismiss(activeTenantId);
   const result = dismiss.data;
