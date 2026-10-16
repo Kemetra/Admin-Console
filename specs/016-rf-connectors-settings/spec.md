@@ -91,7 +91,7 @@ contracts below. Refreshing those rows is RT-558's job (Docs), not this spec's.
 | Last successful posting / sync | **No** | Nearest proxies only: the C3 posting `DomainSummary` (dead-letter count; `detail` is fixed text such as "No posting dead-letters"), C2 `lastSeenAt` (connector liveness, not posting), C3 run `finishedAt` (stock reconciliation, not posting) | There is no "last successfully posted at" or "oldest pending posting age" read. Proposed as issue 6 (§9), stated as a need without field names. Until then the UI must not imply "posting is current". |
 | Posting failures needing attention | **Yes** | C3 `consoleListPostingBacklog` | `rejectionClass` only; reason text is RT-410. |
 | Reconciliation outcome | **Yes** | C3 `consoleListReconciliationRuns`, summary `reconciliation` domain | — |
-| Operator-owned connector configuration | **Yes** | C1 register / issue / rotate / revoke / disable | Owner decision OD-1 on whether to expose it in the browser. |
+| Operator-owned connector configuration | **Yes** | C1 register / issue / rotate / revoke / disable | Browser exposure deferred pending a security review (OD-1, §8); for now this is a platform-team runbook step. |
 | Other tenant/store settings | Out of scope | — | See §1.3. |
 
 ## 3a. Consumed Backend-Core contracts (all exist on `main`; none invented)
@@ -150,7 +150,7 @@ migration). The UI must not invent, parse or infer one.
 5. **Store filter.** The optional `store_id` filter on the summary, backlog and run history,
    limited to the operator's in-scope stores.
 
-### Phase B — Tenant-owned connector configuration (mutating; needs an owner decision, see §8 OD-1)
+### Phase B — Tenant-owned connector configuration (mutating; DEFERRED pending a security review, see §8 OD-1)
 
 Register an instance, issue, rotate or revoke a credential, and disable an instance, through C1
 only. All of these are human-session-only on the server. A `dashboard_api` machine bearer is
@@ -190,7 +190,7 @@ never offered.
 - **A-8 States.** Each panel has loading (skeleton), empty, error (banner with `request_id`),
   stale and no-access states, in Arabic and English, RTL-correct (DESIGN.md / RT-392).
 
-### Phase B (only if OD-1 is approved)
+### Phase B (deferred; the bar it must meet after its security review, OD-1)
 
 - **B-1** The raw `secret` from issue or rotate is shown **exactly once**, in a dismiss-to-close
   dialog. It is never written to storage (local, session or IndexedDB), the query cache, the URL,
@@ -231,15 +231,19 @@ never offered.
 - Alerts and notifications (specs 013/014 are vision stubs; alerting is deferred by design per
   Confluence 25264161).
 
-## 8. Open decisions (for the coordinator / owner; none blocks Phase A)
+## 8. Decisions
 
-- **OD-1 Browser-minted connector credentials (Phase B).** Should tenant owners register
-  connectors and issue, rotate or revoke machine credentials from the Admin-Console, which means
-  showing a raw secret once in a browser? The alternative is to keep this as an operator runbook
-  step (platform team, CLI) and ship Phase A read-only. Backend-Core already allows it for
-  owner/tenant_admin on a human session.
-- **OD-2 Navigation placement.** Should this be a top-level "ERP connection" destination, or a
-  section under an existing tenant area? Decide with the RT-392 navigation budget (UX-09).
+### Decided (coordinator, 2026-10-16, under the owner's delegation)
+
+- **OD-1 Browser-minted connector credentials (Phase B): DEFERRED.** Phase A ships read-only.
+  Phase B (register, issue, rotate, revoke and disable from the browser) needs its own security
+  review before anyone plans it. Until then, the credential lifecycle stays a platform-team
+  runbook step. §5 B-1…B-4 remain the bar Phase B must meet. The question was: should tenant
+  owners do this from the Admin-Console, which means showing a raw secret once in a browser?
+  Backend-Core already allows it for owner/tenant_admin on a human session.
+- **OD-2 Navigation placement: decided in the Phase A implementation issue**, against the RT-392
+  navigation budget (UX-09). The default proposal is a role-gated "ERP connection" entry in its own
+  section, like Stock discrepancies and Shift closes. Nothing further is decided here.
 
 ## 9. Proposed Jira issues (not created; the coordinator decides)
 
@@ -251,8 +255,8 @@ never offered.
 3. **ERPNext-Connector — heartbeat sender to `connectorReportHeartbeat`** (Implementation). This is
    **already named in RT-391 Phase 2.** Create it once, as a shared dependency of 016 and RT-391,
    not twice.
-4. **Admin-Console — 016 Phase B: connector registration & credential lifecycle**, only if OD-1 is
-   approved.
+4. **Admin-Console — 016 Phase B: connector registration & credential lifecycle**: **deferred
+   pending a security review** (OD-1). It is not planned until that review clears it against §5 B-1…B-4.
 5. *(Optional, later)* **Admin-Console — ERP item / warehouse mapping readiness**, if the owner
    wants mapping management in the console.
 6. **Backend-Core — posting freshness read for the console** (Planning, contract-first). The
