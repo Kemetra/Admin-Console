@@ -3,7 +3,7 @@
  * Do not make direct changes to the file.
  */
 
-// Source: Data-Pulse-2 @ 7597a8741d754ce61d28977cc634633d4ed12f80
+// Source: Data-Pulse-2 @ 2b03ad2de5394f54bae296b726ed6fc76ac8af4e
 // Sources:
 // - packages/contracts/openapi/auth.openapi.yaml
 // - packages/contracts/openapi/context.openapi.yaml
@@ -14,6 +14,7 @@
 // - packages/contracts/openapi/catalog/unknown-items.yaml
 // - packages/contracts/openapi/settlement/settlement.yaml
 // - packages/contracts/openapi/erpnext-reconciliation/reconciliation.yaml
+// - packages/contracts/openapi/shift-closes.openapi.yaml
 //
 // The upstream OpenAPI files are separate documents with overlapping component
 // names, so this file namespaces each generated source and composes their path
@@ -220,6 +221,15 @@ export namespace AuthSchema {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
+                /** @description `origin_rejected` (RT-430): the `Origin` header is present and is neither the API's own origin nor listed in `ALLOWED_ORIGINS` (login CSRF). A sign-in with no `Origin` is admitted. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
                 /** @description Rate-limited. */
                 429: {
                     headers: {
@@ -256,6 +266,15 @@ export namespace AuthSchema {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
+                /** @description `origin_rejected` (RT-430): the request is authenticated by the `dp2_session` cookie and its `Origin` header is missing, or is neither the API's own origin nor listed in `ALLOWED_ORIGINS`. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
             };
         };
         refreshSession: {
@@ -276,6 +295,15 @@ export namespace AuthSchema {
                 };
                 /** @description Session expired; sign in required. */
                 401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description `origin_rejected` (RT-430): the request is authenticated by the `dp2_session` cookie and its `Origin` header is missing, or is neither the API's own origin nor listed in `ALLOWED_ORIGINS`. */
+                403: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -363,6 +391,15 @@ export namespace AuthSchema {
                 };
                 /** @description Not authenticated. */
                 401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description `origin_rejected` (RT-430): the request is authenticated by the `dp2_session` cookie and its `Origin` header is missing, or is neither the API's own origin nor listed in `ALLOWED_ORIGINS`. */
+                403: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -472,6 +509,24 @@ export namespace ContextSchema {
                 active_store?: components["schemas"]["StoreSummary"];
                 active_role_code?: string | null;
                 memberships?: components["schemas"]["MembershipSummary"][];
+                /** @description RT-414: the caller's current support session (`active` or `expired`), or null. Always null for a user who is not a platform admin, and when the active tenant was entered through membership. */
+                support_session?: components["schemas"]["SupportSessionSummary"] | null;
+            };
+            /** @description RT-414: the banner subset of `SupportSession` in `platform-support-sessions.openapi.yaml`; the field meanings and value sets are defined there. */
+            SupportSessionSummary: {
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                tenant_id: string;
+                /** @enum {string} */
+                purpose: "customer_support" | "incident" | "onboarding";
+                ticket_ref: string | null;
+                /** @enum {string} */
+                status: "active" | "expired";
+                /** Format: date-time */
+                expires_at: string;
+                /** Format: date-time */
+                renewal_cap_at: string;
             };
             UserSummary: {
                 /** Format: uuid */
@@ -553,14 +608,23 @@ export namespace ContextSchema {
                 };
             };
             responses: {
-                /** @description Active tenant switched. Active store is cleared. */
+                /** @description Active tenant switched. Active store is cleared. Any current support session has ended, so `support_session` is null. */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ContextResponse"];
+                        "application/json": components["schemas"]["ContextResponse"] & {
+                            support_session?: null;
+                        };
                     };
+                };
+                /** @description `support_session_required` (RT-414): the caller is a platform admin and not an active member of this existing tenant. Enter it with `openSupportSession` instead. Never returned to a user who is not a platform admin. A successful switch ends any current support session (`end_reason: tenant_switched`). Also `origin_rejected` (RT-430): the request is authenticated by the `dp2_session` cookie and its `Origin` header is missing, or is neither the API's own origin nor listed in `ALLOWED_ORIGINS`. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
                 };
                 /** @description Tenant does not exist OR user has no membership in it. Same response for both (FR-ISO-4). */
                 404: {
@@ -596,6 +660,13 @@ export namespace ContextSchema {
                         "application/json": components["schemas"]["ContextResponse"];
                     };
                 };
+                /** @description `origin_rejected` (RT-430): the request is authenticated by the `dp2_session` cookie and its `Origin` header is missing, or is neither the API's own origin nor listed in `ALLOWED_ORIGINS`. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
                 /** @description Store does not belong to the active tenant OR user lacks access. Same response for both. */
                 404: {
                     headers: {
@@ -629,6 +700,13 @@ export namespace ContextSchema {
                     content: {
                         "application/json": components["schemas"]["ContextResponse"];
                     };
+                };
+                /** @description `origin_rejected` (RT-430): the request is authenticated by the `dp2_session` cookie and its `Origin` header is missing, or is neither the API's own origin nor listed in `ALLOWED_ORIGINS`. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
                 };
             };
         };
@@ -791,7 +869,7 @@ export namespace TenantsSchema {
                         "application/json": components["schemas"]["Tenant"];
                     };
                 };
-                /** @description Caller is not a platform admin. */
+                /** @description Caller is not a platform admin. Also `origin_rejected` (RT-430): the request is authenticated by the `dp2_session` cookie and its `Origin` header is missing, or is neither the API's own origin nor listed in `ALLOWED_ORIGINS`. */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -854,7 +932,7 @@ export namespace TenantsSchema {
                     };
                     content?: never;
                 };
-                /** @description Caller is not a platform admin. */
+                /** @description Caller is not a platform admin. Also `origin_rejected` (RT-430): the request is authenticated by the `dp2_session` cookie and its `Origin` header is missing, or is neither the API's own origin nor listed in `ALLOWED_ORIGINS`. */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -886,6 +964,13 @@ export namespace TenantsSchema {
                     content: {
                         "application/json": components["schemas"]["Tenant"];
                     };
+                };
+                /** @description `origin_rejected` (RT-430): the request is authenticated by the `dp2_session` cookie and its `Origin` header is missing, or is neither the API's own origin nor listed in `ALLOWED_ORIGINS`. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
                 };
                 /** @description Not found / no access. */
                 404: {
@@ -953,7 +1038,7 @@ export namespace StoresSchema {
                 query?: never;
                 header?: never;
                 path: {
-                    store_id: string;
+                    store_id: components["parameters"]["StoreId"];
                 };
                 cookie?: never;
             };
@@ -965,14 +1050,45 @@ export namespace StoresSchema {
             delete: operations["softDeleteStore"];
             options?: never;
             head?: never;
-            /** Update store fields. Tenant-admin or owner only. */
+            /**
+             * Update store fields. Tenant-admin or owner only.
+             * @description A time zone change (decision 214, RT-401 option A) is applied only when `expected_current_timezone` still matches, the caller asserts `timezone_impact_reviewed`, and no server-known shift at the store is open. All checks and the write run in one transaction with the store row locked; a successful change writes one `store.timezone.changed` audit event in that transaction. Business dates already persisted on sales, returns and shifts are never rewritten (decision 215). Setting `timezone` to its current value is a no-op for the zone and is not blocked by an open shift.
+             */
             patch: operations["updateStore"];
+            trace?: never;
+        };
+        "/api/v1/stores/{store_id}/timezone-change-preview": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    store_id: components["parameters"]["StoreId"];
+                };
+                cookie?: never;
+            };
+            /**
+             * Preview the impact of changing the store's time zone. Read-only.
+             * @description Impact review for decision 214. Writes nothing. Tenant-admin or owner only; a wrong role, another tenant's store, or an unknown store is a non-disclosing 404. The blockers reported here are re-checked when the change is applied, so a preview is advisory, not a reservation.
+             */
+            get: operations["previewStoreTimezoneChange"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
             trace?: never;
         };
     }
     export type webhooks = Record<string, never>;
     export interface components {
         schemas: {
+            /**
+             * @description IANA time zone name, case-sensitive: `UTC` or an `Area/Location[/Sub]` name under a canonical IANA area (Africa, America, Antarctica, Arctic, Asia, Atlantic, Australia, Europe, Indian, Pacific) that the server's PostgreSQL resolves. Abbreviations (`EET`), POSIX strings (`UTC+2`, `+02:00`), `Etc/*` and the legacy alias trees (`US/Eastern`, `posix/*`, …) are rejected.
+             * @example Africa/Cairo
+             * @example UTC
+             */
+            IanaTimezone: string;
             Store: {
                 /** Format: uuid */
                 id?: string;
@@ -980,6 +1096,8 @@ export namespace StoresSchema {
                 tenant_id?: string;
                 code?: string;
                 name?: string;
+                /** @description Drives the store-local business date of sales, returns and shifts. `UTC` is the draft default (decision 213) and is not evidence of production readiness. */
+                timezone: components["schemas"]["IanaTimezone"];
                 is_active?: boolean;
                 /** Format: date-time */
                 created_at?: string;
@@ -991,15 +1109,75 @@ export namespace StoresSchema {
             StoreCreate: {
                 code: string;
                 name: string;
+                /** @description Optional. Omitted means `UTC` (decision 213 draft default). */
+                timezone?: components["schemas"]["IanaTimezone"];
             };
-            /** @description At least one of `name` or `is_active`; an empty body is a 400. */
+            /** @description At least one of `name`, `is_active` or `timezone`; an empty body is a 400. `timezone`, `expected_current_timezone` and `timezone_impact_reviewed` travel together: all three or none. */
             StoreUpdate: {
                 name?: string;
                 is_active?: boolean;
+                timezone?: components["schemas"]["IanaTimezone"];
+                /** @description The zone the caller previewed from. A mismatch with the stored zone is `409 timezone_changed_concurrently`. */
+                expected_current_timezone?: components["schemas"]["IanaTimezone"];
+                /**
+                 * @description The caller asserts the impact preview was shown and accepted.
+                 * @constant
+                 */
+                timezone_impact_reviewed?: true;
+            };
+            StoreTimezoneChangePreview: {
+                /** Format: uuid */
+                store_id: string;
+                current_timezone: components["schemas"]["IanaTimezone"];
+                proposed_timezone: components["schemas"]["IanaTimezone"];
+                /** @description The proposed zone equals the current zone. */
+                no_op: boolean;
+                /**
+                 * Format: date-time
+                 * @description Server time the preview was computed at.
+                 */
+                now: string;
+                utc_offset_minutes_current: number;
+                utc_offset_minutes_proposed: number;
+                /**
+                 * Format: date
+                 * @description Today's business date under the current zone, at `now`.
+                 */
+                business_date_current: string;
+                /**
+                 * Format: date
+                 * @description Today's business date under the proposed zone, at `now`.
+                 */
+                business_date_proposed: string;
+                /** @description `business_date_current` differs from `business_date_proposed`. */
+                business_date_changes_now: boolean;
+                /** @description Shifts at this store the server knows to be open. */
+                open_shift_count: number;
+                blockers: {
+                    /** @enum {string} */
+                    code: "store_has_open_shift";
+                    count: number;
+                }[];
+                /** @description `no_op` is false and `blockers` is empty. */
+                can_apply: boolean;
+                /** @description Limits of what the server can see; always returned. `offline_shifts_not_visible`: a shift opened on a POS that has not synced is not counted. `uncaptured_sales_use_new_zone`: a sale that happened before the change but reaches the server after it gets its business date under the new zone. */
+                caveats: ("offline_shifts_not_visible" | "uncaptured_sales_use_new_zone")[];
+            };
+            /** @description Canonical error envelope. */
+            Error: {
+                error: {
+                    /** @description Stable machine-readable code. This contract adds `invalid_timezone`, `timezone_changed_concurrently` and `store_has_open_shift`. */
+                    code: string;
+                    message: string;
+                    /** Format: uuid */
+                    request_id?: string;
+                };
             };
         };
         responses: never;
-        parameters: never;
+        parameters: {
+            StoreId: string;
+        };
         requestBodies: never;
         headers: never;
         pathItems: never;
@@ -1055,6 +1233,15 @@ export namespace StoresSchema {
                         "application/json": components["schemas"]["Store"];
                     };
                 };
+                /** @description `validation_error` (malformed body or time zone shape) or `invalid_timezone` (well-formed name PostgreSQL does not know). */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
                 /** @description No active tenant. */
                 401: {
                     headers: {
@@ -1062,7 +1249,7 @@ export namespace StoresSchema {
                     };
                     content?: never;
                 };
-                /** @description Insufficient role. */
+                /** @description Insufficient role. Also `origin_rejected` (RT-430): the request is authenticated by the `dp2_session` cookie and its `Origin` header is missing, or is neither the API's own origin nor listed in `ALLOWED_ORIGINS`. */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -1083,7 +1270,7 @@ export namespace StoresSchema {
                 query?: never;
                 header?: never;
                 path: {
-                    store_id: string;
+                    store_id: components["parameters"]["StoreId"];
                 };
                 cookie?: never;
             };
@@ -1112,7 +1299,7 @@ export namespace StoresSchema {
                 query?: never;
                 header?: never;
                 path: {
-                    store_id: string;
+                    store_id: components["parameters"]["StoreId"];
                 };
                 cookie?: never;
             };
@@ -1120,6 +1307,13 @@ export namespace StoresSchema {
             responses: {
                 /** @description Soft-deleted. */
                 204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description `origin_rejected` (RT-430): the request is authenticated by the `dp2_session` cookie and its `Origin` header is missing, or is neither the API's own origin nor listed in `ALLOWED_ORIGINS`. */
+                403: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -1139,7 +1333,7 @@ export namespace StoresSchema {
                 query?: never;
                 header?: never;
                 path: {
-                    store_id: string;
+                    store_id: components["parameters"]["StoreId"];
                 };
                 cookie?: never;
             };
@@ -1157,6 +1351,78 @@ export namespace StoresSchema {
                     content: {
                         "application/json": components["schemas"]["Store"];
                     };
+                };
+                /** @description `validation_error` (malformed body, time zone shape, or `timezone` sent without `expected_current_timezone` and `timezone_impact_reviewed: true`, or either of those sent without `timezone`) or `invalid_timezone`. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description `origin_rejected` (RT-430): the request is authenticated by the `dp2_session` cookie and its `Origin` header is missing, or is neither the API's own origin nor listed in `ALLOWED_ORIGINS`. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not found / no access. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description `timezone_changed_concurrently` (`expected_current_timezone` is stale) or `store_has_open_shift` (a shift at this store is open). Nothing is written. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        previewStoreTimezoneChange: {
+            parameters: {
+                query: {
+                    timezone: components["schemas"]["IanaTimezone"];
+                };
+                header?: never;
+                path: {
+                    store_id: components["parameters"]["StoreId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StoreTimezoneChangePreview"];
+                    };
+                };
+                /** @description `validation_error` or `invalid_timezone`. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description No active tenant. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
                 };
                 /** @description Not found / no access. */
                 404: {
@@ -1324,7 +1590,7 @@ export namespace MembershipsSchema {
                     };
                     content?: never;
                 };
-                /** @description Insufficient role. */
+                /** @description Insufficient role. Also `origin_rejected` (RT-430): the request is authenticated by the `dp2_session` cookie and its `Origin` header is missing, or is neither the API's own origin nor listed in `ALLOWED_ORIGINS`. */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -1370,6 +1636,13 @@ export namespace MembershipsSchema {
                     };
                     content?: never;
                 };
+                /** @description `origin_rejected` (RT-430): the request is authenticated by the `dp2_session` cookie and its `Origin` header is missing, or is neither the API's own origin nor listed in `ALLOWED_ORIGINS`. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
                 /** @description Not found / no access. */
                 404: {
                     headers: {
@@ -1402,6 +1675,13 @@ export namespace MembershipsSchema {
                     content: {
                         "application/json": components["schemas"]["Membership"];
                     };
+                };
+                /** @description `origin_rejected` (RT-430): the request is authenticated by the `dp2_session` cookie and its `Origin` header is missing, or is neither the API's own origin nor listed in `ALLOWED_ORIGINS`. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
                 };
                 /** @description Not found / no access. */
                 404: {
@@ -2120,7 +2400,7 @@ export namespace UnknownItemsSchema {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description Caller lacks the role to dismiss in this scope. */
+                /** @description Caller lacks the role to dismiss in this scope. Also `origin_rejected` (RT-430): the request is authenticated by the `dp2_session` cookie and its `Origin` header is missing, or is neither the API's own origin nor listed in `ALLOWED_ORIGINS`. */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -2192,7 +2472,7 @@ export namespace UnknownItemsSchema {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description Caller lacks the tenant-admin / store-operator role. */
+                /** @description Caller lacks the tenant-admin / store-operator role. Also `origin_rejected` (RT-430): the request is authenticated by the `dp2_session` cookie and its `Origin` header is missing, or is neither the API's own origin nor listed in `ALLOWED_ORIGINS`. */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -2264,7 +2544,7 @@ export namespace UnknownItemsSchema {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description Caller lacks the tenant-admin / store-operator role. */
+                /** @description Caller lacks the tenant-admin / store-operator role. Also `origin_rejected` (RT-430): the request is authenticated by the `dp2_session` cookie and its `Origin` header is missing, or is neither the API's own origin nor listed in `ALLOWED_ORIGINS`. */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -2398,7 +2678,7 @@ export namespace UnknownItemsSchema {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description In-scope but insufficient authority. `error.code = "forbidden"` — reopen requires tenant-wide authority (FR-042). Distinct from 404: the item exists in the caller's scope, but the caller may not reopen it. */
+                /** @description In-scope but insufficient authority. `error.code = "forbidden"` — reopen requires tenant-wide authority (FR-042). Distinct from 404: the item exists in the caller's scope, but the caller may not reopen it. Also `origin_rejected` (RT-430): the request is authenticated by the `dp2_session` cookie and its `Origin` header is missing, or is neither the API's own origin nor listed in `ALLOWED_ORIGINS`. */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -2481,7 +2761,7 @@ export namespace UnknownItemsSchema {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description Caller lacks the role to dismiss in this scope. `error.code = "forbidden"`. */
+                /** @description Caller lacks the role to dismiss in this scope. `error.code = "forbidden"`. Also `origin_rejected` (RT-430): the request is authenticated by the `dp2_session` cookie and its `Origin` header is missing, or is neither the API's own origin nor listed in `ALLOWED_ORIGINS`. */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -2854,6 +3134,15 @@ export namespace SettlementSchema {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description Insufficient role (403) — authenticated but lacks the required role. 028 (G10). Also `origin_rejected` (RT-430): the request is authenticated by the `dp2_session` cookie and its `Origin` header is missing, or is neither the API's own origin nor listed in `ALLOWED_ORIGINS`. */
+            ForbiddenOrOriginRejected: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description too_many_requests (429) — per-device write rate limit exceeded on the POS settlement-intent route (ADR 0009 / audit M-2). Keyed PER DEVICE, not per IP or operator token. Non-disclosing `Error` body; `Retry-After` carries the back-off (seconds, [1, 300]). A POS client MUST treat this as TRANSIENT/retryable, never a permanent dead-letter. The limiter FAILS OPEN on a rate-limiter datastore outage (ADR 0009 D3), so a 429 is always a real budget breach. */
             TooManyRequests: {
                 headers: {
@@ -2979,7 +3268,7 @@ export namespace SettlementSchema {
                 };
                 400: components["responses"]["ValidationFailure"];
                 401: components["responses"]["Unauthorized"];
-                403: components["responses"]["Forbidden"];
+                403: components["responses"]["ForbiddenOrOriginRejected"];
                 409: components["responses"]["Conflict"];
                 500: components["responses"]["SystemFailure"];
             };
@@ -3078,7 +3367,7 @@ export namespace SettlementSchema {
                 };
                 400: components["responses"]["ValidationFailure"];
                 401: components["responses"]["Unauthorized"];
-                403: components["responses"]["Forbidden"];
+                403: components["responses"]["ForbiddenOrOriginRejected"];
                 404: components["responses"]["NotFound"];
                 409: components["responses"]["Conflict"];
                 500: components["responses"]["SystemFailure"];
@@ -3111,7 +3400,7 @@ export namespace SettlementSchema {
                 };
                 400: components["responses"]["ValidationFailure"];
                 401: components["responses"]["Unauthorized"];
-                403: components["responses"]["Forbidden"];
+                403: components["responses"]["ForbiddenOrOriginRejected"];
                 404: components["responses"]["NotFound"];
                 409: components["responses"]["Conflict"];
                 500: components["responses"]["SystemFailure"];
@@ -3147,7 +3436,7 @@ export namespace SettlementSchema {
                 };
                 400: components["responses"]["ValidationFailure"];
                 401: components["responses"]["Unauthorized"];
-                403: components["responses"]["Forbidden"];
+                403: components["responses"]["ForbiddenOrOriginRejected"];
                 404: components["responses"]["NotFound"];
                 409: components["responses"]["Conflict"];
                 500: components["responses"]["SystemFailure"];
@@ -3224,6 +3513,26 @@ export namespace ErpnextReconciliationSchema {
              * @description Re-evaluate 015-RESOLVE for the addressed `permanently_rejected` posting and, if it now resolves, re-make it eligible (`pending`, re-headed) so the connector re-posts it via the EXISTING 012 feed/ack — DP2 makes no outbound ERPNext HTTP. Idempotent (O-3): a repair of an already-`posted` row is a `no_op_echo` returning the stored document reference (never a 2nd document, never a rewrite). A still-unresolved cause leaves the row dead-lettered (`still_failing`) — it returns to the backlog with its class intact. The 008 sale fact is NEVER mutated. `Idempotency-Key` REQUIRED.
              */
             post: operations["repairPosting"];
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/catalog/erpnext-reconciliation/postings/{workItemRef}/re-resolve": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            get?: never;
+            put?: never;
+            /**
+             * Re-resolve a pending posting intent from the current mappings.
+             * @description RT-333. ERP Integration baseline: an incorrect mapping discovered BEFORE any ERP side effect may be fixed by an explicit, audited re-resolution that creates a new resolution version and a controlled retry. The operator corrects the item / warehouse mapping first, then calls this: DP2 writes resolution version n+1 (`resolved_by = operator`) from the CURRENT mappings, points the intent at it and re-heads it with a fresh retry budget, with an `audit_events` row in the same transaction. Only a `pending` intent can be re-resolved: a `posted` row has an ERP side effect (reconciliation, never a remap) and a dead-letter goes through `repairPosting`. A reversal is never re-resolved (it must credit exactly what its sale posted), nor is a sale that already has a reversal intent. A connector post that raced the re-resolution acks the superseded `resolutionVersion` and is recorded `reconciliation_required`, never `posted`, and its failed / rejected ack changes nothing (012 1.6.0-draft). The 008 sale fact is NEVER mutated. `Idempotency-Key` REQUIRED.
+             */
+            post: operations["reResolvePosting"];
             delete?: never;
             options?: never;
             head?: never;
@@ -3363,7 +3672,7 @@ export namespace ErpnextReconciliationSchema {
                 workItemRef: string;
                 /** @enum {string} */
                 kind: "sale_post" | "reversal";
-                /** @description The 015 rejection category (`unmapped_item` / `unmapped_store` / `unmapped_account` / `validation` / `closed_period` / `retry_budget_exhausted`). 015's vocabulary, read in place. */
+                /** @description The 015 rejection category (`unmapped_item` / `unmapped_store` / `unmapped_account` / `validation` / `closed_period` / `retry_budget_exhausted` / RT-332 `reconciliation_required`). 015's vocabulary, read in place. */
                 rejectionCategory: string;
                 /**
                  * Format: uuid
@@ -3379,6 +3688,11 @@ export namespace ErpnextReconciliationSchema {
                  * @description When the posting became `permanently_rejected` (the 015 row's updated_at).
                  */
                 deadLetteredAt: string;
+                /** @description RT-332 — for a `reconciliation_required` dead-letter, the EXISTING ERP document the connector reported (it does not match the intent's frozen resolution; an ERP side effect exists, so repair never re-offers the row — reconcile it in ERPNext). Null otherwise. */
+                reconciliationDocumentRef: {
+                    doctype: string;
+                    name: string;
+                } | null;
             };
             PostingBacklogPage: {
                 items: components["schemas"]["PostingBacklogItem"][];
@@ -3396,6 +3710,10 @@ export namespace ErpnextReconciliationSchema {
                  * @enum {string}
                  */
                 repairKind: "re_map" | "re_sync";
+                note?: string | null;
+            };
+            /** @description Re-resolution command (RT-333). Strict (§XII): tenant + actor are server-resolved from the session and MUST NOT appear here. `note` is an optional operator annotation (no PII). */
+            ReResolvePostingRequest: {
                 note?: string | null;
             };
             /** @description Stock-run trigger. Strict (§XII): tenant + actor are server-resolved; `kind`/`trigger` are server-set (`stock` / `on_demand`). Only the target store is supplied. */
@@ -3421,6 +3739,17 @@ export namespace ErpnextReconciliationSchema {
                 outcome: "eligible_again" | "still_failing" | "no_op_echo";
                 /** @description The ERPNext document reference echoed when a posting repair targets an already-`posted` row (O-3 — the stored document, never a new one). Null otherwise. */
                 resolvedDocumentRef?: string | null;
+                /** Format: date-time */
+                recordedAt: string;
+            };
+            /** @description The recorded re-resolution (RT-333): the intent now carries `resolutionVersion` and is offered to the connector again. */
+            RecordedReResolution: {
+                /** Format: uuid */
+                workItemRef: string;
+                /** @description The new frozen resolution version (`resolved_by = operator`). */
+                resolutionVersion: number;
+                /** @description The superseded version; null when the intent had none frozen. */
+                previousResolutionVersion: number | null;
                 /** Format: date-time */
                 recordedAt: string;
             };
@@ -3562,7 +3891,7 @@ export namespace ErpnextReconciliationSchema {
             /** @description Canonical error envelope, identical to the shared shape in `auth.openapi.yaml` / `catalog/erpnext-warehouse-map.yaml` (used verbatim). Cross-tenant / out-of-scope refusals are non-disclosing (§II/§XII). */
             Error: {
                 error: {
-                    /** @description Stable machine-readable error code. Closed set on this surface: validation_error | not_found | idempotency_key_conflict | system_failure (plus the generic 401 refusal). */
+                    /** @description Stable machine-readable error code. Closed set on this surface: validation_error | not_found | idempotency_key_conflict | not_re_resolvable | system_failure (plus the generic 401 refusal). */
                     code: string;
                     /** @description Human-readable summary. No sensitive data, no cause enumeration. */
                     message: string;
@@ -3593,6 +3922,15 @@ export namespace ErpnextReconciliationSchema {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description `origin_rejected` (RT-430): the request is authenticated by the `dp2_session` cookie and its `Origin` header is missing, or is neither the API's own origin nor listed in `ALLOWED_ORIGINS`. */
+            OriginRejected: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description `not_found` — a cross-tenant / out-of-scope / absent `workItemRef`, `runId`, `resultId`, or `storeId`, or a role that may not use the operation. Identical shape in every case (no existence leak, §II/§XII). */
             NotFound: {
                 headers: {
@@ -3604,6 +3942,15 @@ export namespace ErpnextReconciliationSchema {
             };
             /** @description `idempotency_key_conflict` (409) — the same `Idempotency-Key` reused with a DIFFERENT body. (A duplicate repair of an already-resolved target with the same outcome is an idempotent 200 echo, not a conflict.) */
             Conflict: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `not_re_resolvable` (409) — the intent is not `pending`, is a reversal or a sale that already has a reversal intent, or the current mappings do not resolve it or resolve it to the refs already frozen (nothing is written; the intent keeps its resolution version). `idempotency_key_conflict` (409) — the same `Idempotency-Key` reused with a DIFFERENT body. */
+            NotReResolvable: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3638,7 +3985,7 @@ export namespace ErpnextReconciliationSchema {
         };
         requestBodies: never;
         headers: {
-            /** @description Present and `true` on a 200 idempotent-replay response. */
+            /** @description Present and `true` on an idempotent-replay response. */
             IdempotentReplayed: boolean;
         };
         pathItems: never;
@@ -3716,8 +4063,45 @@ export namespace ErpnextReconciliationSchema {
                 };
                 400: components["responses"]["ValidationFailure"];
                 401: components["responses"]["Unauthorized"];
+                403: components["responses"]["OriginRejected"];
                 404: components["responses"]["NotFound"];
                 409: components["responses"]["Conflict"];
+            };
+        };
+        reResolvePosting: {
+            parameters: {
+                query?: never;
+                header: {
+                    /** @description REQUIRED on repair + run-trigger. Reuses the existing `IdempotencyInterceptor` — identical retry replays the stored response; key-reuse with a different body is 409 `idempotency_key_conflict`. No new primitive. */
+                    "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                };
+                path: {
+                    /** @description The 015 `erpnext_posting_status` row id (the dead-letter to repair). Resolves only within the session tenant; out-of-scope ids are non-disclosing 404s (§II/§XII). */
+                    workItemRef: components["parameters"]["WorkItemRef"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ReResolvePostingRequest"];
+                };
+            };
+            responses: {
+                /** @description Re-resolution recorded. A retry with the same `Idempotency-Key` and the same body replays the stored response with its stored status (201) and `Idempotent-Replayed: true`; nothing is re-applied. */
+                201: {
+                    headers: {
+                        "Idempotent-Replayed": components["headers"]["IdempotentReplayed"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RecordedReResolution"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["OriginRejected"];
+                404: components["responses"]["NotFound"];
+                409: components["responses"]["NotReResolvable"];
             };
         };
         triggerReconciliationRun: {
@@ -3757,6 +4141,7 @@ export namespace ErpnextReconciliationSchema {
                 };
                 400: components["responses"]["ValidationFailure"];
                 401: components["responses"]["Unauthorized"];
+                403: components["responses"]["OriginRejected"];
                 404: components["responses"]["NotFound"];
                 409: components["responses"]["Conflict"];
             };
@@ -3861,6 +4246,7 @@ export namespace ErpnextReconciliationSchema {
                 };
                 400: components["responses"]["ValidationFailure"];
                 401: components["responses"]["Unauthorized"];
+                403: components["responses"]["OriginRejected"];
                 404: components["responses"]["NotFound"];
                 409: components["responses"]["Conflict"];
             };
@@ -3927,6 +4313,352 @@ export namespace ErpnextReconciliationSchema {
     }
 }
 
-export type paths = AuthSchema.paths & ContextSchema.paths & TenantsSchema.paths & StoresSchema.paths & MembershipsSchema.paths & AuditSchema.paths & UnknownItemsSchema.paths & SettlementSchema.paths & ErpnextReconciliationSchema.paths;
-export type components = AuthSchema.components & ContextSchema.components & TenantsSchema.components & StoresSchema.components & MembershipsSchema.components & AuditSchema.components & UnknownItemsSchema.components & SettlementSchema.components & ErpnextReconciliationSchema.components;
-export type operations = AuthSchema.operations & ContextSchema.operations & TenantsSchema.operations & StoresSchema.operations & MembershipsSchema.operations & AuditSchema.operations & UnknownItemsSchema.operations & SettlementSchema.operations & ErpnextReconciliationSchema.operations;
+export namespace ShiftClosesSchema {
+    export interface paths {
+        "/api/v1/shift-closes": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * List recorded shift closes (newest first, keyset paginated).
+             * @description The recorded closes in the caller's tenant and store scope, newest first by (`closedAt`, `shiftId`). Every filter is optional and they combine with AND. With no `store_id`, every store in the caller's scope is listed. An empty page (`items: []`, `nextCursor: null`) is a 200.
+             */
+            get: operations["consoleListShiftCloses"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/shift-closes/{shiftId}": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * Read one recorded shift close with its movements.
+             * @description One recorded close, plus its shift's opening (time, user), its cash movements (pay-in / pay-out with reason codes) and the returns whose cash refund it claimed. A shift that is open, legacy, of another tenant, of a store outside the caller's scope, or absent is the same non-disclosing 404.
+             */
+            get: operations["consoleGetShiftClose"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+    }
+    export type webhooks = Record<string, never>;
+    export interface components {
+        schemas: {
+            /**
+             * @description `normal`: the cashier counted and closed. `forced`: a manager closed a shift the cashier could not close (RT-17).
+             * @enum {string}
+             */
+            CloseKind: "normal" | "forced";
+            /** @description ISO-4217 alphabetic currency code. */
+            CurrencyCode: string;
+            /** @description Exact-decimal amount as a string, never negative; at most 15 integer and 4 fractional digits (`numeric(19,4)`). */
+            NonNegativeDecimalAmount: string;
+            /** @description A `NonNegativeDecimalAmount` greater than zero. */
+            PositiveDecimalAmount: components["schemas"]["NonNegativeDecimalAmount"] & string;
+            /** @description Exact-decimal amount as a string that may be negative. Used for `variance`: a shortage is negative, an overage positive. */
+            SignedDecimalAmount: string;
+            /** @description One recorded close, as listed. Every key is always present; a value that was not recorded is `null`. `forcedReason` is a string when `closeKind` is `forced` and `null` when it is `normal`. No tenant id, device id, payload hash or recording actor (see `ShiftCloseDetail`). The arithmetic holds exactly, as checked on ingest: `expectedCash = openingFloat + cashSalesTotal − cashRefundsTotal + payInTotal − payOutTotal` and `variance = countedCash − expectedCash`. */
+            ShiftCloseSummary: {
+                /** Format: uuid */
+                shiftId: string;
+                /** Format: uuid */
+                storeId: string;
+                currencyCode: components["schemas"]["CurrencyCode"];
+                /**
+                 * Format: date-time
+                 * @description When the shift was closed, on the POS clock.
+                 */
+                closedAt: string;
+                closeKind: components["schemas"]["CloseKind"];
+                /** @description Why the shift was force-closed; `null` for a normal close. No PII. */
+                forcedReason: string | null;
+                /**
+                 * Format: uuid
+                 * @description The `users.id` of the user who closed the shift.
+                 */
+                closingUserId: string;
+                /**
+                 * Format: uuid
+                 * @description The `users.id` the terminal recorded as the variance approver, or `null` when none was recorded. Recorded as sent: this read does not say whether the approver was verified (the persisted `approverCheck`, RT-384 / RT-385, is added later).
+                 */
+                varianceApprovedByUserId: string | null;
+                openingFloat: components["schemas"]["NonNegativeDecimalAmount"];
+                cashSalesTotal: components["schemas"]["NonNegativeDecimalAmount"];
+                cashRefundsTotal: components["schemas"]["NonNegativeDecimalAmount"];
+                payInTotal: components["schemas"]["NonNegativeDecimalAmount"];
+                payOutTotal: components["schemas"]["NonNegativeDecimalAmount"];
+                expectedCash: components["schemas"]["NonNegativeDecimalAmount"];
+                countedCash: components["schemas"]["NonNegativeDecimalAmount"];
+                variance: components["schemas"]["SignedDecimalAmount"];
+                /** @description Number of sales the POS counted in the shift, as reported. */
+                saleCount: number;
+                /**
+                 * Format: date-time
+                 * @description When the server recorded the close (server clock).
+                 */
+                receivedAt: string;
+            };
+            /** @description A keyset page of recorded closes, newest first. */
+            ShiftClosePage: {
+                items: components["schemas"]["ShiftCloseSummary"][];
+                /** @description Opaque cursor for the next page; `null` on the last page. */
+                nextCursor: string | null;
+            };
+            /** @description One recorded close with its shift's opening, its cash movements and its claimed cash-refund returns. The close fields are the `ShiftCloseSummary` fields, with the same rules. */
+            ShiftCloseDetail: {
+                /** Format: uuid */
+                shiftId: string;
+                /** Format: uuid */
+                storeId: string;
+                currencyCode: components["schemas"]["CurrencyCode"];
+                /**
+                 * Format: date-time
+                 * @description When the shift was opened, on the POS clock.
+                 */
+                openedAt: string;
+                /**
+                 * Format: uuid
+                 * @description The `users.id` of the user who opened the shift; may differ from the closing user.
+                 */
+                openingUserId: string;
+                /**
+                 * Format: date-time
+                 * @description When the shift was closed, on the POS clock.
+                 */
+                closedAt: string;
+                closeKind: components["schemas"]["CloseKind"];
+                /** @description Why the shift was force-closed; `null` for a normal close. No PII. */
+                forcedReason: string | null;
+                /**
+                 * Format: uuid
+                 * @description The `users.id` of the user who closed the shift.
+                 */
+                closingUserId: string;
+                /**
+                 * Format: uuid
+                 * @description The verified actor who delivered the close: the admitted cashier on the device path, the envelope operator on the manager path.
+                 */
+                recordedByUserId: string;
+                /**
+                 * Format: uuid
+                 * @description The `users.id` the terminal recorded as the variance approver, or `null`. Recorded as sent; verification is not reported yet.
+                 */
+                varianceApprovedByUserId: string | null;
+                openingFloat: components["schemas"]["NonNegativeDecimalAmount"];
+                cashSalesTotal: components["schemas"]["NonNegativeDecimalAmount"];
+                cashRefundsTotal: components["schemas"]["NonNegativeDecimalAmount"];
+                payInTotal: components["schemas"]["NonNegativeDecimalAmount"];
+                payOutTotal: components["schemas"]["NonNegativeDecimalAmount"];
+                expectedCash: components["schemas"]["NonNegativeDecimalAmount"];
+                countedCash: components["schemas"]["NonNegativeDecimalAmount"];
+                variance: components["schemas"]["SignedDecimalAmount"];
+                saleCount: number;
+                /**
+                 * Format: date-time
+                 * @description When the server recorded the close (server clock).
+                 */
+                receivedAt: string;
+                /** @description The returns whose cash refund the close claimed from this drawer, in the order the POS sent them; may be empty. */
+                cashRefundReturnRefs: string[];
+                /** @description Every pay-in and pay-out recorded on the shift, oldest first by `occurredAt`, ties broken by `movementId`; may be empty. */
+                cashMovements: components["schemas"]["ShiftCashMovement"][];
+            };
+            /** @description A recorded pay-in or pay-out, in the shift's currency (the close's `currencyCode`). `note` is `null` when none was recorded. */
+            ShiftCashMovement: {
+                /** Format: uuid */
+                movementId: string;
+                /** @enum {string} */
+                kind: "pay_in" | "pay_out";
+                amount: components["schemas"]["PositiveDecimalAmount"];
+                /** @enum {string} */
+                reasonCode: "bank_drop" | "float_top_up" | "petty_expense" | "other";
+                /** @description Optional free text from the terminal. No PII. */
+                note: string | null;
+                /**
+                 * Format: date-time
+                 * @description When the movement happened, on the POS clock.
+                 */
+                occurredAt: string;
+                /**
+                 * Format: uuid
+                 * @description The verified actor who recorded the movement.
+                 */
+                recordedByUserId: string;
+                /**
+                 * Format: date-time
+                 * @description When the server recorded the movement (server clock).
+                 */
+                receivedAt: string;
+            };
+            /** @description Canonical error envelope. Out-of-scope and cross-tenant refusals are non-disclosing (§II, §XII): they never name the cause. */
+            Error: {
+                error: {
+                    /** @description Stable machine-readable error code. */
+                    code: string;
+                    /** @description Human-readable summary. No sensitive data, no cause enumeration. */
+                    message: string;
+                    /**
+                     * Format: uuid
+                     * @description Server-side correlation id; the cause is recorded server-side.
+                     */
+                    request_id?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description validation_error (400): a malformed path or query value, an unknown query key, a cursor the server cannot decode, or `closed_to` not later than `closed_from`. Checked before any database read. */
+            ValidationFailure: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Unauthenticated (401): a missing or invalid session cookie, or a non-cookie credential. Non-disclosing. Owned by 028 (G10). */
+            Unauthorized: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description not_found (404), non-disclosing: identical for a role outside `owner` / `tenant_admin` / `store_manager`, another tenant's shift or store, a store outside the caller's scope, a shift with no recorded close and an absent id. */
+            NotFound: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description system_failure (500): unexpected server error; the cause is recorded server-side under `request_id`. */
+            SystemFailure: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+        parameters: {
+            /** @description The shift's client-generated id (`shiftId` on the POS contract). Case insensitive: normalised to lower case before the lookup. A value that is not a UUID is 400 `validation_error` and never reaches the database. */
+            ShiftIdPath: string;
+            /** @description Only closes of this store. Validated against the caller's store scope: a store outside it, or of another tenant, is the non-disclosing 404. */
+            StoreIdQuery: string;
+            /** @description Only closes with `closedAt` at or after this instant (inclusive), RFC 3339 with an offset. Compared with the POS-clock `closedAt`. */
+            ClosedFrom: string;
+            /** @description Only closes with `closedAt` strictly before this instant (exclusive), RFC 3339 with an offset. With `closed_from`, `closed_to` must be later than `closed_from`, else 400 `validation_error`. */
+            ClosedTo: string;
+            /** @description Only closes of this kind. */
+            CloseKindQuery: components["schemas"]["CloseKind"];
+            /** @description Only closes whose absolute `variance` is at least this amount (inclusive), compared in exact decimal. The amount is compared in each close's own currency, with no conversion; pair it with `currency_code` when the scope holds more than one currency. */
+            MinAbsVariance: components["schemas"]["NonNegativeDecimalAmount"];
+            /** @description Only closes in this currency. */
+            CurrencyCodeQuery: components["schemas"]["CurrencyCode"];
+            /** @description `approved`: closes that recorded a `varianceApprovedByUserId`. `not_approved`: closes that did not (including zero-variance closes; combine with `min_abs_variance` to find unapproved variances). Whether the recorded approver was verified is not filterable until the persisted `approverCheck` exists (RT-384 / RT-385). */
+            ApprovalQuery: "approved" | "not_approved";
+            /** @description Opaque keyset cursor from a prior page's `nextCursor`. Do not decode or construct it; omit it for the first page. Reuse it only with the same filters. A value the server did not issue, or cannot decode, is 400 `validation_error`. */
+            Cursor: string;
+            /** @description Maximum items per page (bounded). The server MAY return fewer. */
+            PageSize: number;
+        };
+        requestBodies: never;
+        headers: never;
+        pathItems: never;
+    }
+    export type $defs = Record<string, never>;
+    export interface operations {
+        consoleListShiftCloses: {
+            parameters: {
+                query?: {
+                    /** @description Only closes of this store. Validated against the caller's store scope: a store outside it, or of another tenant, is the non-disclosing 404. */
+                    store_id?: components["parameters"]["StoreIdQuery"];
+                    /** @description Only closes with `closedAt` at or after this instant (inclusive), RFC 3339 with an offset. Compared with the POS-clock `closedAt`. */
+                    closed_from?: components["parameters"]["ClosedFrom"];
+                    /** @description Only closes with `closedAt` strictly before this instant (exclusive), RFC 3339 with an offset. With `closed_from`, `closed_to` must be later than `closed_from`, else 400 `validation_error`. */
+                    closed_to?: components["parameters"]["ClosedTo"];
+                    /** @description Only closes of this kind. */
+                    close_kind?: components["parameters"]["CloseKindQuery"];
+                    /** @description Only closes whose absolute `variance` is at least this amount (inclusive), compared in exact decimal. The amount is compared in each close's own currency, with no conversion; pair it with `currency_code` when the scope holds more than one currency. */
+                    min_abs_variance?: components["parameters"]["MinAbsVariance"];
+                    /** @description Only closes in this currency. */
+                    currency_code?: components["parameters"]["CurrencyCodeQuery"];
+                    /** @description `approved`: closes that recorded a `varianceApprovedByUserId`. `not_approved`: closes that did not (including zero-variance closes; combine with `min_abs_variance` to find unapproved variances). Whether the recorded approver was verified is not filterable until the persisted `approverCheck` exists (RT-384 / RT-385). */
+                    approval?: components["parameters"]["ApprovalQuery"];
+                    /** @description Opaque keyset cursor from a prior page's `nextCursor`. Do not decode or construct it; omit it for the first page. Reuse it only with the same filters. A value the server did not issue, or cannot decode, is 400 `validation_error`. */
+                    cursor?: components["parameters"]["Cursor"];
+                    /** @description Maximum items per page (bounded). The server MAY return fewer. */
+                    page_size?: components["parameters"]["PageSize"];
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description A page of recorded closes, newest first. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ShiftClosePage"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                404: components["responses"]["NotFound"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+        consoleGetShiftClose: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The shift's client-generated id (`shiftId` on the POS contract). Case insensitive: normalised to lower case before the lookup. A value that is not a UUID is 400 `validation_error` and never reaches the database. */
+                    shiftId: components["parameters"]["ShiftIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The recorded close. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ShiftCloseDetail"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                404: components["responses"]["NotFound"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+    }
+}
+
+export type paths = AuthSchema.paths & ContextSchema.paths & TenantsSchema.paths & StoresSchema.paths & MembershipsSchema.paths & AuditSchema.paths & UnknownItemsSchema.paths & SettlementSchema.paths & ErpnextReconciliationSchema.paths & ShiftClosesSchema.paths;
+export type components = AuthSchema.components & ContextSchema.components & TenantsSchema.components & StoresSchema.components & MembershipsSchema.components & AuditSchema.components & UnknownItemsSchema.components & SettlementSchema.components & ErpnextReconciliationSchema.components & ShiftClosesSchema.components;
+export type operations = AuthSchema.operations & ContextSchema.operations & TenantsSchema.operations & StoresSchema.operations & MembershipsSchema.operations & AuditSchema.operations & UnknownItemsSchema.operations & SettlementSchema.operations & ErpnextReconciliationSchema.operations & ShiftClosesSchema.operations;
