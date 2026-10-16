@@ -1,6 +1,6 @@
 /* RT-559 Overview (spec 009 §7): sections with headings, not a card grid. The
- * attention items are one "Precision Ledger" (label, count or state, link);
- * recent activity follows as a short table. Role tokens only, logical
+ * attention items are one "Precision Ledger" (label, count or state, link),
+ * then a plain link to the audit log (P-5 deferred). Role tokens only, logical
  * properties only (RTL-first), numbers tabular. No colour carries meaning
  * alone: states are words, badges reuse the stock screen's classes. */
 
@@ -107,11 +107,8 @@
   text-align: end;
 }
 
-.activity-table__time {
-  font-family: var(--font-mono);
-  font-size: var(--text-machine);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+.overview__related {
+  margin: 0;
 }
 
 @media (max-width: 720px) {

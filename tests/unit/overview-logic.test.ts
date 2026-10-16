@@ -3,7 +3,7 @@ import { LOCALES } from "@/i18n/locale";
 import { ar } from "@/i18n/messages/ar";
 import {
   ATTENTION_DAYS,
-  auditActionKey,
+  canOpenAudit,
   isRefusal,
   pageCount,
   shiftAttention,
@@ -105,30 +105,13 @@ describe("shiftAttention (OD-009-2)", () => {
   });
 });
 
-describe("auditActionKey", () => {
-  test("machine codes drive copy by their domain", () => {
-    expect(auditActionKey("auth.signin")).toBe("overview.activity.action.auth");
-    expect(auditActionKey("context.switch.store")).toBe("overview.activity.action.context");
-    expect(auditActionKey("catalog.product.create")).toBe("overview.activity.action.catalog");
-    expect(auditActionKey("unknown_item.dismissed")).toBe("overview.activity.action.unknownItem");
-    expect(auditActionKey("shift.opened")).toBe("overview.activity.action.shift");
-    expect(auditActionKey("shift_closes.listed")).toBe("overview.activity.action.shift");
-    expect(auditActionKey("sale.captured")).toBe("overview.activity.action.sale");
-    expect(auditActionKey("sale_history.listed")).toBe("overview.activity.action.sale");
-    expect(auditActionKey("settlement.receivable.read")).toBe(
-      "overview.activity.action.settlement",
-    );
-    expect(auditActionKey("erpnext_sync_ops.summary.read")).toBe(
-      "overview.activity.action.erpnext",
-    );
-    expect(auditActionKey("operator.session.takeover")).toBe("overview.activity.action.operator");
-    expect(auditActionKey("membership.invited")).toBe("overview.activity.action.operator");
-  });
-
-  test("an unmapped or empty code gets the generic label, never the raw code", () => {
-    expect(auditActionKey("something.new")).toBe("overview.activity.action.other");
-    expect(auditActionKey("")).toBe("overview.activity.action.other");
-    expect(auditActionKey("__proto__")).toBe("overview.activity.action.other");
+describe("canOpenAudit (P-5 deferred, OD-009-3)", () => {
+  test("only the roles listAuditEvents serves get the /audit link", () => {
+    expect(canOpenAudit("owner")).toBe(true);
+    expect(canOpenAudit("tenant_admin")).toBe(true);
+    for (const role of ["store_manager", "store_staff", "platform_admin", "", null, undefined]) {
+      expect(canOpenAudit(role)).toBe(false);
+    }
   });
 });
 

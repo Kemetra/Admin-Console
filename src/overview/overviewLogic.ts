@@ -1,4 +1,3 @@
-import type { MessageKey } from "@/i18n";
 /**
  * RT-559 pure helpers for the Overview (spec 009). No React, no fetch.
  *
@@ -7,7 +6,8 @@ import type { MessageKey } from "@/i18n";
  * - The shift-close window follows OD-009-2 and is built with the destination's
  *   own helpers (`buildListQuery`, `filtersToSearch`, `zonedDayStartIso`), so
  *   the row and the linked list cover the same subset.
- * - Audit actions are machine codes: they pick catalog copy, never render raw.
+ * - Recent activity (P-5) is deferred (OD-009-3, RT-567): owner and tenant_admin
+ *   get a plain link to `/audit`, with no list and no counts.
  */
 import { isValidZone } from "@/i18n/format";
 import type { ShiftCloseListQuery } from "@/lib/shift-close-queries";
@@ -96,39 +96,12 @@ export function shiftAttention({ storeId, timeZone, nowMs }: ShiftAttentionInput
   return { filters, query, href: `/shift-closes?${filtersToSearch(filters).toString()}` };
 }
 
-// --- Audit action copy ------------------------------------------------------------
+// --- Audit link (P-5 deferred, OD-009-3) -------------------------------------------
 
-/**
- * Domain of an action code → catalog key. The audit vocabulary is open (a free
- * string on the contract), so copy is chosen by the code's first segment and
- * anything unmapped reads as generic recorded activity.
- */
-const ACTION_DOMAINS: Record<string, MessageKey> = {
-  auth: "overview.activity.action.auth",
-  context: "overview.activity.action.context",
-  catalog: "overview.activity.action.catalog",
-  unknown_item: "overview.activity.action.unknownItem",
-  shift: "overview.activity.action.shift",
-  shift_closes: "overview.activity.action.shift",
-  sale: "overview.activity.action.sale",
-  sale_history: "overview.activity.action.sale",
-  sale_sync_ops: "overview.activity.action.sale",
-  settlement: "overview.activity.action.settlement",
-  erpnext: "overview.activity.action.erpnext",
-  erpnext_item_map: "overview.activity.action.erpnext",
-  erpnext_reconciliation: "overview.activity.action.erpnext",
-  erpnext_sync_ops: "overview.activity.action.erpnext",
-  erpnext_warehouse_map: "overview.activity.action.erpnext",
-  operator: "overview.activity.action.operator",
-  membership: "overview.activity.action.operator",
-  invitation: "overview.activity.action.operator",
-  tenant: "overview.activity.action.tenant",
-  store: "overview.activity.action.store",
-};
+/** Roles `listAuditEvents` serves (spec 009 §5.1); the link mirrors the API. */
+export const AUDIT_READ_ROLES = ["owner", "tenant_admin"] as const;
 
-export function auditActionKey(action: string): MessageKey {
-  const domain = action.split(".")[0] ?? "";
-  return Object.hasOwn(ACTION_DOMAINS, domain)
-    ? ACTION_DOMAINS[domain]
-    : "overview.activity.action.other";
+/** Whether to show the plain link to `/audit`. Not an authorization decision. */
+export function canOpenAudit(role: string | null | undefined): boolean {
+  return (AUDIT_READ_ROLES as readonly string[]).includes(role ?? "");
 }

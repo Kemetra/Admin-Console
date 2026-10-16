@@ -3,6 +3,7 @@ import { type Page, expect, test } from "./fixtures";
 /**
  * RT-559 Overview (spec 009) on the built SPA, in both locales. AC-12: changing
  * the store re-reads every panel and no row from the old scope stays visible.
+ * AC-10 (OD-009-3): a plain /audit link, and no audit read at all.
  * AC-13: the page renders in light, dark and forced-colors (captures attached)
  * and its controls are reachable by keyboard. Mocked Backend-Core (C-5).
  */
@@ -114,24 +115,10 @@ async function mock(page: Page): Promise<Record<Panel, (string | null)[]>> {
   await page.route("**/api/v1/shift-closes**", counted("shift", "nextCursor"));
   await page.route("**/api/v1/catalog/unknown-items**", counted("unknown", "next_cursor"));
   await page.route("**/api/v1/settlement/receivables**", counted("receivables", "nextCursor"));
+  // P-5 is deferred (OD-009-3, RT-567): the Overview must not read audit events.
   await page.route("**/api/v1/audit/events**", (r) => {
-    const store = storeOf(r.request().url());
-    seen.audit.push(store);
-    const actor = store === "s2" ? "Hana Fahmy" : "Omar Nabil";
-    return r.fulfill(
-      json({
-        items: [
-          {
-            id: `0190f000-0000-7000-8000-0000000000${store === "s2" ? "e2" : "e1"}`,
-            occurred_at: "2026-10-15T09:30:00Z",
-            actor_label: actor,
-            action: "shift.opened",
-            metadata: {},
-          },
-        ],
-        next_cursor: null,
-      }),
-    );
+    seen.audit.push(storeOf(r.request().url()));
+    return r.fulfill(json({ items: [], next_cursor: null }));
   });
   return seen;
 }
@@ -149,7 +136,7 @@ test("AC-12: changing the store re-reads every panel and drops the old scope's r
     t("overview.count.exact", { noun: t(noun), count: n });
   const stockLabel = (store: string) => t("overview.stock.label", { store });
   const ledger = page.getByRole("region", { name: t("overview.attention.title") });
-  const activity = page.getByRole("region", { name: t("overview.activity.title") });
+  const auditLink = page.getByRole("main").getByRole("link", { name: t("shell.nav.audit") });
 
   await page.goto("/");
   await expect(ledger.getByText(stockLabel("Cairo Festival City"))).toBeVisible();
@@ -157,9 +144,7 @@ test("AC-12: changing the store re-reads every panel and drops the old scope's r
   await expect(ledger.getByText(count("overview.unknown.noun", 5))).toBeVisible();
   await expect(ledger.getByText(count("overview.shift.noun", 2))).toBeVisible();
   await expect(ledger.getByText(count("overview.receivables.noun", 3))).toBeVisible();
-  await expect(activity.getByText("Omar Nabil")).toBeVisible();
-  await expect(activity.getByText(t("overview.activity.action.shift"))).toBeVisible();
-  await expect(activity.getByText("shift.opened")).toBeHidden();
+  await expect(auditLink).toHaveAttribute("href", "/audit");
 
   await page.getByRole("button", { name: /Northstar Retail/ }).click();
   await page.getByRole("menuitem", { name: "New Cairo Mall" }).click();
@@ -167,23 +152,23 @@ test("AC-12: changing the store re-reads every panel and drops the old scope's r
   await expect(ledger.getByText(stockLabel("New Cairo Mall"))).toBeVisible();
   await expect(ledger.getByText(count("overview.unknown.noun", 1))).toBeVisible();
   await expect(ledger.getByText(count("overview.receivables.noun", 1))).toBeVisible();
-  await expect(activity.getByText("Hana Fahmy")).toBeVisible();
   // Nothing from the tenant-wide scope remains.
   await expect(ledger.getByText(stockLabel("Cairo Festival City"))).toBeHidden();
   await expect(ledger.getByText(count("overview.unknown.noun", 5))).toBeHidden();
   await expect(ledger.getByText(count("overview.shift.noun", 2))).toBeHidden();
-  await expect(activity.getByText("Omar Nabil")).toBeHidden();
-  for (const panel of ["shift", "unknown", "receivables", "audit"] as const) {
+  for (const panel of ["shift", "unknown", "receivables"] as const) {
     expect(seen[panel], panel).toContain("s2");
   }
   expect(seen.stock).toContain("s2");
+  expect(seen.audit).toEqual([]);
 
   // And back to the whole tenant.
   await page.getByRole("button", { name: /New Cairo Mall/ }).click();
   await page.getByRole("menuitem", { name: t("shell.scope.allStores") }).click();
   await expect(ledger.getByText(stockLabel("Cairo Festival City"))).toBeVisible();
   await expect(ledger.getByText(count("overview.unknown.noun", 5))).toBeVisible();
-  await expect(activity.getByText("Hana Fahmy")).toBeHidden();
+  await expect(auditLink).toBeVisible();
+  expect(seen.audit).toEqual([]);
 });
 
 test("AC-13: light, dark and forced-colors render; every control is keyboard-reachable", async ({
@@ -211,18 +196,21 @@ test("AC-13: light, dark and forced-colors render; every control is keyboard-rea
   await capture("forced-colors");
   await page.emulateMedia({ forcedColors: "none" });
 
-  // Keyboard walk: Tab reaches the refresh control and every ledger link.
+  // Keyboard walk: Tab reaches the refresh control and every Overview link (inside <main>).
   const targets = [
     t("overview.refresh"),
     t("overview.stock.open"),
     t("overview.shift.open"),
     t("overview.unknown.open"),
-    t("overview.activity.open"),
+    t("shell.nav.audit"),
   ];
   const reached = new Set<string>();
   for (let i = 0; i < 60 && reached.size < targets.length; i++) {
     await page.keyboard.press("Tab");
-    const name = await page.evaluate(() => document.activeElement?.textContent?.trim() ?? "");
+    const name = await page.evaluate(() => {
+      const el = document.activeElement;
+      return el?.closest("main") ? (el.textContent?.trim() ?? "") : "";
+    });
     if (targets.includes(name)) reached.add(name);
   }
   expect([...reached].sort()).toEqual([...targets].sort());

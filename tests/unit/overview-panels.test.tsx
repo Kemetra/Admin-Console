@@ -77,16 +77,6 @@ const ok = (data: unknown) => Promise.resolve({ status: 200, data });
 const fail = (status: number) =>
   Promise.resolve({ status, error: { error: { code: "x", request_id: "req-1" } } });
 
-function event(i: number, action = "auth.signin") {
-  return {
-    id: `0190f000-0000-7000-8000-00000000e${String(i).padStart(3, "0")}`,
-    occurred_at: `2026-10-15T09:${String(i).padStart(2, "0")}:00Z`,
-    actor_label: `Actor ${i}`,
-    action,
-    metadata: {},
-  };
-}
-
 /** Every panel answers with one quiet page unless a test overrides it. */
 function answerAll(): void {
   listErpnextNegativeOnHandStores.mockImplementation(() =>
@@ -95,7 +85,6 @@ function answerAll(): void {
   consoleListShiftCloses.mockImplementation(() => ok({ items: [{}, {}], nextCursor: null }));
   listUnknownItems.mockImplementation(() => ok({ items: [{}], next_cursor: null }));
   consoleListReceivables.mockImplementation(() => ok({ items: [], nextCursor: null }));
-  listAuditEvents.mockImplementation(() => ok({ items: [event(1)], next_cursor: null }));
 }
 
 function renderOverview(): void {
@@ -214,7 +203,6 @@ describe("Overview panels (RT-559, spec 009)", () => {
     });
     expect(listUnknownItems).toHaveBeenCalledWith({ status: "pending" });
     expect(consoleListReceivables).toHaveBeenCalledWith({ state: "flagged" });
-    expect(listAuditEvents).toHaveBeenCalledWith({ limit: 10 });
   });
 
   test("AC-9: a list with a further page shows 'at least N' of the rows returned", async () => {
@@ -316,18 +304,15 @@ describe("Overview panels (RT-559, spec 009)", () => {
   test("AC-6: a store manager's 403 panels are omitted, not shown as empty", async () => {
     activeContext.mockReturnValue(ctx("store_manager"));
     consoleListReceivables.mockImplementation(() => fail(403));
-    listAuditEvents.mockImplementation(() => fail(403));
     renderOverview();
     await findRow(SHIFT);
     await within(row(UNKNOWN)).findByText("Items: 1");
     await waitFor(() => expect(screen.queryByText(RECEIVABLES)).toBeNull());
-    await waitFor(() => expect(screen.queryByText("Recent activity")).toBeNull());
   });
 
-  test("AC-6: store staff see no P-1, P-2, P-4 or P-5; the API is not asked for P-1/P-2", async () => {
+  test("AC-6: store staff see no P-1, P-2, P-4 or audit link; the API is not asked for P-1/P-2", async () => {
     activeContext.mockReturnValue(ctx("store_staff"));
     consoleListReceivables.mockImplementation(() => fail(403));
-    listAuditEvents.mockImplementation(() => fail(404));
     renderOverview();
     await within(await findRow(UNKNOWN)).findByText("Items: 1");
     expect(screen.queryByText(SHIFT)).toBeNull();
@@ -335,7 +320,6 @@ describe("Overview panels (RT-559, spec 009)", () => {
     expect(listErpnextNegativeOnHandStores).not.toHaveBeenCalled();
     expect(consoleListShiftCloses).not.toHaveBeenCalled();
     await waitFor(() => expect(screen.queryByText(RECEIVABLES)).toBeNull());
-    await waitFor(() => expect(screen.queryByText("Recent activity")).toBeNull());
   });
 
   test("a 404 on a role-allowed panel omits it too (the backend wins)", async () => {
@@ -350,7 +334,6 @@ describe("Overview panels (RT-559, spec 009)", () => {
     activeContext.mockReturnValue(ctx("store_staff"));
     listUnknownItems.mockImplementation(() => fail(403));
     consoleListReceivables.mockImplementation(() => fail(403));
-    listAuditEvents.mockImplementation(() => fail(403));
     renderOverview();
     await screen.findByText("No attention items are available to your role here.");
   });
@@ -378,7 +361,6 @@ describe("Overview panels (RT-559, spec 009)", () => {
     });
     expect(listUnknownItems).toHaveBeenCalledWith({ status: "pending", store_id: A });
     expect(consoleListReceivables).toHaveBeenCalledWith({ state: "flagged", store_id: A });
-    expect(listAuditEvents).toHaveBeenCalledWith({ limit: 10, store_id: A });
     expect(within(row(SHIFT)).getByRole("link").getAttribute("href")).toBe(
       `/shift-closes?store=${A}&from=2026-10-10&min=0.0001&approval=not_approved`,
     );
@@ -417,7 +399,6 @@ describe("Overview panels (RT-559, spec 009)", () => {
     listErpnextNegativeOnHandStores.mockImplementation(() =>
       ok({ items: [summary(A, "Cairo Festival City", "fresh", 3)], nextCursor: null }),
     );
-    listAuditEvents.mockImplementation(() => fail(403));
     consoleListReceivables.mockImplementation(() => fail(403));
     renderOverview();
     await findRow(stockLabel("Cairo Festival City"));
@@ -428,40 +409,41 @@ describe("Overview panels (RT-559, spec 009)", () => {
     }
   });
 
-  test("AC-10: recent activity shows up to 10 events with exact time, actor and catalog copy", async () => {
-    activeContext.mockReturnValue(ctx("owner"));
-    listAuditEvents.mockImplementation(() =>
-      ok({
-        items: [event(1, "shift.opened"), event(2, "brand.new.code")],
-        next_cursor: "more",
-      }),
-    );
-    renderOverview();
-    const table = await screen.findByRole("table", {
-      name: "Latest recorded events in the current scope",
-    });
-    const rows = within(table).getAllByRole("row").slice(1);
-    expect(rows).toHaveLength(2);
-    expect(within(rows[0]).getByText("2026-10-15 09:01:00 UTC")).toBeTruthy();
-    expect(within(rows[0]).getByText("Actor 1")).toBeTruthy();
-    expect(within(rows[0]).getByText("Shift activity")).toBeTruthy();
-    expect(within(rows[1]).getByText("Other recorded activity")).toBeTruthy();
-    expect(screen.queryByText("shift.opened")).toBeNull();
-    expect(screen.queryByText("brand.new.code")).toBeNull();
-    expect(screen.getByRole("link", { name: "See all recorded events" }).getAttribute("href")).toBe(
-      "/audit",
-    );
+  test("AC-10: owner and tenant_admin get a plain link to /audit; recent activity is not read", async () => {
+    for (const role of ["owner", "tenant_admin"]) {
+      activeContext.mockReturnValue(ctx(role));
+      const { unmount } = render(
+        <QueryClientProvider client={createQueryClient()}>
+          <MemoryRouter>
+            <Overview />
+          </MemoryRouter>
+        </QueryClientProvider>,
+      );
+      await within(await findRow(UNKNOWN)).findByText("Items: 1");
+      expect(screen.getByRole("link", { name: "Audit" }).getAttribute("href")).toBe("/audit");
+      unmount();
+    }
+    // P-5 is deferred (OD-009-3, RT-567): no list, no counts, no audit read.
+    expect(listAuditEvents).not.toHaveBeenCalled();
+    expect(screen.queryByRole("table")).toBeNull();
   });
 
-  test("recent activity: an empty scope says so; a failure has its own retry", async () => {
-    activeContext.mockReturnValue(ctx("owner"));
-    listAuditEvents.mockImplementationOnce(() => fail(500));
-    listAuditEvents.mockImplementation(() => ok({ items: [], next_cursor: null }));
-    renderOverview();
-    await screen.findByText("Couldn't load recent activity.");
-    const section = screen.getByRole("region", { name: "Recent activity" });
-    fireEvent.click(within(section).getByRole("button", { name: "Retry" }));
-    await screen.findByText("No recorded activity in this scope.");
+  test("AC-10: other roles get no audit link", async () => {
+    for (const role of ["store_manager", "store_staff"]) {
+      activeContext.mockReturnValue(ctx(role));
+      consoleListReceivables.mockImplementation(() => fail(403));
+      const { unmount } = render(
+        <QueryClientProvider client={createQueryClient()}>
+          <MemoryRouter>
+            <Overview />
+          </MemoryRouter>
+        </QueryClientProvider>,
+      );
+      await within(await findRow(UNKNOWN)).findByText("Items: 1");
+      expect(screen.queryByRole("link", { name: "Audit" })).toBeNull();
+      unmount();
+    }
+    expect(listAuditEvents).not.toHaveBeenCalled();
   });
 
   test("NG-7: one refresh control re-reads every panel", async () => {
@@ -469,7 +451,6 @@ describe("Overview panels (RT-559, spec 009)", () => {
     renderOverview();
     await within(await findRow(UNKNOWN)).findByText("Items: 1");
     await within(row(SHIFT)).findByText("Closes: 2");
-    await screen.findByText("Actor 1");
     fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
     await waitFor(() => {
       for (const fn of [
@@ -477,7 +458,6 @@ describe("Overview panels (RT-559, spec 009)", () => {
         consoleListShiftCloses,
         listUnknownItems,
         consoleListReceivables,
-        listAuditEvents,
       ]) {
         expect(fn).toHaveBeenCalledTimes(2);
       }
@@ -520,7 +500,6 @@ describe("Overview panels (RT-559, spec 009)", () => {
       consoleListShiftCloses,
       listUnknownItems,
       consoleListReceivables,
-      listAuditEvents,
     ]) {
       expect(fn).toHaveBeenCalledTimes(2);
     }

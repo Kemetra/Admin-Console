@@ -1,15 +1,15 @@
 /**
- * RT-559 the Overview's five reads (spec 009 §5.1–§5.2). Each uses an
+ * RT-559 the Overview's four reads (spec 009 §5.1–§5.2; P-5 is deferred, OD-009-3). Each uses an
  * operation that already exists in the generated client, through its existing
  * typed wrapper, and each is narrowed by the active store when one is selected
- * (§6.1): `store_id` on P-2…P-5, only that store's row on P-1.
+ * (§6.1): `store_id` on P-2…P-4, only that store's row on P-1.
  *
  * Roles: the nav's own helpers skip the two reads the API is known to refuse
  * (stock discrepancies, shift closes); everything else asks the backend, and a
  * 403/404 omits the panel (§6.2).
  */
 import { useActiveContextValue } from "@/context/ActiveContextProvider";
-import { consoleListReceivables, listAuditEvents } from "@/lib/client";
+import { consoleListReceivables } from "@/lib/client";
 import { consoleListShiftCloses } from "@/lib/shift-close-queries";
 import {
   type SnapshotStatusCode,
@@ -187,29 +187,6 @@ export function useReceivablesPanel(session: OverviewSession): PanelState<PageCo
       readResult(
         await consoleListReceivables({ state: "flagged", ...storeQuery(session) }),
         countOf("nextCursor"),
-      ),
-  });
-}
-
-// --- P-5 Recent activity --------------------------------------------------------------
-
-export const ACTIVITY_LIMIT = 10;
-
-export interface ActivityEvent {
-  id: string;
-  occurred_at: string;
-  actor_user_id?: string | null;
-  actor_label?: string | null;
-  action: string;
-}
-
-export function useActivityPanel(session: OverviewSession): PanelState<ActivityEvent[]> {
-  return usePanelQuery({
-    key: overviewKey("activity", session),
-    gate: "run",
-    read: async () =>
-      readResult(await listAuditEvents({ limit: ACTIVITY_LIMIT, ...storeQuery(session) }), (data) =>
-        (itemsOf(data) as ActivityEvent[] | undefined)?.slice(0, ACTIVITY_LIMIT),
       ),
   });
 }
