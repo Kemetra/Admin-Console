@@ -108,7 +108,7 @@ Ten screens, named in the left-nav order shown in the mockups.
 
 The design runs ahead of the spec — most surfaces have no slice yet.
 
-- **Has a slice** (the mockup is the visual target for that slice): 005, 007, 009, 011, 012, 016.
+- **Has a slice** (the mockup is layout and density reference for that slice): 005, 007, 009, 011, 012, 016.
 - **No slice yet — seeds for future slices**: Reconciliation, Stores & Tenants, Audit Logs,
   and AI Studio. Treat these as design intent captured ahead of specification.
 - **Slices folded into other surfaces** in this vision (no standalone screen): `010` Data
@@ -124,8 +124,8 @@ The design runs ahead of the spec — most surfaces have no slice yet.
 1. **Match the tokens, not the pixels.** Pull color, spacing, type, and radius from
    `DESIGN.md` / `src/styles/tokens.css`. The PNGs show *arrangement and density* only, and
    their colors are retired. Never eyedrop a color off the image.
-2. **Obey the 10 design rules** in `DESIGN.md` even where a mockup looks like it bends one —
-   if you spot a conflict, the rule governs and the mockup is the bug.
+2. **Obey `DESIGN.md`** even where a mockup looks like it bends it. If you spot a conflict,
+   `DESIGN.md` governs and the mockup is the bug.
 3. **Build RTL, Arabic-first.** These are LTR; the product is Arabic-first RTL. Mirror the
    layout, and take the component grammar from `DESIGN.md`.
 4. **One screen ≠ one slice.** Some surfaces fold several concerns together (see the mapping

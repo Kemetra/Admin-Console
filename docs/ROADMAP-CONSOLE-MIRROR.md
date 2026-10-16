@@ -5,7 +5,7 @@
 > - **Work authority:** Jira project **RT** (Retail Tower). Each Jira issue carries its own scope, Work Mode and acceptance criteria.
 > - **Current state, roadmap and decisions:** Confluence space **RETAIL**.
 > - **Naming:** `Data-Pulse-2` is now **`Kemetra/Backend-Core`**; `Retail-Tower-Console` is now **`Kemetra/Admin-Console`**. Contracts still come from Backend-Core OpenAPI, consumed through `src/generated/`.
-> - The "NOT green-lit" note in §1 and the operating rule in §5 no longer apply. RF product UI has shipped through approved Jira work (see the table below).
+> - The "NOT green-lit" note in §1 and the operating rule in §5 no longer apply. RF product UI has shipped through approved spec slices and Jira work (see the table below).
 
 ## Current state on `main` (verified at `d6e666d`)
 
@@ -13,6 +13,7 @@ Taken from `src/App.tsx`, `src/shell/*Routes.tsx` and `src/shell/AppShell.tsx`. 
 
 | Surface | Route(s) | Nav entry | Notes |
 | --- | --- | --- | --- |
+| RF-1 Auth / session / context | `/signin`, `/accept-invitation` (public); protected shell for all routes below | — | Shell has locale and theme switches. |
 | Overview | `/` | Yes | Placeholder: title and active scope only. The dashboard is RT-555 (spec 009). |
 | RF-2 Tenants | `/tenants`, `/tenants/new`, `/tenants/:tenantId`, `/tenants/:tenantId/edit` | Yes | |
 | RF-2 Stores | `/stores`, `/stores/new`, `/stores/:storeId`, `/stores/:storeId/edit` | Yes | Store time zone shown (RT-477). |
