@@ -2,10 +2,14 @@
  * RT-560 shared pieces for the ERP status panels: the status pill (a dot plus
  * a text label, so colour is never the only cue; a hollow dot marks "no
  * signal" style states), the panel frame, the as-of line, the panel error and
- * the stale (inline) error, and the Load more pager.
+ * the stale (inline) error, the Load more pager, and the cursor-paged table
+ * shared by the posting backlog and the run history.
  */
 import { Banner } from "@/components/Banner";
+import { DataTableSkeleton } from "@/components/DataTableSkeleton";
+import { ListState as ListStateView } from "@/components/ListState";
 import { DateTime, useT } from "@/i18n";
+import { Fragment } from "react";
 import type { StatusView } from "./erpStatusLogic";
 import type { ErpError, ListState, PanelState } from "./useErpStatus";
 
@@ -125,5 +129,60 @@ export function LoadMore<T>({ list }: Readonly<{ list: ListState<T> }>): React.J
         {t("erp.loadMore")}
       </button>
     </div>
+  );
+}
+
+export interface CursorTableProps<T> {
+  list: ListState<T>;
+  caption: string;
+  columns: { key: string; header: string }[];
+  loadingNoun: string;
+  failedMessage: string;
+  emptyMessage: string;
+  rowKey: (row: T) => string;
+  renderRow: (row: T) => React.ReactNode;
+}
+
+/** A cursor-paged read-only table: skeleton, error, empty, or rows with Load more. */
+export function CursorTable<T>({
+  list,
+  caption,
+  columns,
+  loadingNoun,
+  failedMessage,
+  emptyMessage,
+  rowKey,
+  renderRow,
+}: Readonly<CursorTableProps<T>>): React.JSX.Element {
+  if (list.isLoading) {
+    return <DataTableSkeleton caption={caption} columns={columns} label={loadingNoun} />;
+  }
+  if (list.error) {
+    return <PanelError error={list.error} failedMessage={failedMessage} onRetry={list.retry} />;
+  }
+  if (list.rows.length === 0) return <ListStateView state="empty" emptyMessage={emptyMessage} />;
+  return (
+    <>
+      <div className="table-scroll">
+        <table className="data-table">
+          <caption className="data-table__caption">{caption}</caption>
+          <thead>
+            <tr>
+              {columns.map((col) => (
+                <th key={col.key} scope="col">
+                  {col.header}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {list.rows.map((row) => (
+              <Fragment key={rowKey(row)}>{renderRow(row)}</Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <LoadMore list={list} />
+    </>
   );
 }

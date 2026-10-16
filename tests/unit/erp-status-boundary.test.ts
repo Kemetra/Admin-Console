@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import * as queries from "@/lib/erp-status-queries";
 import { describe, expect, test } from "vitest";
@@ -8,26 +8,22 @@ import { describe, expect, test } from "vitest";
  * consumes exactly five Backend-Core GETs through the generated client: no
  * credential lifecycle (Phase B, OD-1), no posting repair (Phase C), no machine
  * heartbeat, no call to the Connector or ERPNext, no hand-rolled fetch and no
- * Authorization header (cookie session only). Static source scan, comments
- * stripped.
+ * Authorization header (cookie session only). Static source scan; the code
+ * checks strip comments, the URL checks read the raw source.
  */
-function stripComments(code: string): string {
-  return code.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
-}
-function filesUnder(dir: string, acc: string[] = []): string[] {
-  for (const entry of readdirSync(dir)) {
-    const full = join(dir, entry);
-    if (statSync(full).isDirectory()) filesUnder(full, acc);
-    else if (/\.(ts|tsx)$/.test(entry)) acc.push(full);
-  }
-  return acc;
-}
+const withoutComments = (code: string) =>
+  code.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+
+const FEATURE_DIR = join(process.cwd(), "src/erp-status");
+const featureFiles = readdirSync(FEATURE_DIR, { recursive: true, encoding: "utf8" })
+  .filter((name) => /\.tsx?$/.test(name))
+  .map((name) => join(FEATURE_DIR, name));
 
 const raw = (path: string) => readFileSync(path, "utf8");
 const wrapperRaw = raw(join(process.cwd(), "src/lib/erp-status-queries.ts"));
-const featureRaw = filesUnder(join(process.cwd(), "src/erp-status")).map(raw).join("\n");
-const wrapperSrc = stripComments(wrapperRaw);
-const featureSrc = stripComments(featureRaw);
+const featureRaw = featureFiles.map(raw).join("\n");
+const wrapperSrc = withoutComments(wrapperRaw);
+const featureSrc = withoutComments(featureRaw);
 
 describe("ERP status boundary (RT-560)", () => {
   test("exactly the five read wrappers are exported", () => {

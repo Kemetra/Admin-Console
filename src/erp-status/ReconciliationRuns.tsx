@@ -4,13 +4,11 @@
  * as received. Mismatch detail and the Refresh action stay in the shipped Stock
  * discrepancies screen (RT-178): each store links there instead of duplicating it.
  */
-import { DataTableSkeleton } from "@/components/DataTableSkeleton";
-import { ListState } from "@/components/ListState";
 import { DateTime, type T, useT } from "@/i18n";
 import type { ReconciliationRunView } from "@/lib/erp-status-queries";
 import { Link } from "react-router";
 import { mismatchEntries, runStatusView, runTriggerKey } from "./erpStatusLogic";
-import { AsOf, LoadMore, Panel, PanelError, StaleError, StatusPill } from "./parts";
+import { AsOf, CursorTable, Panel, StaleError, StatusPill } from "./parts";
 import type { ListState as CursorListState } from "./useErpStatus";
 
 type RunList = CursorListState<ReconciliationRunView>;
@@ -84,58 +82,6 @@ function RunRow({
   );
 }
 
-function RunsBody({
-  list,
-  nameOf,
-}: Readonly<{ list: RunList; nameOf: StoreNameOf }>): React.JSX.Element {
-  const t = useT();
-  if (list.isLoading) {
-    return (
-      <DataTableSkeleton
-        caption={t("erp.runs.caption")}
-        columns={headers(t)}
-        label={t("erp.runs.loadingNoun")}
-      />
-    );
-  }
-  if (list.error) {
-    return (
-      <PanelError
-        error={list.error}
-        failedMessage={t("erp.runs.loadFailed")}
-        onRetry={list.retry}
-      />
-    );
-  }
-  if (list.rows.length === 0) {
-    return <ListState state="empty" emptyMessage={t("erp.runs.empty")} />;
-  }
-  return (
-    <>
-      <div className="table-scroll">
-        <table className="data-table">
-          <caption className="data-table__caption">{t("erp.runs.caption")}</caption>
-          <thead>
-            <tr>
-              {headers(t).map((col) => (
-                <th key={col.key} scope="col">
-                  {col.header}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {list.rows.map((run) => (
-              <RunRow key={run.runId} run={run} nameOf={nameOf} />
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <LoadMore list={list} />
-    </>
-  );
-}
-
 export function ReconciliationRuns({
   list,
   nameOf,
@@ -149,7 +95,16 @@ export function ReconciliationRuns({
         })}
       </p>
       <StaleError panel={list} />
-      <RunsBody list={list} nameOf={nameOf} />
+      <CursorTable
+        list={list}
+        caption={t("erp.runs.caption")}
+        columns={headers(t)}
+        loadingNoun={t("erp.runs.loadingNoun")}
+        failedMessage={t("erp.runs.loadFailed")}
+        emptyMessage={t("erp.runs.empty")}
+        rowKey={(run) => run.runId}
+        renderRow={(run) => <RunRow run={run} nameOf={nameOf} />}
+      />
       <AsOf at={list.asOf} />
     </Panel>
   );
