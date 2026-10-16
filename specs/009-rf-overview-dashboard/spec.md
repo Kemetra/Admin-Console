@@ -53,7 +53,11 @@ Backend-Core membership roles enforced by each operation's guard (verified on Ba
   fact. This is shipped today and stays.
 - **G-2.** Lead with **attention items**: one row per domain that has work waiting in the
   current scope, each linking to the screen that owns it.
-- **G-3.** Show **recent activity** (latest audit events in scope) for roles that can read audit.
+- **G-3. Deferred (OD-009-3).** ~~Show **recent activity** (latest audit events in scope) for roles
+  that can read audit.~~ Every Overview load writes read audits of its own (`shift_closes.listed`,
+  `settlement.receivable.listed`, …), so "latest 10" would mostly show the operator's own visit, and
+  filtering in the browser would misstate the page. Waits for Backend-Core **RT-567**. In v1,
+  owner and tenant_admin get a plain link to `/audit` instead.
 - **G-4.** Every value is backend truth: Unknown stays Unknown, an error never reads as zero,
   and no client-side "health" is derived from missing data.
 - **G-5.** Store-scoped users see only granted stores; tenant-wide users see the active store
@@ -110,7 +114,7 @@ in the console's generated client at pin `2b03ad2d` except `consoleGetSyncOpsSum
 | P-2 | Shift-close variances | Cash / shifts (RT-383) | `consoleListShiftCloses` `GET /api/v1/shift-closes` | `shift-closes.openapi.yaml` | owner, tenant_admin, store_manager | `/shift-closes` | **Yes** (per OD-009-2) |
 | P-3 | Unknown items | Catalog (RF-4a) | `tenantAdminListUnknownItems` `GET /api/v1/catalog/unknown-items` | `catalog/unknown-items.yaml` | any tenant member; RLS scopes to stores | `/unknown-items` | **Yes** |
 | P-4 | Flagged receivables | Settlement (035 / 018) | `consoleListReceivables` `GET /api/v1/settlement/receivables` | `settlement/settlement.yaml` | owner, tenant_admin | `/receivables` | **Yes** |
-| P-5 | Recent activity | Audit (RF-6) | `listAuditEvents` `GET /api/v1/audit/events` | `audit.openapi.yaml` | owner, tenant_admin (403 otherwise) | `/audit` | **Yes** |
+| P-5 | Recent activity | Audit (RF-6) | `listAuditEvents` `GET /api/v1/audit/events` | `audit.openapi.yaml` | owner, tenant_admin (403 otherwise) | `/audit` | **Deferred** (OD-009-3, RT-567). v1: a plain `/audit` link for owner/tenant_admin, no list, no counts |
 | P-6 | Sales KPIs | Sales | **None.** Backend-Core dependency (proposed) **BC-009-1** | — | — | Sales screen (RT-556, spec 012) | **No** |
 | P-7 | ERP sync status | ERPNext sync ops (spec 025) | `consoleGetSyncOpsSummary` `GET /api/v1/catalog/erpnext-sync-ops/summary` | `erpnext-sync-ops/console-sync-ops.yaml` | owner, tenant_admin | None yet (RT-557, spec 016) | **Deferred** |
 
@@ -145,7 +149,7 @@ the navigation is RT-270's and the owning slices' concern, not 009's.
 - **P-4 Flagged receivables.** `state=flagged` (the contract's variance / net-zero-or-below
   state), plus `store_id` when a store is active. The contract has no due date, so there is no
   "overdue" item.
-- **P-5 Recent activity.** `limit=10`, plus `store_id` when a store is active. Shows
+- **P-5 Recent activity (deferred, OD-009-3; kept for when RT-567 lands).** `limit=10`, plus `store_id` when a store is active. Shows
   `occurred_at` (exact, timezone-explicit, as the audit screen does), `actor_label` and the
   action rendered through the catalog (machine code drives copy, never shown raw). Newest-first
   order is a **runtime fact only** (`audit.repository.ts` orders by `occurred_at DESC, id DESC`);
@@ -267,8 +271,8 @@ indicator → inline notice), never a zero and never a toast.
   outside their grant (tested with a two-store tenant and a single-store grant).
 - **AC-9 Counts are honest.** No panel sums or walks pages. A list with a further page shows
   "at least N".
-- **AC-10 Recent activity.** Owner/tenant_admin see up to 10 latest events in scope, with exact
-  time, actor label and catalog copy for the action; the row links to `/audit`.
+- **AC-10 Audit link (P-5 deferred, OD-009-3).** Owner/tenant_admin see a link to `/audit`; no
+  activity list in v1, and the Overview makes no `listAuditEvents` call.
 - **AC-11 No sales panel.** No sales or KPI element renders until BC-009-1 exists. When it
   does, P-6 shows only the OD-009-1 figures (today's received-sale count and gross total per
   currency, per store in scope, as text), in a later issue.
@@ -300,12 +304,13 @@ None.
 | ID | Question | Decision | Why |
 | --- | --- | --- | --- |
 | **OD-009-2** | What counts as a shift-close attention item, given no policy threshold and no review state? | **Approved as recommended.** An unapproved close (`approval=not_approved`) with any non-zero variance (`min_abs_variance=0.0001`), closed in the last 7 days (store business days with an active store; UTC dates otherwise). Revisit when the AD-CASH-001 D-7 policy ships (RT-384 / RT-387 / RT-389). | The contract has no policy threshold and no review or acknowledgement state. `0.0001` is the smallest amount `NonNegativeDecimalAmount` allows, so "any non-zero variance" needs no invented threshold and works in every currency. The 7-day window keeps old unapproved closes from staying on the Overview forever, since nothing on the contract clears them. |
+| **OD-009-3** | Ship P-5 recent activity in v1? | **Deferred.** v1 ships P-0…P-4. Owner and tenant_admin get a plain link to `/audit` (the existing «سجل التدقيق» / Audit label), with no list and no counts. The action-copy catalog is deferred with P-5; when P-5 returns it belongs in a shared audit namespace so `/audit` can adopt it. Depends on Backend-Core **RT-567** (`listAuditEvents`: exclude read-only actions or filter by category, contract-first). | Backend-Core audits reads, so every Overview load writes several read audits and "latest 10" would mostly echo the operator's own visit: noise, against this spec's attention-first rule. Dropping rows in the browser would misstate a 10-row page. Decided 2026-10-16 (RT-559). |
 | **OD-009-1** | Which sales figures matter commercially on the landing page? | **Approved as the starting point.** Today's (store business date) received-sale count and gross total per currency, per store in scope, as text. P-6 stays a non-goal until BC-009-1 exists. Average order value and trends come later, with no charts until UX-13. | The count and the gross total are what a summary read can state truthfully with an as-of time and a completeness statement. Totals stay per currency because the console never converts money. Charts wait for a ratified UX-13 data palette (design-system rule 8). |
 
 ### Decided in this spec
 
 - Audience is the tenant/store operator; platform health is RT-391.
-- v1 panels: P-0…P-5. P-6 waits for BC-009-1; P-7 is deferred to RT-557.
+- v1 panels: P-0…P-4 (P-5 deferred by OD-009-3). P-6 waits for BC-009-1; P-7 is deferred to RT-557.
 - Attention items lead; no KPI wall, no charts.
 - No client-derived health, no page-walking totals.
 
