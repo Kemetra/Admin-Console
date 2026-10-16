@@ -16,19 +16,32 @@ import { useOverviewSession } from "./useOverviewPanels";
 import { OVERVIEW_KEY } from "./usePanelQuery";
 import "./overview.css";
 
+/**
+ * One manual re-read of every panel. While it runs the button stays focusable
+ * (`aria-disabled`, not `disabled`, which would drop keyboard focus) and ignores
+ * presses; a polite status line announces it.
+ */
 function RefreshButton(): React.JSX.Element {
   const t = useT();
   const qc = useQueryClient();
   const fetching = useIsFetching({ queryKey: OVERVIEW_KEY }) > 0;
+  const refresh = () => {
+    if (!fetching) void qc.refetchQueries({ queryKey: OVERVIEW_KEY, type: "active" });
+  };
   return (
-    <button
-      type="button"
-      className="btn-secondary overview__refresh"
-      disabled={fetching}
-      onClick={() => void qc.refetchQueries({ queryKey: OVERVIEW_KEY, type: "active" })}
-    >
-      {fetching ? t("overview.refreshing") : t("overview.refresh")}
-    </button>
+    <>
+      <button
+        type="button"
+        className="btn-secondary overview__refresh"
+        aria-disabled={fetching}
+        onClick={refresh}
+      >
+        {fetching ? t("overview.refreshing") : t("overview.refresh")}
+      </button>
+      <span className="sr-only" role="status">
+        {fetching ? t("overview.refreshing") : ""}
+      </span>
+    </>
   );
 }
 

@@ -14,6 +14,7 @@ import {
   negativeCountLabel,
   statusView,
 } from "@/stock-discrepancies/stockDiscrepancyLogic";
+import { useId } from "react";
 import { Link } from "react-router";
 import type { PageCount } from "./overviewLogic";
 import {
@@ -36,11 +37,15 @@ function LedgerRow({
   link,
   children,
 }: Readonly<{ label: string; link: RowLink; children: React.ReactNode }>): React.JSX.Element {
+  // Links repeat ("View store discrepancies" per store): the row label describes each one.
+  const labelId = useId();
   return (
     <li className="ledger__row">
-      <span className="ledger__label">{label}</span>
+      <span id={labelId} className="ledger__label">
+        {label}
+      </span>
       <span className="ledger__value">{children}</span>
-      <Link className="ledger__link" to={link.to}>
+      <Link className="ledger__link" to={link.to} aria-describedby={labelId}>
         {link.text}
       </Link>
     </li>

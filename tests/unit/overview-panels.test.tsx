@@ -515,6 +515,46 @@ describe("Overview panels (RT-559, spec 009)", () => {
     );
   });
 
+  test("a11y: Refresh keeps keyboard focus while it runs and announces it politely", async () => {
+    activeContext.mockReturnValue(ctx("owner"));
+    renderOverview();
+    await within(await findRow(UNKNOWN)).findByText("Items: 1");
+    listUnknownItems.mockImplementation(() => new Promise(() => {}));
+    const button = screen.getByRole("button", { name: "Refresh" });
+    button.focus();
+    fireEvent.click(button);
+    const busy = await screen.findByRole("button", { name: "Refreshing…" });
+    // aria-disabled, not disabled: a disabled button drops focus to <body> (WCAG 2.4.3).
+    expect(busy.hasAttribute("disabled")).toBe(false);
+    expect(busy.getAttribute("aria-disabled")).toBe("true");
+    expect(document.activeElement).toBe(busy);
+    expect(screen.getByRole("status").textContent).toBe("Refreshing…");
+    fireEvent.click(busy);
+    expect(listUnknownItems).toHaveBeenCalledTimes(2);
+  });
+
+  test("a11y: each ledger link is described by its row label (repeated link names)", async () => {
+    activeContext.mockReturnValue(ctx("owner"));
+    listErpnextNegativeOnHandStores.mockImplementation(() =>
+      ok({
+        items: [summary(A, "Cairo Festival City"), summary(B, "Alexandria Corniche")],
+        nextCursor: null,
+      }),
+    );
+    renderOverview();
+    await findRow(stockLabel("Alexandria Corniche"));
+    const links = screen.getAllByRole("link", { name: "View store discrepancies" });
+    expect(links).toHaveLength(2);
+    const described = links.map((link) => {
+      const id = link.getAttribute("aria-describedby") ?? "";
+      return document.getElementById(id)?.textContent;
+    });
+    expect(described).toEqual([
+      stockLabel("Cairo Festival City"),
+      stockLabel("Alexandria Corniche"),
+    ]);
+  });
+
   test("AC-11: no sales or KPI element renders", async () => {
     activeContext.mockReturnValue(ctx("owner"));
     renderOverview();

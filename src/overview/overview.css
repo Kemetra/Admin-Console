@@ -130,3 +130,8 @@
     color: CanvasText;
   }
 }
+
+/* Refresh in flight: still focusable (aria-disabled), the label says "Refreshing…". */
+.overview__refresh[aria-disabled="true"] {
+  cursor: progress;
+}
