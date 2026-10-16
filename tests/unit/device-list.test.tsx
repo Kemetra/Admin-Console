@@ -195,7 +195,7 @@ describe("DeviceList (RT-371)", () => {
 
   test("a rejected filter (400) offers Clear filters, not a retry of the same request", async () => {
     consoleListDevices.mockResolvedValueOnce(failure(400, "req-4"));
-    renderList(`/devices?store=not-a-uuid`);
+    renderList("/devices?store=not-a-uuid");
     const alert = await screen.findByRole("alert");
     expect(within(alert).queryByRole("button", { name: "Retry" })).toBeNull();
     fireEvent.click(within(alert).getByRole("button", { name: "Clear filters" }));
