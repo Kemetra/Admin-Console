@@ -41,7 +41,7 @@ Voice: matter-of-fact. Labels are short, accurate, and unambiguous. No marketing
 3. **Role-appropriate surfaces.** A store manager and a platform admin have different cognitive loads and different stakes. Screens should feel scoped to the actor using them, not expose everything to everyone.
 4. **Errors are first-class.** Operational errors have consequences. Error states are designed with the same care as happy paths. Every error says what went wrong, who can fix it, and how.
 5. **No chrome for chrome's sake.** Decorative elements, illustrative icons, gradient fills, and motion that doesn't signal state change are removed on sight. The product's value is operational utility.
-6. **The operator owns the surface.** Operators work in real rooms, dim and bright, across long sessions. The console is dark by default (the command-desk identity) but ships a fully accessible light alternate the operator can switch to and that persists. Both themes meet WCAG AA; theme is a preference, never a downgrade. Neither theme is an afterthought, the same system is expressed on two grounds.
+6. **The operator owns the surface.** Operators work in real rooms, dim and bright, across long sessions. The console is light-first by default (RT-396) and ships a fully accessible opt-in dark theme the operator can switch to and that persists (RT-398). Both themes meet WCAG AA; theme is a preference, never a downgrade. Neither theme is an afterthought, the same system is expressed on two grounds.
 
 ## Accessibility & Inclusion
 
