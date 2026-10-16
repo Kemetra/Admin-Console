@@ -49,6 +49,7 @@ describe("production navigation", () => {
       "Audit",
       "Stock discrepancies",
       "Shift closes",
+      "Connection & sync",
       "Sign out",
     ]);
     expect(nav.querySelector("[aria-disabled='true']")).toBeNull();

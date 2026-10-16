@@ -7,6 +7,7 @@ import type { ar } from "./ar";
 import { audit } from "./en/audit";
 import { auth } from "./en/auth";
 import { common } from "./en/common";
+import { erp } from "./en/erp";
 import { money } from "./en/money";
 import { operators } from "./en/operators";
 import { shell } from "./en/shell";
@@ -15,7 +16,18 @@ import { stock } from "./en/stock";
 import { tenants } from "./en/tenants";
 import type { MessagesOf } from "./types";
 
-export const EN_MODULES = { common, shell, auth, tenants, operators, audit, stock, shift, money };
+export const EN_MODULES = {
+  common,
+  shell,
+  auth,
+  tenants,
+  operators,
+  audit,
+  stock,
+  shift,
+  money,
+  erp,
+};
 
 export const en: MessagesOf<typeof ar> = {
   ...common,
@@ -27,4 +39,5 @@ export const en: MessagesOf<typeof ar> = {
   ...stock,
   ...shift,
   ...money,
+  ...erp,
 };

@@ -19,6 +19,7 @@ import { TowerMark } from "@/components/TowerMark";
  * announce it explicitly with a gate badge (RF-3 / RF-4).
  */
 import { useActiveContextValue } from "@/context/ActiveContextProvider";
+import { canReadErpStatus } from "@/erp-status/erpStatusLogic";
 import { type MessageKey, roleKey, useT } from "@/i18n";
 import { LocaleSwitch } from "@/i18n/LocaleSwitch";
 import { canReadShiftCloses } from "@/shift-closes/shiftCloseLogic";
@@ -40,7 +41,8 @@ const LIVE_NAV: { label: MessageKey; to: string; icon: IconName }[] = [
 /**
  * Role-gated destinations, each under its own section: shown only for the roles
  * the API lets read the surface (RT-178 stock discrepancies, RT-18 shift
- * closes). The nav mirrors the API; it is not an authorization decision.
+ * closes, RT-560 ERP connection). The nav mirrors the API; it is not an
+ * authorization decision.
  */
 const ROLE_NAV: {
   section: MessageKey;
@@ -62,6 +64,15 @@ const ROLE_NAV: {
     to: "/shift-closes",
     icon: "cash",
     canRead: canReadShiftCloses,
+  },
+  {
+    // RT-557 OD-2 (decided in RT-560): one entry in its own section, owner /
+    // tenant_admin only, within the RT-392 nav budget.
+    section: "erp.nav.section",
+    label: "erp.nav.label",
+    to: "/erp-connection",
+    icon: "connection",
+    canRead: canReadErpStatus,
   },
 ];
 
