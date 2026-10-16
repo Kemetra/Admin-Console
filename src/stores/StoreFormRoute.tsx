@@ -56,7 +56,14 @@ function EditStoreForm({ storeId }: Readonly<{ storeId: string | undefined }>): 
       mode="edit"
       storeId={storeId}
       initial={
-        store ? { code: store.code, name: store.name, is_active: store.is_active } : undefined
+        store
+          ? {
+              code: store.code,
+              name: store.name,
+              is_active: store.is_active,
+              timezone: store.timezone,
+            }
+          : undefined
       }
     />
   );

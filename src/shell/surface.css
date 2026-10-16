@@ -183,3 +183,45 @@
   color: var(--color-text-muted);
   line-height: var(--leading-body);
 }
+
+/* RT-477: the impact review before a store's time zone changes. Inline, not a modal. */
+.surface__impact {
+  display: grid;
+  gap: var(--space-3);
+  max-width: 65ch;
+  margin-top: var(--space-5);
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+.surface__impact-title {
+  margin: 0;
+  font: var(--weight-strong) var(--text-control) / var(--leading-title) var(--font-sans);
+  color: var(--color-text);
+}
+.surface__impact-body {
+  display: grid;
+  gap: var(--space-3);
+}
+.surface__impact-line {
+  margin: 0;
+  color: var(--color-text);
+}
+.surface__impact-line--muted {
+  color: var(--color-text-muted);
+  font-size: var(--text-control);
+}
+.surface__impact-line--blocked {
+  color: var(--color-warning);
+  font-weight: var(--weight-strong);
+}
+.surface__impact-review {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  color: var(--color-text);
+}
+.surface__impact-review input {
+  margin-block-start: var(--space-1);
+}

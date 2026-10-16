@@ -4,7 +4,7 @@ import { ListState } from "@/components/ListState";
 import { useT } from "@/i18n";
 /**
  * SF-S2 — Store detail (T027; RT-400 screen 19). Read-first field rows plus
- * the state badge, and «تعديل المتجر» in the header for everyone (no role
+ * the state badge and the store's time zone (RT-477), and «تعديل المتجر» in the header for everyone (no role
  * pre-hide, OQ-3; the server's 403 is the authority). 404 renders uniformly
  * (FR-004-008).
  *
@@ -14,6 +14,7 @@ import { useT } from "@/i18n";
 import { Link, useParams } from "react-router";
 import { ScopePrompt } from "./ScopePrompt";
 import { StoreStateBadge } from "./StoreStateBadge";
+import { ZoneName } from "./ZoneName";
 import { useStoreDetail } from "./useStoreQueries";
 import "../shell/surface.css";
 
@@ -73,6 +74,12 @@ export function StoreDetail(): React.JSX.Element {
           <dt className="field-row__label">{t("stores.field.state")}</dt>
           <dd className="field-row__value">
             <StoreStateBadge isActive={store.is_active} />
+          </dd>
+        </div>
+        <div className="field-row">
+          <dt className="field-row__label">{t("stores.field.timezone")}</dt>
+          <dd className="field-row__value">
+            <ZoneName zone={store.timezone} />
           </dd>
         </div>
         <div className="field-row">

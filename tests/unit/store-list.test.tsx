@@ -1,5 +1,5 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -42,8 +42,8 @@ const withActiveTenant = {
 const noActiveTenant = { context: { active_tenant: null } };
 
 const twoStores = [
-  { id: "s1", code: "CFC", name: "Cairo Festival City", is_active: true },
-  { id: "s2", code: "NCM", name: "New Cairo Mall", is_active: false },
+  { id: "s1", code: "CFC", name: "Cairo Festival City", is_active: true, timezone: "Africa/Cairo" },
+  { id: "s2", code: "NCM", name: "New Cairo Mall", is_active: false, timezone: "UTC" },
 ];
 
 /**
@@ -74,6 +74,29 @@ describe("StoreList pre-gate + state matrix", () => {
     expect(screen.getByText("CFC")).toBeDefined();
     expect(screen.getByRole("columnheader", { name: "Store" })).toBeDefined();
     expect(screen.getByRole("columnheader", { name: "Status" })).toBeDefined();
+  });
+
+  test("RT-477: each row shows the store's time zone as its IANA identity, no UTC offset", async () => {
+    activeContext.mockReturnValue(withActiveTenant);
+    listStores.mockResolvedValue({ status: 200, data: twoStores });
+    renderList();
+    await screen.findByText("Cairo Festival City");
+    expect(screen.getByRole("columnheader", { name: "Time zone" })).toBeDefined();
+    expect(screen.getByText("Cairo").closest("td")?.textContent).toBe("Cairo (Africa/Cairo)");
+    expect(screen.getByText("Africa/Cairo").tagName).toBe("BDI");
+    expect(screen.getByText("UTC")).toBeDefined();
+    expect(screen.queryByText(/GMT|UTC[+-]|\+\d\d:\d\d/)).toBeNull();
+  });
+
+  test("RT-477: Arabic list shows «المنطقة الزمنية» and «القاهرة (Africa/Cairo)»", async () => {
+    setLocale("ar");
+    activeContext.mockReturnValue(withActiveTenant);
+    listStores.mockResolvedValue({ status: 200, data: twoStores });
+    renderList();
+    await screen.findByText("Cairo Festival City");
+    expect(screen.getByRole("columnheader", { name: "المنطقة الزمنية" })).toBeDefined();
+    expect(screen.getByText("القاهرة").closest("td")?.textContent).toBe("القاهرة (Africa/Cairo)");
+    act(() => setLocale("en"));
   });
 
   test("loading -> the add action is already in the header", () => {

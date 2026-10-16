@@ -1,10 +1,12 @@
 import {
   type Rf2ErrorRender,
   type StoreCreateBody,
+  type StoreTimezoneChangePreview,
   type StoreUpdateBody,
   createStore,
   listStores,
   mapRf2Error,
+  previewStoreTimezoneChange,
   readStore,
   rf2QueryKeys,
   updateStore,
@@ -123,6 +125,59 @@ export function useStoreMutations(activeTenantId: string | null, storeId?: strin
     onSuccess: onUpdated,
   });
   return { create, update };
+}
+
+export type TimezonePreviewResult =
+  | { kind: "preview"; preview: StoreTimezoneChangePreview }
+  | { kind: "error"; render: Rf2ErrorRender };
+
+/**
+ * RT-477 — the read-only impact review of moving a store to `timezone`. Only
+ * runs once a zone is proposed. A preview is advisory (the blockers are
+ * re-checked when the change is applied), so it is never served from cache:
+ * every proposal asks again. A thrown request is a visible failure, not a retry.
+ */
+export function useTimezonePreview(storeId: string | undefined, timezone: string | undefined) {
+  const enabled = Boolean(storeId && timezone);
+  const query = useQuery<TimezonePreviewResult>({
+    queryKey: enabled
+      ? rf2QueryKeys.timezonePreview(storeId as string, timezone as string)
+      : ["rf2", "store-timezone-preview", "none"],
+    enabled,
+    retry: false,
+    staleTime: 0,
+    gcTime: 0,
+    queryFn: async () => {
+      try {
+        const res = await previewStoreTimezoneChange({
+          storeId: storeId as string,
+          timezone: timezone as string,
+        });
+        if (res.status >= 400 || !res.data) {
+          return { kind: "error", render: mapRf2Error({ ...res, context: "store" }) };
+        }
+        return { kind: "preview", preview: res.data };
+      } catch {
+        return { kind: "error", render: STORE_REQUEST_FAILED };
+      }
+    },
+  });
+  return { result: enabled ? query.data : undefined, isLoading: enabled && query.isPending };
+}
+
+/**
+ * After `timezone_changed_concurrently` the form's idea of the current zone is
+ * stale: re-read the store and drop the previews computed from the old zone.
+ */
+export function useRefreshStoreTimezone(storeId: string | undefined) {
+  const qc = useQueryClient();
+  return () => {
+    if (!storeId) return Promise.resolve();
+    return Promise.all([
+      qc.invalidateQueries({ queryKey: rf2QueryKeys.store(storeId) }),
+      qc.invalidateQueries({ queryKey: rf2QueryKeys.timezonePreviews(storeId) }),
+    ]);
+  };
 }
 
 /** A store request that threw (offline, aborted) before any HTTP status. */

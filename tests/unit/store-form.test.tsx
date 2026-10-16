@@ -50,7 +50,7 @@ function renderForm(props: Parameters<typeof StoreForm>[0]): void {
 }
 
 const withTenant = { context: { active_tenant: { id: "t1", name: "Northstar Retail" } } };
-const cfc = { code: "CFC", name: "Cairo Festival City", is_active: true };
+const cfc = { code: "CFC", name: "Cairo Festival City", is_active: true, timezone: "UTC" };
 
 /**
  * Store create/edit branching (T021; RT-400 screens 16 and 17). No tenant
@@ -82,8 +82,10 @@ describe("StoreForm create", () => {
     renderForm({ mode: "create" });
     expect(screen.getByRole("heading", { name: "Add store" })).toBeDefined();
     expect(screen.getByText(/Northstar Retail/)).toBeDefined();
-    expect(screen.queryByRole("combobox")).toBeNull();
-    // only name + code inputs, both marked required, code editable with its hint
+    // no tenant picker: the only select is the store time zone (RT-477)
+    expect(screen.getAllByRole("combobox")).toHaveLength(1);
+    expect(screen.getByLabelText(/time zone/i).tagName).toBe("SELECT");
+    // name + code inputs, both marked required, code editable with its hint
     const name = screen.getByLabelText(/store name/i);
     const code = screen.getByLabelText(/store code/i);
     expect(name.getAttribute("aria-required")).toBe("true");
@@ -105,7 +107,11 @@ describe("StoreForm create", () => {
     await waitFor(() =>
       expect(navigate).toHaveBeenCalledWith("/stores/s9", { state: SAVED_NAVIGATION }),
     );
-    expect(createStore).toHaveBeenCalledWith({ code: "CFC", name: "Cairo FC" });
+    expect(createStore).toHaveBeenCalledWith({
+      code: "CFC",
+      name: "Cairo FC",
+      timezone: "Africa/Cairo",
+    });
   });
 
   test("409 store-code conflict -> inline on the code field, no route change", async () => {
