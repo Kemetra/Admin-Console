@@ -5,7 +5,7 @@
 | Feature ID | 012 |
 | Short name | rf-sales |
 | Jira | RT-556 (epic RT-5) |
-| Status | **Specified / Planning**. Blocked on a new Backend-Core admin read contract (§6). |
+| Status | **Specified / Planning**. Contract path decided by the coordinator (OD-556-1..3, 2026-10-16), pending ratification by the [GATED] Backend-Core contract review. Implementation is blocked on that contract (§6). |
 | Mode | Planning only. No implementation is authorized by this document. |
 | Created | 2026-06-13 (vision stub) |
 | Specified | 2026-10-16 |
@@ -72,6 +72,9 @@ store, or open an itemized sale. That read must be a new Backend-Core contract (
 - **No direct ERPNext, Frappe or ERPNext-Connector reads.** ERP posting state comes
   only from Backend-Core.
 - **No reuse of POS credentials or of POS-scoped authorization** for admin reads.
+- **No tenant-wide "All stores" sales list in v1.** Every list query names one store
+  (OD-556-2). A tenant-wide list is deferred to a later slice; it would need its own
+  approval and probably a [GATED] index migration (proposed issue 4, §6.5).
 - **No cross-tenant view.** Platform support sessions are out of scope.
 - **No duplication** of the receivables, shift-close or audit screens.
 - **No change to spec 015** (another session owns it) or to any other spec.
@@ -153,7 +156,7 @@ facts, following the RT-383 shift-closes precedent.
 **(b) An additive extension of the RT-537 `pos-sale-history` contract**, adding the
 console session as a third credential.
 
-### 6.2 Recommendation: (a), a new console read
+### 6.2 Recommendation: (a), a new console read (approved as OD-556-1, §6.4)
 
 Three facts on Backend-Core `main@1d26d287` rule out (b):
 
@@ -221,17 +224,21 @@ shape.
 - **Completeness**: the list covers sales received up to `asOf`. Sales still queued
   on a terminal are unknown to the server, and the contract says so.
 
-### 6.4 Owner / coordinator decisions
+### 6.4 Coordinator decisions (2026-10-16, under the owner's delegation)
 
-- **OD-556-1 — contract path.** Recommended: (a), a new console read (§6.2).
-- **OD-556-2 — `store_id` required in v1.** Recommended: **yes**. The existing index
-  starts `(tenant_id, store_id, …)`, so a one-store query needs no new migration.
-  A tenant-wide list, or a tenant-wide sale-number lookup, would probably need a new
-  index, which is a [GATED] migration. A tenant-wide view can be added later as an
-  additive change.
-- **OD-556-3 — role set.** Recommended: `owner`, `tenant_admin`, `store_manager`,
-  matching RT-383 and OD-534-1 ("manager/admin: all authorized store sales"). The
-  sale-sync-ops reads stay `owner` and `tenant_admin` only and are not widened here.
+- **OD-556-1 — contract path: approved, (a).** A new Backend-Core `cookieAuth`
+  console read following RT-383. RT-537 is not extended. This is a **planning
+  decision, not a contract**: the [GATED] Backend-Core contract review must ratify
+  it, and the operation names, paths and audit action names in §6.3 are proposed,
+  not final.
+- **OD-556-2 — `store_id` required in v1: approved, with no new migration.** The
+  existing index starts `(tenant_id, store_id, …)`, so a one-store query needs no
+  new index. A tenant-wide "All stores" list, or a tenant-wide sale-number lookup, is
+  a v1 non-goal (§3), deferred to a later slice.
+- **OD-556-3 — roles: approved.** `owner`, `tenant_admin`, `store_manager`, the same
+  as the shift-closes navigation and OD-534-1 ("manager/admin: all authorized store
+  sales"). The API stays the authority. The sale-sync-ops reads stay `owner` and
+  `tenant_admin` only and are not widened here.
 
 ### 6.5 Proposed Backend-Core issues (not created; listed for the coordinator)
 
@@ -247,7 +254,8 @@ shape.
    stable pages while sales arrive.
 3. **(Optional) Backend-Core — additive `sale_ref` filter on `consoleListReceivables`**,
    so a sale can link to its receivables (§7).
-4. **(Only if OD-556-2 is "no") Backend-Core — tenant-wide sales index [GATED migration].**
+4. **Deferred.** Backend-Core — tenant-wide sales index [GATED migration]. Only if a
+   tenant-wide "All stores" list is approved later; not needed for v1 (OD-556-2).
 
 ## 7. Links to existing screens
 
