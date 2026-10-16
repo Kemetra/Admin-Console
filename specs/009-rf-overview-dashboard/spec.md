@@ -133,8 +133,12 @@ the navigation is RT-270's and the owning slices' concern, not 009's.
   `closed_from` window, plus `store_id` when a store is active. The contract records no review
   or acknowledgement state, and the policy threshold (AD-CASH-001 D-7) does not exist yet, so
   the attention definition is set by OD-009-2 (§10): `min_abs_variance=0.0001` and
-  `closed_from` at the start of the store business day six days before today (today plus the
-  six days before it). The amount is compared in each
+  `closed_from` at the start of the day six days before today (today plus the six days
+  before it). Days are the active store's business dates, or UTC dates when no store is active
+  (owner or tenant_admin, tenant-wide), the same rule `/shift-closes` uses. The Overview builds
+  `closed_from` with the destination's own helper (`zonedDayStartIso` in
+  `src/shift-closes/shiftCloseDates.ts`, as `shiftCloseFilters.ts` does), so the row count and
+  the linked list always cover the same subset. The amount is compared in each
   close's own currency; the panel never converts or sums money across currencies.
 - **P-3 Unknown items.** `status=pending`, plus `store_id` when a store is active. Store-scoped
   operators are narrowed by RLS regardless.
@@ -155,7 +159,7 @@ console `main` @ `d6e666d`:
 | Row | Destination today | Link |
 | --- | --- | --- |
 | P-1 | `/stock-discrepancies/:storeId` (per store) | Matches: one row per store. |
-| P-2 | `/shift-closes` reads its filters from the URL (`shiftCloseFilters.ts`: `store`, `from`, `to`, `min`, `currency`, `approval`) | The link carries `approval=not_approved`, `min`, `from` and `store`. `from` is a calendar date read in the store's timezone, so the OD-009-2 window is expressed in store business dates. |
+| P-2 | `/shift-closes` reads its filters from the URL (`shiftCloseFilters.ts`: `store`, `from`, `to`, `min`, `currency`, `approval`) | The link carries `approval=not_approved`, `min`, `from` and `store`. `from` is a calendar date that `shiftCloseFilters.ts` reads in the selected store's timezone, else in UTC. The Overview computes the OD-009-2 window by the same rule and helper (`zonedDayStartIso`): store business dates with an active store, UTC dates otherwise. |
 | P-3 | `/unknown-items` defaults to `pending` and passes the active store as `store_id` (`UnknownItemList.tsx`) | Matches with a plain link. |
 | P-4 | `/receivables` has no URL filter state and sends no `state` or `store_id` | **Gap.** Until the receivables screen (spec 018 slice) accepts `state` (and `store_id`) from the URL, the row links to the unfiltered list and its copy names the subset (flagged receivables, catalog wording decided at implementation), so the operator knows what to look for. Listed in §11. |
 | P-5 | `/audit` | Plain link to the search; no filter carried (AuditSearch has no URL filter state, as RT-556 also found). |
@@ -295,7 +299,7 @@ None.
 
 | ID | Question | Decision | Why |
 | --- | --- | --- | --- |
-| **OD-009-2** | What counts as a shift-close attention item, given no policy threshold and no review state? | **Approved as recommended.** An unapproved close (`approval=not_approved`) with any non-zero variance (`min_abs_variance=0.0001`), closed in the last 7 store business days. Revisit when the AD-CASH-001 D-7 policy ships (RT-384 / RT-387 / RT-389). | The contract has no policy threshold and no review or acknowledgement state. `0.0001` is the smallest amount `NonNegativeDecimalAmount` allows, so "any non-zero variance" needs no invented threshold and works in every currency. The 7-day window keeps old unapproved closes from staying on the Overview forever, since nothing on the contract clears them. |
+| **OD-009-2** | What counts as a shift-close attention item, given no policy threshold and no review state? | **Approved as recommended.** An unapproved close (`approval=not_approved`) with any non-zero variance (`min_abs_variance=0.0001`), closed in the last 7 days (store business days with an active store; UTC dates otherwise). Revisit when the AD-CASH-001 D-7 policy ships (RT-384 / RT-387 / RT-389). | The contract has no policy threshold and no review or acknowledgement state. `0.0001` is the smallest amount `NonNegativeDecimalAmount` allows, so "any non-zero variance" needs no invented threshold and works in every currency. The 7-day window keeps old unapproved closes from staying on the Overview forever, since nothing on the contract clears them. |
 | **OD-009-1** | Which sales figures matter commercially on the landing page? | **Approved as the starting point.** Today's (store business date) received-sale count and gross total per currency, per store in scope, as text. P-6 stays a non-goal until BC-009-1 exists. Average order value and trends come later, with no charts until UX-13. | The count and the gross total are what a summary read can state truthfully with an as-of time and a completeness statement. Totals stay per currency because the console never converts money. Charts wait for a ratified UX-13 data palette (design-system rule 8). |
 
 ### Decided in this spec
