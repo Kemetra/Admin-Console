@@ -135,8 +135,8 @@ test("RT-549: loading shows the skeleton table with the real headers, then the r
   const row = table.locator("tbody tr").first();
   const before = await row.evaluate((el) => getComputedStyle(el).backgroundColor);
   await row.hover();
-  // Outlast the row's colour transition (--duration-2) before reading it back.
-  await page.waitForTimeout(400);
+  // Let the row's colour transition (--duration-2) settle before reading it back.
+  await row.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
   expect(await row.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(before);
   // The header action is available while loading.
   await expect(page.getByRole("link", { name: t("stores.list.add") })).toBeVisible();
