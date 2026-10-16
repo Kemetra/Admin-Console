@@ -32,9 +32,21 @@ export function nextDeviceCursor(page: DevicePage): string | undefined {
   return page.nextCursor ?? undefined;
 }
 
-/** The server's order across pages, as received: never re-sorted or filtered. */
+/**
+ * The server's order across pages, never re-sorted. A keyset walk is not a
+ * snapshot: a device whose rank changes mid-walk (a revoke, a shift opening or
+ * closing) can come back on a later page. It is shown once, where it first
+ * appeared, so the table never holds two rows (or two React keys) for one device.
+ */
 export function flattenDevicePages(pages: readonly DevicePage[]): DevicePage["items"] {
-  return pages.flatMap((page) => page.items);
+  const seen = new Set<string>();
+  return pages
+    .flatMap((page) => page.items)
+    .filter((device) => {
+      if (seen.has(device.deviceId)) return false;
+      seen.add(device.deviceId);
+      return true;
+    });
 }
 
 // --- Trust state ---------------------------------------------------------------

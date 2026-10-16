@@ -178,6 +178,31 @@ describe("DeviceList (RT-371)", () => {
     expect(screen.queryByText(/healthy/i)).toBeNull();
   });
 
+  test("last seen from activity is labelled with its source in the list too", async () => {
+    consoleListDevices.mockResolvedValue(
+      page([summary({ lastSeenAt: SEEN_AT, lastSeenSource: "activity" })]),
+    );
+    renderList();
+    const rows = bodyRows(await tableReady());
+    expect(within(rows[0]).getByText("Last authenticated request from the device")).toBeDefined();
+  });
+
+  test("a device with nothing recorded reads 'No recorded exception', not 'all clear'", async () => {
+    renderList();
+    const rows = bodyRows(await tableReady());
+    expect(within(rows[0]).getByText("No recorded exception")).toBeDefined();
+  });
+
+  test("a rejected filter (400) offers Clear filters, not a retry of the same request", async () => {
+    consoleListDevices.mockResolvedValueOnce(failure(400, "req-4"));
+    renderList(`/devices?store=not-a-uuid`);
+    const alert = await screen.findByRole("alert");
+    expect(within(alert).queryByRole("button", { name: "Retry" })).toBeNull();
+    fireEvent.click(within(alert).getByRole("button", { name: "Clear filters" }));
+    await waitFor(() => expect(screen.getByTestId("location").textContent).toBe("/devices"));
+    await waitFor(() => expect(lastQuery()).toEqual({ page_size: 50, cursor: undefined }));
+  });
+
   test("the first request asks only for a page; the order note explains stale", async () => {
     renderList();
     await tableReady();

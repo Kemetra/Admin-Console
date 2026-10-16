@@ -7,7 +7,9 @@ import { type Page, expect, test } from "./fixtures";
  * S2: Store Detail deep link → the registry filtered to that store.
  * S3: a store manager's deep link to a store outside the scope → the server's
  *     404 reads as that store's devices being unavailable, never as empty.
- * S4: a role the API refuses has no nav entry; an empty fleet says so.
+ * S4: a role the API refuses (store_staff) has no nav entry, and a direct URL
+ *     gets the uniform 404 as "not available", never an empty fleet.
+ * S5: an empty fleet says so.
  * RT-399: runs in both locales; copy comes from the catalog (`t`), mocked data
  * (store names, labels, ids) stays as authored.
  */
@@ -173,12 +175,30 @@ test("S3: a deep link to a store outside the scope reads as unavailable, not emp
   await expect(page.getByLabel(t("devices.filter.store"))).toHaveValue(OTHER_STORE);
 });
 
-test("S4: a refused role has no nav entry; an empty fleet says so", async ({ page, t }) => {
-  await mockBase(page, "cashier");
+test("S4: a refused role has no nav entry, and a direct URL reads as unavailable", async ({
+  page,
+  t,
+}) => {
+  await mockBase(page, "store_staff");
+  const queries: URLSearchParams[] = [];
+  await page.route("**/api/v1/devices?**", (r) => {
+    queries.push(new URL(r.request().url()).searchParams);
+    return r.fulfill(json({ error: { code: "not_found", message: "Not found" } }, 404));
+  });
+
   await page.goto("/");
   await expect(page.getByRole("heading", { name: t("shell.overview.title") })).toBeVisible();
   await expect(page.getByRole("link", { name: t("devices.nav.label") })).toHaveCount(0);
 
+  // The nav mirrors the API; the API's non-disclosing 404 is the authority.
+  await page.goto("/devices");
+  await expect(page.getByText(t("devices.list.unavailable"))).toBeVisible();
+  await expect(page.getByText(t("devices.list.empty"))).toHaveCount(0);
+  await expect(page.getByRole("table")).toHaveCount(0);
+  expect(queries).toHaveLength(1);
+});
+
+test("S5: an empty fleet says so", async ({ page, t }) => {
   await mockBase(page, "tenant_admin");
   await mockList(page, []);
   await page.goto("/devices");

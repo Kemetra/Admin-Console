@@ -34,6 +34,7 @@ export const devices = {
   "devices.list.loadFailed": "تعذّر تحميل الأجهزة.",
   "devices.list.sessionExpired": "انتهت جلستك. سجّل الدخول مرة أخرى.",
   "devices.list.inlineError": "تعذّر تحميل بقية الصفوف. الصفوف المعروضة من آخر تحميل ناجح.",
+  "devices.list.clearFilters": "مسح التصفية",
   "devices.list.retry": "إعادة المحاولة",
   "devices.list.loaded": "المحمّل: {count}",
   "devices.list.loadMore": "تحميل المزيد",
@@ -45,7 +46,7 @@ export const devices = {
   "devices.list.col.lastSeen": "آخر نشاط",
   "devices.list.unknownStore": "متجر غير معروف",
   "devices.list.unlabelled": "بلا اسم",
-  "devices.list.noAttention": "لا شيء",
+  "devices.list.noAttention": "لا يوجد استثناء مسجّل",
 
   // --- Attention ---------------------------------------------------------------
   "devices.attention.custody": "استثناء عهدة: وردية مفتوحة",

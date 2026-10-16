@@ -76,21 +76,64 @@ function deviceColumns(
           lastSeenAt={d.lastSeenAt}
           lastSeenSource={d.lastSeenSource}
           timeZone={directory.timeZoneOf(d.storeId)}
+          showSource
         />
       ),
     },
   ];
 }
 
+interface ErrorViewProps {
+  error: DeviceError;
+  storeFiltered: boolean;
+  onRetry: () => void;
+  onClear: () => void;
+}
+
+/**
+ * A rejected filter (400) cannot be fixed by retrying the same request: the way
+ * out is to clear the filters. Any other failure offers a retry.
+ */
+function FailureBanner({
+  error,
+  onRetry,
+  onClear,
+}: Readonly<Omit<ErrorViewProps, "storeFiltered">>): React.JSX.Element {
+  const t = useT();
+  if (error.kind === "rejected") {
+    return (
+      <Banner
+        variant="warning"
+        message={t("devices.list.filterRejected")}
+        requestId={error.requestId}
+        action={
+          <button type="button" className="btn-secondary" onClick={onClear}>
+            {t("devices.list.clearFilters")}
+          </button>
+        }
+      />
+    );
+  }
+  return (
+    <Banner
+      variant="danger"
+      message={t("devices.list.loadFailed")}
+      requestId={error.requestId}
+      action={
+        <button type="button" className="btn-secondary" onClick={onRetry}>
+          {t("devices.list.retry")}
+        </button>
+      }
+    />
+  );
+}
+
 function ErrorView({
   error,
   storeFiltered,
   onRetry,
-}: Readonly<{
-  error: DeviceError;
-  storeFiltered: boolean;
-  onRetry: () => void;
-}>): React.JSX.Element {
+  onClear,
+}: Readonly<ErrorViewProps>): React.JSX.Element {
   const t = useT();
   if (error.kind === "not-found") {
     return storeFiltered ? (
@@ -112,20 +155,7 @@ function ErrorView({
       />
     );
   }
-  const retry = (
-    <button type="button" className="btn-secondary" onClick={onRetry}>
-      {t("devices.list.retry")}
-    </button>
-  );
-  const rejected = error.kind === "rejected";
-  return (
-    <Banner
-      variant={rejected ? "warning" : "danger"}
-      message={t(rejected ? "devices.list.filterRejected" : "devices.list.loadFailed")}
-      requestId={error.requestId}
-      action={retry}
-    />
-  );
+  return <FailureBanner error={error} onRetry={onRetry} onClear={onClear} />;
 }
 
 /** Loaded count, the inline continuation error, and Load more. */
@@ -168,6 +198,7 @@ interface ResultsProps {
   directory: StoreDirectory;
   filters: DeviceFilters;
   onOpen: (row: DeviceSummary) => void;
+  onClear: () => void;
 }
 
 /**
@@ -179,7 +210,13 @@ function awaitingRoster(list: DeviceListState, directory: StoreDirectory): boole
   return list.rows.length > 0 && !directory.ready;
 }
 
-function Results({ list, directory, filters, onOpen }: Readonly<ResultsProps>): React.JSX.Element {
+function Results({
+  list,
+  directory,
+  filters,
+  onOpen,
+  onClear,
+}: Readonly<ResultsProps>): React.JSX.Element {
   const t = useT();
   // One clock reading per mount: "expiry passed" does not flicker between renders.
   const [now] = useState(() => Date.now());
@@ -196,7 +233,12 @@ function Results({ list, directory, filters, onOpen }: Readonly<ResultsProps>): 
   }
   if (list.error) {
     return (
-      <ErrorView error={list.error} storeFiltered={filters.storeId !== ""} onRetry={list.retry} />
+      <ErrorView
+        error={list.error}
+        storeFiltered={filters.storeId !== ""}
+        onRetry={list.retry}
+        onClear={onClear}
+      />
     );
   }
   if (list.rows.length === 0) {
@@ -233,6 +275,7 @@ export function DeviceList(): React.JSX.Element {
 
   const filters = filtersFromSearch(search);
   const list = useDeviceList(scope, buildListQuery(filters));
+  const clearFilters = () => setSearch(new URLSearchParams());
 
   if (!scope.tenantId) {
     return (
@@ -259,13 +302,14 @@ export function DeviceList(): React.JSX.Element {
         applied={filters}
         stores={directory.stores}
         onApply={(next) => setSearch(filtersToSearch(next))}
-        onClear={() => setSearch(new URLSearchParams())}
+        onClear={clearFilters}
       />
 
       <Results
         list={list}
         directory={directory}
         filters={filters}
+        onClear={clearFilters}
         onOpen={(row) => navigate(`/devices/${row.deviceId}`, { state: { list: location.search } })}
       />
     </div>

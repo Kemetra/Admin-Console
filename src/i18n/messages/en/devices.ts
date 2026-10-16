@@ -30,6 +30,7 @@ export const devices: MessagesOf<typeof ar> = {
   "devices.list.sessionExpired": "Your session has expired. Sign in again.",
   "devices.list.inlineError":
     "The rest of the rows could not be loaded. The rows shown are from the last successful load.",
+  "devices.list.clearFilters": "Clear filters",
   "devices.list.retry": "Retry",
   "devices.list.loaded": "Loaded: {count}",
   "devices.list.loadMore": "Load more",
@@ -41,7 +42,7 @@ export const devices: MessagesOf<typeof ar> = {
   "devices.list.col.lastSeen": "Last seen",
   "devices.list.unknownStore": "Unknown store",
   "devices.list.unlabelled": "No label",
-  "devices.list.noAttention": "None",
+  "devices.list.noAttention": "No recorded exception",
 
   // --- Attention ---------------------------------------------------------------
   "devices.attention.custody": "Custody exception: open shift",

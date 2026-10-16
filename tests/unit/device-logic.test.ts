@@ -22,6 +22,7 @@ import { describe, expect, test } from "vitest";
 import {
   DEVICE_1,
   DEVICE_2,
+  DEVICE_3,
   DUBAI_STORE,
   EXPIRES_FUTURE,
   EXPIRES_PAST,
@@ -132,6 +133,23 @@ describe("device logic (RT-371)", () => {
       DEVICE_2,
       DEVICE_1,
     ]);
+  });
+
+  test("a device repeated on a later page (its rank changed mid-walk) is shown once, where it first appeared", () => {
+    const first = {
+      items: [summary({ deviceId: DEVICE_2 }), summary({ deviceId: DEVICE_1 })],
+      nextCursor: "c2",
+    };
+    const second = {
+      items: [
+        summary({ deviceId: DEVICE_2, trustState: "revoked" }),
+        summary({ deviceId: DEVICE_3 }),
+      ],
+      nextCursor: null,
+    };
+    const rows = flattenDevicePages([first, second] as never);
+    expect(rows.map((d) => d.deviceId)).toEqual([DEVICE_2, DEVICE_1, DEVICE_3]);
+    expect(rows[0].trustState).toBe("active");
   });
 });
 
