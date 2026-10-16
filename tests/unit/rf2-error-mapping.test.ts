@@ -132,3 +132,47 @@ describe("mapRf2Error", () => {
     expect(ar({ status: 401, context: "store" })).toBe("اختر مؤسسة قبل إدارة المتاجر.");
   });
 });
+
+describe("mapRf2Error: store time zone codes (RT-477 / RT-401)", () => {
+  const coded = (code: string, requestId = "req-tz") => ({
+    error: { code, message: "m", request_id: requestId },
+  });
+
+  test("400 invalid_timezone -> an inline error on the time zone field", () => {
+    const r = mapRf2Error({ status: 400, error: coded("invalid_timezone"), context: "store" });
+    expect(r.kind).toBe("field-error");
+    expect(r.messageKey).toBe("stores.errors.timezoneInvalid");
+    if (r.kind === "field-error") expect(r.field).toBe("timezone");
+  });
+
+  test("409 timezone_changed_concurrently -> a banner with request_id, not a code conflict", () => {
+    const r = mapRf2Error({
+      status: 409,
+      error: coded("timezone_changed_concurrently"),
+      context: "store",
+    });
+    expect(r.kind).toBe("banner");
+    expect(r.messageKey).toBe("stores.errors.timezoneChangedConcurrently");
+    if (r.kind === "banner") {
+      expect(r.requestId).toBe("req-tz");
+      expect(r.retryable).toBe(false);
+    }
+  });
+
+  test("409 store_has_open_shift -> a banner with request_id, not a code conflict", () => {
+    const r = mapRf2Error({ status: 409, error: coded("store_has_open_shift"), context: "store" });
+    expect(r.kind).toBe("banner");
+    expect(r.messageKey).toBe("stores.errors.storeHasOpenShift");
+    if (r.kind === "banner") expect(r.requestId).toBe("req-tz");
+  });
+
+  test("any other 409 on a store stays the inline code conflict", () => {
+    const r = mapRf2Error({ status: 409, error: coded("store_code_conflict"), context: "store" });
+    expect(r.kind).toBe("conflict");
+  });
+
+  test("the time zone codes mean nothing on a tenant", () => {
+    const r = mapRf2Error({ status: 409, error: coded("store_has_open_shift"), context: "tenant" });
+    expect(r.kind).toBe("conflict");
+  });
+});

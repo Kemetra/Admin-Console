@@ -20,11 +20,18 @@ import type { Rf2ErrorRender } from "@/lib/rf2-queries";
 import { Link, useNavigate } from "react-router";
 import { ScopePrompt } from "./ScopePrompt";
 import { StoreStateBadge } from "./StoreStateBadge";
+import { ZoneName } from "./ZoneName";
 import { useStoreList } from "./useStoreQueries";
 import { useStoreScope } from "./useStoreScope";
 import "../shell/surface.css";
 
-type StoreRow = { id: string; code: string; name: string; is_active?: boolean };
+type StoreRow = {
+  id: string;
+  code: string;
+  name: string;
+  timezone?: string;
+  is_active?: boolean;
+};
 
 function storeColumns(t: T) {
   return [
@@ -34,6 +41,11 @@ function storeColumns(t: T) {
       header: t("stores.field.code"),
       cell: (s: StoreRow) => <bdi dir="ltr">{s.code}</bdi>,
       mono: true,
+    },
+    {
+      key: "timezone",
+      header: t("stores.field.timezone"),
+      cell: (s: StoreRow) => <ZoneName zone={s.timezone} />,
     },
     {
       key: "state",

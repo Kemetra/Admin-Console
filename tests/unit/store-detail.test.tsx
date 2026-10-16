@@ -65,6 +65,55 @@ describe("StoreDetail", () => {
     expect(screen.queryByRole("button", { name: /delete/i })).toBeNull();
   });
 
+  test("RT-477: shows the time zone row as «city (IANA id)», no UTC offset, between status and ID", async () => {
+    readStore.mockResolvedValue({
+      status: 200,
+      data: {
+        id: "s1",
+        code: "CFC",
+        name: "Cairo Festival City",
+        is_active: true,
+        timezone: "Africa/Cairo",
+      },
+    });
+    renderDetail();
+    expect(await screen.findByText("Time zone")).toBeDefined();
+    const row = screen.getByText("Time zone").closest(".field-row");
+    expect(row?.textContent).toBe("Time zoneCairo (Africa/Cairo)");
+    expect(screen.getByText("Africa/Cairo").tagName).toBe("BDI");
+    expect(row?.textContent).not.toMatch(/GMT|UTC[+-]/);
+    const labels = [...document.querySelectorAll(".field-row__label")].map((e) => e.textContent);
+    expect(labels).toEqual(["Code", "Status", "Time zone", "Store ID"]);
+  });
+
+  test("RT-477: a zone with no curated name is shown as its IANA identity", async () => {
+    readStore.mockResolvedValue({
+      status: 200,
+      data: { id: "s1", code: "X", name: "X", is_active: true, timezone: "Asia/Tokyo" },
+    });
+    renderDetail();
+    expect(await screen.findByText("Asia/Tokyo")).toBeDefined();
+  });
+
+  test("RT-477: Arabic detail shows «المنطقة الزمنية» as «القاهرة (Africa/Cairo)»", async () => {
+    setLocale("ar");
+    readStore.mockResolvedValue({
+      status: 200,
+      data: {
+        id: "s1",
+        code: "CFC",
+        name: "Cairo Festival City",
+        is_active: true,
+        timezone: "Africa/Cairo",
+      },
+    });
+    renderDetail();
+    const label = await screen.findByText("المنطقة الزمنية");
+    expect(label.closest(".field-row")?.textContent).toBe(
+      "المنطقة الزمنية" + "القاهرة (Africa/Cairo)",
+    );
+  });
+
   test("404 -> uniform not-available with a way back", async () => {
     readStore.mockResolvedValue({ status: 404 });
     renderDetail();

@@ -49,6 +49,7 @@ export const tenants: MessagesOf<typeof ar> = {
   "stores.field.code": "Code",
   "stores.field.state": "Status",
   "stores.field.id": "Store ID",
+  "stores.field.timezone": "Time zone",
 
   "stores.state.active": "Active",
   "stores.state.inactive": "Suspended",
@@ -70,6 +71,28 @@ export const tenants: MessagesOf<typeof ar> = {
   "stores.form.saveChanges": "Save store",
   "stores.form.cancelEdit": "Cancel editing",
   "stores.form.scopeLine": "The store will be created in {tenant}.",
+  "stores.form.timezoneHintCreate":
+    "Store times are shown, and business days counted, in this time zone. Its offset from UTC follows the zone's rules, including daylight saving.",
+  "stores.form.timezoneHintEdit":
+    "The impact is reviewed before the change is applied, and the zone can't be changed while a shift is open. Its offset from UTC follows the zone's rules, including daylight saving.",
+  "stores.form.timezoneGroupCommon": "Common zones",
+  "stores.form.timezoneGroupOther": "All other zones",
+
+  // The impact review shown before a time zone change is applied (RT-401).
+  "stores.timezone.impact.title": "Impact of the change",
+  "stores.timezone.impact.loading": "Checking the impact…",
+  "stores.timezone.impact.zones": "Changing from {current} to {proposed}.",
+  "stores.timezone.impact.dateChanges": "Today's business date changes from {from} to {to}.",
+  "stores.timezone.impact.dateSame": "Today's business date stays {date}.",
+  "stores.timezone.impact.noOpenShifts": "No open shifts at this store.",
+  "stores.timezone.impact.openShifts": {
+    one: "1 shift is open at this store. Close it before changing the time zone.",
+    other: "{count} shifts are open at this store. Close them before changing the time zone.",
+  },
+  "stores.timezone.impact.history":
+    "Sales, returns and shifts already recorded keep their business date.",
+  "stores.timezone.impact.noChange": "This is already this store's time zone. Nothing to change.",
+  "stores.timezone.impact.review": "I've reviewed this impact and want to change the time zone.",
 
   "stores.status.title": "Store status",
   "stores.status.current": "Current status:",
@@ -84,6 +107,11 @@ export const tenants: MessagesOf<typeof ar> = {
   "stores.errors.codeConflict":
     "That store code is already in use in this tenant. Choose a different one.",
   "stores.errors.scopeRequired": "Select a tenant before managing stores.",
+  "stores.errors.timezoneInvalid": "Choose a valid time zone from the list.",
+  "stores.errors.timezoneChangedConcurrently":
+    "The store's time zone was changed by someone else, so nothing was saved. Review the impact again before applying.",
+  "stores.errors.storeHasOpenShift":
+    "This store has an open shift, so its time zone can't be changed now. Close the open shift and try again. Nothing was changed.",
   "stores.errors.editDeniedTitle": "You don't have permission to edit this store.",
   "stores.errors.editDeniedBody":
     "Nothing changed. The tenant owner or an admin can make this change.",

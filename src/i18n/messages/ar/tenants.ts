@@ -58,6 +58,7 @@ export const tenants = {
   "stores.field.code": "الرمز",
   "stores.field.state": "الحالة",
   "stores.field.id": "معرّف المتجر",
+  "stores.field.timezone": "المنطقة الزمنية",
 
   // State badges: the adjective agrees with «المتجر» (masculine). Inactive is
   // the V1 `is_active=false` state, not a closure (decisions 188/194).
@@ -81,6 +82,31 @@ export const tenants = {
   "stores.form.saveChanges": "حفظ المتجر",
   "stores.form.cancelEdit": "إلغاء التعديل",
   "stores.form.scopeLine": "سيُنشأ المتجر في {tenant}.",
+  "stores.form.timezoneHintCreate":
+    "تُعرض أوقات المتجر وتُحسب أيام العمل بهذه المنطقة. فرق التوقيت عن UTC يتبع قواعد المنطقة، ومنها التوقيت الصيفي.",
+  "stores.form.timezoneHintEdit":
+    "يُراجَع أثر التغيير قبل تطبيقه، ولا يمكن تغييرها أثناء وردية مفتوحة. فرق التوقيت عن UTC يتبع قواعد المنطقة، ومنها التوقيت الصيفي.",
+  "stores.form.timezoneGroupCommon": "مناطق شائعة",
+  "stores.form.timezoneGroupOther": "كل المناطق الأخرى",
+
+  // The impact review shown before a time zone change is applied (RT-401).
+  "stores.timezone.impact.title": "أثر التغيير",
+  "stores.timezone.impact.loading": "جارٍ فحص الأثر…",
+  "stores.timezone.impact.zones": "التغيير من {current} إلى {proposed}.",
+  "stores.timezone.impact.dateChanges": "يتغيّر تاريخ يوم العمل اليوم من {from} إلى {to}.",
+  "stores.timezone.impact.dateSame": "يبقى تاريخ يوم العمل اليوم {date}.",
+  "stores.timezone.impact.noOpenShifts": "لا توجد ورديات مفتوحة في هذا المتجر.",
+  "stores.timezone.impact.openShifts": {
+    zero: "لا توجد ورديات مفتوحة في هذا المتجر.",
+    one: "هناك وردية مفتوحة في هذا المتجر. أغلقها قبل تغيير المنطقة الزمنية.",
+    two: "هناك ورديتان مفتوحتان في هذا المتجر. أغلقهما قبل تغيير المنطقة الزمنية.",
+    few: "هناك {count} ورديات مفتوحة في هذا المتجر. أغلقها قبل تغيير المنطقة الزمنية.",
+    many: "هناك {count} وردية مفتوحة في هذا المتجر. أغلقها قبل تغيير المنطقة الزمنية.",
+    other: "هناك {count} وردية مفتوحة في هذا المتجر. أغلقها قبل تغيير المنطقة الزمنية.",
+  },
+  "stores.timezone.impact.history": "تحتفظ المبيعات والمرتجعات والورديات المسجّلة بتاريخ يوم عملها.",
+  "stores.timezone.impact.noChange": "هذه هي المنطقة الزمنية الحالية للمتجر. لا يوجد ما يتغيّر.",
+  "stores.timezone.impact.review": "راجعتُ هذا الأثر وأريد تغيير المنطقة الزمنية.",
 
   // The V1 `is_active` control on the edit screen (owner decision 2026-10-13).
   "stores.status.title": "حالة المتجر",
@@ -95,6 +121,11 @@ export const tenants = {
 
   "stores.errors.codeConflict": "رمز المتجر هذا مستخدم بالفعل في هذه المؤسسة. اختر رمزًا آخر.",
   "stores.errors.scopeRequired": "اختر مؤسسة قبل إدارة المتاجر.",
+  "stores.errors.timezoneInvalid": "اختر منطقة زمنية صالحة من القائمة.",
+  "stores.errors.timezoneChangedConcurrently":
+    "غيّر شخص آخر المنطقة الزمنية لهذا المتجر، فلم يُحفظ شيء. راجع الأثر من جديد قبل التطبيق.",
+  "stores.errors.storeHasOpenShift":
+    "لدى هذا المتجر وردية مفتوحة، لذا لا يمكن تغيير منطقته الزمنية الآن. أغلق الوردية المفتوحة ثم حاول مجددًا. لم يتغيّر شيء.",
   "stores.errors.editDeniedTitle": "ليست لديك صلاحية لتعديل هذا المتجر.",
   "stores.errors.editDeniedBody": "لم يتغيّر شيء. يستطيع مالك المؤسسة أو مسؤولها إجراء هذا التعديل.",
 } satisfies Messages;

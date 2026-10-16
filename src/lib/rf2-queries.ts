@@ -16,6 +16,7 @@
  * document NO 422/429 on these ops, so none is asserted (AS-5, Principle 2).
  */
 import { apiClient } from "@/generated/client";
+import type { components } from "@/generated/schema";
 import type { MessageKey } from "@/i18n";
 
 // --- Typed operation wrappers -------------------------------------------------
@@ -31,14 +32,10 @@ export interface TenantUpdateBody {
   name?: string;
   status?: "active" | "suspended";
 }
-export interface StoreCreateBody {
-  code: string;
-  name: string;
-}
-export interface StoreUpdateBody {
-  name?: string;
-  is_active?: boolean;
-}
+/** From the generated contract, so a field it does not have cannot be sent (RT-477). */
+export type StoreCreateBody = components["schemas"]["StoreCreate"];
+export type StoreUpdateBody = components["schemas"]["StoreUpdate"];
+export type StoreTimezoneChangePreview = components["schemas"]["StoreTimezoneChangePreview"];
 
 /** GET /api/v1/tenants */
 export async function listTenants() {
@@ -106,6 +103,18 @@ export async function updateStore(storeId: string, body: StoreUpdateBody) {
   return { status: response.status, data, error };
 }
 
+/** GET /api/v1/stores/{store_id}/timezone-change-preview: read-only impact review. */
+export async function previewStoreTimezoneChange(request: {
+  storeId: string;
+  timezone: string;
+}) {
+  const { data, error, response } = await apiClient.GET(
+    "/api/v1/stores/{store_id}/timezone-change-preview",
+    { params: { path: { store_id: request.storeId }, query: { timezone: request.timezone } } },
+  );
+  return { status: response.status, data, error };
+}
+
 // --- Query keys ---------------------------------------------------------------
 // Store keys are scoped by the active tenant id so a tenant switch re-scopes the
 // cache (S7); RF-2 holds no authoritative scope (OQ-5) — the id comes from the
@@ -116,6 +125,9 @@ export const rf2QueryKeys = {
   tenant: (tenantId: string) => ["rf2", "tenant", tenantId] as const,
   stores: (tenantId: string | null) => ["rf2", "stores", tenantId] as const,
   store: (storeId: string) => ["rf2", "store", storeId] as const,
+  timezonePreview: (storeId: string, timezone: string) =>
+    ["rf2", "store-timezone-preview", storeId, timezone] as const,
+  timezonePreviews: (storeId: string) => ["rf2", "store-timezone-preview", storeId] as const,
 } as const;
 
 // --- Typed error mapping ------------------------------------------------------
@@ -147,6 +159,8 @@ export type Rf2ErrorRender =
   | { kind: "not-found"; messageKey: MessageKey }
   /** 409 conflict, rendered inline on the named field (slug | code, OQ-9). */
   | { kind: "conflict"; field: "slug" | "code"; messageKey: MessageKey }
+  /** 400 `invalid_timezone` (RT-401): inline on the time zone field. */
+  | { kind: "field-error"; field: "timezone"; messageKey: MessageKey }
   /** Store 401 "No active tenant" — scope precondition, NOT session expiry (OQ-4). */
   | { kind: "scope-required"; messageKey: MessageKey }
   /** Anything else (incl. an undocumented tenant 401) — generic banner copy. */
@@ -159,6 +173,9 @@ const COPY = {
   slugConflict: "tenants.errors.slugConflict",
   codeConflict: "stores.errors.codeConflict",
   scopeRequired: "stores.errors.scopeRequired",
+  timezoneInvalid: "stores.errors.timezoneInvalid",
+  timezoneChangedConcurrently: "stores.errors.timezoneChangedConcurrently",
+  storeHasOpenShift: "stores.errors.storeHasOpenShift",
   serverError: "errors.server",
   generic: "errors.generic",
 } as const satisfies Record<string, MessageKey>;
@@ -168,29 +185,65 @@ function requestIdOf(input: Rf2ErrorContext): string | undefined {
 }
 
 /**
+ * RT-401 store time zone errors, keyed by the backend `error.code`. They share
+ * statuses with older store errors (a 409 was always the code conflict), so the
+ * code decides, and only on a store.
+ */
+function timezoneErrorRender(input: Rf2ErrorContext): Rf2ErrorRender | undefined {
+  if (input.context !== "store") return undefined;
+  const requestId = requestIdOf(input);
+  switch (input.error?.error?.code) {
+    case "invalid_timezone":
+      return { kind: "field-error", field: "timezone", messageKey: COPY.timezoneInvalid };
+    case "timezone_changed_concurrently":
+      return {
+        kind: "banner",
+        messageKey: COPY.timezoneChangedConcurrently,
+        requestId,
+        retryable: false,
+      };
+    case "store_has_open_shift":
+      return { kind: "banner", messageKey: COPY.storeHasOpenShift, requestId, retryable: false };
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * Only the store ops document a 401 (scope precondition). A 401 on a tenant op
+ * is undocumented: do not invent scope handling, fall through to generic.
+ */
+function unauthorizedRender(input: Rf2ErrorContext): Rf2ErrorRender {
+  if (input.context === "store") return { kind: "scope-required", messageKey: COPY.scopeRequired };
+  return { kind: "generic", messageKey: COPY.generic, requestId: requestIdOf(input) };
+}
+
+/** A 409 with no time zone code: the unique slug (tenant) or code (store). */
+function conflictRender(input: Rf2ErrorContext): Rf2ErrorRender {
+  return input.context === "tenant"
+    ? { kind: "conflict", field: "slug", messageKey: COPY.slugConflict }
+    : { kind: "conflict", field: "code", messageKey: COPY.codeConflict };
+}
+
+/**
  * Map an RF-2 operation's failure to a render decision. Pure; no React, no
  * fetch. The store 401 → `scope-required` is deliberately distinct from a
  * session-expiry 401: it must NOT trigger a refresh or sign-out, because RF-2's
  * calls do not run through RF-1's per-call context interceptor (OQ-4/OQ-10).
  */
 export function mapRf2Error(input: Rf2ErrorContext): Rf2ErrorRender {
+  const timezoneError = timezoneErrorRender(input);
+  if (timezoneError) return timezoneError;
   const requestId = requestIdOf(input);
   switch (input.status) {
     case 401:
-      // Only the store ops document a 401 (scope precondition). A 401 on a
-      // tenant op is undocumented — do not invent scope handling; fall through.
-      if (input.context === "store") {
-        return { kind: "scope-required", messageKey: COPY.scopeRequired };
-      }
-      return { kind: "generic", messageKey: COPY.generic, requestId };
+      return unauthorizedRender(input);
     case 403:
       return { kind: "banner", messageKey: COPY.forbidden403, requestId, retryable: false };
     case 404:
       return { kind: "not-found", messageKey: COPY.notFound };
     case 409:
-      return input.context === "tenant"
-        ? { kind: "conflict", field: "slug", messageKey: COPY.slugConflict }
-        : { kind: "conflict", field: "code", messageKey: COPY.codeConflict };
+      return conflictRender(input);
     default:
       if (input.status >= 500) {
         return { kind: "banner", messageKey: COPY.serverError, requestId, retryable: true };
