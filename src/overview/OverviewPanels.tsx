@@ -9,7 +9,7 @@
  */
 import { useT } from "@/i18n";
 import { useIsFetching, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { AttentionLedger } from "./AttentionLedger";
 import { canOpenAudit } from "./overviewLogic";
@@ -24,12 +24,9 @@ import "./overview.css";
  */
 function RefreshButton({ onRefresh }: Readonly<{ onRefresh: () => void }>): React.JSX.Element {
   const t = useT();
-  const qc = useQueryClient();
   const fetching = useIsFetching({ queryKey: OVERVIEW_KEY }) > 0;
   const refresh = () => {
-    if (fetching) return;
-    onRefresh();
-    void qc.refetchQueries({ queryKey: OVERVIEW_KEY, type: "active" });
+    if (!fetching) onRefresh();
   };
   return (
     <>
@@ -46,18 +43,34 @@ function RefreshButton({ onRefresh }: Readonly<{ onRefresh: () => void }>): Reac
   );
 }
 
+/**
+ * The time the date-bound read (P-2's window) is computed from: load, then each
+ * Refresh. The re-read runs after the new time commits, so a query whose key
+ * moved (a new day's window) fetches once on its own, and an in-flight read is
+ * joined rather than repeated; the old day's window is never re-read.
+ */
+function useRefresh(): { value: number; refresh: () => void } {
+  const qc = useQueryClient();
+  const [state, setState] = useState(() => ({ value: Date.now(), tick: 0 }));
+  useEffect(() => {
+    if (state.tick === 0) return;
+    void qc.refetchQueries({ queryKey: OVERVIEW_KEY, type: "active" }, { cancelRefetch: false });
+  }, [qc, state.tick]);
+  const refresh = () => setState((s) => ({ value: Date.now(), tick: s.tick + 1 }));
+  return { value: state.value, refresh };
+}
+
 export function OverviewPanels(): React.JSX.Element | null {
   const t = useT();
   const session = useOverviewSession();
-  // The time the date-bound read (P-2's window) is computed from: load, then each Refresh.
-  const [nowMs, setNowMs] = useState(Date.now);
+  const clock = useRefresh();
   if (!session.tenantId) return null;
   return (
     <div className="overview">
       <div className="overview__toolbar">
-        <RefreshButton onRefresh={() => setNowMs(Date.now())} />
+        <RefreshButton onRefresh={clock.refresh} />
       </div>
-      <AttentionLedger session={session} nowMs={nowMs} />
+      <AttentionLedger session={session} nowMs={clock.value} />
       {canOpenAudit(session.role) ? (
         <p className="overview__related">
           <Link className="ledger__link" to="/audit">

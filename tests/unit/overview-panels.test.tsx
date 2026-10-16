@@ -578,6 +578,12 @@ describe("Overview panels (RT-559, spec 009)", () => {
       ),
     );
     expect(within(row(SHIFT)).getByRole("link").getAttribute("href")).toContain("from=2026-10-11");
+    // No extra read of the stale window: one call for the old day, one for the new.
+    expect(consoleListShiftCloses).toHaveBeenCalledTimes(2);
+    expect(consoleListShiftCloses.mock.calls.map(([q]) => q.closed_from)).toEqual([
+      "2026-10-09T21:00:00.000Z",
+      "2026-10-10T21:00:00.000Z",
+    ]);
   });
 
   test("AC-11: no sales or KPI element renders", async () => {
