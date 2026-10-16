@@ -3,7 +3,7 @@
  * Do not make direct changes to the file.
  */
 
-// Source: Data-Pulse-2 @ 2b03ad2de5394f54bae296b726ed6fc76ac8af4e
+// Source: Data-Pulse-2 @ ba22a8128179106978f1c87ca5ead2cbc3a00b6b
 // Sources:
 // - packages/contracts/openapi/auth.openapi.yaml
 // - packages/contracts/openapi/context.openapi.yaml
@@ -12,12 +12,13 @@
 // - packages/contracts/openapi/memberships.openapi.yaml
 // - packages/contracts/openapi/audit.openapi.yaml
 // - packages/contracts/openapi/catalog/unknown-items.yaml
-// - packages/contracts/openapi/settlement/settlement.yaml
+// - packages/contracts/openapi/settlement/settlement.yaml (held @ 2b03ad2de5394f54bae296b726ed6fc76ac8af4e)
 // - packages/contracts/openapi/erpnext-reconciliation/reconciliation.yaml
 // - packages/contracts/openapi/shift-closes.openapi.yaml
 // - packages/contracts/openapi/connector/connector-admin.yaml
 // - packages/contracts/openapi/erpnext-connector/connector-health.yaml
 // - packages/contracts/openapi/erpnext-sync-ops/console-sync-ops.yaml
+// - packages/contracts/openapi/devices.openapi.yaml
 //
 // The upstream OpenAPI files are separate documents with overlapping component
 // names, so this file namespaces each generated source and composes their path
@@ -4397,7 +4398,7 @@ export namespace ShiftClosesSchema {
                 closingUserId: string;
                 /**
                  * Format: uuid
-                 * @description The `users.id` the terminal recorded as the variance approver, or `null` when none was recorded. Recorded as sent: this read does not say whether the approver was verified (the persisted `approverCheck`, RT-384 / RT-385, is added later).
+                 * @description The `users.id` the terminal recorded as the variance approver, or `null` when none was recorded. Recorded as sent: whether the approver was verified is the persisted `approverCheck` (RT-384, emitted from RT-387).
                  */
                 varianceApprovedByUserId: string | null;
                 openingFloat: components["schemas"]["NonNegativeDecimalAmount"];
@@ -4415,7 +4416,12 @@ export namespace ShiftClosesSchema {
                  * @description When the server recorded the close (server clock).
                  */
                 receivedAt: string;
-            };
+                /** @description RT-384, from RT-387. The shift variance policy frozen with the shift's open (K-2) and its accept-and-flag findings; `null` when the open carried none. */
+                frozenPolicy?: components["schemas"]["RecordedFrozenPolicy"] | null;
+                approvalRequiredByPolicy?: components["schemas"]["PolicyTriState"];
+                approvalMissing?: components["schemas"]["PolicyTriState"];
+                approverCheck?: components["schemas"]["ApproverCheck"];
+            } & (components["schemas"]["ApproverCheckMatchesApprover"] & components["schemas"]["ApprovalMissingMatches"]);
             /** @description A keyset page of recorded closes, newest first. */
             ShiftClosePage: {
                 items: components["schemas"]["ShiftCloseSummary"][];
@@ -4459,7 +4465,7 @@ export namespace ShiftClosesSchema {
                 recordedByUserId: string;
                 /**
                  * Format: uuid
-                 * @description The `users.id` the terminal recorded as the variance approver, or `null`. Recorded as sent; verification is not reported yet.
+                 * @description The `users.id` the terminal recorded as the variance approver, or `null`. Recorded as sent; verification is `approverCheck` (RT-384, emitted from RT-387).
                  */
                 varianceApprovedByUserId: string | null;
                 openingFloat: components["schemas"]["NonNegativeDecimalAmount"];
@@ -4480,6 +4486,48 @@ export namespace ShiftClosesSchema {
                 cashRefundReturnRefs: string[];
                 /** @description Every pay-in and pay-out recorded on the shift, oldest first by `occurredAt`, ties broken by `movementId`; may be empty. */
                 cashMovements: components["schemas"]["ShiftCashMovement"][];
+                /** @description RT-384, from RT-387. The shift variance policy frozen with the shift's open (K-2) and its accept-and-flag findings; `null` when the open carried none. */
+                frozenPolicy?: components["schemas"]["RecordedFrozenPolicy"] | null;
+                approvalRequiredByPolicy?: components["schemas"]["PolicyTriState"];
+                approvalMissing?: components["schemas"]["PolicyTriState"];
+                approverCheck?: components["schemas"]["ApproverCheck"];
+            } & (components["schemas"]["ApproverCheckMatchesApprover"] & components["schemas"]["ApprovalMissingMatches"]);
+            /** @description The frozen policy value (AD-CASH-001 D-1). `none`: the cashier always closes alone. `limit`: approval is required exactly when `|variance| > limitAmount`. */
+            CashVariancePolicyValue: {
+                /** @enum {string} */
+                mode: "none" | "limit";
+                limitAmount?: components["schemas"]["NonNegativeDecimalAmount"];
+                currencyCode?: components["schemas"]["CurrencyCode"];
+            };
+            /**
+             * @description AD-CASH-001 D-6 accept-and-flag findings on the open's frozen policy (see `pos-shifts.openapi.yaml` `PolicyFlag`). Never a refusal.
+             * @enum {string}
+             */
+            PolicyFlag: "policy_revision_unknown" | "policy_revision_superseded" | "policy_value_mismatch";
+            /**
+             * @description A derived yes / no, or `unknown` when the shift's open carried no frozen policy (a pre-upgrade or pre-RT-384 shift). `unknown` is never "no exception". `approvalRequiredByPolicy` is `yes` when the frozen value is `limit` and `|variance| > limitAmount`; `approvalMissing` is `yes` when approval was required and no `varianceApprovedByUserId` was recorded.
+             * @enum {string}
+             */
+            PolicyTriState: "yes" | "no" | "unknown";
+            /** @description The persisted server finding on the recorded approver (AD-CASH-001 D-7, K-4); it never refused the close. `not_applicable`: no approver was recorded. `verified`: the approver held a manager role with store access and was not the closer when checked. `unverified` with a `reason` otherwise. Closes recorded before RT-385 (coordinator decision 4): no approver → `not_applicable`; an approver recorded but never checked → `unverified` / `check_unavailable`. */
+            ApproverCheck: {
+                /** @enum {string} */
+                status: "not_applicable" | "verified" | "unverified";
+                /** @enum {string|null} */
+                reason: "approver_is_closer" | "inactive_membership" | "not_manager" | "no_store_access" | "check_unavailable" | null;
+            };
+            /** @description RT-384: when present, `approvalMissing` follows from `approvalRequiredByPolicy` and the recorded approver: `unknown` exactly when `approvalRequiredByPolicy` is `unknown`; `no` when approval was not required, or was required and an approver was recorded; `yes` when approval was required and no approver was recorded (`varianceApprovedByUserId` `null`). `approvalRequiredByPolicy` is `unknown` exactly when `frozenPolicy` is `null`: a close whose open carried no frozen policy never reads as "no exception". The four RT-384 fields (`frozenPolicy`, `approvalRequiredByPolicy`, `approvalMissing`, `approverCheck`) are all present or all absent. */
+            ApprovalMissingMatches: unknown & unknown & unknown & unknown & unknown & unknown & unknown;
+            /** @description RT-384: when `approverCheck` is present it agrees with the recorded approver: `not_applicable` exactly when `varianceApprovedByUserId` is `null`, and `verified` or `unverified` when an approver was recorded. */
+            ApproverCheckMatchesApprover: unknown & unknown;
+            /** @description The shift variance policy frozen with the open (AD-CASH-001 D-6), as in `pos-shifts.openapi.yaml`: the source, the revision id (a uuid for `tenant` / `store`, `null` for `system` / `fallback`), the value and the accept-and-flag findings (empty when none). All four members are always present together. */
+            RecordedFrozenPolicy: {
+                /** @enum {string} */
+                policySource: "system" | "tenant" | "store" | "fallback";
+                /** Format: uuid */
+                policyRevisionId: string | null;
+                policyValue: components["schemas"]["CashVariancePolicyValue"];
+                policyFlags: components["schemas"]["PolicyFlag"][];
             };
             /** @description A recorded pay-in or pay-out, in the shift's currency (the close's `currencyCode`). `note` is `null` when none was recorded. */
             ShiftCashMovement: {
@@ -4576,8 +4624,14 @@ export namespace ShiftClosesSchema {
             MinAbsVariance: components["schemas"]["NonNegativeDecimalAmount"];
             /** @description Only closes in this currency. */
             CurrencyCodeQuery: components["schemas"]["CurrencyCode"];
-            /** @description `approved`: closes that recorded a `varianceApprovedByUserId`. `not_approved`: closes that did not (including zero-variance closes; combine with `min_abs_variance` to find unapproved variances). Whether the recorded approver was verified is not filterable until the persisted `approverCheck` exists (RT-384 / RT-385). */
+            /** @description `approved`: closes that recorded a `varianceApprovedByUserId`. `not_approved`: closes that did not (including zero-variance closes; combine with `min_abs_variance` to find unapproved variances). Whether the recorded approver was verified is the separate `approver_check` filter (RT-384, accepted from RT-387). */
             ApprovalQuery: "approved" | "not_approved";
+            /** @description RT-384, accepted from RT-387 (until then an unknown query key is 400 `validation_error`). Only closes whose `approvalRequiredByPolicy` is this value. */
+            ApprovalRequiredQuery: "yes" | "no" | "unknown";
+            /** @description RT-384, accepted from RT-387 (until then an unknown query key is 400 `validation_error`). Only closes whose `approvalMissing` is this value; `yes` lists the closes the frozen policy required a manager for and that recorded none. */
+            ApprovalMissingQuery: "yes" | "no" | "unknown";
+            /** @description RT-384, accepted from RT-387 (until then an unknown query key is 400 `validation_error`). Only closes whose persisted `approverCheck.status` is this value. */
+            ApproverCheckQuery: "not_applicable" | "verified" | "unverified";
             /** @description Opaque keyset cursor from a prior page's `nextCursor`. Do not decode or construct it; omit it for the first page. Reuse it only with the same filters. A value the server did not issue, or cannot decode, is 400 `validation_error`. */
             Cursor: string;
             /** @description Maximum items per page (bounded). The server MAY return fewer. */
@@ -4604,8 +4658,14 @@ export namespace ShiftClosesSchema {
                     min_abs_variance?: components["parameters"]["MinAbsVariance"];
                     /** @description Only closes in this currency. */
                     currency_code?: components["parameters"]["CurrencyCodeQuery"];
-                    /** @description `approved`: closes that recorded a `varianceApprovedByUserId`. `not_approved`: closes that did not (including zero-variance closes; combine with `min_abs_variance` to find unapproved variances). Whether the recorded approver was verified is not filterable until the persisted `approverCheck` exists (RT-384 / RT-385). */
+                    /** @description `approved`: closes that recorded a `varianceApprovedByUserId`. `not_approved`: closes that did not (including zero-variance closes; combine with `min_abs_variance` to find unapproved variances). Whether the recorded approver was verified is the separate `approver_check` filter (RT-384, accepted from RT-387). */
                     approval?: components["parameters"]["ApprovalQuery"];
+                    /** @description RT-384, accepted from RT-387 (until then an unknown query key is 400 `validation_error`). Only closes whose `approvalRequiredByPolicy` is this value. */
+                    approval_required?: components["parameters"]["ApprovalRequiredQuery"];
+                    /** @description RT-384, accepted from RT-387 (until then an unknown query key is 400 `validation_error`). Only closes whose `approvalMissing` is this value; `yes` lists the closes the frozen policy required a manager for and that recorded none. */
+                    approval_missing?: components["parameters"]["ApprovalMissingQuery"];
+                    /** @description RT-384, accepted from RT-387 (until then an unknown query key is 400 `validation_error`). Only closes whose persisted `approverCheck.status` is this value. */
+                    approver_check?: components["parameters"]["ApproverCheckQuery"];
                     /** @description Opaque keyset cursor from a prior page's `nextCursor`. Do not decode or construct it; omit it for the first page. Reuse it only with the same filters. A value the server did not issue, or cannot decode, is 400 `validation_error`. */
                     cursor?: components["parameters"]["Cursor"];
                     /** @description Maximum items per page (bounded). The server MAY return fewer. */
@@ -5821,6 +5881,409 @@ export namespace SyncOpsSchema {
     }
 }
 
-export type paths = AuthSchema.paths & ContextSchema.paths & TenantsSchema.paths & StoresSchema.paths & MembershipsSchema.paths & AuditSchema.paths & UnknownItemsSchema.paths & SettlementSchema.paths & ErpnextReconciliationSchema.paths & ShiftClosesSchema.paths & ConnectorAdminSchema.paths & ConnectorHealthSchema.paths & SyncOpsSchema.paths;
-export type components = AuthSchema.components & ContextSchema.components & TenantsSchema.components & StoresSchema.components & MembershipsSchema.components & AuditSchema.components & UnknownItemsSchema.components & SettlementSchema.components & ErpnextReconciliationSchema.components & ShiftClosesSchema.components & ConnectorAdminSchema.components & ConnectorHealthSchema.components & SyncOpsSchema.components;
-export type operations = AuthSchema.operations & ContextSchema.operations & TenantsSchema.operations & StoresSchema.operations & MembershipsSchema.operations & AuditSchema.operations & UnknownItemsSchema.operations & SettlementSchema.operations & ErpnextReconciliationSchema.operations & ShiftClosesSchema.operations & ConnectorAdminSchema.operations & ConnectorHealthSchema.operations & SyncOpsSchema.operations;
+export namespace DevicesSchema {
+    export interface paths {
+        "/api/v1/devices": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * List devices (exception-first, keyset paginated).
+             * @description The devices in the caller's tenant and store scope, exception-first (see the ordering rule above). Every filter is optional and they combine with AND. With no `store_id`, every store in the caller's scope is listed. An empty page (`items: []`, `nextCursor: null`) is a 200.
+             */
+            get: operations["consoleListDevices"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/devices/{deviceId}": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * Read one device.
+             * @description One device with its revoke note and retire attribution (the History tab's revoke / retire / replace chain). A device of another tenant, of a store outside the caller's scope, or absent is the same non-disclosing 404.
+             */
+            get: operations["consoleGetDevice"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/devices/{deviceId}/revoke": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            get?: never;
+            put?: never;
+            /**
+             * Revoke a device (structured reason, cascade, Cash Session rule).
+             * @description Revokes the device in one transaction, cascading to its live operator sessions and its pending pairing codes, under the Cash Session rule (see "Revoke" above for the decision order). Idempotent: a device that is already revoked answers 200 `already_revoked` with its current state and changes nothing. A malformed path or body is 400 before any read.
+             */
+            post: operations["consoleRevokeDevice"];
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+    }
+    export type webhooks = Record<string, never>;
+    export interface components {
+        schemas: {
+            /**
+             * @description `active`: the device token authenticates. `revoked`: it never will again (no un-revoke, RT-287 D-Q5). `retired`: revoked and closed out (RT-368). Derived; see "Trust state" above.
+             * @enum {string}
+             */
+            TrustState: "active" | "revoked" | "retired";
+            /**
+             * @description The closed RT-287 D-Q3 set (0040 CHECK `devices_revoke_reason_valid`). Security class: `lost`, `stolen`, `suspected_compromise`. `hardware_failure` with an open shift is a recovery revoke. `other` requires a note.
+             * @enum {string}
+             */
+            RevokeReason: "lost" | "stolen" | "suspected_compromise" | "hardware_failure" | "replaced" | "moved" | "retired" | "admin_error" | "other";
+            /** @description Operator free text: 1..500 characters and not blank (0040 CHECK `devices_revoke_note_shape`), and no NUL character, because Postgres `text` cannot store U+0000 (a NUL is 400 `validation_error`). For a recovery revoke: what happened and where the drawer cash physically is. No PII, no token, PIN or secret; never logged or audited. */
+            RevokeNote: string;
+            /** @description One device, as listed. Every key is always present; a value that is not recorded is `null`. No tenant id, token hash, previous token or rotation window. */
+            DeviceSummary: {
+                /** Format: uuid */
+                deviceId: string;
+                /**
+                 * Format: uuid
+                 * @description The store the device is paired to. Never changes: a move is a re-pair into the target store (RT-287 D-Q1).
+                 */
+                storeId: string;
+                /** @description The terminal label given at pairing; `null` when none. */
+                label: string | null;
+                trustState: components["schemas"]["TrustState"];
+                /**
+                 * Format: date-time
+                 * @description When the device was paired (server clock).
+                 */
+                createdAt: string;
+                /**
+                 * Format: date-time
+                 * @description When the device credential expires (RT-138 L2, 90 days). Reported, not yet enforced (RT-370).
+                 */
+                expiresAt: string;
+                /**
+                 * Format: date-time
+                 * @description The device's last authenticated activity (RT-138 L7). `null` until RT-370 writes it. Label it with `lastSeenSource`; activity alone never means healthy (RT-287 D-Q6).
+                 */
+                lastSeenAt: string | null;
+                /** @description Where `lastSeenAt` comes from, so the console can label it. `activity`: the last authenticated request (RT-138 L7). `null` exactly when `lastSeenAt` is null. A `heartbeat` value (AD-DEVICE-001 D-5) is added later; clients must show an unknown source as unknown, never as healthy. */
+                lastSeenSource: "activity" | null;
+                /**
+                 * Format: date-time
+                 * @description When the device was revoked (server clock); `null` while active.
+                 */
+                revokedAt: string | null;
+                /**
+                 * Format: uuid
+                 * @description The `users.id` who revoked it. `null` while active, and on a revoke recorded before RT-365 (actor unknown).
+                 */
+                revokedByUserId: string | null;
+                /** @description The structured reason. `null` while active, and on a revoke recorded before RT-365 (no reason recorded, never guessed). */
+                revokeReason: components["schemas"]["RevokeReason"] | null;
+                /**
+                 * Format: date-time
+                 * @description When the device was retired (RT-368); `null` otherwise.
+                 */
+                retiredAt: string | null;
+                /**
+                 * Format: uuid
+                 * @description The device this one replaced: the `replaces_device_id` of the pairing code that paired it (RT-367). `null` otherwise, and `null` when that device is in a store outside the caller's scope (out-of-scope reads as absent).
+                 */
+                replacesDeviceId: string | null;
+                /**
+                 * Format: uuid
+                 * @description The device paired by a code whose `replaces_device_id` is this device (RT-367). `null` otherwise, and `null` when that device is in a store outside the caller's scope.
+                 */
+                replacedByDeviceId: string | null;
+                /**
+                 * Format: uuid
+                 * @description The open custody exception: the id of the open shift still on this revoked device (see "Custody exception" above). `null` when there is none, and always `null` on an active device.
+                 */
+                custodyExceptionShiftId: string | null;
+            } & (components["schemas"]["TrustStateConsistency"] & components["schemas"]["LastSeenConsistency"]);
+            /** @description One device with its revoke note and retire attribution. The summary fields are the `DeviceSummary` fields, with the same rules. A retired device always carries `retireReason`; any other device has `retireReason` and `retiredByUserId` null. */
+            DeviceDetail: {
+                /** Format: uuid */
+                deviceId: string;
+                /** Format: uuid */
+                storeId: string;
+                label: string | null;
+                trustState: components["schemas"]["TrustState"];
+                /** Format: date-time */
+                createdAt: string;
+                /** Format: date-time */
+                expiresAt: string;
+                /** Format: date-time */
+                lastSeenAt: string | null;
+                lastSeenSource: "activity" | null;
+                /** Format: date-time */
+                revokedAt: string | null;
+                /** Format: uuid */
+                revokedByUserId: string | null;
+                revokeReason: components["schemas"]["RevokeReason"] | null;
+                /** Format: date-time */
+                retiredAt: string | null;
+                /** Format: uuid */
+                replacesDeviceId: string | null;
+                /** Format: uuid */
+                replacedByDeviceId: string | null;
+                /** Format: uuid */
+                custodyExceptionShiftId: string | null;
+                /** @description The note recorded with the revoke; `null` when none. Returned to the authorised operator only; never in the list, logs or audit. */
+                revokeNote: components["schemas"]["RevokeNote"] | null;
+                /**
+                 * Format: uuid
+                 * @description The `users.id` who retired the device (RT-368); `null` otherwise.
+                 */
+                retiredByUserId: string | null;
+                /** @description The retire reason (RT-368); `null` otherwise. Operator text, no PII. */
+                retireReason: string | null;
+            } & (components["schemas"]["TrustStateConsistency"] & components["schemas"]["LastSeenConsistency"] & unknown);
+            /** @description The trust state agrees with the revoke / retire timestamps, and a custody exception exists only on a revoked or retired device. */
+            TrustStateConsistency: unknown & unknown & unknown;
+            /** @description `lastSeenSource` is null exactly when `lastSeenAt` is null. */
+            LastSeenConsistency: unknown;
+            /** @description A keyset page of devices, exception-first. */
+            DevicePage: {
+                items: components["schemas"]["DeviceSummary"][];
+                /** @description Opaque cursor for the next page; `null` on the last page. */
+                nextCursor: string | null;
+            };
+            /** @description The revoke. `other` requires a `note` (400 otherwise). For a recovery revoke (`hardware_failure` while the device has an open shift) the `note` and `acknowledgeCustodyException: true` are required too (422 otherwise); elsewhere `acknowledgeCustodyException` is accepted and ignored. */
+            DeviceRevokeRequest: {
+                reason: components["schemas"]["RevokeReason"];
+                note?: components["schemas"]["RevokeNote"];
+                /** @description The client showed the custody-exception impact and the operator confirmed it. Required `true` for a recovery revoke. */
+                acknowledgeCustodyException?: boolean;
+            };
+            /** @description The revoke outcome and the device's state after the request. */
+            DeviceRevokeResult: {
+                /**
+                 * @description `revoked`: this request revoked the device. `already_revoked`: it was already revoked (or retired); nothing changed.
+                 * @enum {string}
+                 */
+                outcome: "revoked" | "already_revoked";
+                /** @description The device after the request. Always revoked or retired: a revoke that succeeds or repeats never leaves the device active. */
+                device: components["schemas"]["DeviceDetail"] & {
+                    /** @enum {unknown} */
+                    trustState?: "revoked" | "retired";
+                };
+            };
+            /** @description Canonical error envelope. Out-of-scope and cross-tenant refusals are non-disclosing (§II, §XII): they never name the cause. Open to additive fields (RT-366 adds the impact preview to the 409). */
+            Error: {
+                error: {
+                    /** @description Stable machine-readable error code. */
+                    code: string;
+                    /** @description Human-readable summary. No sensitive data, no cause enumeration. */
+                    message: string;
+                    /**
+                     * Format: uuid
+                     * @description Server-side correlation id; the cause is recorded server-side.
+                     */
+                    request_id?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description validation_error (400): a malformed path, query or body value, an unknown query or body key, a cursor the server cannot decode, or `other` without a `note`. Checked before any database read. */
+            ValidationFailure: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Unauthenticated (401): a missing or invalid session cookie, or a non-cookie credential. Non-disclosing. Owned by 028 (G10). */
+            Unauthorized: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Forbidden (403), with a stable code: `origin_rejected` — a cookie-authenticated revoke without a trusted `Origin` (RT-430); `recovery_revoke_forbidden` — a `store_manager` attempting a recovery revoke (`hardware_failure` while the device has an open shift), which is `owner` / `tenant_admin` only (RT-287 D-Q4 amended). */
+            RevokeForbidden: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description not_found (404), non-disclosing: identical for a role outside `owner` / `tenant_admin` / `store_manager`, another tenant's device or store, a store outside the caller's scope and an absent id. */
+            NotFound: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description unresolved_cash_session (409): the device has an open shift and the reason is neither a security reason nor a recovery revoke (`replaced`, `moved`, `retired`, `admin_error`, `other`). Close the shift on the till and let it sync, then revoke. Nothing was changed. */
+            UnresolvedCashSession: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Unprocessable (422), with a stable code, for a recovery revoke by `owner` / `tenant_admin`: `recovery_note_required` — no `note`; `custody_exception_not_acknowledged` — `acknowledgeCustodyException` is not `true`. Nothing was changed. */
+            RecoveryRequirementsUnmet: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description system_failure (500): unexpected server error; the cause is recorded server-side under `request_id`. */
+            SystemFailure: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+        parameters: {
+            /** @description The device id (`devices.id`, which is the paired `terminal_id`). Case insensitive: normalised to lower case before the lookup. A value that is not a UUID is 400 `validation_error` and never reaches the database. */
+            DeviceIdPath: string;
+            /** @description Only devices of this store (the Store Detail deep link). Validated against the caller's store scope: a store outside it, or of another tenant, is the non-disclosing 404. */
+            StoreIdQuery: string;
+            /** @description Only devices in this trust state. The states are mutually exclusive: `revoked` excludes retired devices. */
+            TrustStateQuery: components["schemas"]["TrustState"];
+            /** @description Opaque keyset cursor from a prior page's `nextCursor`. Do not decode or construct it; omit it for the first page. Reuse it only with the same filters. A value the server did not issue, or cannot decode, is 400 `validation_error`. */
+            Cursor: string;
+            /** @description Maximum items per page (bounded). The server MAY return fewer. */
+            PageSize: number;
+        };
+        requestBodies: never;
+        headers: never;
+        pathItems: never;
+    }
+    export type $defs = Record<string, never>;
+    export interface operations {
+        consoleListDevices: {
+            parameters: {
+                query?: {
+                    /** @description Only devices of this store (the Store Detail deep link). Validated against the caller's store scope: a store outside it, or of another tenant, is the non-disclosing 404. */
+                    store_id?: components["parameters"]["StoreIdQuery"];
+                    /** @description Only devices in this trust state. The states are mutually exclusive: `revoked` excludes retired devices. */
+                    trust_state?: components["parameters"]["TrustStateQuery"];
+                    /** @description Opaque keyset cursor from a prior page's `nextCursor`. Do not decode or construct it; omit it for the first page. Reuse it only with the same filters. A value the server did not issue, or cannot decode, is 400 `validation_error`. */
+                    cursor?: components["parameters"]["Cursor"];
+                    /** @description Maximum items per page (bounded). The server MAY return fewer. */
+                    page_size?: components["parameters"]["PageSize"];
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description A page of devices, exception-first. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DevicePage"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                404: components["responses"]["NotFound"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+        consoleGetDevice: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The device id (`devices.id`, which is the paired `terminal_id`). Case insensitive: normalised to lower case before the lookup. A value that is not a UUID is 400 `validation_error` and never reaches the database. */
+                    deviceId: components["parameters"]["DeviceIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The device. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DeviceDetail"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                404: components["responses"]["NotFound"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+        consoleRevokeDevice: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The device id (`devices.id`, which is the paired `terminal_id`). Case insensitive: normalised to lower case before the lookup. A value that is not a UUID is 400 `validation_error` and never reaches the database. */
+                    deviceId: components["parameters"]["DeviceIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DeviceRevokeRequest"];
+                };
+            };
+            responses: {
+                /** @description The device is revoked: by this request (`revoked`) or already (`already_revoked`). The body is the device's state after the request. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DeviceRevokeResult"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["RevokeForbidden"];
+                404: components["responses"]["NotFound"];
+                409: components["responses"]["UnresolvedCashSession"];
+                422: components["responses"]["RecoveryRequirementsUnmet"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+    }
+}
+
+export type paths = AuthSchema.paths & ContextSchema.paths & TenantsSchema.paths & StoresSchema.paths & MembershipsSchema.paths & AuditSchema.paths & UnknownItemsSchema.paths & SettlementSchema.paths & ErpnextReconciliationSchema.paths & ShiftClosesSchema.paths & ConnectorAdminSchema.paths & ConnectorHealthSchema.paths & SyncOpsSchema.paths & DevicesSchema.paths;
+export type components = AuthSchema.components & ContextSchema.components & TenantsSchema.components & StoresSchema.components & MembershipsSchema.components & AuditSchema.components & UnknownItemsSchema.components & SettlementSchema.components & ErpnextReconciliationSchema.components & ShiftClosesSchema.components & ConnectorAdminSchema.components & ConnectorHealthSchema.components & SyncOpsSchema.components & DevicesSchema.components;
+export type operations = AuthSchema.operations & ContextSchema.operations & TenantsSchema.operations & StoresSchema.operations & MembershipsSchema.operations & AuditSchema.operations & UnknownItemsSchema.operations & SettlementSchema.operations & ErpnextReconciliationSchema.operations & ShiftClosesSchema.operations & ConnectorAdminSchema.operations & ConnectorHealthSchema.operations & SyncOpsSchema.operations & DevicesSchema.operations;

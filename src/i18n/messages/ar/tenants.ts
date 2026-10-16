@@ -68,6 +68,7 @@ export const tenants = {
   "stores.detail.loadingNoun": "المتجر",
   "stores.detail.back": "العودة إلى المتاجر",
   "stores.detail.edit": "تعديل المتجر",
+  "stores.detail.devices": "أجهزة هذا المتجر",
 
   "stores.form.createTitle": "إضافة متجر",
   "stores.form.editTitle": "تعديل {name}",

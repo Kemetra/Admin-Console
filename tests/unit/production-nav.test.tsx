@@ -50,6 +50,7 @@ describe("production navigation", () => {
       "Stock discrepancies",
       "Shift closes",
       "Connection & sync",
+      "Devices",
       "Sign out",
     ]);
     expect(nav.querySelector("[aria-disabled='true']")).toBeNull();
@@ -84,6 +85,25 @@ describe("production navigation", () => {
     const nav = renderShell(role, false);
     expect(entryLabels(nav)).not.toContain("Connection & sync");
     expect(within(nav).queryByText("Integration")).toBeNull();
+  });
+
+  // RT-371: the device registry, in its own "Point of sale" section, for the
+  // roles the RT-365 API lets read it.
+  test.each(["owner", "tenant_admin", "store_manager"])(
+    "RT-371: %s sees Devices in its section",
+    (role) => {
+      const nav = renderShell(role, false);
+      expect(within(nav).getByRole("link", { name: "Devices" }).getAttribute("href")).toBe(
+        "/devices",
+      );
+      expect(within(nav).getByText("Point of sale").className).toBe("nav-section");
+    },
+  );
+
+  test.each(["store_staff", "cashier", "auditor"])("RT-371: %s has no Devices entry", (role) => {
+    const nav = renderShell(role, false);
+    expect(entryLabels(nav)).not.toContain("Devices");
+    expect(within(nav).queryByText("Point of sale")).toBeNull();
   });
 
   test("dev builds keep the gated placeholders, marked disabled", () => {
