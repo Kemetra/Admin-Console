@@ -89,5 +89,5 @@ export function timezoneOptions(current?: string): TimezoneOptions {
   const known = new Set(common);
   const other = new Set(runtimeZones().filter((zone) => !known.has(zone)));
   if (current && !known.has(current)) other.add(current);
-  return { common, other: [...other].sort() };
+  return { common, other: [...other].sort((a, b) => a.localeCompare(b)) };
 }
