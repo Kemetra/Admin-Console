@@ -49,6 +49,7 @@ describe("production navigation", () => {
       "Audit",
       "Stock discrepancies",
       "Shift closes",
+      "Connection & sync",
       "Sign out",
     ]);
     expect(nav.querySelector("[aria-disabled='true']")).toBeNull();
@@ -64,6 +65,25 @@ describe("production navigation", () => {
 
   test("RT-18: the shift-close review is hidden from roles the API refuses", () => {
     expect(entryLabels(renderShell("cashier", false))).not.toContain("Shift closes");
+  });
+
+  // RT-560 / RT-557 OD-2: one entry in its own "Integration" section, for the
+  // roles the API lets read the ERP connection & sync status.
+  test.each(["owner", "tenant_admin"])(
+    "RT-560: %s sees Connection & sync in its section",
+    (role) => {
+      const nav = renderShell(role, false);
+      expect(
+        within(nav).getByRole("link", { name: "Connection & sync" }).getAttribute("href"),
+      ).toBe("/erp-connection");
+      expect(within(nav).getByText("Integration").className).toBe("nav-section");
+    },
+  );
+
+  test.each(["store_manager", "cashier", "auditor"])("RT-560: %s has no entry", (role) => {
+    const nav = renderShell(role, false);
+    expect(entryLabels(nav)).not.toContain("Connection & sync");
+    expect(within(nav).queryByText("Integration")).toBeNull();
   });
 
   test("dev builds keep the gated placeholders, marked disabled", () => {

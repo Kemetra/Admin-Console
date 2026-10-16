@@ -1,0 +1,130 @@
+import type { erp as ar } from "../ar/erp";
+import type { MessagesOf } from "../types";
+
+export const erp: MessagesOf<typeof ar> = {
+  // --- Navigation (RT-557 OD-2: its own role-gated section) ---------------------
+  "erp.nav.section": "Integration",
+  "erp.nav.label": "Connection & sync",
+
+  // --- Page ---------------------------------------------------------------------
+  "erp.title": "ERP connection & sync",
+  "erp.sub": "ERPNext Connector, posting and reconciliation status in {tenant}. Read-only.",
+  "erp.scopePrompt": "Select a tenant to view the ERP connection status.",
+  "erp.refresh": "Refresh",
+  "erp.retry": "Retry",
+  "erp.loadMore": "Load more",
+  "erp.asOf": "Last read: {time}",
+  "erp.inlineError": "Couldn't refresh this section. Showing the last successful read.",
+  "erp.error.session": "Your session has ended. Sign in again.",
+  "erp.error.forbidden": "This section isn't available to your role.",
+  "erp.error.rejected": "The server rejected this request. Check the filter and try again.",
+  "erp.error.notFound": "This store isn't available to you.",
+
+  // --- Store filter ---------------------------------------------------------------
+  "erp.filter.store": "Store",
+  "erp.filter.allStores": "All stores",
+  "erp.filter.note":
+    "The store filter applies to the sync summary, rejected postings and reconciliation history. The connector connection is tenant-wide.",
+
+  // --- Connection panel (C1 joined with C2) ---------------------------------------
+  "erp.conn.title": "Connector connection",
+  "erp.conn.caption": "ERPNext Connector instances registered to this tenant",
+  "erp.conn.loadingNoun": "connector instances",
+  "erp.conn.empty": "No ERPNext Connector is registered for this tenant.",
+  "erp.conn.emptyHint":
+    "Registering a connector and issuing its credentials is a platform-team step for now.",
+  "erp.conn.loadFailed": "Couldn't load the connector instances.",
+  "erp.conn.healthFailed":
+    "Couldn't read the connection status, so every instance shows no signal.",
+  "erp.conn.noSignalNote":
+    "“No signal” means the connector hasn't sent a heartbeat yet. It is neither healthy nor an error.",
+  "erp.conn.col.instance": "Instance",
+  "erp.conn.col.environment": "Environment",
+  "erp.conn.col.site": "ERPNext site",
+  "erp.conn.col.signal": "Connection",
+  "erp.conn.col.lastSeen": "Last seen",
+  "erp.conn.col.version": "Version (reported by the connector)",
+  "erp.conn.col.reachable": "ERPNext reachable (reported by the connector)",
+  "erp.conn.col.credential": "Credential expires",
+  "erp.conn.never": "Never",
+  "erp.conn.unknown": "Unknown",
+  "erp.conn.since": "{duration} ago",
+  "erp.conn.reportedAt": "Reported {time}",
+  "erp.conn.noCredential": "No active credential",
+  "erp.conn.registrationDisabled": "Registration disabled",
+  "erp.reported.reachable": "Reachable",
+  "erp.reported.unreachable": "Not reachable",
+  "erp.reported.notReported": "Not reported",
+  "erp.env.dev": "Development",
+  "erp.env.staging": "Staging",
+  "erp.env.pilot": "Pilot",
+  "erp.env.prod": "Production",
+  "erp.env.unknown": "Unknown environment",
+  "erp.signal.healthy": "Connected",
+  "erp.signal.stale": "Delayed",
+  "erp.signal.noSignal": "No signal",
+  "erp.signal.disabled": "Disabled",
+
+  // --- Sync summary (C3) -------------------------------------------------------------
+  "erp.summary.title": "Sync summary",
+  "erp.summary.note": "Each domain shows its own status; there is no single combined status.",
+  "erp.summary.loadingNoun": "sync summary",
+  "erp.summary.loadFailed": "Couldn't load the sync summary.",
+  "erp.summary.empty": "The server returned no domains in the summary.",
+  "erp.summary.count": "Count: {count}",
+  "erp.domain.posting": "ERPNext posting",
+  "erp.domain.reconciliation": "Reconciliation",
+  "erp.domain.connector_health": "Connector health",
+  "erp.domain.product_master": "Product master",
+  "erp.domain.unknown": "Unknown domain",
+  "erp.domainStatus.ok": "Nothing needs attention",
+  "erp.domainStatus.attention": "Needs attention",
+  "erp.domainStatus.notAvailable": "Not available yet",
+  "erp.domainStatus.unknown": "Unknown status",
+
+  // --- Posting backlog (C3) -------------------------------------------------------------
+  "erp.backlog.title": "Permanently rejected postings",
+  "erp.backlog.sub":
+    "Postings to ERPNext that were rejected and won't be resent automatically. Read-only.",
+  "erp.backlog.reasonNote":
+    "The detailed rejection reason isn't available yet; only the rejection class is shown.",
+  "erp.backlog.caption": "Permanently rejected postings, newest first",
+  "erp.backlog.loadingNoun": "rejected postings",
+  "erp.backlog.empty": "No permanently rejected postings.",
+  "erp.backlog.loadFailed": "Couldn't load the rejected postings.",
+  "erp.backlog.col.kind": "Kind",
+  "erp.backlog.col.externalId": "POS reference",
+  "erp.backlog.col.source": "Source",
+  "erp.backlog.col.rejectionClass": "Rejection class",
+  "erp.backlog.col.deadLetteredAt": "Rejected at",
+  "erp.backlog.kind.sale_post": "Sale posting",
+  "erp.backlog.kind.reversal": "Reversal",
+  "erp.backlog.kind.unknown": "Unknown kind",
+  "erp.backlog.notRecorded": "Not recorded",
+
+  // --- Reconciliation runs (C3) ------------------------------------------------------------
+  "erp.runs.title": "Reconciliation history",
+  "erp.runs.sub":
+    "Stock reconciliation runs with ERPNext, newest first. Mismatch detail is in {link}.",
+  "erp.runs.caption": "Stock reconciliation runs, newest first",
+  "erp.runs.loadingNoun": "reconciliation runs",
+  "erp.runs.empty": "No reconciliation runs recorded.",
+  "erp.runs.loadFailed": "Couldn't load the reconciliation history.",
+  "erp.runs.col.store": "Store",
+  "erp.runs.col.trigger": "Started by",
+  "erp.runs.col.status": "Status",
+  "erp.runs.col.startedAt": "Started",
+  "erp.runs.col.finishedAt": "Finished",
+  "erp.runs.col.mismatches": "Mismatches by class",
+  "erp.runs.trigger.on_demand": "On demand",
+  "erp.runs.trigger.scheduled": "Schedule",
+  "erp.runs.trigger.unknown": "Unknown",
+  "erp.runs.status.running": "Running",
+  "erp.runs.status.completed": "Completed",
+  "erp.runs.status.failed": "Failed",
+  "erp.runs.status.unknown": "Unknown status",
+  "erp.runs.notFinished": "Not finished",
+  "erp.runs.noMismatches": "None recorded",
+  "erp.runs.mismatch": "{kind}: {count}",
+  "erp.runs.unknownStore": "Unknown store",
+};

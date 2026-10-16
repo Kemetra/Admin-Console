@@ -23,6 +23,7 @@ export type IconName =
   | "unknown"
   | "stock"
   | "cash"
+  | "connection"
   | "search"
   | "bell"
   | "help"
@@ -103,6 +104,14 @@ const PATHS: Record<IconName, React.ReactNode> = {
       <rect x="3" y="6.5" width="18" height="11" rx="1.5" />
       <circle cx="12" cy="12" r="2.5" />
       <path d="M6.5 12h0M17.5 12h0" />
+    </>
+  ),
+  // Two linked nodes — the ERPNext connector connection (RT-560).
+  connection: (
+    <>
+      <circle cx="6" cy="12" r="2.5" />
+      <circle cx="18" cy="12" r="2.5" />
+      <path d="M8.5 12h7" />
     </>
   ),
   // Magnifier — global search.

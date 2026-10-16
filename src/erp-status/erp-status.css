@@ -1,0 +1,150 @@
+/* RT-560 ERP connection & sync status. Built from existing tokens only; no new
+ * colour, font or dependency. Every status is a dot plus a text label, so
+ * colour is never the only cue; "no signal" is a hollow neutral dot (design
+ * system `.dot--hollow`). Logical properties throughout (RTL by structure). */
+
+.erp-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.erp-panel__title {
+  margin: 0;
+  color: var(--color-text);
+  font: var(--weight-strong) var(--text-section-title) / var(--leading-title) var(--font-sans);
+}
+
+.erp-pill {
+  gap: var(--space-2);
+}
+.erp-pill--success {
+  border-color: var(--color-success);
+  color: var(--color-success);
+}
+.erp-pill--warning {
+  border-color: var(--color-warning);
+  color: var(--color-warning);
+}
+.erp-pill--danger {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+.erp-pill--info {
+  border-color: var(--color-info);
+  color: var(--color-info);
+}
+.erp-pill--neutral {
+  color: var(--color-text);
+}
+
+.erp-dot {
+  inline-size: 8px;
+  block-size: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+.erp-dot--hollow {
+  background: transparent;
+  border: 2px solid currentColor;
+}
+
+.erp-stack {
+  display: inline-flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+/* Read-only rows: no pointer and no hover wash, so nothing reads as clickable. */
+.erp-row {
+  cursor: default;
+}
+.erp-row:hover {
+  background-color: transparent;
+}
+.erp-row__name {
+  font-weight: var(--weight-strong);
+  text-align: start;
+}
+
+.erp-note,
+.erp-asof {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-meta);
+}
+
+.erp-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-object);
+}
+.erp-filter__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.erp-filter__field label {
+  font: var(--weight-strong) var(--text-meta) / var(--leading-tight) var(--font-sans);
+  color: var(--color-text-muted);
+}
+.erp-filter__field .input {
+  inline-size: auto;
+  min-inline-size: 200px;
+}
+.erp-filter__note {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-meta);
+}
+
+.erp-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.erp-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-object);
+}
+.erp-tile__title {
+  margin: 0;
+  color: var(--color-text);
+  font: var(--weight-strong) var(--text-body) / var(--leading-title) var(--font-sans);
+}
+.erp-tile__count {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.erp-tile__detail {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-meta);
+}
+
+.erp-mismatches {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (forced-colors: active) {
+  .erp-dot:not(.erp-dot--hollow) {
+    background: CanvasText;
+  }
+}
