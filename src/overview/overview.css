@@ -1,0 +1,137 @@
+/* RT-559 Overview (spec 009 §7): sections with headings, not a card grid. The
+ * attention items are one "Precision Ledger" (label, count or state, link),
+ * then a plain link to the audit log (P-5 deferred). Role tokens only, logical
+ * properties only (RTL-first), numbers tabular. No colour carries meaning
+ * alone: states are words, badges reuse the stock screen's classes. */
+
+.overview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  margin-block-start: var(--space-5);
+}
+
+.overview__toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.overview__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.overview__heading {
+  margin: 0;
+  color: var(--color-text);
+  font: var(--weight-strong) var(--text-section-title) / var(--leading-title) var(--font-sans);
+}
+
+.ledger {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-block-start: 1px solid var(--color-border);
+}
+
+.ledger__row {
+  display: grid;
+  /* Fixed fractions so every row's columns line up (each row is its own grid). */
+  grid-template-columns: minmax(0, 5fr) minmax(0, 5fr) minmax(0, 3fr);
+  gap: var(--space-4);
+  align-items: baseline;
+  padding-block: var(--space-3);
+  border-block-end: 1px solid var(--color-border);
+}
+
+.ledger__label {
+  color: var(--color-text);
+  font-weight: var(--weight-medium);
+}
+
+.ledger__value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.ledger__count {
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.ledger__quiet {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.ledger__meta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--text-control);
+}
+
+.ledger__pending {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.ledger__error {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--color-danger);
+}
+
+.ledger__retry {
+  color: var(--color-text);
+}
+
+.ledger__link {
+  color: var(--color-primary-emphasis);
+  font-size: var(--text-control);
+}
+
+.ledger__row .ledger__link {
+  justify-self: end;
+  text-align: end;
+}
+
+.overview__related {
+  margin: 0;
+}
+
+@media (max-width: 720px) {
+  .ledger__row {
+    grid-template-columns: 1fr;
+    gap: var(--space-1);
+  }
+  .ledger__row .ledger__link {
+    justify-self: start;
+  }
+}
+
+@media (forced-colors: active) {
+  .ledger,
+  .ledger__row {
+    border-color: CanvasText;
+  }
+  .ledger__error {
+    color: CanvasText;
+  }
+}
+
+/* Refresh in flight: still focusable (aria-disabled), the label says "Refreshing…". */
+.overview__refresh[aria-disabled="true"] {
+  cursor: progress;
+}

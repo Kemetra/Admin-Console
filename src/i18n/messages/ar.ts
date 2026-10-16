@@ -11,6 +11,7 @@ import { common } from "./ar/common";
 import { erp } from "./ar/erp";
 import { money } from "./ar/money";
 import { operators } from "./ar/operators";
+import { overview } from "./ar/overview";
 import { shell } from "./ar/shell";
 import { shift } from "./ar/shift";
 import { stock } from "./ar/stock";
@@ -26,6 +27,7 @@ export const AR_MODULES = {
   stock,
   shift,
   money,
+  overview,
   erp,
 };
 
@@ -39,5 +41,6 @@ export const ar = {
   ...stock,
   ...shift,
   ...money,
+  ...overview,
   ...erp,
 };
