@@ -135,7 +135,10 @@ function StoreSnapshot({ row }: Readonly<{ row: StoreNegativeOnHandSummary }>): 
         })}
       </span>
       <span className="ledger__meta">
-        <span className={view.badgeClass}>{t(view.labelKey)}</span>
+        {/* Healthy stays quiet (§7): a fresh snapshot shows only its as-of time. */}
+        {row.snapshot.status === "fresh" ? null : (
+          <span className={view.badgeClass}>{t(view.labelKey)}</span>
+        )}
         {asOf ? (
           <span>{t.rich("overview.stock.asOf", { asOf: <DateTime value={asOf} /> })}</span>
         ) : null}

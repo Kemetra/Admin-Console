@@ -174,6 +174,9 @@ describe("Overview panels (RT-559, spec 009)", () => {
 
     const stock = await findRow(stockLabel("Cairo Festival City"));
     expect(within(stock).getByText("Negative items: 3")).toBeTruthy();
+    // Healthy stays quiet: no "Fresh snapshot" badge, only the as-of time.
+    expect(within(stock).queryByText("Fresh snapshot")).toBeNull();
+    expect(within(stock).getByText(/as of/)).toBeTruthy();
     expect(
       within(stock).getByRole("link", { name: "View store discrepancies" }).getAttribute("href"),
     ).toBe(`/stock-discrepancies/${A}`);
