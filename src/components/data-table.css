@@ -62,7 +62,7 @@
   background: var(--color-surface);
 }
 .data-table__row--skeleton:hover {
-  background-color: transparent;
+  background-color: var(--color-surface);
 }
 .skeleton {
   display: block;
