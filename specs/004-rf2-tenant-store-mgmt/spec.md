@@ -14,6 +14,17 @@
 | Scaffold slice | [`specs/002-tooling-and-scaffold`](../002-tooling-and-scaffold/) (merged) |
 | Auth-shell slice | [`specs/003-rf1-auth-shell`](../003-rf1-auth-shell/) (merged; RF-2 attaches to it) |
 
+> **Amendment — RT-400 (2026-10-16): store soft-delete is retired.** Per owner
+> decision 194 (permanent closure is a governed workflow, not a raw delete) and
+> RT-400 (PR #101, `fd6eb13`), the Admin Console no longer offers store
+> soft-delete: no `softDeleteStore` call, no confirm step, no `useStoreDelete`, and
+> no `store-delete` e2e. Wherever this spec (and its `tasks.md`, `design-brief.md`
+> and `contracts/`) describes store soft-delete — SF-S2/SF-S3, Scenario S8, A3 —
+> read it as **superseded**. The store «حالة المتجر» control is the V1
+> `is_active` flag only (readiness-gated activation is decision 188; closure is
+> decision 194). **Tenant soft-delete is unchanged.** Store time zone is tracked
+> in RT-477.
+
 > **Mode contract**: Planning-only. This spec specifies the RF-2 tenant/store
 > management surface (foundation `spec.md` §5, route family RF-2). It must not be
 > used to justify any implementation, component file, route file,
@@ -423,7 +434,10 @@ store list (SF-S1) re-fetches `listStores` for the new tenant; any store-scoped
 RF-2 view is dropped and re-resolved against the new scope. RF-2 holds no
 authoritative scope of its own — it reads RF-1's active context (OQ-5).
 
-### Scenario S8 — Soft-delete a store with confirmation
+### Scenario S8 — Soft-delete a store with confirmation (SUPERSEDED by RT-400)
+
+> Not implemented and no longer in scope — see the amendment at the top of this
+> spec (decision 194). Kept as historical record.
 
 A2 soft-deletes a store (SF-S3, `softDeleteStore`) behind a confirm step
 (a destructive action; DESIGN.md `.btn-destructive` + single-primary rule). On

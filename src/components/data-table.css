@@ -51,3 +51,28 @@
   font-size: var(--text-machine);
   color: var(--color-text-muted);
 }
+
+/* Loading skeleton (RT-549): flat placeholder bars in the approved designs'
+ * row rhythm. Not a row target: no pointer, no hover. Bars are static, so no
+ * reduced-motion handling is needed. */
+.data-table__row--skeleton {
+  cursor: default;
+  /* The design-system table ground (components.css .table): the sunken bars
+   * only read against the raised surface, not the page background. */
+  background: var(--color-surface);
+}
+.data-table__row--skeleton:hover {
+  background-color: var(--color-surface);
+}
+.skeleton {
+  display: block;
+  block-size: 10px;
+  border-radius: 4px;
+  background: var(--color-surface-sunken);
+}
+.data-table__row--skeleton td:first-child .skeleton {
+  inline-size: 26%;
+}
+.data-table__row--skeleton td:not(:first-child) .skeleton {
+  inline-size: 24%;
+}

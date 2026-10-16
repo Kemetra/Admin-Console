@@ -94,3 +94,74 @@ test("S5: no active tenant -> scope prompt, store list never loads", async ({ pa
   await expect(page.getByRole("heading", { name: t("shell.gate.title") })).toBeVisible();
   expect(storesCalled).toBe(false);
 });
+
+test("RT-549: loading shows the skeleton table with the real headers, then the rows", async ({
+  page,
+  t,
+}) => {
+  await mockBase(page, {
+    user,
+    active_tenant: { id: "t1", name: "Northstar Retail" },
+    active_store: null,
+    active_role_code: "tenant_admin",
+    memberships: [{ tenant_id: "t1", tenant_name: "Northstar Retail", role_code: "tenant_admin" }],
+  });
+  let release: () => void = () => {};
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/api/v1/stores", async (r) => {
+    await gate;
+    await r.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([
+        { id: "s1", code: "CFC", name: "Cairo Festival City", is_active: true },
+      ]),
+    });
+  });
+
+  await page.goto("/stores");
+  const table = page.getByRole("table", { name: t("stores.list.caption") });
+  await expect(table).toHaveAttribute("aria-busy", "true");
+  await expect(table.getByRole("columnheader")).toHaveCount(3);
+  await expect(table.locator("tbody tr")).toHaveCount(6);
+  await expect(
+    page.getByRole("status").filter({
+      hasText: t("components.list.loading", { label: t("stores.list.loadingNoun") }),
+    }),
+  ).toHaveCount(1);
+  // Hovering a skeleton row must not drop its surface ground (bars stay visible).
+  const row = table.locator("tbody tr").first();
+  const before = await row.evaluate((el) => getComputedStyle(el).backgroundColor);
+  await row.hover();
+  // Let the row's colour transition (--duration-2) settle before reading it back.
+  await row.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+  expect(await row.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(before);
+  // The header action is available while loading.
+  await expect(page.getByRole("link", { name: t("stores.list.add") })).toBeVisible();
+
+  release();
+  await expect(page.getByRole("cell", { name: "Cairo Festival City" })).toBeVisible();
+  await expect(page.getByRole("table", { name: t("stores.list.caption") })).not.toHaveAttribute(
+    "aria-busy",
+    "true",
+  );
+});
+
+test("RT-549: forced colours keep the skeleton bars visible as outlines", async ({ page }) => {
+  await page.emulateMedia({ forcedColors: "active" });
+  await mockBase(page, {
+    user,
+    active_tenant: { id: "t1", name: "Northstar Retail" },
+    active_store: null,
+    active_role_code: "tenant_admin",
+    memberships: [{ tenant_id: "t1", tenant_name: "Northstar Retail", role_code: "tenant_admin" }],
+  });
+  await page.route("**/api/v1/stores", () => new Promise(() => {}));
+
+  await page.goto("/stores");
+  const bar = page.locator(".skeleton").first();
+  await expect(bar).toBeVisible();
+  await expect(bar).toHaveCSS("border-top-width", "1px");
+});
