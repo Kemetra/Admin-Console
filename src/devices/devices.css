@@ -1,0 +1,137 @@
+/* RT-371 device registry. Built from existing tokens only; no new colour, font
+ * or dependency. Every state carries text (UX-02): colour reinforces, never
+ * decides. Unknown takes the danger role and is never softened to neutral
+ * (DESIGN.md §3). Logical properties throughout (RTL by structure). */
+
+.device-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-object);
+}
+.device-filters__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.device-filters__field label {
+  font: var(--weight-strong) var(--text-meta) / var(--leading-tight) var(--font-sans);
+  color: var(--color-text-muted);
+}
+.device-filters__field .input {
+  inline-size: auto;
+  min-inline-size: 180px;
+}
+.device-filters__actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-inline-start: auto;
+}
+
+/* Trust state: a bordered text pill. Active stays neutral (not proven healthy). */
+.device-trust--danger {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+.device-trust--muted {
+  color: var(--color-text-muted);
+}
+
+/* Attention and unknown values: text first, the role colour second. */
+.device-flag {
+  font-weight: var(--weight-strong);
+}
+.device-flag--danger {
+  color: var(--color-danger);
+}
+.device-flag--warning {
+  color: var(--color-warning);
+}
+.device-quiet {
+  color: var(--color-text-muted);
+}
+
+.device-name {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.device-name__id {
+  font-family: var(--font-mono);
+  font-size: var(--text-machine);
+  color: var(--color-text-muted);
+}
+
+.device-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--text-control);
+}
+
+/* Detail tabs: the selected tab carries the teal Signal Line under its label
+ * and a bold weight, so selection survives forced colours as a border. */
+.device-tabs {
+  display: flex;
+  gap: var(--space-1);
+  border-block-end: 1px solid var(--color-border);
+}
+.device-tab {
+  min-block-size: 36px;
+  padding-inline: var(--space-4);
+  background: none;
+  border: 0;
+  border-block-end: 2px solid transparent;
+  color: var(--color-text-muted);
+  font: var(--weight-regular) var(--text-control) / var(--leading-tight) var(--font-sans);
+  cursor: pointer;
+}
+.device-tab[aria-selected="true"] {
+  border-block-end-color: var(--color-primary);
+  color: var(--color-text);
+  font-weight: var(--weight-strong);
+}
+.device-tabpanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.device-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* History: an ordered timeline of recorded events, oldest first. */
+.device-history {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.device-history__event {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-inline-start: var(--space-4);
+  border-inline-start: 2px solid var(--color-border);
+}
+.device-history__title {
+  margin: 0;
+  font: var(--weight-strong) var(--text-body) / var(--leading-tight) var(--font-sans);
+}
+
+@media (forced-colors: active) {
+  .device-tab[aria-selected="true"] {
+    border-block-end-color: Highlight;
+  }
+}

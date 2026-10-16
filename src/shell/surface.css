@@ -111,6 +111,11 @@
   background: var(--color-surface-sunken);
   color: var(--color-text-muted);
 }
+/* Actions beside a title in .surface__head (RT-371): aligned with it, no top gap. */
+.surface__actions--head {
+  margin-top: 0;
+}
+
 .surface__actions--divided {
   margin-top: 0;
   padding-top: var(--space-5);

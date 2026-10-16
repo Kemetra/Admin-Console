@@ -22,6 +22,7 @@ import { SignInRoute } from "@/shell/SignInRoute";
  * block navigation (useBlocker). The route tree is unchanged; the root layout
  * hosts the providers the routes read.
  */
+import { deviceRoutes } from "@/shell/deviceRoutes";
 import { DirtyGuardProvider } from "@/shell/dirty-guard";
 import { erpStatusRoutes } from "@/shell/erpStatusRoutes";
 import { NavigationBlocker } from "@/shell/navigation-blocker";
@@ -78,6 +79,7 @@ const router = createBrowserRouter(
         {stockDiscrepancyRoutes}
         {shiftCloseRoutes}
         {erpStatusRoutes}
+        {deviceRoutes}
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Route>,

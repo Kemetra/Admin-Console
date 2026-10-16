@@ -10,6 +10,12 @@ import { useT } from "@/i18n";
  *
  * There is no delete or closure action: permanent closure is a governed
  * workflow (Org & Store decision 194), not something this V1 surface offers.
+ *
+ * RT-371: «أجهزة هذا المتجر» deep-links to the device registry filtered to this
+ * store. Like the edit action it is shown to everyone (no role pre-hide, OQ-3
+ * / VG-5): the device API's non-disclosing 404 is the authority, and the
+ * registry renders it as "this store's devices are not available to you". The
+ * link sets a filter in the URL, never the active scope.
  */
 import { Link, useParams } from "react-router";
 import { ScopePrompt } from "./ScopePrompt";
@@ -58,9 +64,17 @@ export function StoreDetail(): React.JSX.Element {
     <div className="surface">
       <header className="surface__head">
         <h1 className="content__title">{store.name}</h1>
-        <Link to={`/stores/${store.id}/edit`} className="btn-secondary">
-          {t("stores.detail.edit")}
-        </Link>
+        <div className="surface__actions surface__actions--head">
+          <Link
+            to={{ pathname: "/devices", search: `?store=${encodeURIComponent(store.id)}` }}
+            className="btn-ghost"
+          >
+            {t("stores.detail.devices")}
+          </Link>
+          <Link to={`/stores/${store.id}/edit`} className="btn-secondary">
+            {t("stores.detail.edit")}
+          </Link>
+        </div>
       </header>
 
       <dl className="surface__detail">

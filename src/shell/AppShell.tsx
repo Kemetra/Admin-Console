@@ -19,6 +19,7 @@ import { TowerMark } from "@/components/TowerMark";
  * announce it explicitly with a gate badge (RF-3 / RF-4).
  */
 import { useActiveContextValue } from "@/context/ActiveContextProvider";
+import { canReadDevices } from "@/devices/deviceLogic";
 import { canReadErpStatus } from "@/erp-status/erpStatusLogic";
 import { type MessageKey, roleKey, useT } from "@/i18n";
 import { LocaleSwitch } from "@/i18n/LocaleSwitch";
@@ -41,7 +42,7 @@ const LIVE_NAV: { label: MessageKey; to: string; icon: IconName }[] = [
 /**
  * Role-gated destinations, each under its own section: shown only for the roles
  * the API lets read the surface (RT-178 stock discrepancies, RT-18 shift
- * closes, RT-560 ERP connection). The nav mirrors the API; it is not an
+ * closes, RT-560 ERP connection, RT-371 devices). The nav mirrors the API; it is not an
  * authorization decision.
  */
 const ROLE_NAV: {
@@ -73,6 +74,14 @@ const ROLE_NAV: {
     to: "/erp-connection",
     icon: "connection",
     canRead: canReadErpStatus,
+  },
+  {
+    // RT-371: the device registry, for the roles the RT-365 API lets read it.
+    section: "devices.nav.section",
+    label: "devices.nav.label",
+    to: "/devices",
+    icon: "device",
+    canRead: canReadDevices,
   },
 ];
 

@@ -24,6 +24,7 @@ export type IconName =
   | "stock"
   | "cash"
   | "connection"
+  | "device"
   | "search"
   | "bell"
   | "help"
@@ -112,6 +113,13 @@ const PATHS: Record<IconName, React.ReactNode> = {
       <circle cx="6" cy="12" r="2.5" />
       <circle cx="18" cy="12" r="2.5" />
       <path d="M8.5 12h7" />
+    </>
+  ),
+  // Till terminal: a screen on a stand — the POS device registry (RT-371).
+  device: (
+    <>
+      <rect x="4" y="4" width="16" height="11" rx="1.5" />
+      <path d="M12 15v3M8 20h8" />
     </>
   ),
   // Magnifier — global search.

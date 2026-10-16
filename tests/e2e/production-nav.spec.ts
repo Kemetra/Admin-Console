@@ -33,6 +33,7 @@ test("production sidebar shows no RF-* placeholder entries", async ({ page, t })
     t("shell.nav.stockDiscrepancies"),
     t("shell.nav.shiftCloses"),
     t("erp.nav.label"),
+    t("devices.nav.label"),
     t("shell.signOut"),
   ]);
   await expect(nav.locator("[aria-disabled='true']")).toHaveCount(0);

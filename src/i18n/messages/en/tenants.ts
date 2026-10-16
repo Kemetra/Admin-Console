@@ -57,6 +57,7 @@ export const tenants: MessagesOf<typeof ar> = {
   "stores.detail.loadingNoun": "store",
   "stores.detail.back": "Back to stores",
   "stores.detail.edit": "Edit store",
+  "stores.detail.devices": "Devices in this store",
 
   "stores.form.createTitle": "Add store",
   "stores.form.editTitle": "Edit {name}",
