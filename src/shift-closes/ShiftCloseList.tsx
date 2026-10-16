@@ -23,12 +23,11 @@ import { ShiftScopePrompt } from "./ShiftScopePrompt";
 import {
   type ShiftCloseFilters,
   buildListQuery,
-  closeKindKey,
   filtersFromSearch,
   filtersToSearch,
   validateFilters,
-  varianceDirectionKey,
-} from "./shiftCloseLogic";
+} from "./shiftCloseFilters";
+import { closeKindKey, varianceDirectionKey } from "./shiftCloseLogic";
 import {
   type ListGate,
   type ShiftCloseError,
@@ -56,7 +55,7 @@ function shiftColumns(t: T, directory: StoreDirectory): DataTableColumn<ShiftClo
     {
       key: "kind",
       header: t("shift.list.col.kind"),
-      cell: (s) => <span className="badge">{t(closeKindKey(s.closeKind))}</span>,
+      cell: (s) => <span className="badge">{t(closeKindKey(s))}</span>,
     },
     {
       key: "expected",
@@ -74,7 +73,7 @@ function shiftColumns(t: T, directory: StoreDirectory): DataTableColumn<ShiftClo
       cell: (s) => (
         <span className="shift-variance">
           <Money signed value={s.variance} currency={s.currencyCode} />
-          <small className="shift-variance__label">{t(varianceDirectionKey(s.variance))}</small>
+          <small className="shift-variance__label">{t(varianceDirectionKey(s))}</small>
         </span>
       ),
     },
@@ -233,7 +232,7 @@ export function ShiftCloseList(): React.JSX.Element {
   const needsZone = Boolean(filters.storeId) && Boolean(filters.fromDate || filters.toDate);
   const zone = directory.timeZoneOf(filters.storeId) ?? "UTC";
   const gate = listGate(valid, needsZone && !directory.ready);
-  const list = useShiftCloseList(scope, buildListQuery(filters, zone), gate);
+  const list = useShiftCloseList(scope, buildListQuery({ filters, timeZone: zone }), gate);
 
   if (!scope.tenantId) return <ShiftScopePrompt />;
 

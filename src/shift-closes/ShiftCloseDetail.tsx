@@ -106,7 +106,7 @@ function SummarySection({ detail, storeName, timeZone }: Readonly<LoadedProps>):
           <MachineId value={detail.shiftId} />
         </Field>
         <Field label={t("shift.field.kind")}>
-          <span className="badge">{t(closeKindKey(detail.closeKind))}</span>
+          <span className="badge">{t(closeKindKey(detail))}</span>
         </Field>
         {detail.forcedReason ? (
           <Field label={t("shift.field.forcedReason")}>
@@ -162,9 +162,7 @@ function CashSection({ detail }: Readonly<{ detail: Detail }>): React.JSX.Elemen
         <Field label={t("shift.field.variance")}>
           <span className="shift-variance">
             <Money signed value={detail.variance} currency={currency} />
-            <small className="shift-variance__label">
-              {t(varianceDirectionKey(detail.variance))}
-            </small>
+            <small className="shift-variance__label">{t(varianceDirectionKey(detail))}</small>
           </span>
         </Field>
       </dl>
@@ -206,8 +204,8 @@ function MovementRow({
       <td>
         <DateTime value={movement.occurredAt} timeZone={timeZone} />
       </td>
-      <td>{t(movementKindKey(movement.kind))}</td>
-      <td>{t(reasonCodeKey(movement.reasonCode))}</td>
+      <td>{t(movementKindKey(movement))}</td>
+      <td>{t(reasonCodeKey(movement))}</td>
       <td>
         <Money value={movement.amount} currency={currency} />
       </td>

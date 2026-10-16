@@ -98,7 +98,7 @@ function dateTimeFormat(
   return f;
 }
 
-function isValidZone(timeZone: string): boolean {
+export function isValidZone(timeZone: string): boolean {
   try {
     new Intl.DateTimeFormat("en", { timeZone });
     return true;

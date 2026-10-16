@@ -13,7 +13,7 @@ import {
   type ShiftCloseFilters,
   filtersFromSearch,
   validateFilters,
-} from "./shiftCloseLogic";
+} from "./shiftCloseFilters";
 import type { StoreInfo } from "./useShiftCloses";
 import "./shift-closes.css";
 

@@ -1,17 +1,19 @@
 import { formatMoney, formatSignedMoney } from "@/i18n/format";
+import { zonedDayStartIso } from "@/shift-closes/shiftCloseDates";
 import {
   MIN_NONZERO_VARIANCE,
   PAGE_SIZE,
   buildListQuery,
-  canReadShiftCloses,
   filtersFromSearch,
   filtersToSearch,
+  validateFilters,
+} from "@/shift-closes/shiftCloseFilters";
+import {
+  canReadShiftCloses,
   flattenShiftClosePages,
   isShiftId,
   nextShiftCloseCursor,
-  validateFilters,
   varianceDirection,
-  zonedDayStartIso,
 } from "@/shift-closes/shiftCloseLogic";
 import { describe, expect, test } from "vitest";
 
@@ -54,7 +56,7 @@ describe("varianceDirection", () => {
     ["0.0000", "none"],
     ["-0.0000", "none"],
   ])("%s → %s", (variance, expected) => {
-    expect(varianceDirection(variance)).toBe(expected);
+    expect(varianceDirection({ variance })).toBe(expected);
   });
 });
 
@@ -96,24 +98,36 @@ describe("keyset paging", () => {
 
 describe("zonedDayStartIso", () => {
   test("UTC start of day", () => {
-    expect(zonedDayStartIso("2026-10-07", "UTC")).toBe("2026-10-07T00:00:00.000Z");
+    expect(zonedDayStartIso({ date: "2026-10-07", timeZone: "UTC" })).toBe(
+      "2026-10-07T00:00:00.000Z",
+    );
   });
 
   test("a zone ahead of UTC starts the day the evening before (UTC)", () => {
-    expect(zonedDayStartIso("2026-10-07", "Asia/Dubai")).toBe("2026-10-06T20:00:00.000Z");
+    expect(zonedDayStartIso({ date: "2026-10-07", timeZone: "Asia/Dubai" })).toBe(
+      "2026-10-06T20:00:00.000Z",
+    );
   });
 
   test("a zone behind UTC, with its daylight offset on that date", () => {
-    expect(zonedDayStartIso("2026-10-07", "America/New_York")).toBe("2026-10-07T04:00:00.000Z");
-    expect(zonedDayStartIso("2026-11-02", "America/New_York")).toBe("2026-11-02T05:00:00.000Z");
+    expect(zonedDayStartIso({ date: "2026-10-07", timeZone: "America/New_York" })).toBe(
+      "2026-10-07T04:00:00.000Z",
+    );
+    expect(zonedDayStartIso({ date: "2026-11-02", timeZone: "America/New_York" })).toBe(
+      "2026-11-02T05:00:00.000Z",
+    );
   });
 
   test("the day a zone's clocks change still starts at local midnight", () => {
-    expect(zonedDayStartIso("2026-11-01", "America/New_York")).toBe("2026-11-01T04:00:00.000Z");
+    expect(zonedDayStartIso({ date: "2026-11-01", timeZone: "America/New_York" })).toBe(
+      "2026-11-01T04:00:00.000Z",
+    );
   });
 
   test("an unknown zone falls back to UTC rather than the browser's zone", () => {
-    expect(zonedDayStartIso("2026-10-07", "Not/AZone")).toBe("2026-10-07T00:00:00.000Z");
+    expect(zonedDayStartIso({ date: "2026-10-07", timeZone: "Not/AZone" })).toBe(
+      "2026-10-07T00:00:00.000Z",
+    );
   });
 });
 
@@ -217,7 +231,7 @@ describe("validateFilters", () => {
 
 describe("buildListQuery", () => {
   test("with no filters it still asks the server for non-zero variance only", () => {
-    expect(buildListQuery(NONE, "UTC")).toEqual({
+    expect(buildListQuery({ filters: NONE, timeZone: "UTC" })).toEqual({
       min_abs_variance: MIN_NONZERO_VARIANCE,
       page_size: PAGE_SIZE,
     });
@@ -225,16 +239,22 @@ describe("buildListQuery", () => {
   });
 
   test("a zero or blank minimum is raised to the floor; a larger one is kept", () => {
-    expect(buildListQuery({ ...NONE, minVariance: "0" }, "UTC").min_abs_variance).toBe("0.0001");
-    expect(buildListQuery({ ...NONE, minVariance: "0.0000" }, "UTC").min_abs_variance).toBe(
-      "0.0001",
-    );
-    expect(buildListQuery({ ...NONE, minVariance: "25.50" }, "UTC").min_abs_variance).toBe("25.50");
+    expect(
+      buildListQuery({ filters: { ...NONE, minVariance: "0" }, timeZone: "UTC" }).min_abs_variance,
+    ).toBe("0.0001");
+    expect(
+      buildListQuery({ filters: { ...NONE, minVariance: "0.0000" }, timeZone: "UTC" })
+        .min_abs_variance,
+    ).toBe("0.0001");
+    expect(
+      buildListQuery({ filters: { ...NONE, minVariance: "25.50" }, timeZone: "UTC" })
+        .min_abs_variance,
+    ).toBe("25.50");
   });
 
   test("maps every filter to the generated client's query keys", () => {
-    const q = buildListQuery(
-      {
+    const q = buildListQuery({
+      filters: {
         storeId: "0190f000-0000-7000-8000-0000000000a1",
         fromDate: "2026-10-01",
         toDate: "2026-10-07",
@@ -243,8 +263,8 @@ describe("buildListQuery", () => {
         currency: "egp",
         approval: "approved",
       },
-      "Asia/Dubai",
-    );
+      timeZone: "Asia/Dubai",
+    });
     expect(q).toEqual({
       store_id: "0190f000-0000-7000-8000-0000000000a1",
       closed_from: "2026-09-30T20:00:00.000Z",
