@@ -34,6 +34,8 @@ import openapiTS, { astToString, COMMENT_HEADER } from "openapi-typescript";
  *     erpnext-sync-ops/console-sync-ops.yaml (consoleGetSyncOpsSummary,
  *     consoleListPostingBacklog, consoleListReconciliationRuns) — RT-560
  *     (spec 016 Phase A); added at the existing pin, no re-pin
+ *   - devices.openapi.yaml (consoleListDevices, consoleGetDevice; the
+ *     consoleRevokeDevice write is in the document but not wrapped) — RT-371
  *
  * The pin is UNCHANGED across slices; new slices add their contract source and
  * regenerate at the same SHA (regeneration, not a re-pin).
@@ -62,8 +64,15 @@ import openapiTS, { astToString, COMMENT_HEADER } from "openapi-typescript";
  * 2b03ad2 (Backend-Core main) to pick up `Store.timezone` (RT-401, PR #746;
  * stores.openapi.yaml) and the admin shift-close read API (RT-383, PRs #737 /
  * #740; `shift-closes.openapi.yaml`, added to the composed sources below).
+ *
+ * FOURTH deliberate re-pin (RT-371, 2026-10-16): bumped 2b03ad2 -> ba22a81
+ * (Backend-Core PR #781 / RT-365 runtime) to add the device registry source
+ * (`devices.openapi.yaml`, contract #777). Drift across the composed sources:
+ * `shift-closes.openapi.yaml` 1.1.0-draft (RT-384) is additive (optional
+ * properties and filters); every other source except Settlement is
+ * byte-identical. Settlement is HELD at the previous pin (see its entry below).
  */
-export const DATA_PULSE_2_PIN = "2b03ad2de5394f54bae296b726ed6fc76ac8af4e" as const;
+export const DATA_PULSE_2_PIN = "ba22a8128179106978f1c87ca5ead2cbc3a00b6b" as const;
 
 /**
  * The OpenAPI sources composed into the generated client, one entry per
@@ -78,7 +87,8 @@ export const DATA_PULSE_2_PIN = "2b03ad2de5394f54bae296b726ed6fc76ac8af4e" as co
  *   specs/007-rf4a-unknown-items/contracts/rf4a-unknown-items.md).
  *
  * `path` is relative to the Data-Pulse-2 repo root at the pinned SHA; `name` is
- * the TypeScript namespace the source is emitted under.
+ * the TypeScript namespace the source is emitted under; an optional `pin`
+ * overrides `DATA_PULSE_2_PIN` for that one source (a temporary hold only).
  */
 export const OPENAPI_SOURCE_SPECS = [
   { name: "Auth", path: "packages/contracts/openapi/auth.openapi.yaml" },
@@ -90,7 +100,17 @@ export const OPENAPI_SOURCE_SPECS = [
   { name: "UnknownItems", path: "packages/contracts/openapi/catalog/unknown-items.yaml" },
   // Settlement boundary (017/018/019): payer accounts, receivables, claims,
   // apply-payment, reconciliation. Consume-only; specs author no YAML.
-  { name: "Settlement", path: "packages/contracts/openapi/settlement/settlement.yaml" },
+  //
+  // TEMPORARY per-source pin (RT-371, coordinator-approved): Settlement is held
+  // at 2b03ad2 because settlement.yaml 2.0.0 (Backend-Core #779, RT-417) removes
+  // operations the shipped 018/019 screens still call (receivables, claims,
+  // remittance, apply-payment). RT-421 removes this hold after RT-418, together
+  // with those callers. Guarded by tests/unit/openapi-pin-override.test.ts.
+  {
+    name: "Settlement",
+    path: "packages/contracts/openapi/settlement/settlement.yaml",
+    pin: "2b03ad2de5394f54bae296b726ed6fc76ac8af4e",
+  },
   // ERPNext reconciliation (RT-178): the negative on-hand read pair plus the
   // `triggerReconciliationRun` refresh. Consume-only; no YAML authored here.
   {
@@ -110,6 +130,9 @@ export const OPENAPI_SOURCE_SPECS = [
     path: "packages/contracts/openapi/erpnext-connector/connector-health.yaml",
   },
   { name: "SyncOps", path: "packages/contracts/openapi/erpnext-sync-ops/console-sync-ops.yaml" },
+  // Console device registry (RT-365 contract #777 / runtime #781; RT-371): the
+  // fleet list and device detail reads. Consume-only; no YAML authored here.
+  { name: "Devices", path: "packages/contracts/openapi/devices.openapi.yaml" },
 ] as const;
 
 /** Upstream source paths (kept for back-compat / documentation references). */
@@ -148,8 +171,13 @@ function resolveDataPulseRepo(): string {
   return candidate;
 }
 
-function readPinnedSource(dataPulseRepo: string, sourcePath: string): string {
-  return execFileSync("git", ["-C", dataPulseRepo, "show", `${DATA_PULSE_2_PIN}:${sourcePath}`], {
+/** The SHA a source is read at: its own `pin` (a temporary hold), else the global pin. */
+export function pinOf(spec: (typeof OPENAPI_SOURCE_SPECS)[number]): string {
+  return "pin" in spec ? spec.pin : DATA_PULSE_2_PIN;
+}
+
+function readPinnedSource(dataPulseRepo: string, sourcePath: string, pin: string): string {
+  return execFileSync("git", ["-C", dataPulseRepo, "show", `${pin}:${sourcePath}`], {
     encoding: "utf8",
     windowsHide: true,
   });
@@ -174,7 +202,9 @@ function indent(text: string): string {
 }
 
 function composeSchema(generatedTypesBySource: readonly string[]): string {
-  const sourceList = OPENAPI_SOURCE_SPECS.map((spec) => `// - ${spec.path}`).join("\n");
+  const sourceList = OPENAPI_SOURCE_SPECS.map((spec) =>
+    "pin" in spec ? `// - ${spec.path} (held @ ${spec.pin})` : `// - ${spec.path}`,
+  ).join("\n");
   const namespaceBlocks = OPENAPI_SOURCE_SPECS.map(
     (spec, index) =>
       `export namespace ${spec.name}Schema {\n${indent(stripOpenApiTypescriptHeader(generatedTypesBySource[index]))}\n}`,
@@ -200,16 +230,22 @@ export type operations = ${intersection("operations")};
 
 async function generateClientSchema(): Promise<void> {
   const dataPulseRepo = resolveDataPulseRepo();
-  execFileSync("git", ["-C", dataPulseRepo, "cat-file", "-e", `${DATA_PULSE_2_PIN}^{commit}`], {
-    stdio: "ignore",
-    windowsHide: true,
-  });
+  for (const pin of new Set(OPENAPI_SOURCE_SPECS.map(pinOf))) {
+    execFileSync("git", ["-C", dataPulseRepo, "cat-file", "-e", `${pin}^{commit}`], {
+      stdio: "ignore",
+      windowsHide: true,
+    });
+  }
 
   const tempDir = mkdtempSync(join(tmpdir(), "retail-tower-console-openapi-"));
   const generatedTypes = await Promise.all(
     OPENAPI_SOURCE_SPECS.map(async (spec) => {
       const sourceFilePath = join(tempDir, `${spec.name.toLowerCase()}.openapi.yaml`);
-      writeFileSync(sourceFilePath, readPinnedSource(dataPulseRepo, spec.path), "utf8");
+      writeFileSync(
+        sourceFilePath,
+        readPinnedSource(dataPulseRepo, spec.path, pinOf(spec)),
+        "utf8",
+      );
       return generateSourceTypes(sourceFilePath);
     }),
   );
