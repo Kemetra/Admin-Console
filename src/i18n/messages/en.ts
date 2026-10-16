@@ -7,6 +7,7 @@ import type { ar } from "./ar";
 import { audit } from "./en/audit";
 import { auth } from "./en/auth";
 import { common } from "./en/common";
+import { erp } from "./en/erp";
 import { money } from "./en/money";
 import { operators } from "./en/operators";
 import { overview } from "./en/overview";
@@ -27,6 +28,7 @@ export const EN_MODULES = {
   shift,
   money,
   overview,
+  erp,
 };
 
 export const en: MessagesOf<typeof ar> = {
@@ -40,4 +42,5 @@ export const en: MessagesOf<typeof ar> = {
   ...shift,
   ...money,
   ...overview,
+  ...erp,
 };

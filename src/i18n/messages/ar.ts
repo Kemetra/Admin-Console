@@ -8,6 +8,7 @@
 import { audit } from "./ar/audit";
 import { auth } from "./ar/auth";
 import { common } from "./ar/common";
+import { erp } from "./ar/erp";
 import { money } from "./ar/money";
 import { operators } from "./ar/operators";
 import { overview } from "./ar/overview";
@@ -27,6 +28,7 @@ export const AR_MODULES = {
   shift,
   money,
   overview,
+  erp,
 };
 
 export const ar = {
@@ -40,4 +42,5 @@ export const ar = {
   ...shift,
   ...money,
   ...overview,
+  ...erp,
 };

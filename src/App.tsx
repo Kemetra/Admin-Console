@@ -23,6 +23,7 @@ import { SignInRoute } from "@/shell/SignInRoute";
  * hosts the providers the routes read.
  */
 import { DirtyGuardProvider } from "@/shell/dirty-guard";
+import { erpStatusRoutes } from "@/shell/erpStatusRoutes";
 import { NavigationBlocker } from "@/shell/navigation-blocker";
 import { payerRoutes } from "@/shell/payerRoutes";
 import { receivableRoutes } from "@/shell/receivableRoutes";
@@ -76,6 +77,7 @@ const router = createBrowserRouter(
         {receivableRoutes}
         {stockDiscrepancyRoutes}
         {shiftCloseRoutes}
+        {erpStatusRoutes}
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Route>,
