@@ -1,5 +1,7 @@
 # Draft 013 — RF Monitoring / Pipeline Ops
 
+**Current status (2026-10-16, RT-558):** Covered by RT-391 (Platform Control Center); tenant-scoped ERP posting/reconciliation status is spec 016 (RT-557).
+
 > **VISION STUB — NOT YET SPECIFIED.** Seeded from a design vision mockup. No goals, contracts, data model, or tasks defined yet. Run `/speckit-specify` when ready to build.
 
 **Status:** VISION-STUB / DRAFT. **Date:** 2026-06-13. **Owning repo:** Retail-Tower-Console.

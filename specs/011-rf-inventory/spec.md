@@ -1,5 +1,7 @@
 # Draft 011 — RF Inventory
 
+**Current status (2026-10-16, RT-558):** Covered by RT-436 / RT-455 and the Stock discrepancies screens.
+
 > **VISION STUB — NOT YET SPECIFIED.** Seeded from a design vision mockup. No goals, contracts, data model, or tasks defined yet. Run `/speckit-specify` when ready to build.
 
 **Status:** VISION-STUB / DRAFT. **Date:** 2026-06-13. **Owning repo:** Retail-Tower-Console.
