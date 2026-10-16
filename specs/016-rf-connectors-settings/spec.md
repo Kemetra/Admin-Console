@@ -83,7 +83,18 @@ contracts below. Refreshing those rows is RT-558's job (Docs), not this spec's.
 | store_manager, cashier | **No access.** Navigation is hidden by role (DESIGN.md UX-09). The server is the authority: a call returns 403/404. |
 | platform_admin | Out of scope here. Reaches tenant data only through RT-391 / RT-414 support sessions. |
 
-## 3. Consumed Backend-Core contracts (all exist on `main`; none invented)
+## 3. Operator needs vs what Backend-Core `main` serves
+
+| Operator need | Served on BC `1d26d287`? | By | Gap |
+| --- | --- | --- | --- |
+| ERP connection status | **Yes (contract + runtime)** | C1 `tenantAdminListConnectorInstances`, C2 `listConnectorHealth` / `getConnectorHealth` | No Connector heartbeat sender, so every instance reads `never_seen`. The summary's `connector_health` domain is hard-coded `not_available`. |
+| Last successful posting / sync | **No** | Nearest proxies only: the C3 posting `DomainSummary` (dead-letter count; `detail` is fixed text such as "No posting dead-letters"), C2 `lastSeenAt` (connector liveness, not posting), C3 run `finishedAt` (stock reconciliation, not posting) | There is no "last successfully posted at" or "oldest pending posting age" read. Proposed as issue 6 (§9), stated as a need without field names. Until then the UI must not imply "posting is current". |
+| Posting failures needing attention | **Yes** | C3 `consoleListPostingBacklog` | `rejectionClass` only; reason text is RT-410. |
+| Reconciliation outcome | **Yes** | C3 `consoleListReconciliationRuns`, summary `reconciliation` domain | — |
+| Operator-owned connector configuration | **Yes** | C1 register / issue / rotate / revoke / disable | Owner decision OD-1 on whether to expose it in the browser. |
+| Other tenant/store settings | Out of scope | — | See §1.3. |
+
+## 3a. Consumed Backend-Core contracts (all exist on `main`; none invented)
 
 | # | Contract (Backend-Core `packages/contracts/openapi/`) | Operations used | In console client today? |
 | --- | --- | --- | --- |
@@ -244,6 +255,10 @@ never offered.
    approved.
 5. *(Optional, later)* **Admin-Console — ERP item / warehouse mapping readiness**, if the owner
    wants mapping management in the console.
+6. **Backend-Core — posting freshness read for the console** (Planning, contract-first). The
+   operator needs to know when posting last succeeded, or how old the oldest pending posting is,
+   for the tenant or a store. Field names and semantics are Backend-Core's to define. Today only
+   the dead-letter count exists (§3).
 
 ## 10. Boundaries with sibling specs
 
@@ -251,6 +266,14 @@ never offered.
   deep-links to 016. 016 owns the detail view. RT-555 defers that tile until 016 exists.
 - **013 Monitoring / pipeline ops (vision stub):** overlaps on posting backlog and reconciliation
   runs for the tenant persona. Flagged to RT-558 so the stub can be pointed here or retired.
+- **Sale-sync-ops (Backend-Core spec 032, `sale-sync-ops/sale-sync-ops.yaml`):**
+  `consoleGetSaleSyncStatus`, `consoleListNeedsRepair`, `consoleGetSaleAuditTimeline` and
+  `consoleRepairSaleSync` exist (owner/tenant_admin). They cover POS → Backend-Core sale sync
+  per sale, not ERP posting. Per-sale sync status belongs to the sale detail in **012 Sales
+  (RT-556)**. `consoleRepairSaleSync` is **excluded from 016**. RT-391 found the needs-repair
+  dead-letter producer unwired. On BC `1d26d287` the producer
+  (`apps/worker/src/sales/sale-sync-deadletter.producer.ts`) exists, but code search shows no
+  caller outside its own test. Re-verify before any UI relies on that list being non-empty.
 - **Stock discrepancies (shipped, RT-178):** owns negative on-hand and the reconciliation Refresh.
   016 run history links to it.
 - **020 Admin observability instrumentation:** watches the Admin app itself, which is distinct
