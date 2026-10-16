@@ -52,8 +52,13 @@ import openapiTS, { astToString, COMMENT_HEADER } from "openapi-typescript";
  * 8 existing sources DID drift between the two SHAs (validation constraints,
  * `additionalProperties: false`, `x-runtime-*` annotations, settlement money
  * patterns + a 429 response); the regenerated client absorbs them.
+ *
+ * THIRD deliberate re-pin (RT-477 / RT-18, 2026-10-16): bumped 7597a87 ->
+ * 2b03ad2 (Backend-Core main) to pick up `Store.timezone` (RT-401, PR #746;
+ * stores.openapi.yaml) and the admin shift-close read API (RT-383, PRs #737 /
+ * #740; `shift-closes.openapi.yaml`, added to the composed sources below).
  */
-export const DATA_PULSE_2_PIN = "7597a8741d754ce61d28977cc634633d4ed12f80" as const;
+export const DATA_PULSE_2_PIN = "2b03ad2de5394f54bae296b726ed6fc76ac8af4e" as const;
 
 /**
  * The OpenAPI sources composed into the generated client, one entry per
@@ -87,6 +92,9 @@ export const OPENAPI_SOURCE_SPECS = [
     name: "ErpnextReconciliation",
     path: "packages/contracts/openapi/erpnext-reconciliation/reconciliation.yaml",
   },
+  // Admin shift-close read API (RT-383 / RT-18): `consoleListShiftCloses`,
+  // `consoleGetShiftClose`. Consume-only; no YAML authored here.
+  { name: "ShiftCloses", path: "packages/contracts/openapi/shift-closes.openapi.yaml" },
 ] as const;
 
 /** Upstream source paths (kept for back-compat / documentation references). */
