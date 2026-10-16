@@ -30,6 +30,7 @@ import { rf2Routes } from "@/shell/rf2Routes";
 import { rf4aRoutes } from "@/shell/rf4aRoutes";
 import { rf5Routes } from "@/shell/rf5Routes";
 import { rf6Routes } from "@/shell/rf6Routes";
+import { shiftCloseRoutes } from "@/shell/shiftCloseRoutes";
 import { stockDiscrepancyRoutes } from "@/shell/stockDiscrepancyRoutes";
 import { QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -74,6 +75,7 @@ const router = createBrowserRouter(
         {payerRoutes}
         {receivableRoutes}
         {stockDiscrepancyRoutes}
+        {shiftCloseRoutes}
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Route>,

@@ -8,7 +8,7 @@
  * switch can't leave one string behind in the old language.
  */
 import { Fragment, createElement, useEffect, useSyncExternalStore } from "react";
-import { formatDateTime, formatMoney } from "./format";
+import { formatDateTime, formatMoney, formatSignedMoney } from "./format";
 import { type Locale, applyLocaleToDocument, getLocale, subscribeLocale } from "./locale";
 import {
   type MessageKey,
@@ -82,17 +82,26 @@ export function DocumentLocale(): null {
   return null;
 }
 
-/** An exact `Money` amount as `1,250.00 EGP`, isolated LTR (UX-12). */
+/**
+ * An exact `Money` amount as `1,250.00 EGP`, isolated LTR (UX-12). EGP unless
+ * the contract gives a `currency` code. `signed` writes an explicit sign
+ * (`+12.50 EGP` / `-12.50 EGP`) for a signed difference; direction never implies
+ * a colour.
+ */
 export function Money({
   value,
+  currency,
+  signed,
   className,
 }: Readonly<{
   value: string;
+  currency?: string;
+  signed?: boolean;
   className?: string;
 }>): React.JSX.Element {
   return (
     <bdi dir="ltr" className={className}>
-      {formatMoney(value)}
+      {signed ? formatSignedMoney(value, currency) : formatMoney(value, currency)}
     </bdi>
   );
 }

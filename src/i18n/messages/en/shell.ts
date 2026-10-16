@@ -11,6 +11,8 @@ export const shell: MessagesOf<typeof ar> = {
   "shell.nav.audit": "Audit",
   "shell.nav.section.inventory": "Inventory",
   "shell.nav.stockDiscrepancies": "Stock discrepancies",
+  "shell.nav.section.cash": "Cash",
+  "shell.nav.shiftCloses": "Shift closes",
   "shell.nav.catalog": "Catalog",
   "shell.nav.unknownItems": "Unknown items",
   "shell.signOut": "Sign out",

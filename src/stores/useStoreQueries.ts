@@ -28,6 +28,8 @@ type Store = {
   tenant_id?: string;
   code: string;
   name: string;
+  /** The store's IANA time zone (RT-401); shift and sales times are shown in it. */
+  timezone?: string;
   is_active?: boolean;
   created_at?: string;
   updated_at?: string;

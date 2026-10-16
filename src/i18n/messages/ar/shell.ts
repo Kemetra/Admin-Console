@@ -11,6 +11,8 @@ export const shell = {
   "shell.nav.audit": "سجل التدقيق",
   "shell.nav.section.inventory": "المخزون",
   "shell.nav.stockDiscrepancies": "فروقات المخزون",
+  "shell.nav.section.cash": "النقدية",
+  "shell.nav.shiftCloses": "إقفالات الورديات",
   "shell.nav.catalog": "الكتالوج",
   "shell.nav.unknownItems": "أصناف غير معروفة",
   "shell.signOut": "تسجيل الخروج",

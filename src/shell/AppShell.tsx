@@ -21,8 +21,10 @@ import { TowerMark } from "@/components/TowerMark";
 import { useActiveContextValue } from "@/context/ActiveContextProvider";
 import { type MessageKey, roleKey, useT } from "@/i18n";
 import { LocaleSwitch } from "@/i18n/LocaleSwitch";
+import { canReadShiftCloses } from "@/shift-closes/shiftCloseLogic";
 import { canReadStockDiscrepancies } from "@/stock-discrepancies/stockDiscrepancyLogic";
 import { ThemeToggle } from "@/theme/ThemeToggle";
+import { Fragment } from "react";
 import { NavLink } from "react-router";
 import { ScopeHeader } from "./ScopeHeader";
 import "./app-shell.css";
@@ -33,6 +35,34 @@ const LIVE_NAV: { label: MessageKey; to: string; icon: IconName }[] = [
   { label: "shell.nav.stores", to: "/stores", icon: "stores" },
   { label: "shell.nav.operators", to: "/operators", icon: "operators" },
   { label: "shell.nav.audit", to: "/audit", icon: "audit" },
+];
+
+/**
+ * Role-gated destinations, each under its own section: shown only for the roles
+ * the API lets read the surface (RT-178 stock discrepancies, RT-18 shift
+ * closes). The nav mirrors the API; it is not an authorization decision.
+ */
+const ROLE_NAV: {
+  section: MessageKey;
+  label: MessageKey;
+  to: string;
+  icon: IconName;
+  canRead: (role: string | null | undefined) => boolean;
+}[] = [
+  {
+    section: "shell.nav.section.inventory",
+    label: "shell.nav.stockDiscrepancies",
+    to: "/stock-discrepancies",
+    icon: "stock",
+    canRead: canReadStockDiscrepancies,
+  },
+  {
+    section: "shell.nav.section.cash",
+    label: "shell.nav.shiftCloses",
+    to: "/shift-closes",
+    icon: "cash",
+    canRead: canReadShiftCloses,
+  },
 ];
 
 /**
@@ -120,21 +150,20 @@ export function AppShell({
             <span className="nav-entry__label">{t(item.label)}</span>
           </NavLink>
         ))}
-        {canReadStockDiscrepancies(context?.active_role_code) ? (
-          <>
-            {/* RT-178: shown only for the roles the API lets read this surface. */}
-            <div className="nav-section">{t("shell.nav.section.inventory")}</div>
+        {ROLE_NAV.filter((entry) => entry.canRead(context?.active_role_code)).map((entry) => (
+          <Fragment key={entry.to}>
+            <div className="nav-section">{t(entry.section)}</div>
             <NavLink
-              to="/stock-discrepancies"
+              to={entry.to}
               className={({ isActive }) =>
                 isActive ? "nav-entry nav-entry--active" : "nav-entry nav-entry--link"
               }
             >
-              <Icon name="stock" className="nav-entry__icon" />
-              <span className="nav-entry__label">{t("shell.nav.stockDiscrepancies")}</span>
+              <Icon name={entry.icon} className="nav-entry__icon" />
+              <span className="nav-entry__label">{t(entry.label)}</span>
             </NavLink>
-          </>
-        ) : null}
+          </Fragment>
+        ))}
         {showGatedNav
           ? GATED_NAV.map((item) => (
               <span key={item.gate} className="nav-entry nav-entry--disabled" aria-disabled="true">
