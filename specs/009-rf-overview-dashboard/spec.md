@@ -42,7 +42,7 @@ Backend-Core membership roles enforced by each operation's guard (verified on Ba
 | Tenant owner | `owner` | All v1 panels, tenant-wide or narrowed to the active store. |
 | Tenant admin | `tenant_admin` | Same as owner. |
 | Store manager | `store_manager` | Unknown items, stock discrepancies and shift closes for their store scope. No receivables, no audit. |
-| Store staff | `store_staff` | Scope line and the unknown-items panel only (the list has no role guard; RLS scopes it). Shift closes and stock discrepancies are non-disclosing 404 for this role. |
+| Store staff | `store_staff` | Whatever the backend answers. Today that is the scope line and the unknown-items panel: the list has no `RolesGuard`, a gap the controller's own comment calls temporary ("real auth+roles stack lands in a future Wave 1 slice"), so it is expected to tighten and is not a grant. Shift closes, stock discrepancies, receivables and audit refuse this role. |
 | Platform admin | platform | **Out of scope.** See §4 (RT-391). With a tenant selected, the platform admin sees what the backend lets that session read, like any other caller. |
 
 ## 3. Goals and non-goals
@@ -61,13 +61,13 @@ Backend-Core membership roles enforced by each operation's guard (verified on Ba
 
 ### Non-goals (v1)
 
-- **NG-1. Sales KPIs.** No Backend-Core contract serves console sales figures (§5.3). The sales
+- **NG-1. Sales KPIs.** No Backend-Core contract serves console sales figures (§5.4). The sales
   panel waits for BC-009-1 and an owner decision on which KPIs matter (OD-009-1). No
   placeholder "coming soon" tile is rendered.
 - **NG-2. Charts.** Bar, line and sparkline charts are not allowed until UX-13 ratifies a data
   palette (design-system rule 8). Counts appear as text in a ledger.
 - **NG-3. Integration / ERP sync health tile.** `consoleGetSyncOpsSummary` exists, but there is
-  no console destination for it yet. It belongs with RT-557 (spec 016); see §5.4.
+  no console destination for it yet. It belongs with RT-557 (spec 016); see §5.5.
 - **NG-4. Platform health, telemetry and cross-tenant views.** These belong to RT-391 (§4).
 - **NG-5. Actions on the Overview.** The Overview links; it does not dismiss, repair, approve
   or apply anything. Actions stay on the owning screens.
@@ -145,7 +145,20 @@ the navigation is RT-270's and the owning slices' concern, not 009's.
   order is a **runtime fact only** (`audit.repository.ts` orders by `occurred_at DESC, id DESC`);
   `audit.openapi.yaml` does not state it. See BC-009-3.
 
-### 5.3 Why sales KPIs have no contract today
+### 5.3 Destination links must show the same subset
+
+A row that says "3 unapproved variances" must not land on an unfiltered list. Checked on
+console `main` @ `d6e666d`:
+
+| Row | Destination today | Link |
+| --- | --- | --- |
+| P-1 | `/stock-discrepancies/:storeId` (per store) | Matches: one row per store. |
+| P-2 | `/shift-closes` reads its filters from the URL (`shiftCloseFilters.ts`: `store`, `from`, `to`, `min`, `currency`, `approval`) | The link carries `approval=not_approved`, `min`, `from` and `store`. `from` is a calendar date read in the store's timezone, so the OD-009-2 window is expressed in store business dates. |
+| P-3 | `/unknown-items` defaults to `pending` and passes the active store as `store_id` (`UnknownItemList.tsx`) | Matches with a plain link. |
+| P-4 | `/receivables` has no URL filter state and sends no `state` or `store_id` | **Gap.** Until the receivables screen (spec 018 slice) accepts `state` (and `store_id`) from the URL, the row links to the unfiltered list and its copy names the subset (flagged receivables, catalog wording decided at implementation), so the operator knows what to look for. Listed in §11. |
+| P-5 | `/audit` | Plain link to the search; no filter carried (AuditSearch has no URL filter state, as RT-556 also found). |
+
+### 5.4 Why sales KPIs have no contract today
 
 `pos-sales/sale-history.yaml` (`listSaleHistory`, RT-537 / RT-539) is the only sales list on
 `main`. It does not serve the console:
@@ -161,7 +174,7 @@ the navigation is RT-270's and the owning slices' concern, not 009's.
 So the KPI panel is a Backend-Core dependency (BC-009-1). The figures it shows are an owner
 decision (OD-009-1).
 
-### 5.4 Why the sync-ops tile is deferred
+### 5.5 Why the sync-ops tile is deferred
 
 `consoleGetSyncOpsSummary` is runtime-present, tenant-scoped and returns a backend-derived
 `status` (`ok` / `attention` / `not_available`) per domain, so it would not break the "no
@@ -195,11 +208,15 @@ wins when it disagrees.
 ### 6.3 Counts
 
 Only P-1 has a backend count. The lists behind P-2, P-3 and P-4 return a page and a cursor,
-with no total. The Overview reads **one page** (contract default size, 50) and shows:
+with no total. The Overview reads **one page** (each contract's default size, 50; the server
+MAY return fewer) and shows:
 
 - an exact count when the page returns `nextCursor: null` (or `next_cursor: null`);
-- "at least N" (whole-phrase plural, e.g. «50 أو أكثر») when a further page exists;
-- a quiet "none" when the page is empty. Zero is neutral text, never green.
+- "at least N", where N is the number of items **actually returned**, when the cursor is not
+  null (whole-phrase plural, e.g. «12 أو أكثر»);
+- a quiet "none" only when the page is empty **and** the cursor is null. An empty page with a
+  cursor is not proven empty: the row says the list has more to check and links to it, never "none".
+  Zero is neutral text, never green.
 
 It never walks every page to compute a total. If exact counts matter, that is BC-009-2.
 
@@ -289,6 +306,9 @@ The coordinator creates these issues if approved. Each is contract-first in Back
   (regeneration at the pin), owned by whichever slice adds the tile.
 - Reuse the owning screens' existing query hooks and copy where they fit; do not duplicate
   status vocabularies.
+- Console dependency on the receivables slice (spec 018): URL filter state for `state` and
+  `store_id` on `/receivables`, so the P-4 link can open the flagged subset (§5.3). Not a
+  Backend-Core change.
 - Evidence expected: component tests per panel state (loading / data / empty / at-least-N /
   Unknown / error / no-access), a two-store isolation test, an e2e for scope change, and
   visual captures in light, dark, Arabic, English and forced-colors.
