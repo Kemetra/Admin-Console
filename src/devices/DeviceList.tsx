@@ -170,12 +170,22 @@ interface ResultsProps {
   onOpen: (row: DeviceSummary) => void;
 }
 
+/**
+ * Rows are held back until the store roster has settled (read or failed), so a
+ * time is never shown in UTC, or a store as unknown, just because the roster
+ * had not arrived yet.
+ */
+function awaitingRoster(list: DeviceListState, directory: StoreDirectory): boolean {
+  return list.rows.length > 0 && !directory.ready;
+}
+
 function Results({ list, directory, filters, onOpen }: Readonly<ResultsProps>): React.JSX.Element {
   const t = useT();
   // One clock reading per mount: "expiry passed" does not flicker between renders.
   const [now] = useState(() => Date.now());
   const columns = deviceColumns(t, directory, now);
-  if (list.isLoading) {
+  const pending = list.isLoading || awaitingRoster(list, directory);
+  if (pending) {
     return (
       <DataTableSkeleton
         caption={t("devices.list.caption")}

@@ -1,3 +1,4 @@
+import { tabForKey, tabFromSearch } from "@/devices/DeviceTabs";
 import {
   EMPTY_FILTERS,
   PAGE_SIZE,
@@ -12,6 +13,7 @@ import {
   isPastExpiry,
   isUuid,
   lastSeenView,
+  listSearchFrom,
   nextDeviceCursor,
   revokeReasonKey,
   trustStateView,
@@ -130,6 +132,31 @@ describe("device logic (RT-371)", () => {
       DEVICE_2,
       DEVICE_1,
     ]);
+  });
+});
+
+describe("device detail navigation (RT-371)", () => {
+  test("listSearchFrom keeps only the list's search string", () => {
+    expect(listSearchFrom({ list: "?state=active" })).toBe("?state=active");
+    expect(listSearchFrom({ list: "state=active" })).toBe("");
+    expect(listSearchFrom({ list: 3 })).toBe("");
+    expect(listSearchFrom(null)).toBe("");
+    expect(listSearchFrom(undefined)).toBe("");
+  });
+
+  test("tabFromSearch: only `history` selects History", () => {
+    expect(tabFromSearch(new URLSearchParams("tab=history"))).toBe("history");
+    expect(tabFromSearch(new URLSearchParams("tab=health"))).toBe("overview");
+    expect(tabFromSearch(new URLSearchParams())).toBe("overview");
+  });
+
+  test("tabForKey: either arrow moves to the other tab (RTL-safe), Home / End, else nothing", () => {
+    expect(tabForKey("ArrowLeft", "overview")).toBe("history");
+    expect(tabForKey("ArrowRight", "overview")).toBe("history");
+    expect(tabForKey("ArrowLeft", "history")).toBe("overview");
+    expect(tabForKey("Home", "history")).toBe("overview");
+    expect(tabForKey("End", "overview")).toBe("history");
+    expect(tabForKey("Enter", "overview")).toBeUndefined();
   });
 });
 

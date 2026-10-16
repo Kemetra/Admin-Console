@@ -105,6 +105,32 @@ describe("DeviceList (RT-371)", () => {
     expect(screen.getByText("Loading devices…")).toBeDefined();
   });
 
+  test("rows wait for the store roster: never UTC or 'Unknown store' by accident", async () => {
+    let settle: (value: unknown) => void = () => {};
+    listStores.mockReturnValue(
+      new Promise((resolve) => {
+        settle = resolve;
+      }),
+    );
+    renderList();
+    await waitFor(() => expect(consoleListDevices).toHaveBeenCalled());
+    expect(screen.getByRole("table").getAttribute("aria-busy")).toBe("true");
+    expect(screen.queryByText("Till 1")).toBeNull();
+    expect(screen.queryByText("Unknown store")).toBeNull();
+
+    settle({ status: 200, data: stores });
+    const rows = bodyRows(await tableReady());
+    expect(within(rows[0]).getByText("Dubai Mall")).toBeDefined();
+  });
+
+  test("a failed roster read still shows the rows, with the store labelled unknown", async () => {
+    listStores.mockResolvedValue(failure(500));
+    renderList();
+    const rows = bodyRows(await tableReady());
+    expect(within(rows[0]).getByText("Till 1")).toBeDefined();
+    expect(within(rows[0]).getByText("Unknown store")).toBeDefined();
+  });
+
   test("rows render in the server's order, exactly as received (no re-sort)", async () => {
     consoleListDevices.mockResolvedValue(
       page([

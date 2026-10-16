@@ -133,6 +133,18 @@ export function isPastExpiry(expiresAt: string, now: number): boolean {
   return Number.isFinite(at) && at <= now;
 }
 
+// --- Navigation ------------------------------------------------------------------
+
+/**
+ * The list's filters, as the list put them in the navigation state for Back.
+ * Anything that is not a search string is ignored (a hand-made state, a reload).
+ */
+export function listSearchFrom(state: unknown): string {
+  const list = (state as { list?: unknown } | null)?.list;
+  if (typeof list !== "string") return "";
+  return list.startsWith("?") ? list : "";
+}
+
 // --- Errors --------------------------------------------------------------------
 
 export function requestIdOf(error: unknown): string | undefined {
