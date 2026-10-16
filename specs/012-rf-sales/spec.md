@@ -64,7 +64,8 @@ store, or open an itemized sale. That read must be a new Backend-Core contract (
 ## 3. Non-goals
 
 - **No writes.** No void, return, refund, repair, reprint or edit of any sale fact.
-  Sync repair stays on the sale-sync-ops surface (spec 013, not this slice).
+  Sync repair stays on the sale-sync-ops repair surface (not yet specified; see
+  spec 016 §10), not this slice.
 - **No receipt reprint or receipt preview** from the console. Reprint is a POS action
   under RT-534 / OD-534-2.
 - **No KPIs, trend charts, aggregates, exports or date-range reports.** These are
@@ -268,9 +269,9 @@ The sales screens link out. They never re-render another screen's data.
 | --- | --- | --- | --- |
 | Receivables list row | Sale detail | `Receivable.saleRef` → `/sales/:saleRef` | Available once 012 ships (receivables already carry `saleRef`). |
 | Sale detail | Receivables for this sale | `/receivables?sale=<saleRef>` | **Blocked** on proposed issue 3 (no `sale_ref` filter today). Hidden until then. |
-| Sale detail | Shift closes for the store and day | `/shift-closes?store=<storeId>&from=<businessDate>&to=<businessDate>` (keys `ShiftCloseList` already reads) | Available. Labelled "shift closes that day"; sales carry no shift id, so it is not "this sale's shift". A shift that crosses midnight may close the next day. |
+| Sale detail | Shift-close exceptions for the store and day | `/shift-closes?store=<storeId>&from=<businessDate>&to=<businessDate>` (keys `ShiftCloseList` already reads) | Available. Labelled "shift-close exceptions (non-zero variance) that day": RT-18's `buildListQuery` always sends `min_abs_variance >= 0.0001`, so balanced closes are not listed. Sales carry no shift id, so it is not "this sale's shift", and a shift that crosses midnight may close the next day. A link to *all* closes that day needs an all-closes URL key on `ShiftCloseList` (console dependency, not this slice). |
 | Sale detail | Audit search | `/audit` filtered by store, date and the console sales audit actions (proposed `console_sales.`; final per the [GATED] contract) plus `sale_history.` / `sale.` | **Blocked.** `AuditSearch` keeps no filter state in the URL and the audit API has no `saleRef` filter. Needs URL filter state in spec 006 (dependency, not this slice). |
-| Sale detail | Sync repair | — | Not linked. Repair is the sync-ops surface (spec 013), `owner`/`tenant_admin` only. |
+| Sale detail | Sync repair | — | Not linked. Repair is the sale-sync-ops repair surface (not yet specified; see spec 016 §10), `owner`/`tenant_admin` only. |
 
 ## 8. States
 
@@ -351,8 +352,9 @@ The later implementation is accepted when:
 - **AC-12.** No email address appears as an operator name, and `current` names are
   labelled.
 - **AC-13.** Every list page shows "received by the server up to {asOf}".
-- **AC-14.** A receivable row opens its sale detail. The shift-closes link opens that
-  store and day.
+- **AC-14.** A receivable row opens its sale detail. The link labelled "shift-close
+  exceptions (non-zero variance) that day" opens that store and day on the shift-close
+  exception list.
 - **AC-15.** Network traces show only Backend-Core console routes; no `/api/pos/v1/**`,
   ERPNext or Connector requests.
 - **AC-16.** Opening a sale writes one detail-read audit event, and a list request
@@ -379,7 +381,10 @@ Spec 015 itself is not edited here. Its owner records the dependency on RT-556 t
   the POS contract.
 - **RT-383 / RT-18**: shift-closes admin read, the auth and scope precedent.
 - **Spec 006 (audit search)**: URL filter state, needed for the audit link.
-- **Spec 013 (monitoring / sync ops)**: owns sync repair; not duplicated here.
+- **Sale-sync-ops repair surface** (not yet specified; see spec 016 §10, which
+  excludes `consoleRepairSaleSync`): owns sync repair; not duplicated here.
+- **Shift closes (RT-18)**: an all-closes URL key on `ShiftCloseList`, needed only for
+  a link to every close of a day (console dependency, not this slice).
 - **Spec 015**: deferred behind this slice (§11).
 - **RT-544**: store timezone must be correct before the first sale; business dates
   are frozen at capture.
