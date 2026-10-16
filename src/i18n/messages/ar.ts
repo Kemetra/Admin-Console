@@ -11,10 +11,11 @@ import { common } from "./ar/common";
 import { money } from "./ar/money";
 import { operators } from "./ar/operators";
 import { shell } from "./ar/shell";
+import { shift } from "./ar/shift";
 import { stock } from "./ar/stock";
 import { tenants } from "./ar/tenants";
 
-export const AR_MODULES = { common, shell, auth, tenants, operators, audit, stock, money };
+export const AR_MODULES = { common, shell, auth, tenants, operators, audit, stock, shift, money };
 
 export const ar = {
   ...common,
@@ -24,5 +25,6 @@ export const ar = {
   ...operators,
   ...audit,
   ...stock,
+  ...shift,
   ...money,
 };

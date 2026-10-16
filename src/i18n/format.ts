@@ -17,8 +17,9 @@ export { formatNumber } from "./translate";
 // --- Money -------------------------------------------------------------------
 
 /**
- * Every Admin `Money` value is EGP (RT-399 scope; RT-266 Q3). The contract
- * carries no currency field, so this is a constant until it does.
+ * The default currency of an Admin `Money` value (RT-399 scope; RT-266 Q3).
+ * Most contracts carry no currency field, so it is EGP unless the caller has a
+ * currency code from the contract (the shift close does, RT-18).
  */
 export const CURRENCY = "EGP";
 
@@ -50,7 +51,7 @@ function groupThousands(digits: string): string {
  * (`10.1250` → `10.125 EGP`). Anything that is not a plain decimal string is
  * returned unchanged instead of guessed at.
  */
-export function formatMoney(amount: string): string {
+export function formatMoney(amount: string, currency: string = CURRENCY): string {
   const match = MONEY.exec(amount.trim());
   if (!match) return amount;
   const [, sign, intDigits, fracDigits = ""] = match;
@@ -58,9 +59,25 @@ export function formatMoney(amount: string): string {
   let frac = trimTrailingZeros(fracDigits);
   if (frac.length < 2) frac = frac.padEnd(2, "0");
   const grouped = groupThousands(int);
-  const isZero = /^0+$/.test(int) && /^0*$/.test(fracDigits);
-  const minus = sign === "-" && !isZero ? "-" : "";
-  return `${minus}${grouped}.${frac} ${CURRENCY}`;
+  const minus = sign === "-" && !isZeroAmount(int, fracDigits) ? "-" : "";
+  return `${minus}${grouped}.${frac} ${currency}`;
+}
+
+function isZeroAmount(int: string, fracDigits: string): boolean {
+  return /^0+$/.test(int) && /^0*$/.test(fracDigits);
+}
+
+/**
+ * A signed amount with an explicit sign (RT-18 variance, counted minus
+ * expected): `+12.50 EGP` over, `-12.50 EGP` short, `0.00 EGP` for zero. The
+ * sign is the only cue: no colour is implied by direction (UX-13).
+ */
+export function formatSignedMoney(amount: string, currency: string = CURRENCY): string {
+  const formatted = formatMoney(amount, currency);
+  const match = MONEY.exec(amount.trim());
+  if (!match) return formatted;
+  const [, sign, intDigits, fracDigits = ""] = match;
+  return sign === "-" || isZeroAmount(intDigits, fracDigits) ? formatted : `+${formatted}`;
 }
 
 // --- Operational date/time ---------------------------------------------------
@@ -81,7 +98,7 @@ function dateTimeFormat(
   return f;
 }
 
-function isValidZone(timeZone: string): boolean {
+export function isValidZone(timeZone: string): boolean {
   try {
     new Intl.DateTimeFormat("en", { timeZone });
     return true;

@@ -48,10 +48,22 @@ describe("production navigation", () => {
       "Operators",
       "Audit",
       "Stock discrepancies",
+      "Shift closes",
       "Sign out",
     ]);
     expect(nav.querySelector("[aria-disabled='true']")).toBeNull();
     expect(within(nav).queryByText(/^RF-/)).toBeNull();
+  });
+
+  test.each(["owner", "tenant_admin", "store_manager"])(
+    "RT-18: the shift-close review is listed for %s",
+    (role) => {
+      expect(entryLabels(renderShell(role, false))).toContain("Shift closes");
+    },
+  );
+
+  test("RT-18: the shift-close review is hidden from roles the API refuses", () => {
+    expect(entryLabels(renderShell("cashier", false))).not.toContain("Shift closes");
   });
 
   test("dev builds keep the gated placeholders, marked disabled", () => {

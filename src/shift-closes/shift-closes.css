@@ -1,0 +1,79 @@
+/* RT-18 shift-close variance review. Built from existing tokens only; no new
+ * colour, font or dependency. Variance direction carries a text label and a
+ * sign, never red/green (UX-13). Logical properties throughout (RTL by structure). */
+
+.shift-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-object);
+}
+.shift-filters__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.shift-filters__field label {
+  font: var(--weight-strong) var(--text-meta) / var(--leading-tight) var(--font-sans);
+  color: var(--color-text-muted);
+}
+.shift-filters__field .input {
+  inline-size: auto;
+  min-inline-size: 150px;
+}
+.shift-filters__zone {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-meta);
+}
+.shift-filters__actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-inline-start: auto;
+}
+
+/* Signed variance with its text label beside it (colour is never the cue). */
+.shift-variance {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-variant-numeric: tabular-nums;
+}
+.shift-variance__label {
+  color: var(--color-text-muted);
+  font-size: var(--text-meta);
+}
+
+.shift-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--text-control);
+}
+
+/* Detail: a section per concern, read-first field rows. */
+.shift-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.data-table__row--static {
+  cursor: default;
+}
+.data-table__row--static:hover {
+  background-color: transparent;
+}
+.shift-refs {
+  margin: 0;
+  padding-inline-start: var(--space-5);
+  font-family: var(--font-mono);
+  font-size: var(--text-machine);
+  color: var(--color-text-muted);
+}

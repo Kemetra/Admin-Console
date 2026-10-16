@@ -22,6 +22,7 @@ export type IconName =
   | "catalog"
   | "unknown"
   | "stock"
+  | "cash"
   | "search"
   | "bell"
   | "help"
@@ -94,6 +95,14 @@ const PATHS: Record<IconName, React.ReactNode> = {
       <path d="M3.5 8 12 3.5 20.5 8v8L12 20.5 3.5 16V8Z" />
       <path d="M3.5 8 12 12.5 20.5 8" />
       <path d="M12 12.5v8" />
+    </>
+  ),
+  // Banknote — shift cash close (RT-18).
+  cash: (
+    <>
+      <rect x="3" y="6.5" width="18" height="11" rx="1.5" />
+      <circle cx="12" cy="12" r="2.5" />
+      <path d="M6.5 12h0M17.5 12h0" />
     </>
   ),
   // Magnifier — global search.
