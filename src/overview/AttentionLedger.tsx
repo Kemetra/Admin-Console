@@ -195,10 +195,11 @@ function StockRows({
 
 export function AttentionLedger({
   session,
-}: Readonly<{ session: OverviewSession }>): React.JSX.Element {
+  nowMs,
+}: Readonly<{ session: OverviewSession; nowMs: number }>): React.JSX.Element {
   const t = useT();
   const stock = useStockPanel(session);
-  const shift = useShiftPanel(session);
+  const shift = useShiftPanel(session, nowMs);
   const unknown = useUnknownItemsPanel(session);
   const receivables = useReceivablesPanel(session);
   const allHidden = [stock, shift.state, unknown, receivables].every((s) => s.status === "hidden");

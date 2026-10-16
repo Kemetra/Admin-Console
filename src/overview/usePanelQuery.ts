@@ -79,6 +79,27 @@ export interface PanelQuery<T> {
   read: () => Promise<PanelRead<T>>;
 }
 
+const LOADING = { status: "loading" } as const;
+const HIDDEN = { status: "hidden" } as const;
+
+/** A settled read as a panel state. */
+function settledState<T>(result: PanelRead<T>, retry: () => void): PanelState<T> {
+  if (result.kind === "ready") return { status: "ready", data: result.data };
+  if (result.kind === "hidden") return HIDDEN;
+  return { status: "error", requestId: result.requestId, retry };
+}
+
+interface QuerySnapshot<T> {
+  data?: PanelRead<T>;
+  isError: boolean;
+  isFetching: boolean;
+}
+
+/** A retry in flight reads as loading again, not as the old failure. */
+function isRetrying<T>(query: QuerySnapshot<T>): boolean {
+  return query.isFetching && (query.isError || query.data?.kind === "error");
+}
+
 export function usePanelQuery<T>({ key, gate, read }: PanelQuery<T>): PanelState<T> {
   const query = useQuery<PanelRead<T>>({
     queryKey: key,
@@ -86,15 +107,9 @@ export function usePanelQuery<T>({ key, gate, read }: PanelQuery<T>): PanelState
     queryFn: read,
     retry: false,
   });
-  if (gate === "skip") return { status: "hidden" };
+  if (gate === "skip") return HIDDEN;
+  if (gate === "wait" || isRetrying(query)) return LOADING;
   const retry = () => void query.refetch();
-  const result = query.data;
-  const failed = query.isError || result?.kind === "error";
-  // A retry in flight reads as loading again, not as the old failure.
-  if (gate === "wait" || (failed && query.isFetching)) return { status: "loading" };
   if (query.isError) return { status: "error", retry };
-  if (!result) return { status: "loading" };
-  if (result.kind === "error") return { status: "error", requestId: result.requestId, retry };
-  if (result.kind === "hidden") return { status: "hidden" };
-  return { status: "ready", data: result.data };
+  return query.data ? settledState(query.data, retry) : LOADING;
 }

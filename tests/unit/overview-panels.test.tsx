@@ -287,7 +287,8 @@ describe("Overview panels (RT-559, spec 009)", () => {
     listUnknownItems.mockImplementation(() => ok({}));
     renderOverview();
     const unknown = await findRow(UNKNOWN);
-    await within(unknown).findByText("Couldn't load.");
+    expect(await within(unknown).findByText("Couldn't load.")).toBeTruthy();
+    expect(within(unknown).queryByText("None")).toBeNull();
   });
 
   test("a store summary with a snapshot status outside the contract is an error, not a row", async () => {
@@ -335,7 +336,10 @@ describe("Overview panels (RT-559, spec 009)", () => {
     listUnknownItems.mockImplementation(() => fail(403));
     consoleListReceivables.mockImplementation(() => fail(403));
     renderOverview();
-    await screen.findByText("No attention items are available to your role here.");
+    expect(
+      await screen.findByText("No attention items are available to your role here."),
+    ).toBeTruthy();
+    expect(screen.queryByRole("list")).toBeNull();
   });
 
   test("AC-7: an active store narrows every panel, for an owner too", async () => {
@@ -389,8 +393,11 @@ describe("Overview panels (RT-559, spec 009)", () => {
         : ok({ items: [summary(A, "Cairo Festival City", "fresh", 3)], nextCursor: "p2" }),
     );
     renderOverview();
-    await findRow(stockLabel("Cairo Festival City"));
-    await findRow(stockLabel("Alexandria Corniche"));
+    const first = await findRow(stockLabel("Cairo Festival City"));
+    const second = await findRow(stockLabel("Alexandria Corniche"));
+    expect(within(first).getByText("Negative items: 3")).toBeTruthy();
+    expect(within(second).getByText("Negative items: 4")).toBeTruthy();
+    expect(listErpnextNegativeOnHandStores).toHaveBeenCalledTimes(2);
   });
 
   test("AC-8: a store-scoped user sees only their granted store, never another's name", async () => {
@@ -553,6 +560,24 @@ describe("Overview panels (RT-559, spec 009)", () => {
       stockLabel("Cairo Festival City"),
       stockLabel("Alexandria Corniche"),
     ]);
+  });
+
+  test("Refresh moves the shift window forward when the store's day has changed", async () => {
+    activeContext.mockReturnValue(ctx("owner", { id: A, name: "Cairo Festival City" }));
+    renderOverview();
+    await within(await findRow(SHIFT)).findByText("Closes: 2");
+    expect(consoleListShiftCloses).toHaveBeenLastCalledWith(
+      expect.objectContaining({ closed_from: "2026-10-09T21:00:00.000Z" }),
+    );
+    // A day later in Cairo: the window must start a day later too.
+    vi.setSystemTime(new Date("2026-10-16T22:30:00Z"));
+    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    await waitFor(() =>
+      expect(consoleListShiftCloses).toHaveBeenLastCalledWith(
+        expect.objectContaining({ closed_from: "2026-10-10T21:00:00.000Z" }),
+      ),
+    );
+    expect(within(row(SHIFT)).getByRole("link").getAttribute("href")).toContain("from=2026-10-11");
   });
 
   test("AC-11: no sales or KPI element renders", async () => {

@@ -9,6 +9,7 @@
  */
 import { useT } from "@/i18n";
 import { useIsFetching, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { Link } from "react-router";
 import { AttentionLedger } from "./AttentionLedger";
 import { canOpenAudit } from "./overviewLogic";
@@ -21,12 +22,14 @@ import "./overview.css";
  * (`aria-disabled`, not `disabled`, which would drop keyboard focus) and ignores
  * presses; a polite status line announces it.
  */
-function RefreshButton(): React.JSX.Element {
+function RefreshButton({ onRefresh }: Readonly<{ onRefresh: () => void }>): React.JSX.Element {
   const t = useT();
   const qc = useQueryClient();
   const fetching = useIsFetching({ queryKey: OVERVIEW_KEY }) > 0;
   const refresh = () => {
-    if (!fetching) void qc.refetchQueries({ queryKey: OVERVIEW_KEY, type: "active" });
+    if (fetching) return;
+    onRefresh();
+    void qc.refetchQueries({ queryKey: OVERVIEW_KEY, type: "active" });
   };
   return (
     <>
@@ -38,9 +41,7 @@ function RefreshButton(): React.JSX.Element {
       >
         {fetching ? t("overview.refreshing") : t("overview.refresh")}
       </button>
-      <span className="sr-only" role="status">
-        {fetching ? t("overview.refreshing") : ""}
-      </span>
+      <output className="sr-only">{fetching ? t("overview.refreshing") : ""}</output>
     </>
   );
 }
@@ -48,13 +49,15 @@ function RefreshButton(): React.JSX.Element {
 export function OverviewPanels(): React.JSX.Element | null {
   const t = useT();
   const session = useOverviewSession();
+  // The time the date-bound read (P-2's window) is computed from: load, then each Refresh.
+  const [nowMs, setNowMs] = useState(Date.now);
   if (!session.tenantId) return null;
   return (
     <div className="overview">
       <div className="overview__toolbar">
-        <RefreshButton />
+        <RefreshButton onRefresh={() => setNowMs(Date.now())} />
       </div>
-      <AttentionLedger session={session} />
+      <AttentionLedger session={session} nowMs={nowMs} />
       {canOpenAudit(session.role) ? (
         <p className="overview__related">
           <Link className="ledger__link" to="/audit">

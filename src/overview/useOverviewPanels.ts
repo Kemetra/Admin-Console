@@ -20,7 +20,6 @@ import { listUnknownItems } from "@/lib/unknown-items-queries";
 import { canReadShiftCloses } from "@/shift-closes/shiftCloseLogic";
 import { canReadStockDiscrepancies, statusView } from "@/stock-discrepancies/stockDiscrepancyLogic";
 import { useStoreList } from "@/stores/useStoreQueries";
-import { useState } from "react";
 import { type PageCount, pageCount, shiftAttention } from "./overviewLogic";
 import {
   type ApiResult,
@@ -98,10 +97,34 @@ function storesPage(data: unknown): StoresPage | undefined {
   return items?.every(isSummary) ? (data as StoresPage) : undefined;
 }
 
+type WalkEnd = "more" | "last" | "cap";
+
+function readyStores(
+  stores: StoreNegativeOnHandSummary[],
+  truncated = false,
+): PanelRead<StockPanel> {
+  return { kind: "ready", data: { stores, truncated } };
+}
+
+/**
+ * What the stores read so far prove, or null to keep walking. With an active
+ * store: its row once found, omitted if the walk ends without it. Tenant-wide:
+ * every store, flagged as truncated when the page cap stopped the walk.
+ */
+function walkOutcome(
+  stores: StoreNegativeOnHandSummary[],
+  activeStoreId: string | null,
+  end: WalkEnd,
+): PanelRead<StockPanel> | null {
+  if (!activeStoreId) return end === "more" ? null : readyStores(stores, end === "cap");
+  const found = stores.filter((s) => s.storeId === activeStoreId);
+  if (found.length > 0) return readyStores(found);
+  return end === "more" ? null : { kind: "hidden" };
+}
+
 /**
  * The one walk §5.2 allows: following `nextCursor` to list stores (each count is
- * per store, so nothing is summed across pages). With an active store the walk
- * stops once that store is found; if it never appears, the panel is omitted.
+ * per store, so nothing is summed across pages).
  */
 async function readStockStores(activeStoreId: string | null): Promise<PanelRead<StockPanel>> {
   const stores: StoreNegativeOnHandSummary[] = [];
@@ -110,14 +133,11 @@ async function readStockStores(activeStoreId: string | null): Promise<PanelRead<
     const read = readResult(await listErpnextNegativeOnHandStores({ cursor }), storesPage);
     if (read.kind !== "ready") return read;
     stores.push(...read.data.items);
-    const found = activeStoreId ? stores.filter((s) => s.storeId === activeStoreId) : null;
-    if (found?.length) return { kind: "ready", data: { stores: found, truncated: false } };
     cursor = read.data.nextCursor ?? undefined;
-    if (!cursor) {
-      return found ? { kind: "hidden" } : { kind: "ready", data: { stores, truncated: false } };
-    }
+    const outcome = walkOutcome(stores, activeStoreId, cursor ? "more" : "last");
+    if (outcome) return outcome;
   }
-  return activeStoreId ? { kind: "hidden" } : { kind: "ready", data: { stores, truncated: true } };
+  return walkOutcome(stores, activeStoreId, "cap") ?? { kind: "hidden" };
 }
 
 export function useStockPanel(session: OverviewSession): PanelState<StockPanel> {
@@ -150,9 +170,12 @@ function useActiveStoreZone(session: OverviewSession): { timeZone: string; ready
   return { timeZone: zone ?? "UTC", ready: !storeId || !isLoading };
 }
 
-export function useShiftPanel(session: OverviewSession): ShiftPanel {
+/**
+ * `nowMs` is the Overview's last load or refresh, so a Refresh after the store's
+ * midnight moves the window (and its link) to the new day.
+ */
+export function useShiftPanel(session: OverviewSession, nowMs: number): ShiftPanel {
   const { timeZone, ready } = useActiveStoreZone(session);
-  const [nowMs] = useState(() => Date.now());
   const storeId = session.activeStoreId;
   const attention = shiftAttention({ storeId, timeZone, nowMs });
   const allowed = canReadShiftCloses(session.role);
@@ -167,26 +190,26 @@ export function useShiftPanel(session: OverviewSession): ShiftPanel {
 
 // --- P-3 Unknown items, P-4 Flagged receivables ---------------------------------------
 
-export function useUnknownItemsPanel(session: OverviewSession): PanelState<PageCount> {
+/** A one-page count panel every role may ask for (the backend decides). */
+function useCountPanel(
+  panel: string,
+  session: OverviewSession,
+  list: () => Promise<ApiResult>,
+  cursorField: "nextCursor" | "next_cursor",
+): PanelState<PageCount> {
   return usePanelQuery({
-    key: overviewKey("unknown-items", session),
+    key: overviewKey(panel, session),
     gate: "run",
-    read: async () =>
-      readResult(
-        (await listUnknownItems({ status: "pending", ...storeQuery(session) })) as ApiResult,
-        countOf("next_cursor"),
-      ),
+    read: async () => readResult(await list(), countOf(cursorField)),
   });
 }
 
+export function useUnknownItemsPanel(session: OverviewSession): PanelState<PageCount> {
+  const list = () => listUnknownItems({ status: "pending", ...storeQuery(session) });
+  return useCountPanel("unknown-items", session, list as () => Promise<ApiResult>, "next_cursor");
+}
+
 export function useReceivablesPanel(session: OverviewSession): PanelState<PageCount> {
-  return usePanelQuery({
-    key: overviewKey("receivables", session),
-    gate: "run",
-    read: async () =>
-      readResult(
-        await consoleListReceivables({ state: "flagged", ...storeQuery(session) }),
-        countOf("nextCursor"),
-      ),
-  });
+  const list = () => consoleListReceivables({ state: "flagged", ...storeQuery(session) });
+  return useCountPanel("receivables", session, list, "nextCursor");
 }
