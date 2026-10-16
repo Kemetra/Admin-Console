@@ -29,6 +29,11 @@ import openapiTS, { astToString, COMMENT_HEADER } from "openapi-typescript";
  *   - settlement/settlement.yaml (payer accounts, receivables, claims) — 017/018/019
  *   - erpnext-reconciliation/reconciliation.yaml (ERPNext negative on-hand
  *       read + `triggerReconciliationRun` refresh) — RT-178
+ *   - connector/connector-admin.yaml (tenantAdminListConnectorInstances),
+ *     erpnext-connector/connector-health.yaml (listConnectorHealth) and
+ *     erpnext-sync-ops/console-sync-ops.yaml (consoleGetSyncOpsSummary,
+ *     consoleListPostingBacklog, consoleListReconciliationRuns) — RT-560
+ *     (spec 016 Phase A); added at the existing pin, no re-pin
  *
  * The pin is UNCHANGED across slices; new slices add their contract source and
  * regenerate at the same SHA (regeneration, not a re-pin).
@@ -95,6 +100,16 @@ export const OPENAPI_SOURCE_SPECS = [
   // Admin shift-close read API (RT-383 / RT-18): `consoleListShiftCloses`,
   // `consoleGetShiftClose`. Consume-only; no YAML authored here.
   { name: "ShiftCloses", path: "packages/contracts/openapi/shift-closes.openapi.yaml" },
+  // ERP connection & sync status, Phase A (RT-560 / spec 016). Regenerated at
+  // the same pin (no re-pin): connector instances (018), connector health (020)
+  // and the console sync-ops read model (025). Read-only consumption; the
+  // credential lifecycle and heartbeat ops are in the documents but not wrapped.
+  { name: "ConnectorAdmin", path: "packages/contracts/openapi/connector/connector-admin.yaml" },
+  {
+    name: "ConnectorHealth",
+    path: "packages/contracts/openapi/erpnext-connector/connector-health.yaml",
+  },
+  { name: "SyncOps", path: "packages/contracts/openapi/erpnext-sync-ops/console-sync-ops.yaml" },
 ] as const;
 
 /** Upstream source paths (kept for back-compat / documentation references). */

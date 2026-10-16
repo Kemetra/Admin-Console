@@ -15,6 +15,9 @@
 // - packages/contracts/openapi/settlement/settlement.yaml
 // - packages/contracts/openapi/erpnext-reconciliation/reconciliation.yaml
 // - packages/contracts/openapi/shift-closes.openapi.yaml
+// - packages/contracts/openapi/connector/connector-admin.yaml
+// - packages/contracts/openapi/erpnext-connector/connector-health.yaml
+// - packages/contracts/openapi/erpnext-sync-ops/console-sync-ops.yaml
 //
 // The upstream OpenAPI files are separate documents with overlapping component
 // names, so this file namespaces each generated source and composes their path
@@ -4659,6 +4662,1165 @@ export namespace ShiftClosesSchema {
     }
 }
 
-export type paths = AuthSchema.paths & ContextSchema.paths & TenantsSchema.paths & StoresSchema.paths & MembershipsSchema.paths & AuditSchema.paths & UnknownItemsSchema.paths & SettlementSchema.paths & ErpnextReconciliationSchema.paths & ShiftClosesSchema.paths;
-export type components = AuthSchema.components & ContextSchema.components & TenantsSchema.components & StoresSchema.components & MembershipsSchema.components & AuditSchema.components & UnknownItemsSchema.components & SettlementSchema.components & ErpnextReconciliationSchema.components & ShiftClosesSchema.components;
-export type operations = AuthSchema.operations & ContextSchema.operations & TenantsSchema.operations & StoresSchema.operations & MembershipsSchema.operations & AuditSchema.operations & UnknownItemsSchema.operations & SettlementSchema.operations & ErpnextReconciliationSchema.operations & ShiftClosesSchema.operations;
+export namespace ConnectorAdminSchema {
+    export interface paths {
+        "/api/v1/connector/instances": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * List the tenant's connector instances.
+             * @description Returns the tenant's connector registrations as `ConnectorInstance` projections (identity + lifecycle status). Scoped to the session tenant (RLS); cross-tenant rows are never disclosed. NEVER returns a raw secret or token hash.
+             */
+            get: operations["tenantAdminListConnectorInstances"];
+            put?: never;
+            /**
+             * Register a connector instance.
+             * @description Creates a `connector_registration` for the session tenant. At most one active registration per `(tenant, environment, erpnext_site_ref)`; a duplicate is `409 conflict`. `tenant_id` + actor are server-resolved (§XII); they MUST NOT appear in the body. No credential is issued here.
+             */
+            post: operations["tenantAdminRegisterConnectorInstance"];
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/connector/instances/{id}/disable": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            get?: never;
+            put?: never;
+            /**
+             * Disable a connector instance (logical).
+             * @description Sets `disabled_at`/`disabled_by` on the addressed instance. All of its credentials immediately become unusable at the connector guard. No row is deleted (history retained for audit). Idempotent: re-disabling an already-disabled instance is a no-op success. Cross-tenant / out-of-scope ids are non-disclosing `404`s.
+             */
+            post: operations["tenantAdminDisableConnectorInstance"];
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/connector/instances/{id}/credentials": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            get?: never;
+            put?: never;
+            /**
+             * Issue a machine credential for a connector instance.
+             * @description Mints a `connector`-scoped credential for the addressed (non-disabled) registration. The raw secret is in the `201` body EXACTLY ONCE and is never retrievable again. Optional `expires_in_days` (server default 90, capped at a server ceiling; a credential is never minted without a bounded expiry). Issuing for a disabled instance is rejected.
+             */
+            post: operations["tenantAdminIssueConnectorCredential"];
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/connector/instances/{id}/credentials/rotate": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            get?: never;
+            put?: never;
+            /**
+             * Rotate a connector credential (atomic immediate-revoke).
+             * @description In ONE atomic operation: revoke the instance's currently-active credential and issue a new one for the SAME registration; the new raw secret is in the `201` body ONCE. At most one active (unrevoked) credential per registration. If issuing the new credential fails, the previous one stays active (no lockout). Requires an `Idempotency-Key`.
+             *
+             *     Non-replayable (RT-82 K3): the raw secret is never stored for idempotent replay. A retry with the SAME `Idempotency-Key` for the same instance does not rotate again and does not return the secret; it is answered `409 idempotency_key_conflict`. A client that lost the `201` body rotates again with a NEW key, which revokes the lost credential. The key is scoped to the instance `{id}` (RT-82 K1), so the same key on a different instance is an independent rotation.
+             */
+            post: operations["tenantAdminRotateConnectorCredential"];
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/connector/credentials/{credentialId}/revoke": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            get?: never;
+            put?: never;
+            /**
+             * Revoke one connector credential.
+             * @description Revokes the addressed credential (sets its revoked timestamp). The connector instance stays registered and active. Idempotent: revoking an already-revoked credential is a no-op success. Requires an `Idempotency-Key`. Cross-tenant / out-of-scope ids are non-disclosing `404`s.
+             */
+            post: operations["tenantAdminRevokeConnectorCredential"];
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+    }
+    export type webhooks = Record<string, never>;
+    export interface components {
+        schemas: {
+            /** @description Register command. Strict (`additionalProperties: false`, §XII): `tenant_id`, actor, id, and disabled state are server-resolved and MUST NOT appear here. */
+            RegisterConnectorInstanceRequest: {
+                /** @description Operator-facing label. Non-empty after trimming (server-enforced): a whitespace-only value is a 400. */
+                display_name: string;
+                /** @description The ERPNext site this instance targets (label/ref, NOT a secret). Non-empty after trimming (server-enforced): a whitespace-only value is a 400. */
+                erpnext_site_ref: string;
+                /**
+                 * @description The environment this instance serves.
+                 * @enum {string}
+                 */
+                environment: "dev" | "staging" | "pilot" | "prod";
+            };
+            /** @description Issue command. All identity/actor fields are server-resolved (§XII). A JSON object body is required; send `{}` to take the server default expiry. */
+            IssueCredentialRequest: {
+                /** @description Optional override of the default credential lifetime (server default 90). MUST NOT exceed the server ceiling (a credential is never unbounded). Over-ceiling is `400`. */
+                expires_in_days?: number;
+            };
+            /** @description The `toBody()` projection of a `connector_registration` row (no raw DB entity, §IV). Identity + lifecycle + the active-credential STATUS only — NEVER a raw secret or token hash. */
+            ConnectorInstance: {
+                /** Format: uuid */
+                id: string;
+                display_name: string;
+                erpnext_site_ref: string;
+                /** @enum {string} */
+                environment: "dev" | "staging" | "pilot" | "prod";
+                /** Format: date-time */
+                created_at: string;
+                /**
+                 * Format: date-time
+                 * @description Logical-disable timestamp. Null = active.
+                 */
+                disabled_at?: string | null;
+                /** @description The current active credential's STATUS, or null if none. Never a secret. */
+                active_credential: components["schemas"]["CredentialStatus"] | null;
+            };
+            /** @description The issue/rotate response. The ONLY place a raw secret ever appears, and only once. The caller MUST capture `secret` here; it is unrecoverable. */
+            IssuedCredential: {
+                /** Format: uuid */
+                credential_id: string;
+                /** Format: uuid */
+                instance_id: string;
+                /** @description The raw machine credential, shown ONCE. Configure it into the connector now — it cannot be retrieved again. Never logged, never in any other response. */
+                secret: string;
+                /** Format: date-time */
+                expires_at: string;
+                /** Format: date-time */
+                issued_at: string;
+            };
+            /** @description A credential's lifecycle STATUS (no secret, no hash). Used in list/get and as the revoke response. */
+            CredentialStatus: {
+                /** Format: uuid */
+                credential_id: string;
+                /** Format: uuid */
+                instance_id: string;
+                /** Format: date-time */
+                issued_at: string;
+                /** Format: date-time */
+                expires_at: string;
+                /**
+                 * Format: date-time
+                 * @description Null = active (subject also to expiry + instance-disabled).
+                 */
+                revoked_at?: string | null;
+            };
+            /** @description Canonical error envelope, identical to the shared shape in `auth.openapi.yaml` / `catalog/erpnext-warehouse-map.yaml` (used verbatim). Cross-tenant / out-of-scope / wrong-principal refusals are non-disclosing (§II/§XII) — they never enumerate the underlying cause. */
+            Error: {
+                error: {
+                    /** @description Stable machine-readable error code. Closed set on this surface: validation_error | not_found | conflict | idempotency_key_conflict | system_failure (plus the generic 401 refusal). */
+                    code: string;
+                    /** @description Human-readable summary. No sensitive data, no cause enumeration. */
+                    message: string;
+                    /**
+                     * Format: uuid
+                     * @description Server-side correlation id; the actual cause is recorded server-side.
+                     */
+                    request_id?: string;
+                };
+            };
+        };
+        responses: never;
+        parameters: {
+            /** @description UUIDv7 primary key of the `connector_registration` row. */
+            InstanceId: string;
+            /** @description UUIDv7 primary key of the `auth_tokens` credential row. */
+            CredentialId: string;
+            /** @description Required on rotate + revoke (reuses the platform idempotency interceptor). Keyed per resource: the resolved `{id}` / `{credentialId}` is part of the key (RT-82 K1), so reusing a key on a different instance or credential never replays another resource's result. */
+            IdempotencyKey: string;
+        };
+        requestBodies: never;
+        headers: never;
+        pathItems: never;
+    }
+    export type $defs = Record<string, never>;
+    export interface operations {
+        tenantAdminListConnectorInstances: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The tenant's connector instances. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["ConnectorInstance"][];
+                        };
+                    };
+                };
+                /** @description Caller is not authenticated, or not a human session, or lacks the required role (non-disclosing). */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        tenantAdminRegisterConnectorInstance: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RegisterConnectorInstanceRequest"];
+                };
+            };
+            responses: {
+                /** @description Instance registered (no credential yet). */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ConnectorInstance"];
+                    };
+                };
+                /** @description Bad request (validation failure). */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Not authenticated / not a human session / wrong role (non-disclosing). */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description `origin_rejected` (RT-430): the request is authenticated by the `dp2_session` cookie and its `Origin` header is missing, or is neither the API's own origin nor listed in `ALLOWED_ORIGINS`. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description An active registration already exists for this `(environment, erpnext_site_ref)`. `error.code = "conflict"`. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        tenantAdminDisableConnectorInstance: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description UUIDv7 primary key of the `connector_registration` row. */
+                    id: components["parameters"]["InstanceId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Instance disabled (or already disabled — idempotent). */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ConnectorInstance"];
+                    };
+                };
+                /** @description Not authenticated / not a human session / wrong role (non-disclosing). */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description `origin_rejected` (RT-430): the request is authenticated by the `dp2_session` cookie and its `Origin` header is missing, or is neither the API's own origin nor listed in `ALLOWED_ORIGINS`. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Not found OR not in scope (non-disclosing, §II/§XII). */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        tenantAdminIssueConnectorCredential: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description UUIDv7 primary key of the `connector_registration` row. */
+                    id: components["parameters"]["InstanceId"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["IssueCredentialRequest"];
+                };
+            };
+            responses: {
+                /** @description Credential issued. The raw secret is present ONCE. */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["IssuedCredential"];
+                    };
+                };
+                /** @description Bad request (validation failure, e.g. expires_in_days over the ceiling). */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Not authenticated / not a human session / wrong role (non-disclosing). */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description `origin_rejected` (RT-430): the request is authenticated by the `dp2_session` cookie and its `Origin` header is missing, or is neither the API's own origin nor listed in `ALLOWED_ORIGINS`. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Instance not found OR not in scope OR disabled (non-disclosing, §II/§XII). */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description The instance already has an active (unrevoked) credential. Issue mints only the first one; use `POST /api/v1/connector/instances/{id}/credentials/rotate` to replace it. `error.code = "conflict"`. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        tenantAdminRotateConnectorCredential: {
+            parameters: {
+                query?: never;
+                header: {
+                    /** @description Required on rotate + revoke (reuses the platform idempotency interceptor). Keyed per resource: the resolved `{id}` / `{credentialId}` is part of the key (RT-82 K1), so reusing a key on a different instance or credential never replays another resource's result. */
+                    "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                };
+                path: {
+                    /** @description UUIDv7 primary key of the `connector_registration` row. */
+                    id: components["parameters"]["InstanceId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Rotated. The new raw secret is present ONCE; the old credential is revoked. */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["IssuedCredential"];
+                    };
+                };
+                /** @description Not authenticated / not a human session / wrong role (non-disclosing). */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description `origin_rejected` (RT-430): the request is authenticated by the `dp2_session` cookie and its `Origin` header is missing, or is neither the API's own origin nor listed in `ALLOWED_ORIGINS`. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Instance not found OR not in scope OR disabled (non-disclosing, §II/§XII). */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description An idempotency-key conflict, `error.code = "idempotency_key_conflict"`: the key was reused with a different request, OR it already completed a rotation of this instance (a same-key retry is never replayed, because the secret is never stored; RT-82 K3). Rotate again with a new `Idempotency-Key`. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        tenantAdminRevokeConnectorCredential: {
+            parameters: {
+                query?: never;
+                header: {
+                    /** @description Required on rotate + revoke (reuses the platform idempotency interceptor). Keyed per resource: the resolved `{id}` / `{credentialId}` is part of the key (RT-82 K1), so reusing a key on a different instance or credential never replays another resource's result. */
+                    "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                };
+                path: {
+                    /** @description UUIDv7 primary key of the `auth_tokens` credential row. */
+                    credentialId: components["parameters"]["CredentialId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Credential revoked (or already revoked — idempotent). */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CredentialStatus"];
+                    };
+                };
+                /** @description Not authenticated / not a human session / wrong role (non-disclosing). */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description `origin_rejected` (RT-430): the request is authenticated by the `dp2_session` cookie and its `Origin` header is missing, or is neither the API's own origin nor listed in `ALLOWED_ORIGINS`. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Not found OR not in scope (non-disclosing, §II/§XII). */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description An idempotency-key conflict. `error.code = "idempotency_key_conflict"`. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+    }
+}
+
+export namespace ConnectorHealthSchema {
+    export interface paths {
+        "/api/connector/v1/erpnext/health/heartbeat": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            get?: never;
+            put?: never;
+            /**
+             * Report a connector liveness heartbeat.
+             * @description A registered connector instance reports a liveness heartbeat. DP2 records `last_seen_at = now()` from its OWN server clock (§X) and upserts a bounded set of self-reported observational fields (last-write-wins). The connector identity + tenant are resolved from the 018 guard-attached context, NEVER from the body. The body is `.strict()`: unknown keys and any identity field (`tenant_id` / `registration_id` / `last_seen_at`) are rejected as `validation_error` (§XII). A heartbeat failing the full 018 usability predicate (token missing / invalid / expired / revoked, scope != connector, unlinked / cross-tenant / disabled-registration) is refused with the non-disclosing 401. Repeated or concurrent heartbeats converge to the latest `last_seen_at` (idempotent / convergent, no double effect).
+             */
+            post: operations["connectorReportHeartbeat"];
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/connector/health": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * List the connection status of the tenant's connector instances.
+             * @description A tenant administrator (owner / tenant_admin human cookie session ONLY — the 018 session-only admin pattern; token principals incl. `dashboard_api` bearers are REJECTED) lists the connection status of every connector instance registered to their tenant. Each item carries the 018 identity, a nullable `lastSeenAt`, the read-derived `liveness` verdict, and `secondsSinceLastSeen`. An empty array is valid (no registrations). NO secret material. Cross-tenant instances are absent (RLS-scoped, §II).
+             */
+            get: operations["listConnectorHealth"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/connector/health/{registrationId}": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * Read the single-instance connection status detail.
+             * @description Read the single-instance health detail of one connector instance owned by the caller's tenant: identity, the read-derived verdict, `lastSeenAt`, `secondsSinceLastSeen`, and the most recent self-reported observational fields (`connectorVersion` / `backlogIndicator` / `erpnextReachable` / `reportedFieldsAt`). A cross-tenant / out-of-scope / absent `registrationId` returns the canonical non-disclosing `not_found` (safe 404, no existence leak — §II/§XII). Session-only admin auth (token principals rejected).
+             */
+            get: operations["getConnectorHealth"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+    }
+    export type webhooks = Record<string, never>;
+    export interface components {
+        schemas: {
+            /** @description A liveness heartbeat's self-reported observational fields. ALL optional — an empty / absent body is a valid heartbeat (it still records `last_seen_at = now()`). NO `tenant_id`, NO `registration_id`, NO `last_seen_at`: identity + the authoritative last-seen clock are DP2-owned (§XII / §X). Unknown keys and any identity field are rejected as `validation_error`. */
+            HeartbeatReport: {
+                /** @description Self-reported connector software version string. Stored verbatim. */
+                connectorVersion?: string;
+                /** @description Self-reported lag / backlog (e.g. count of pending postings). Non-negative int4. Stored verbatim as a self-report. */
+                backlogIndicator?: number;
+                /** @description Self-reported ERPNext-reachability flag. The connector's own report — NEVER a DP2 probe result (DP2 makes no outbound ERPNext HTTP). */
+                erpnextReachable?: boolean;
+                /**
+                 * Format: date-time
+                 * @description Connector-reported clock at heartbeat time. PRESERVED as provenance only; NEVER used for the liveness verdict (§X). Distinct from DP2's server-clock `last_seen_at`.
+                 */
+                sourceClockAt?: string;
+            };
+            /** @description Minimal heartbeat acknowledgement. Carries the DP2 server-clock stamp at which the heartbeat was recorded. No identity echo beyond what the connector already knows; no secret. */
+            HeartbeatAck: {
+                /**
+                 * Format: date-time
+                 * @description DP2 server-clock time the heartbeat was recorded (the §X clock).
+                 */
+                acknowledgedAt: string;
+            };
+            /** @description One connector instance's current connection status. Identity comes from the 018 registration; `liveness` is DERIVED AT READ against the DP2 server clock and the staleness threshold. Self-reported fields are the most recent values stored by a heartbeat (null until the first beat). NO health-row id, NO tenant_id, NO secret / token / token hash (§IV). */
+            ConnectorHealthView: {
+                /**
+                 * Format: uuid
+                 * @description The 018 `connector_registration(id)`.
+                 */
+                connectorId: string;
+                /** @description The operator-facing label (018). */
+                displayName: string;
+                /**
+                 * @description The 018 environment token.
+                 * @enum {string}
+                 */
+                environment: "dev" | "staging" | "pilot" | "prod";
+                /** @description The 018 ERPNext site label/ref (NOT a secret). */
+                erpnextSiteRef: string;
+                /**
+                 * Format: date-time
+                 * @description Server-clock time of the last accepted heartbeat; null when never seen. The §X security clock — never a connector-reported time.
+                 */
+                lastSeenAt: string | null;
+                /**
+                 * @description Read-derived liveness verdict. `disabled` (018 `disabled_at` set) wins over all liveness states and is never `healthy` (FR-002 / FR-016); `never_seen` when no heartbeat; `healthy` when within the 5-minute staleness threshold; else `stale`.
+                 * @enum {string}
+                 */
+                liveness: "healthy" | "stale" | "never_seen" | "disabled";
+                /** @description Whole seconds since the last heartbeat (floored); null when never seen. */
+                secondsSinceLastSeen: number | null;
+                /** @description Most recent self-reported connector version (null until reported). */
+                connectorVersion?: string | null;
+                /** @description Most recent self-reported backlog/lag indicator (null until reported). int4. */
+                backlogIndicator?: number | null;
+                /** @description Most recent self-reported ERPNext-reachability flag (null until reported). A connector self-report, never a DP2 probe. */
+                erpnextReachable?: boolean | null;
+                /**
+                 * Format: date-time
+                 * @description Server-clock time the self-reported fields above were last updated (null until the first beat with self-reported fields).
+                 */
+                reportedFieldsAt?: string | null;
+            };
+            /** @description The tenant's connector connection-status list. `items` is possibly empty (no registrations). Only the caller's tenant's instances appear (RLS). */
+            ConnectorHealthList: {
+                items: components["schemas"]["ConnectorHealthView"][];
+            };
+            /** @description Canonical error envelope, identical to the shared shape in `auth.openapi.yaml` / `posting-feed.yaml` / `stock-view.yaml` / `reconciliation.yaml` (verbatim — no extra fields). Cross-tenant / out-of-scope refusals are non-disclosing (§II/§XII). */
+            Error: {
+                error: {
+                    /** @description Stable machine-readable error code. Closed set on this surface: validation_error | not_found | system_failure (plus the generic 401 auth refusal and the 403 forbidden-role refusal). */
+                    code: string;
+                    /** @description Human-readable summary. No sensitive data, no cause enumeration. */
+                    message: string;
+                    /**
+                     * Format: uuid
+                     * @description Server-side correlation id; the actual cause is recorded server-side.
+                     */
+                    request_id?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description `validation_error` — malformed body, an unknown key (strict boundary), an out-of-range self-reported field, or a body-supplied server-owned identity field (`tenant_id` / `registration_id` / `last_seen_at`). Deterministic; no state change. */
+            ValidationFailure: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Generic refusal (401). On the heartbeat path it does not distinguish a missing / invalid / expired / revoked connector bearer from an unlinked / cross-tenant / disabled-registration token (the full 018 usability predicate). On the operator path it covers an absent / non-session principal (a token principal, incl. a `dashboard_api` bearer, is refused here — session-only). Non-disclosing. */
+            Unauthorized: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 403 — an authenticated human session whose role is not owner / tenant_admin. Distinct from the 401 (no usable principal). Non-disclosing of any tenant data. */
+            Forbidden: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `not_found` — non-disclosing 404-class for a cross-tenant / out-of-scope / genuinely-absent `registrationId`. Identical shape for all three, with NO existence leak (§II/§XII). */
+            NotFound: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `system_failure` (500) — an unexpected server error. The cause is recorded server-side keyed by `request_id` and is never returned. */
+            SystemFailure: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+        parameters: {
+            /** @description The 018 `connector_registration(id)` to read. Resolves only within the caller's tenant scope — out-of-scope / cross-tenant / absent ids are a non-disclosing `not_found` (safe 404, §II/§XII). A path param so it cannot be body-forged. */
+            RegistrationId: string;
+        };
+        requestBodies: never;
+        headers: never;
+        pathItems: never;
+    }
+    export type $defs = Record<string, never>;
+    export interface operations {
+        connectorReportHeartbeat: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["HeartbeatReport"];
+                };
+            };
+            responses: {
+                /** @description Heartbeat accepted; the health row was upserted. Returns the server-clock acknowledgement. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["HeartbeatAck"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+        listConnectorHealth: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The tenant's connector connection-status list (possibly empty). */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ConnectorHealthList"];
+                    };
+                };
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+        getConnectorHealth: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The 018 `connector_registration(id)` to read. Resolves only within the caller's tenant scope — out-of-scope / cross-tenant / absent ids are a non-disclosing `not_found` (safe 404, §II/§XII). A path param so it cannot be body-forged. */
+                    registrationId: components["parameters"]["RegistrationId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The single-instance connection-status detail. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ConnectorHealthView"];
+                    };
+                };
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+    }
+}
+
+export namespace SyncOpsSchema {
+    export interface paths {
+        "/api/v1/catalog/erpnext-sync-ops/summary": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * Consolidated sync-ops summary across domains for the operator's tenant.
+             * @description One tenant-scoped summary aggregating 015 posting health + 017 reconciliation health, with 020 connector_health + 021 product_master reported as `not_available` (forward-compat). Optional `store_id` narrows to one in-scope store. Tenant resolves server-side from the session.
+             */
+            get: operations["consoleGetSyncOpsSummary"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/catalog/erpnext-sync-ops/posting-backlog": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * Paginated read-through of the 015 posting dead-letter backlog.
+             * @description The tenant's `permanently_rejected` 015 posting rows ONLY — projected with class, origin ref, provenance, structured rejection reason, and dead-letter time. Cursor-paginated, bounded page, deterministic order. READ-ONLY — no repair affordance (repair is a 017 operation).
+             */
+            get: operations["consoleListPostingBacklog"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/catalog/erpnext-sync-ops/reconciliation-runs": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * Paginated newest-first read-through of 017 reconciliation runs.
+             * @description The tenant's 017 `erpnext_reconciliation_run` rows, newest-first, cursor-paginated, projected with trigger source, status, timestamps, and a per-class mismatch summary. Optional `store_id` narrows to one store. READ-ONLY.
+             */
+            get: operations["consoleListReconciliationRuns"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+    }
+    export type webhooks = Record<string, never>;
+    export interface components {
+        schemas: {
+            /** @description The consolidated sync-ops summary for one tenant (optionally one store). One `DomainSummary` per sync-ops domain. */
+            SyncOpsSummary: {
+                /** @description One entry per sync-ops domain. v1 populates `posting` + `reconciliation`; `connector_health` + `product_master` are present as `not_available`. */
+                domains: components["schemas"]["DomainSummary"][];
+            };
+            /** @description Health of one sync-ops domain. `status` is the operator-facing rollup; `not_available` means the domain's source spec (020/021) is not yet built (forward-compat stub — the Console renders a deferred tile). */
+            DomainSummary: {
+                /**
+                 * @description The sync-ops domain this summary describes.
+                 * @enum {string}
+                 */
+                domain: "posting" | "reconciliation" | "connector_health" | "product_master";
+                /**
+                 * @description `ok` — nothing needs operator attention. `attention` — there is a backlog / open mismatch / failed run to look at. `not_available` — the domain's source is not yet built (020/021 in v1).
+                 * @enum {string}
+                 */
+                status: "ok" | "attention" | "not_available";
+                /** @description The single operator-facing count for the domain (e.g. dead-letter backlog size for `posting`; open-mismatch count for `reconciliation`). Null when `not_available`. */
+                headlineCount?: number | null;
+                /** @description Short human-readable context (e.g. latest run outcome). Null when `not_available`. No PII, no internal identifiers. */
+                detail?: string | null;
+            };
+            /** @description A bounded page of posting dead-letter backlog items. */
+            PostingBacklogPage: {
+                items: components["schemas"]["PostingBacklogItem"][];
+                /** @description Opaque cursor for the next page; null on the last page. */
+                nextCursor: string | null;
+            };
+            /** @description A bounded page of reconciliation runs (newest first). */
+            ReconciliationRunPage: {
+                items: components["schemas"]["ReconciliationRunView"][];
+                /** @description Opaque cursor for the next page; null on the last page. */
+                nextCursor: string | null;
+            };
+            /** @description One `permanently_rejected` 015 posting row, projected read-only. No write / repair field (repair is a 017 operation, not exposed here). */
+            PostingBacklogItem: {
+                /**
+                 * Format: uuid
+                 * @description The 015 `erpnext_posting_status` row id (operator reference).
+                 */
+                postingStatusId: string;
+                /**
+                 * @description Whether the posting was a sale post or a void/refund reversal.
+                 * @enum {string}
+                 */
+                kind: "sale_post" | "reversal";
+                /** @description Provenance source system (correlation; mirrors 008/015). */
+                sourceSystem: string;
+                /** @description POS-side identifier of the originating sale/terminal event. */
+                externalId: string;
+                /**
+                 * @description Always `permanently_rejected` — the backlog is dead-letters only.
+                 * @enum {string}
+                 */
+                status: "permanently_rejected";
+                /** @description The 015 `rejection_category` (the nearest 012 RejectionReason.category), for grouping. Null if not recorded. */
+                rejectionClass?: string | null;
+                /**
+                 * Format: date-time
+                 * @description When the row reached its terminal rejected state (015 `updated_at`).
+                 */
+                deadLetteredAt: string;
+            };
+            /** @description One 017 `erpnext_reconciliation_run` row, projected read-only, with a per-class mismatch summary. */
+            ReconciliationRunView: {
+                /** Format: uuid */
+                runId: string;
+                /** Format: uuid */
+                storeId: string;
+                /**
+                 * @description Stock-only in v1 (017 `run.kind`).
+                 * @enum {string}
+                 */
+                kind: "stock";
+                /** @enum {string} */
+                trigger: "on_demand" | "scheduled";
+                /** @enum {string} */
+                status: "running" | "completed" | "failed";
+                /** Format: date-time */
+                startedAt: string;
+                /**
+                 * Format: date-time
+                 * @description Null while `running`; set on a terminal status.
+                 */
+                finishedAt?: string | null;
+                /** @description Per-mismatch-class counts (014 vocabulary keys → count), from the run's `summary` jsonb. Null if the run produced none. Counts only, no PII/money. */
+                mismatchSummary?: {
+                    [key: string]: number;
+                } | null;
+            };
+            /** @description Canonical error envelope, identical to the shared shape in `auth` / `outbox` / `pos-sales` / `erpnext-reconciliation`. Cross-tenant / out-of-scope refusals are non-disclosing (§II/§XII). */
+            Error: {
+                error: {
+                    /** @description Stable machine-readable code. Closed set: validation_error | unauthorized | forbidden | not_found | system_failure. */
+                    code: string;
+                    /** @description Human-readable summary. No sensitive data, no cause enumeration. */
+                    message: string;
+                    /**
+                     * Format: uuid
+                     * @description Server-side correlation id; the cause is recorded server-side.
+                     */
+                    request_id?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description validation_error (400) — malformed query, unknown key (strict), bad cursor. */
+            ValidationFailure: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Unauthorized (401) — missing / invalid session, OR a machine credential (connectorBearer / dashboard_api / clerkJwt) presented to this human-only surface. Non-disclosing. */
+            Unauthorized: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description forbidden (403) — authenticated human without the required tenant role. */
+            Forbidden: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description not_found (404) — non-disclosing for a cross-tenant / out-of-scope `store_id` or resource. Identical for cross-tenant, out-of-scope, and genuinely-absent (§II/§XII). */
+            NotFound: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description system_failure (500) — unexpected server error; cause recorded server-side. */
+            SystemFailure: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+        parameters: {
+            /** @description Optional in-scope store filter. Validated against the operator's accessible stores; an out-of-scope id is a non-disclosing 404. */
+            StoreIdQuery: string;
+            /** @description Opaque pagination cursor from a prior page's `nextCursor`. Opaque — do not decode or construct. Omit for the first page. The posting-backlog cursor is a numeric token (1–18 digits); anything else is a 400 `validation_error`. */
+            Cursor: string;
+            /** @description Opaque pagination cursor from a prior page's `nextCursor`. Opaque — do not decode or construct. Omit for the first page. The run-history cursor is `<startedAt>|<runId>`: a UTC instant in `YYYY-MM-DDTHH:mm:ss.sssZ` form that exists on the calendar (no Feb 30, month 13, hour 24 or year 0000), then `|`, then a UUID. Anything else is a 400 `validation_error`. */
+            RunCursor: string;
+            /** @description Maximum items per page (bounded). The server MAY return fewer. */
+            PageSize: number;
+        };
+        requestBodies: never;
+        headers: never;
+        pathItems: never;
+    }
+    export type $defs = Record<string, never>;
+    export interface operations {
+        consoleGetSyncOpsSummary: {
+            parameters: {
+                query?: {
+                    /** @description Optional in-scope store filter. Validated against the operator's accessible stores; an out-of-scope id is a non-disclosing 404. */
+                    store_id?: components["parameters"]["StoreIdQuery"];
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The consolidated sync-ops summary. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SyncOpsSummary"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+        consoleListPostingBacklog: {
+            parameters: {
+                query?: {
+                    /** @description Optional in-scope store filter. Validated against the operator's accessible stores; an out-of-scope id is a non-disclosing 404. */
+                    store_id?: components["parameters"]["StoreIdQuery"];
+                    /** @description Opaque pagination cursor from a prior page's `nextCursor`. Opaque — do not decode or construct. Omit for the first page. The posting-backlog cursor is a numeric token (1–18 digits); anything else is a 400 `validation_error`. */
+                    cursor?: components["parameters"]["Cursor"];
+                    /** @description Maximum items per page (bounded). The server MAY return fewer. */
+                    page_size?: components["parameters"]["PageSize"];
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description A page of dead-letter backlog items. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PostingBacklogPage"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+        consoleListReconciliationRuns: {
+            parameters: {
+                query?: {
+                    /** @description Optional in-scope store filter. Validated against the operator's accessible stores; an out-of-scope id is a non-disclosing 404. */
+                    store_id?: components["parameters"]["StoreIdQuery"];
+                    /** @description Opaque pagination cursor from a prior page's `nextCursor`. Opaque — do not decode or construct. Omit for the first page. The run-history cursor is `<startedAt>|<runId>`: a UTC instant in `YYYY-MM-DDTHH:mm:ss.sssZ` form that exists on the calendar (no Feb 30, month 13, hour 24 or year 0000), then `|`, then a UUID. Anything else is a 400 `validation_error`. */
+                    cursor?: components["parameters"]["RunCursor"];
+                    /** @description Maximum items per page (bounded). The server MAY return fewer. */
+                    page_size?: components["parameters"]["PageSize"];
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description A page of reconciliation runs (newest first). */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReconciliationRunPage"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+    }
+}
+
+export type paths = AuthSchema.paths & ContextSchema.paths & TenantsSchema.paths & StoresSchema.paths & MembershipsSchema.paths & AuditSchema.paths & UnknownItemsSchema.paths & SettlementSchema.paths & ErpnextReconciliationSchema.paths & ShiftClosesSchema.paths & ConnectorAdminSchema.paths & ConnectorHealthSchema.paths & SyncOpsSchema.paths;
+export type components = AuthSchema.components & ContextSchema.components & TenantsSchema.components & StoresSchema.components & MembershipsSchema.components & AuditSchema.components & UnknownItemsSchema.components & SettlementSchema.components & ErpnextReconciliationSchema.components & ShiftClosesSchema.components & ConnectorAdminSchema.components & ConnectorHealthSchema.components & SyncOpsSchema.components;
+export type operations = AuthSchema.operations & ContextSchema.operations & TenantsSchema.operations & StoresSchema.operations & MembershipsSchema.operations & AuditSchema.operations & UnknownItemsSchema.operations & SettlementSchema.operations & ErpnextReconciliationSchema.operations & ShiftClosesSchema.operations & ConnectorAdminSchema.operations & ConnectorHealthSchema.operations & SyncOpsSchema.operations;
