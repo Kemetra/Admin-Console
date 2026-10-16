@@ -194,6 +194,10 @@ describe("DeviceDetail (RT-371)", () => {
     renderDetail({ pathname: `/devices/${DEVICE_1}`, state: { list: "?state=active" } });
     const overview = await screen.findByRole("tab", { name: "Overview" });
     expect(overview.getAttribute("aria-selected")).toBe("true");
+    // Every aria-controls names a panel that exists (only the selected one renders).
+    expect(overview.getAttribute("aria-controls")).toBe("device-panel-overview");
+    expect(document.getElementById("device-panel-overview")).not.toBeNull();
+    expect(screen.getByRole("tab", { name: "History" }).hasAttribute("aria-controls")).toBe(false);
 
     fireEvent.click(screen.getByRole("tab", { name: "History" }));
     await waitFor(() =>

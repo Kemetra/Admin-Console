@@ -92,7 +92,8 @@ function DeviceTabs({
           type="button"
           role="tab"
           id={`device-tab-${tab}`}
-          aria-controls={`device-panel-${tab}`}
+          // Only the selected panel is rendered, so only its tab points at it.
+          aria-controls={selected === tab ? `device-panel-${tab}` : undefined}
           aria-selected={selected === tab}
           tabIndex={selected === tab ? 0 : -1}
           className="device-tab"
