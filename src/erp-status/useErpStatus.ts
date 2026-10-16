@@ -53,17 +53,26 @@ export function useErpScope(): ErpScope {
   };
 }
 
-/** The store filter value (`""` = all stores) is part of every C3 key. */
+/** What a panel reads: the tenant, the store filter (`""` = all stores), and the page's gate. */
+export interface ErpQuery {
+  tenantId: string | null;
+  storeId: string;
+  /** False for a role that may not read, or a malformed store filter: nothing is requested. */
+  enabled: boolean;
+}
+
+/** Reads only with a tenant and an open gate. */
+function isActive(query: ErpQuery): boolean {
+  return query.enabled && Boolean(query.tenantId);
+}
+
+/** The store filter is part of every C3 key; the connection reads are tenant-wide. */
 export const erpQueryKeys = {
-  all: (tenantId: string | null) => ["erp-status", tenantId] as const,
-  instances: (tenantId: string | null) => ["erp-status", tenantId, "instances"] as const,
-  health: (tenantId: string | null) => ["erp-status", tenantId, "health"] as const,
-  summary: (tenantId: string | null, storeId: string) =>
-    ["erp-status", tenantId, "summary", storeId] as const,
-  backlog: (tenantId: string | null, storeId: string) =>
-    ["erp-status", tenantId, "backlog", storeId] as const,
-  runs: (tenantId: string | null, storeId: string) =>
-    ["erp-status", tenantId, "runs", storeId] as const,
+  instances: (q: ErpQuery) => ["erp-status", q.tenantId, "instances"] as const,
+  health: (q: ErpQuery) => ["erp-status", q.tenantId, "health"] as const,
+  summary: (q: ErpQuery) => ["erp-status", q.tenantId, "summary", q.storeId] as const,
+  backlog: (q: ErpQuery) => ["erp-status", q.tenantId, "backlog", q.storeId] as const,
+  runs: (q: ErpQuery) => ["erp-status", q.tenantId, "runs", q.storeId] as const,
 };
 
 class ErpFetchError extends Error {
@@ -130,13 +139,16 @@ type ListResult = Pick<
   "error" | "data" | "isLoading" | "dataUpdatedAt" | "refetch"
 >;
 
-function oldest(a: number | undefined, b: number | undefined): number | undefined {
-  if (a === undefined || b === undefined) return a ?? b;
-  return Math.min(a, b);
+/** The oldest of the read times that exist. */
+function oldest(times: readonly (number | undefined)[]): number | undefined {
+  const known = times.filter((time): time is number => time !== undefined);
+  return known.length > 0 ? Math.min(...known) : undefined;
 }
 
-const pageQuery = (storeId: string, cursor: string | undefined): PageQuery => ({
-  ...(storeId ? { store_id: storeId } : {}),
+const storeFilter = (query: ErpQuery) => (query.storeId ? { store_id: query.storeId } : {});
+
+const pageQuery = (query: ErpQuery, cursor: string | undefined): PageQuery => ({
+  ...storeFilter(query),
   ...(cursor ? { cursor } : {}),
 });
 
@@ -148,16 +160,16 @@ export interface ConnectionsState extends PanelState {
   healthFailed: boolean;
 }
 
-export function useConnections(tenantId: string | null, enabled: boolean): ConnectionsState {
-  const active = enabled && Boolean(tenantId);
+export function useConnections(query: ErpQuery): ConnectionsState {
+  const active = isActive(query);
   const instances = useQuery({
-    queryKey: erpQueryKeys.instances(tenantId),
+    queryKey: erpQueryKeys.instances(query),
     enabled: active,
     queryFn: () => tenantAdminListConnectorInstances().then(dataOrThrow),
     retry: false,
   });
   const health = useQuery<ConnectorHealthList>({
-    queryKey: erpQueryKeys.health(tenantId),
+    queryKey: erpQueryKeys.health(query),
     enabled: active,
     queryFn: () => listConnectorHealth().then(dataOrThrow),
     retry: false,
@@ -173,7 +185,7 @@ export function useConnections(tenantId: string | null, enabled: boolean): Conne
     rows: joinConnections(instances.data?.items ?? [], healthFailed ? undefined : health.data),
     healthFailed,
     // The pills come from C2, so "last read" is the older of the two reads.
-    asOf: oldest(panel.asOf, healthFailed ? undefined : healthPanel.asOf),
+    asOf: oldest([panel.asOf, healthFailed ? undefined : healthPanel.asOf]),
     retry: () => {
       void instances.refetch();
       void health.refetch();
@@ -187,16 +199,12 @@ export interface SummaryState extends PanelState {
   summary?: SyncOpsSummary;
 }
 
-export function useSyncSummary(
-  tenantId: string | null,
-  storeId: string,
-  enabled: boolean,
-): SummaryState {
-  const active = enabled && Boolean(tenantId);
+export function useSyncSummary(query: ErpQuery): SummaryState {
+  const active = isActive(query);
   const result = useQuery({
-    queryKey: erpQueryKeys.summary(tenantId, storeId),
+    queryKey: erpQueryKeys.summary(query),
     enabled: active,
-    queryFn: () => consoleGetSyncOpsSummary(storeId ? { store_id: storeId } : {}).then(dataOrThrow),
+    queryFn: () => consoleGetSyncOpsSummary(storeFilter(query)).then(dataOrThrow),
     retry: false,
   });
   return { ...panelOf(result, active), summary: result.data };
@@ -215,9 +223,10 @@ const FIRST_PAGE: string | undefined = undefined;
 
 function useCursorList<T>(
   queryKey: readonly unknown[],
-  active: boolean,
+  query: ErpQuery,
   fetchPage: (cursor: string | undefined) => Promise<{ items: T[]; nextCursor: string | null }>,
 ): ListState<T> {
+  const active = isActive(query);
   const result = useInfiniteQuery({
     queryKey,
     enabled: active,
@@ -241,22 +250,14 @@ function useCursorList<T>(
   };
 }
 
-export function usePostingBacklog(
-  tenantId: string | null,
-  storeId: string,
-  enabled: boolean,
-): ListState<PostingBacklogItem> {
-  return useCursorList(erpQueryKeys.backlog(tenantId, storeId), enabled && Boolean(tenantId), (c) =>
-    consoleListPostingBacklog(pageQuery(storeId, c)).then(dataOrThrow),
+export function usePostingBacklog(query: ErpQuery): ListState<PostingBacklogItem> {
+  return useCursorList(erpQueryKeys.backlog(query), query, (cursor) =>
+    consoleListPostingBacklog(pageQuery(query, cursor)).then(dataOrThrow),
   );
 }
 
-export function useReconciliationRuns(
-  tenantId: string | null,
-  storeId: string,
-  enabled: boolean,
-): ListState<ReconciliationRunView> {
-  return useCursorList(erpQueryKeys.runs(tenantId, storeId), enabled && Boolean(tenantId), (c) =>
-    consoleListReconciliationRuns(pageQuery(storeId, c)).then(dataOrThrow),
+export function useReconciliationRuns(query: ErpQuery): ListState<ReconciliationRunView> {
+  return useCursorList(erpQueryKeys.runs(query), query, (cursor) =>
+    consoleListReconciliationRuns(pageQuery(query, cursor)).then(dataOrThrow),
   );
 }

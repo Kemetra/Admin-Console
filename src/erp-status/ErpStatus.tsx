@@ -25,6 +25,7 @@ import { SyncSummary } from "./SyncSummary";
 import { canReadErpStatus, isStoreFilter } from "./erpStatusLogic";
 import {
   type ErpError,
+  type ErpQuery,
   type ErpScope,
   type PanelState,
   useConnections,
@@ -72,16 +73,13 @@ function ErpStatusContent({ scope }: Readonly<{ scope: ErpScope }>): React.JSX.E
 
   const validStore = isStoreFilter(storeId);
 
-  const connections = useConnections(scope.tenantId, true);
-  const summary = notFoundUnless(validStore, useSyncSummary(scope.tenantId, storeId, validStore));
-  const backlog = notFoundUnless(
-    validStore,
-    usePostingBacklog(scope.tenantId, storeId, validStore),
-  );
-  const runs = notFoundUnless(
-    validStore,
-    useReconciliationRuns(scope.tenantId, storeId, validStore),
-  );
+  // A malformed store filter closes the C3 gate: those panels read not-found.
+  const c3: ErpQuery = { tenantId: scope.tenantId, storeId, enabled: validStore };
+
+  const connections = useConnections({ tenantId: scope.tenantId, storeId: "", enabled: true });
+  const summary = notFoundUnless(validStore, useSyncSummary(c3));
+  const backlog = notFoundUnless(validStore, usePostingBacklog(c3));
+  const runs = notFoundUnless(validStore, useReconciliationRuns(c3));
   const nameOf = (id: string) => stores.find((s) => s.id === id)?.name;
 
   const refreshAll = () => {
