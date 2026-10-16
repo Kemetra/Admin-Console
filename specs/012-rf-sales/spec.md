@@ -203,7 +203,10 @@ shape.
   `sale_number` (exact); proposed status filters `sync_status`, `voided`,
   `return_state`, `erp_posting_state` with the existing enum values; `cursor`
   (opaque, bound to tenant, store and filters; foreign or forged is 400);
-  `page_size` 1 to 100, default 50.
+  `page_size` 1 to 100, default 50. The return and ERP states come from return and
+  posting rows, not from `sales` columns, so the 0048 index does not cover those
+  filters. Backend-Core decides whether they ship in v1 without a new index; if they
+  would need one, they move to a later slice (OD-556-2: no new migration in v1).
 - **List response**: `{items, nextCursor, asOf, storeTimezone, from, to}`. Items carry
   the `SaleHistoryItem` fields (saleRef, saleNumber, businessDate, occurredAt,
   receivedAt, device, operator, currencyCode, posTotal, syncStatus, voided,
@@ -242,8 +245,8 @@ shape.
 
 ### 6.5 Proposed Backend-Core issues (not created; listed for the coordinator)
 
-1. **Backend-Core — console sales read contract [GATED].** `consoleListSales` and
-   `consoleGetSale` as in §6.3, with contract tests, `read-scope` tests and the
+1. **Backend-Core — console sales read contract [GATED].** The proposed
+   `consoleListSales` and `consoleGetSale` (names final per that review) as in §6.3, with contract tests, `read-scope` tests and the
    `route-auth-markers` entry. Contract first; the console implementation waits on it.
 2. **Backend-Core — console sales read runtime, authorization and audit.** Guards,
    operator-store-scope, explicit `store_id` predicate, span cap, keyset cursor,
@@ -266,7 +269,7 @@ The sales screens link out. They never re-render another screen's data.
 | Receivables list row | Sale detail | `Receivable.saleRef` → `/sales/:saleRef` | Available once 012 ships (receivables already carry `saleRef`). |
 | Sale detail | Receivables for this sale | `/receivables?sale=<saleRef>` | **Blocked** on proposed issue 3 (no `sale_ref` filter today). Hidden until then. |
 | Sale detail | Shift closes for the store and day | `/shift-closes?store=<storeId>&from=<businessDate>&to=<businessDate>` (keys `ShiftCloseList` already reads) | Available. Labelled "shift closes that day"; sales carry no shift id, so it is not "this sale's shift". A shift that crosses midnight may close the next day. |
-| Sale detail | Audit search | `/audit` filtered by store, date and `console_sales.` / `sale_history.` / `sale.` actions | **Blocked.** `AuditSearch` keeps no filter state in the URL and the audit API has no `saleRef` filter. Needs URL filter state in spec 006 (dependency, not this slice). |
+| Sale detail | Audit search | `/audit` filtered by store, date and the console sales audit actions (proposed `console_sales.`; final per the [GATED] contract) plus `sale_history.` / `sale.` | **Blocked.** `AuditSearch` keeps no filter state in the URL and the audit API has no `saleRef` filter. Needs URL filter state in spec 006 (dependency, not this slice). |
 | Sale detail | Sync repair | — | Not linked. Repair is the sync-ops surface (spec 013), `owner`/`tenant_admin` only. |
 
 ## 8. States
@@ -352,8 +355,9 @@ The later implementation is accepted when:
   store and day.
 - **AC-15.** Network traces show only Backend-Core console routes; no `/api/pos/v1/**`,
   ERPNext or Connector requests.
-- **AC-16.** Opening a sale writes one `console_sales.detail_read` audit event, and a
-  list request writes one `console_sales.listed` event (verified against Backend-Core,
+- **AC-16.** Opening a sale writes one detail-read audit event, and a list request
+  writes one list audit event (proposed `console_sales.detail_read` and
+  `console_sales.listed`; final per the [GATED] contract) (verified against Backend-Core,
   not asserted by the console).
 
 ## 11. Reports (spec 015) — deferred
