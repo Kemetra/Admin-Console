@@ -22,9 +22,11 @@ import { PostingBacklog } from "./PostingBacklog";
 import { ReconciliationRuns } from "./ReconciliationRuns";
 import { type FilterStore, StoreFilter } from "./StoreFilter";
 import { SyncSummary } from "./SyncSummary";
-import { canReadErpStatus } from "./erpStatusLogic";
+import { canReadErpStatus, isStoreFilter } from "./erpStatusLogic";
 import {
+  type ErpError,
   type ErpScope,
+  type PanelState,
   useConnections,
   useErpScope,
   usePostingBacklog,
@@ -45,16 +47,41 @@ function useFilterStores(tenantId: string | null): FilterStore[] {
   return scopeMenuStores(rows, membership, null).map((s) => ({ id: s.id, name: s.name }));
 }
 
+const MALFORMED_STORE: ErpError = { kind: "not-found" };
+
+/** A malformed store filter is never sent: its panels read not-found, like an out-of-scope store. */
+function notFoundUnless<S extends PanelState>(valid: boolean, state: S): S {
+  if (valid) return state;
+  const inert = () => {};
+  return {
+    ...state,
+    isLoading: false,
+    error: MALFORMED_STORE,
+    inlineError: undefined,
+    asOf: undefined,
+    retry: inert,
+    ...("loadMore" in state ? { loadMore: inert, hasMore: false } : {}),
+  };
+}
+
 function ErpStatusContent({ scope }: Readonly<{ scope: ErpScope }>): React.JSX.Element {
   const t = useT();
   const [search, setSearch] = useSearchParams();
   const storeId = search.get("store") ?? "";
   const stores = useFilterStores(scope.tenantId);
 
+  const validStore = isStoreFilter(storeId);
+
   const connections = useConnections(scope.tenantId, true);
-  const summary = useSyncSummary(scope.tenantId, storeId, true);
-  const backlog = usePostingBacklog(scope.tenantId, storeId, true);
-  const runs = useReconciliationRuns(scope.tenantId, storeId, true);
+  const summary = notFoundUnless(validStore, useSyncSummary(scope.tenantId, storeId, validStore));
+  const backlog = notFoundUnless(
+    validStore,
+    usePostingBacklog(scope.tenantId, storeId, validStore),
+  );
+  const runs = notFoundUnless(
+    validStore,
+    useReconciliationRuns(scope.tenantId, storeId, validStore),
+  );
   const nameOf = (id: string) => stores.find((s) => s.id === id)?.name;
 
   const refreshAll = () => {

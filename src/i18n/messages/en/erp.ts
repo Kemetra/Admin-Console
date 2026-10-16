@@ -47,6 +47,7 @@ export const erp: MessagesOf<typeof ar> = {
   "erp.conn.col.reachable": "ERPNext reachable (reported by the connector)",
   "erp.conn.col.credential": "Credential expires",
   "erp.conn.never": "Never",
+  "erp.conn.unknown": "Unknown",
   "erp.conn.since": "{duration} ago",
   "erp.conn.reportedAt": "Reported {time}",
   "erp.conn.noCredential": "No active credential",

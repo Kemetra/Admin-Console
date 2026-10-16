@@ -32,6 +32,7 @@ export function StoreFilter({
         <select
           id="erp-store-filter"
           className="input"
+          aria-describedby="erp-store-filter-note"
           value={value}
           onChange={(e) => onChange(e.target.value)}
         >
@@ -43,7 +44,9 @@ export function StoreFilter({
           ))}
         </select>
       </div>
-      <p className="erp-filter__note">{t("erp.filter.note")}</p>
+      <p className="erp-filter__note" id="erp-store-filter-note">
+        {t("erp.filter.note")}
+      </p>
     </div>
   );
 }

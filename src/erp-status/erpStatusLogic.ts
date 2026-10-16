@@ -27,6 +27,17 @@ export function canReadErpStatus(role: string | null | undefined): boolean {
   return (READ_ROLES as readonly string[]).includes(role ?? "");
 }
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * The `?store=` filter: "" (all stores) or a UUID. Anything else would be a
+ * contract 400, so it is never sent and renders as not-found, like an
+ * out-of-scope store.
+ */
+export function isStoreFilter(value: string): boolean {
+  return value === "" || UUID_PATTERN.test(value);
+}
+
 // --- Status pills ---------------------------------------------------------------
 
 export type Tone = "success" | "warning" | "danger" | "info" | "neutral";

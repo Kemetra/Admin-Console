@@ -3,6 +3,7 @@ import {
   domainKey,
   domainStatusView,
   flattenPages,
+  isStoreFilter,
   joinConnections,
   livenessSignal,
   mismatchEntries,
@@ -33,6 +34,16 @@ describe("role gate (A-6)", () => {
       expect(canReadErpStatus(role)).toBe(false);
     },
   );
+});
+
+describe("store filter value", () => {
+  test("all stores or a UUID is sent", () => {
+    expect(isStoreFilter("")).toBe(true);
+    expect(isStoreFilter("0190f000-0000-7000-8000-0000000000a1")).toBe(true);
+  });
+  test.each(["abc", "1", "0190f000-0000-7000-8000", "' or 1=1"])("%s is not sent", (value) => {
+    expect(isStoreFilter(value)).toBe(false);
+  });
 });
 
 describe("liveness → signal (A-1, A-2)", () => {

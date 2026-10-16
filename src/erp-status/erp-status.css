@@ -54,9 +54,12 @@
   flex-direction: column;
   gap: var(--space-1);
 }
-.erp-row,
-.erp-row:hover {
+/* Read-only rows: no pointer and no hover wash, so nothing reads as clickable. */
+.erp-row {
   cursor: default;
+}
+.erp-row:hover {
+  background-color: transparent;
 }
 .erp-row__name {
   font-weight: var(--weight-strong);

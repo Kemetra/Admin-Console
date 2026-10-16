@@ -30,9 +30,9 @@ function BacklogRow({ item }: Readonly<{ item: PostingBacklogItem }>): React.JSX
   return (
     <tr className="data-table__row erp-row">
       <td>{t(postingKindKey(item.kind))}</td>
-      <td className="data-table__cell--mono">
+      <th scope="row" className="data-table__cell--mono erp-row__name">
         <bdi dir="ltr">{item.externalId}</bdi>
-      </td>
+      </th>
       <td className="data-table__cell--mono">
         <bdi dir="ltr">{item.sourceSystem}</bdi>
       </td>

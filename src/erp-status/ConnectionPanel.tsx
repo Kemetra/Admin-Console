@@ -38,9 +38,16 @@ function headers(t: T): { key: string; header: string }[] {
   ];
 }
 
+/** No C2 row for this instance (or no readable C2): nothing is known about it. */
+function Unknown(): React.JSX.Element {
+  const t = useT();
+  return <span className="muted">{t("erp.conn.unknown")}</span>;
+}
+
 function LastSeen({ health }: Readonly<{ health?: ConnectorHealthView }>): React.JSX.Element {
   const t = useT();
-  if (!health?.lastSeenAt) return <span className="muted">{t("erp.conn.never")}</span>;
+  if (!health) return <Unknown />;
+  if (!health.lastSeenAt) return <span className="muted">{t("erp.conn.never")}</span>;
   const since = sinceSeconds(health.secondsSinceLastSeen);
   return (
     <span className="erp-stack">
@@ -94,19 +101,13 @@ function ConnectionTableRow({ row }: Readonly<{ row: ConnectionRow }>): React.JS
       <td>
         <LastSeen health={health} />
       </td>
+      <td>{health ? <Version health={health} /> : <Unknown />}</td>
       <td>
-        <Reported health={health}>
-          {health?.connectorVersion ? (
-            <bdi dir="ltr" className="data-table__cell--mono">
-              {health.connectorVersion}
-            </bdi>
-          ) : (
-            <span className="muted">{t("erp.reported.notReported")}</span>
-          )}
-        </Reported>
-      </td>
-      <td>
-        <Reported health={health}>{t(reachabilityKey(health?.erpnextReachable))}</Reported>
+        {health ? (
+          <Reported health={health}>{t(reachabilityKey(health.erpnextReachable))}</Reported>
+        ) : (
+          <Unknown />
+        )}
       </td>
       <td>
         {credential ? (
@@ -116,6 +117,21 @@ function ConnectionTableRow({ row }: Readonly<{ row: ConnectionRow }>): React.JS
         )}
       </td>
     </tr>
+  );
+}
+
+function Version({ health }: Readonly<{ health: ConnectorHealthView }>): React.JSX.Element {
+  const t = useT();
+  return (
+    <Reported health={health}>
+      {health.connectorVersion ? (
+        <bdi dir="ltr" className="data-table__cell--mono">
+          {health.connectorVersion}
+        </bdi>
+      ) : (
+        <span className="muted">{t("erp.reported.notReported")}</span>
+      )}
+    </Reported>
   );
 }
 
@@ -173,12 +189,13 @@ function ConnectionBody({ state }: Readonly<{ state: ConnectionsState }>): React
       />
     );
   }
-  const anyNoSignal = state.rows.some((row) => row.signal === "no_signal");
+  // The note explains the never_seen verdict only; other no-signal causes are not known here.
+  const anyNeverSeen = state.rows.some((row) => row.health?.liveness === "never_seen");
   return (
     <>
       {state.healthFailed ? <p className="erp-note">{t("erp.conn.healthFailed")}</p> : null}
       <ConnectionTable rows={state.rows} />
-      {anyNoSignal ? <p className="erp-note">{t("erp.conn.noSignalNote")}</p> : null}
+      {anyNeverSeen ? <p className="erp-note">{t("erp.conn.noSignalNote")}</p> : null}
     </>
   );
 }

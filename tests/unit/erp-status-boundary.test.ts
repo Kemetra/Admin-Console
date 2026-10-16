@@ -23,11 +23,11 @@ function filesUnder(dir: string, acc: string[] = []): string[] {
   return acc;
 }
 
-const read = (path: string) => stripComments(readFileSync(join(process.cwd(), path), "utf8"));
-const wrapperSrc = read("src/lib/erp-status-queries.ts");
-const featureSrc = filesUnder(join(process.cwd(), "src/erp-status"))
-  .map((f) => stripComments(readFileSync(f, "utf8")))
-  .join("\n");
+const raw = (path: string) => readFileSync(path, "utf8");
+const wrapperRaw = raw(join(process.cwd(), "src/lib/erp-status-queries.ts"));
+const featureRaw = filesUnder(join(process.cwd(), "src/erp-status")).map(raw).join("\n");
+const wrapperSrc = stripComments(wrapperRaw);
+const featureSrc = stripComments(featureRaw);
 
 describe("ERP status boundary (RT-560)", () => {
   test("exactly the five read wrappers are exported", () => {
@@ -81,14 +81,25 @@ describe("ERP status boundary (RT-560)", () => {
     }
   });
 
+  test("no credential secret, issue/rotate response or credential id is read or shown", () => {
+    for (const src of [wrapperSrc, featureSrc]) {
+      expect(src).not.toMatch(/\bsecret\b/);
+      expect(src).not.toContain("IssuedCredential");
+      expect(src).not.toContain("credential_id");
+    }
+  });
+
   test("nothing leaves for the Connector or ERPNext, and no hand-rolled fetch or bearer", () => {
+    // Raw source: stripping `//` comments would also cut "https://" out of a string.
+    for (const src of [wrapperRaw, featureRaw]) {
+      expect(src).not.toMatch(/https?:\/\//);
+      expect(src).not.toMatch(/\/api\/method\/|\/api\/resource\//);
+    }
     for (const src of [wrapperSrc, featureSrc]) {
       expect(src).not.toMatch(/\bfetch\s*\(/);
       expect(src).not.toMatch(/XMLHttpRequest|axios/);
-      expect(src).not.toMatch(/https?:\/\//);
       expect(src).not.toMatch(/[Aa]uthorization\s*:/);
       expect(src).not.toMatch(/[Bb]earer\s+/);
-      expect(src).not.toMatch(/\/api\/method\/|\/api\/resource\//);
     }
   });
 });

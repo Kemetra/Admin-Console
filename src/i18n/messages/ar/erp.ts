@@ -55,6 +55,7 @@ export const erp = {
   "erp.conn.col.reachable": "الوصول إلى ERPNext (حسب تقرير الموصل)",
   "erp.conn.col.credential": "انتهاء بيانات الاعتماد",
   "erp.conn.never": "لم يظهر بعد",
+  "erp.conn.unknown": "غير معروف",
   "erp.conn.since": "منذ {duration}",
   "erp.conn.reportedAt": "أُبلغ في {time}",
   "erp.conn.noCredential": "لا توجد بيانات اعتماد فعّالة",

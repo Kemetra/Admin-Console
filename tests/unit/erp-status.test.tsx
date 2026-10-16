@@ -279,6 +279,58 @@ describe("connection panel (A-1, A-2, A-3)", () => {
   });
 });
 
+describe("connection truth regressions (review H1, M2, M4)", () => {
+  test("a failed C2 re-read drops an earlier healthy verdict to no signal", async () => {
+    api.tenantAdminListConnectorInstances.mockResolvedValue(
+      ok({ items: [instance({ display_name: "Cairo ERP" })] }),
+    );
+    api.listConnectorHealth.mockResolvedValueOnce(
+      ok({
+        items: [
+          healthView({
+            liveness: "healthy",
+            lastSeenAt: "2026-10-16T09:00:00Z",
+            secondsSinceLastSeen: 30,
+          }),
+        ],
+      }),
+    );
+    renderPage();
+    expect(within(await connectionRow("Cairo ERP")).getByText("Connected")).toBeDefined();
+    api.listConnectorHealth.mockResolvedValue(failure(500));
+    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    await waitFor(() =>
+      expect(
+        within(screen.getByRole("row", { name: /Cairo ERP/ })).getByText("No signal"),
+      ).toBeDefined(),
+    );
+    const connection = panel(/connector connection/i);
+    expect(within(connection).queryByText("Connected")).toBeNull();
+    expect(within(connection).getByText(/couldn't read the connection status/i)).toBeDefined();
+  });
+
+  test("with no C2 row nothing is asserted about the instance, and no cause is invented", async () => {
+    api.listConnectorHealth.mockResolvedValue(ok({ items: [] }));
+    renderPage();
+    const row = await connectionRow("Cairo ERP");
+    expect(within(row).getByText("No signal")).toBeDefined();
+    expect(within(row).getAllByText("Unknown")).toHaveLength(3);
+    expect(within(row).queryByText("Never")).toBeNull();
+    expect(within(row).queryByText("Not reported")).toBeNull();
+    expect(screen.queryByText(/hasn't sent a heartbeat/i)).toBeNull();
+  });
+
+  test("while C2 is still loading the panel is a skeleton, never no-signal rows", async () => {
+    api.listConnectorHealth.mockReturnValue(new Promise(() => {}));
+    renderPage();
+    const connection = panel(/connector connection/i);
+    await waitFor(() =>
+      expect(within(connection).getByRole("table").getAttribute("aria-busy")).toBe("true"),
+    );
+    expect(within(connection).queryByText("No signal")).toBeNull();
+  });
+});
+
 describe("sync summary (A-4)", () => {
   test("each domain is its own tile; connector_health stays not available", async () => {
     // A healthy instance in the panel does not lift the summary's not_available.
@@ -412,6 +464,30 @@ describe("store filter (§4.5, A-6)", () => {
       "This store isn't available to you.",
     );
     expect(api.consoleGetSyncOpsSummary).toHaveBeenCalledWith({ store_id: other });
+  });
+});
+
+describe("malformed store filter", () => {
+  test("is never sent: the C3 panels read not-found and the connection still loads", async () => {
+    renderPage("/erp-connection?store=not-a-store");
+    expect(await connectionRow("Cairo ERP")).toBeDefined();
+    const summary = panel(/sync summary/i);
+    expect(within(summary).getByRole("alert").textContent).toContain(
+      "This store isn't available to you.",
+    );
+    expect(api.consoleGetSyncOpsSummary).not.toHaveBeenCalled();
+    expect(api.consoleListPostingBacklog).not.toHaveBeenCalled();
+    expect(api.consoleListReconciliationRuns).not.toHaveBeenCalled();
+  });
+
+  test("Refresh still sends nothing for the malformed filter (review M1)", async () => {
+    renderPage("/erp-connection?store=not-a-store");
+    await connectionRow("Cairo ERP");
+    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    await waitFor(() => expect(api.tenantAdminListConnectorInstances).toHaveBeenCalledTimes(2));
+    expect(api.consoleGetSyncOpsSummary).not.toHaveBeenCalled();
+    expect(api.consoleListPostingBacklog).not.toHaveBeenCalled();
+    expect(api.consoleListReconciliationRuns).not.toHaveBeenCalled();
   });
 });
 

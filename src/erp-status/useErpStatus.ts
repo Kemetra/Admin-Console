@@ -130,6 +130,11 @@ type ListResult = Pick<
   "error" | "data" | "isLoading" | "dataUpdatedAt" | "refetch"
 >;
 
+function oldest(a: number | undefined, b: number | undefined): number | undefined {
+  if (a === undefined || b === undefined) return a ?? b;
+  return Math.min(a, b);
+}
+
 const pageQuery = (storeId: string, cursor: string | undefined): PageQuery => ({
   ...(storeId ? { store_id: storeId } : {}),
   ...(cursor ? { cursor } : {}),
@@ -159,13 +164,16 @@ export function useConnections(tenantId: string | null, enabled: boolean): Conne
   });
   const panel = panelOf(instances, active);
   const healthPanel = panelOf(health, active);
+  // Liveness is time-bound: once a C2 read fails (first read or re-read), the
+  // earlier verdict is no longer evidence, so every row drops to no signal.
+  const healthFailed = health.isError;
   return {
     ...panel,
     isLoading: panel.isLoading || healthPanel.isLoading,
-    // A failed C2 re-read over loaded rows is stale, like a failed C1 re-read.
-    inlineError: panel.inlineError ?? healthPanel.inlineError,
-    rows: joinConnections(instances.data?.items ?? [], health.data),
-    healthFailed: Boolean(healthPanel.error),
+    rows: joinConnections(instances.data?.items ?? [], healthFailed ? undefined : health.data),
+    healthFailed,
+    // The pills come from C2, so "last read" is the older of the two reads.
+    asOf: oldest(panel.asOf, healthFailed ? undefined : healthPanel.asOf),
     retry: () => {
       void instances.refetch();
       void health.refetch();

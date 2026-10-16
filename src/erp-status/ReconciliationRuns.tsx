@@ -58,11 +58,11 @@ function RunRow({
   const t = useT();
   return (
     <tr className="data-table__row erp-row">
-      <td>
+      <th scope="row" className="erp-row__name">
         <Link to={`/stock-discrepancies/${run.storeId}`}>
           {nameOf(run.storeId) ?? t("erp.runs.unknownStore")}
         </Link>
-      </td>
+      </th>
       <td>{t(runTriggerKey(run.trigger))}</td>
       <td className="nowrap">
         <StatusPill view={runStatusView(run.status)} />
