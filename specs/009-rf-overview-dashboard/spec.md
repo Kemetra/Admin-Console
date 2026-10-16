@@ -62,7 +62,7 @@ Backend-Core membership roles enforced by each operation's guard (verified on Ba
 ### Non-goals (v1)
 
 - **NG-1. Sales KPIs.** No Backend-Core contract serves console sales figures (§5.4). The sales
-  panel waits for BC-009-1 and an owner decision on which KPIs matter (OD-009-1). No
+  panel waits for BC-009-1; its figures are decided (OD-009-1, §10). No
   placeholder "coming soon" tile is rendered.
 - **NG-2. Charts.** Bar, line and sparkline charts are not allowed until UX-13 ratifies a data
   palette (design-system rule 8). Counts appear as text in a ledger.
@@ -107,7 +107,7 @@ in the console's generated client at pin `2b03ad2d` except `consoleGetSyncOpsSum
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | P-0 | Scope line | Context | `getActiveContext` `GET /api/v1/context/me` | `context.openapi.yaml` | any session | — | **Yes** (shipped) |
 | P-1 | Stock discrepancies | Inventory / ERPNext reconciliation (RT-177) | `listErpnextNegativeOnHandStores` `GET /api/v1/catalog/erpnext-reconciliation/negative-on-hand/stores` | `erpnext-reconciliation/reconciliation.yaml` | owner, tenant_admin, store_manager | `/stock-discrepancies`, `/stock-discrepancies/:storeId` | **Yes** |
-| P-2 | Shift-close variances | Cash / shifts (RT-383) | `consoleListShiftCloses` `GET /api/v1/shift-closes` | `shift-closes.openapi.yaml` | owner, tenant_admin, store_manager | `/shift-closes` | **Yes** (needs OD-009-2) |
+| P-2 | Shift-close variances | Cash / shifts (RT-383) | `consoleListShiftCloses` `GET /api/v1/shift-closes` | `shift-closes.openapi.yaml` | owner, tenant_admin, store_manager | `/shift-closes` | **Yes** (per OD-009-2) |
 | P-3 | Unknown items | Catalog (RF-4a) | `tenantAdminListUnknownItems` `GET /api/v1/catalog/unknown-items` | `catalog/unknown-items.yaml` | any tenant member; RLS scopes to stores | `/unknown-items` | **Yes** |
 | P-4 | Flagged receivables | Settlement (035 / 018) | `consoleListReceivables` `GET /api/v1/settlement/receivables` | `settlement/settlement.yaml` | owner, tenant_admin | `/receivables` | **Yes** |
 | P-5 | Recent activity | Audit (RF-6) | `listAuditEvents` `GET /api/v1/audit/events` | `audit.openapi.yaml` | owner, tenant_admin (403 otherwise) | `/audit` | **Yes** |
@@ -132,7 +132,9 @@ the navigation is RT-270's and the owning slices' concern, not 009's.
 - **P-2 Shift-close variances.** `approval=not_approved` plus `min_abs_variance` and a
   `closed_from` window, plus `store_id` when a store is active. The contract records no review
   or acknowledgement state, and the policy threshold (AD-CASH-001 D-7) does not exist yet, so
-  the attention definition is an owner decision (OD-009-2). The amount is compared in each
+  the attention definition is set by OD-009-2 (§10): `min_abs_variance=0.0001` and
+  `closed_from` at the start of the store business day six days before today (today plus the
+  six days before it). The amount is compared in each
   close's own currency; the panel never converts or sums money across currencies.
 - **P-3 Unknown items.** `status=pending`, plus `store_id` when a store is active. Store-scoped
   operators are narrowed by RLS regardless.
@@ -171,8 +173,8 @@ console `main` @ `d6e666d`:
 - summing pages in the browser would be a derived, incomplete total, which the truth rules
   forbid.
 
-So the KPI panel is a Backend-Core dependency (BC-009-1). The figures it shows are an owner
-decision (OD-009-1).
+So the KPI panel is a Backend-Core dependency (BC-009-1). The figures it shows are decided
+(OD-009-1, §10).
 
 ### 5.5 Why the sync-ops tile is deferred
 
@@ -263,8 +265,9 @@ indicator → inline notice), never a zero and never a toast.
   "at least N".
 - **AC-10 Recent activity.** Owner/tenant_admin see up to 10 latest events in scope, with exact
   time, actor label and catalog copy for the action; the row links to `/audit`.
-- **AC-11 No sales panel.** No sales or KPI element renders until BC-009-1 exists and OD-009-1
-  is decided.
+- **AC-11 No sales panel.** No sales or KPI element renders until BC-009-1 exists. When it
+  does, P-6 shows only the OD-009-1 figures (today's received-sale count and gross total per
+  currency, per store in scope, as text), in a later issue.
 - **AC-12 Scope change.** Changing tenant or store re-reads every panel; no row from the old
   scope remains visible.
 - **AC-13 Design rules.** Light and dark themes, Arabic and English, forced-colors, keyboard
@@ -286,10 +289,14 @@ The coordinator creates these issues if approved. Each is contract-first in Back
 
 ### Open owner decisions
 
-| ID | Question | Recommendation |
-| --- | --- | --- |
-| **OD-009-1** | Which sales figures matter commercially on the landing page? | When BC-009-1 exists: today's (store business date) received-sale count and gross total per currency, per active store or per store in scope, as text. Average order value and multi-day trends later; no charts until UX-13. |
-| **OD-009-2** | What counts as a shift-close attention item, given no policy threshold and no review state? | Unapproved (`approval=not_approved`) closes with any non-zero variance (`min_abs_variance=0.0001`, currency-independent), closed in the last 7 days. Revisit when AD-CASH-001 D-7 policy values ship (RT-384 / RT-385). |
+None.
+
+### Decided by the coordinator (2026-10-16, under the owner's delegation)
+
+| ID | Question | Decision | Why |
+| --- | --- | --- | --- |
+| **OD-009-2** | What counts as a shift-close attention item, given no policy threshold and no review state? | **Approved as recommended.** An unapproved close (`approval=not_approved`) with any non-zero variance (`min_abs_variance=0.0001`), closed in the last 7 store business days. Revisit when the AD-CASH-001 D-7 policy ships (RT-384 / RT-387 / RT-389). | The contract has no policy threshold and no review or acknowledgement state. `0.0001` is the smallest amount `NonNegativeDecimalAmount` allows, so "any non-zero variance" needs no invented threshold and works in every currency. The 7-day window keeps old unapproved closes from staying on the Overview forever, since nothing on the contract clears them. |
+| **OD-009-1** | Which sales figures matter commercially on the landing page? | **Approved as the starting point.** Today's (store business date) received-sale count and gross total per currency, per store in scope, as text. P-6 stays a non-goal until BC-009-1 exists. Average order value and trends come later, with no charts until UX-13. | The count and the gross total are what a summary read can state truthfully with an as-of time and a completeness statement. Totals stay per currency because the console never converts money. Charts wait for a ratified UX-13 data palette (design-system rule 8). |
 
 ### Decided in this spec
 
