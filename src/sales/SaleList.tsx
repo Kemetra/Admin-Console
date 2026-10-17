@@ -150,17 +150,20 @@ function Pager({ list }: Readonly<{ list: SaleListState }>): React.JSX.Element {
       <div className="sale-pager">
         <span>{t("sales.list.loaded", { count: list.rows.length })}</span>
         {list.hasMore ? (
+          // aria-disabled, not disabled: a disabled button drops keyboard focus
+          // while the next page loads. loadMore ignores repeat presses.
           <button
             type="button"
             className="btn-secondary"
             onClick={list.loadMore}
-            disabled={list.isFetchingNextPage}
+            aria-disabled={list.isFetchingNextPage ? true : undefined}
+            aria-busy={list.isFetchingNextPage ? true : undefined}
           >
             {list.isFetchingNextPage ? <span className="spinner" aria-hidden="true" /> : null}
             {t("sales.list.loadMore")}
           </button>
         ) : null}
-        {list.ended ? <span>{t("sales.list.ended")}</span> : null}
+        {list.ended ? <output>{t("sales.list.ended")}</output> : null}
       </div>
     </>
   );
@@ -207,7 +210,7 @@ function Results({
           onRowActivate={onOpen}
         />
       ) : (
-        <p className="sale-partial">{t("sales.list.partialPage")}</p>
+        <output className="sale-partial">{t("sales.list.partialPage")}</output>
       )}
       <Pager list={list} />
     </>

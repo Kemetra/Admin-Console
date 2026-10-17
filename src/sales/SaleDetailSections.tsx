@@ -48,9 +48,9 @@ function LineRow({ line }: Readonly<{ line: SaleLine }>): React.JSX.Element {
   return (
     <tr className="data-table__row data-table__row--static">
       <td>{line.sequence ?? notRecorded}</td>
-      <td>
+      <th scope="row">
         <bdi dir="auto">{line.lineName}</bdi>
-      </td>
+      </th>
       <td className="sale-amount">
         <MachineText value={line.quantity} />
       </td>
@@ -251,11 +251,11 @@ function ReturnBlock({
         <tbody>
           {entry.lines.map((returned) => (
             <tr key={returned.lineRef} className="data-table__row data-table__row--static">
-              <td>
+              <th scope="row">
                 <bdi dir="auto">
                   {lineNames.get(returned.lineRef) ?? t("sales.returns.unknownLine")}
                 </bdi>
-              </td>
+              </th>
               <td className="sale-amount">
                 <MachineText value={returned.quantity} />
               </td>

@@ -58,6 +58,7 @@
 }
 
 .sale-partial {
+  display: block;
   margin: 0;
   padding: var(--space-4);
   border: 1px dashed var(--color-border);

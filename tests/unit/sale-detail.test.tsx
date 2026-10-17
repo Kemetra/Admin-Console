@@ -286,8 +286,9 @@ describe("SaleDetail (RT-587, spec 012 J2)", () => {
     renderDetail();
     await loaded();
     const lineRows = within(section("Lines")).getAllByRole("row");
-    // Columns: position, item, quantity, unit, unit price, amount, tax, returned.
-    expect(within(lineRows[1]).getAllByRole("cell")[7].textContent).toBe("1");
+    // The item is the row header; cells: position, quantity, unit, unit price, amount, tax, returned.
+    expect(within(lineRows[1]).getByRole("rowheader").textContent).toBe("Mineral water 1.5L");
+    expect(within(lineRows[1]).getAllByRole("cell")[6].textContent).toBe("1");
     const returns = section("Returns");
     expect(within(returns).getByText(cairo("2026-10-08T09:00:00Z"))).toBeDefined();
     expect(within(returns).getByText("Oct 8, 2026")).toBeDefined();
