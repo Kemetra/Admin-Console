@@ -56,6 +56,27 @@ describe("payer wrappers — surface", () => {
     }
   });
 
+  test("RT-421: the retired 018/019 wrappers are not exported (settlement.yaml 2.0.0)", () => {
+    for (const retired of [
+      "consoleListReceivables",
+      "consoleGetReceivable",
+      "consoleSubmitClaim",
+      "consoleReconcileRemittance",
+      "consoleApplyPayment",
+    ]) {
+      expect(Object.keys(client)).not.toContain(retired);
+    }
+  });
+
+  test("RT-421: the create body carries no creditTerms (2.0.0 is strict: it would be a 400)", () => {
+    expect(clientSrc).not.toMatch(/creditTerms|credit_terms/);
+    expect(payerSrc).not.toMatch(/creditTerms|credit_terms/);
+  });
+
+  test("RT-421: the Console never calls ERPNext/Frappe from the payer screens", () => {
+    expect(payerSrc).not.toMatch(/frappe|erpnext\.com|\/api\/resource|\/api\/method/i);
+  });
+
   test("VG-3: 017's own code sets no Authorization/Bearer header (cookie transport only)", () => {
     expect(payerSrc).not.toMatch(/[Aa]uthorization\s*:/);
     expect(payerSrc).not.toMatch(/[Bb]earer\s+/);

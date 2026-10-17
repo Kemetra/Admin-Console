@@ -32,7 +32,7 @@
 
 ## Create form fields (T009 — exactly `PayerAccountCreate`)
 
-`category` (enum select, required) · `displayName` (text, 1..200, required) · `externalRef` (optional) · `storeId` (optional; null = tenant-wide) · `creditTerms` (opaque placeholder — **no** credit-terms/tax field invented; NG-8).
+`category` (enum select, required) · `displayName` (text, 1..200, required) · `externalRef` (optional) · `storeId` (optional; null = tenant-wide). `creditTerms` was removed in settlement.yaml 2.0.0 (RT-417/RT-421); `externalRef` is the ERPNext Customer link.
 
 ## State matrix (for the post-gate unit-test plan, T012)
 

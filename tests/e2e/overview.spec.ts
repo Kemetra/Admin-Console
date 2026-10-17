@@ -49,7 +49,6 @@ function snapshot() {
 const ANSWERS = {
   unknown: { all: 5, s2: 1 },
   shift: { all: 2, s2: 0 },
-  receivables: { all: 3, s2: 1 },
 } as const;
 
 type Panel = "stock" | "shift" | "unknown" | "receivables" | "audit";
@@ -105,7 +104,7 @@ async function mock(page: Page): Promise<Record<Panel, (string | null)[]>> {
     );
   });
   const counted =
-    (panel: "shift" | "unknown" | "receivables", cursorField: string) =>
+    (panel: "shift" | "unknown", cursorField: string) =>
     (r: Parameters<Parameters<Page["route"]>[1]>[0]) => {
       const store = storeOf(r.request().url());
       seen[panel].push(store);
@@ -114,7 +113,11 @@ async function mock(page: Page): Promise<Record<Panel, (string | null)[]>> {
     };
   await page.route("**/api/v1/shift-closes**", counted("shift", "nextCursor"));
   await page.route("**/api/v1/catalog/unknown-items**", counted("unknown", "next_cursor"));
-  await page.route("**/api/v1/settlement/receivables**", counted("receivables", "nextCursor"));
+  // P-4 (flagged receivables) is withdrawn (RT-421): the Overview must not read receivables.
+  await page.route("**/api/v1/settlement/receivables**", (r) => {
+    seen.receivables.push(storeOf(r.request().url()));
+    return r.fulfill(json({ items: [], nextCursor: null }));
+  });
   // P-5 is deferred (OD-009-3, RT-567): the Overview must not read audit events.
   await page.route("**/api/v1/audit/events**", (r) => {
     seen.audit.push(storeOf(r.request().url()));
@@ -143,7 +146,6 @@ test("AC-12: changing the store re-reads every panel and drops the old scope's r
   await expect(ledger.getByText(stockLabel("New Cairo Mall"))).toBeVisible();
   await expect(ledger.getByText(count("overview.unknown.noun", 5))).toBeVisible();
   await expect(ledger.getByText(count("overview.shift.noun", 2))).toBeVisible();
-  await expect(ledger.getByText(count("overview.receivables.noun", 3))).toBeVisible();
   await expect(auditLink).toHaveAttribute("href", "/audit");
 
   await page.getByRole("button", { name: /Northstar Retail/ }).click();
@@ -151,16 +153,16 @@ test("AC-12: changing the store re-reads every panel and drops the old scope's r
 
   await expect(ledger.getByText(stockLabel("New Cairo Mall"))).toBeVisible();
   await expect(ledger.getByText(count("overview.unknown.noun", 1))).toBeVisible();
-  await expect(ledger.getByText(count("overview.receivables.noun", 1))).toBeVisible();
   // Nothing from the tenant-wide scope remains.
   await expect(ledger.getByText(stockLabel("Cairo Festival City"))).toBeHidden();
   await expect(ledger.getByText(count("overview.unknown.noun", 5))).toBeHidden();
   await expect(ledger.getByText(count("overview.shift.noun", 2))).toBeHidden();
-  for (const panel of ["shift", "unknown", "receivables"] as const) {
+  for (const panel of ["shift", "unknown"] as const) {
     expect(seen[panel], panel).toContain("s2");
   }
   expect(seen.stock).toContain("s2");
   expect(seen.audit).toEqual([]);
+  expect(seen.receivables).toEqual([]);
 
   // And back to the whole tenant.
   await page.getByRole("button", { name: /New Cairo Mall/ }).click();

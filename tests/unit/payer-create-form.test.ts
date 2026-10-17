@@ -34,6 +34,27 @@ describe("validatePayerDraft", () => {
     });
   });
 
+  test("the length rule applies to the TRIMMED name, the value that is sent", () => {
+    const padded = `  ${"x".repeat(200)}  `;
+    expect(validatePayerDraft(draft({ displayName: padded })).displayName).toBeUndefined();
+    expect(
+      validatePayerDraft(draft({ displayName: `  ${"x".repeat(201)}  ` })).displayName,
+    ).toBeDefined();
+  });
+
+  test("a store scope is optional: null (tenant-wide) and a store id are both valid", () => {
+    expect(validatePayerDraft(draft({ storeId: null }))).toEqual({});
+    expect(validatePayerDraft(draft({ storeId: "6f1c2f6e-1c1d-4a5e-9d8e-0a1b2c3d4e5f" }))).toEqual(
+      {},
+    );
+  });
+
+  test("creditTerms is not part of the draft (RT-417: ERPNext owns payment terms)", () => {
+    // @ts-expect-error — the removed field must not type-check
+    const withTerms: PayerCreateDraft = draft({ creditTerms: { days: 30 } });
+    expect(withTerms.category).toBe("credit_customer");
+  });
+
   test("displayName exactly 200 -> ok", () => {
     expect(validatePayerDraft(draft({ displayName: "x".repeat(200) })).displayName).toBeUndefined();
   });

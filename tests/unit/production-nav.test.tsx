@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { describe, expect, test, vi } from "vitest";
 
@@ -51,6 +51,7 @@ describe("production navigation", () => {
       "Shift closes",
       "Connection & sync",
       "Devices",
+      "Payer accounts",
       "Sign out",
     ]);
     expect(nav.querySelector("[aria-disabled='true']")).toBeNull();
@@ -104,6 +105,36 @@ describe("production navigation", () => {
     const nav = renderShell(role, false);
     expect(entryLabels(nav)).not.toContain("Devices");
     expect(within(nav).queryByText("Point of sale")).toBeNull();
+  });
+
+  // RT-421: payer accounts, in their own "Payers" section, for owner / tenant_admin
+  // only (both payer routes are `@Roles("owner", "tenant_admin")`).
+  test.each(["owner", "tenant_admin"])("RT-421: %s sees Payer accounts in its section", (role) => {
+    const nav = renderShell(role, false);
+    expect(within(nav).getByRole("link", { name: "Payer accounts" }).getAttribute("href")).toBe(
+      "/payer-accounts",
+    );
+    expect(within(nav).getByText("Payers").className).toBe("nav-section");
+  });
+
+  test.each(["store_manager", "store_staff", "cashier", "auditor"])(
+    "RT-421: %s has no Payer accounts entry",
+    (role) => {
+      const nav = renderShell(role, false);
+      expect(entryLabels(nav)).not.toContain("Payer accounts");
+      expect(within(nav).queryByText("Payers")).toBeNull();
+    },
+  );
+
+  test("RT-421: no navigation entry leads to the retired receivables screens", () => {
+    for (const role of ["owner", "tenant_admin", "store_manager"]) {
+      const nav = renderShell(role, true);
+      expect(entryLabels(nav).join("|")).not.toMatch(/receivable|claim|remittance|apply payment/i);
+      for (const link of within(nav).queryAllByRole("link")) {
+        expect(link.getAttribute("href")).not.toMatch(/receivables|claims|apply-payment/);
+      }
+      cleanup();
+    }
   });
 
   test("dev builds keep the gated placeholders, marked disabled", () => {

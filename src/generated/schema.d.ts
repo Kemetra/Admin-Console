@@ -12,7 +12,7 @@
 // - packages/contracts/openapi/memberships.openapi.yaml
 // - packages/contracts/openapi/audit.openapi.yaml
 // - packages/contracts/openapi/catalog/unknown-items.yaml
-// - packages/contracts/openapi/settlement/settlement.yaml (held @ 2b03ad2de5394f54bae296b726ed6fc76ac8af4e)
+// - packages/contracts/openapi/settlement/settlement.yaml
 // - packages/contracts/openapi/erpnext-reconciliation/reconciliation.yaml
 // - packages/contracts/openapi/shift-closes.openapi.yaml
 // - packages/contracts/openapi/connector/connector-admin.yaml
@@ -2808,134 +2808,17 @@ export namespace SettlementSchema {
                 path?: never;
                 cookie?: never;
             };
-            /** List payer accounts (tenant-scoped, newest-first, keyset paginated). */
+            /**
+             * List payer accounts (tenant-scoped, newest-first, keyset paginated).
+             * @description The caller's tenant's payers: tenant-wide payers (`storeId` null) and payers of the stores the caller can access; store-scoped payers outside the caller's store access are excluded (the same scope create enforces with its non-disclosing 404).
+             */
             get: operations["consoleListPayerAccounts"];
             put?: never;
             /**
-             * Create a payer account (credit / corporate / insurer).
-             * @description Create a payer account. `tenant_id` + actor are server-resolved (§XII). Idempotent on `Idempotency-Key`. FR-001/002/004.
+             * Create a payer account (credit customer / corporate / insurer).
+             * @description Create a payer account. `tenant_id` + actor are server-resolved (§XII). Idempotent on `Idempotency-Key`. FR-001/002.
              */
             post: operations["consoleCreatePayerAccount"];
-            delete?: never;
-            options?: never;
-            head?: never;
-            patch?: never;
-            trace?: never;
-        };
-        "/api/v1/settlement/receivables": {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            /** List receivables (tenant+store scoped, keyset paginated). */
-            get: operations["consoleListReceivables"];
-            put?: never;
-            post?: never;
-            delete?: never;
-            options?: never;
-            head?: never;
-            patch?: never;
-            trace?: never;
-        };
-        "/api/v1/settlement/receivables/{receivableRef}": {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            /**
-             * Read one receivable's projection (balance + lifecycle state).
-             * @description Object-level authz: a receivable outside the operator's (tenant, store) scope returns a non-disclosing 404 (§II/§XII, FR-022).
-             */
-            get: operations["consoleGetReceivable"];
-            put?: never;
-            post?: never;
-            delete?: never;
-            options?: never;
-            head?: never;
-            patch?: never;
-            trace?: never;
-        };
-        "/api/v1/settlement/receivables/{receivableRef}/apply-payment": {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            get?: never;
-            put?: never;
-            /**
-             * Apply a payment / cash against a receivable (full or partial).
-             * @description DP-2-owned cash application (7-C). Reduces the receivable's outstanding balance; a clearing application transitions it to `settled`, a partial one to `partially_applied`. Idempotent — identical retry replays the stored response; replay never double-reduces the balance (FR-012/020, G5). The ERPNext Payment Entry is a downstream valuation projection referenced by external ref (see `Receivable.erpnextPaymentEntryRef`) and is NOT posted by this op (connector-owned, gated behind 011-DR-POSTING-R1).
-             *     Outcomes: over-application (amount > outstanding balance) is a deterministic `409 conflict` (`error.code = "conflict"`), never silent truncation (§4 edge case). A stale `version` is `409 conflict`.
-             */
-            post: operations["consoleApplyPayment"];
-            delete?: never;
-            options?: never;
-            head?: never;
-            patch?: never;
-            trace?: never;
-        };
-        "/api/v1/settlement/claims": {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            get?: never;
-            put?: never;
-            /**
-             * Submit receivable(s) to a third-party payer as a claim.
-             * @description Submit one or more open receivables to a third-party payer for collection (FR-014). Transitions the targeted receivables to `claimed`. Idempotent.
-             */
-            post: operations["consoleSubmitClaim"];
-            delete?: never;
-            options?: never;
-            head?: never;
-            patch?: never;
-            trace?: never;
-        };
-        "/api/v1/settlement/claims/{claimRef}/reconcile-remittance": {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            get?: never;
-            put?: never;
-            /**
-             * Reconcile a remittance against a claim (records variance).
-             * @description Match a third-party payer's remittance against a claim, recording variance (claimed − remitted). A clearing remittance settles the underlying receivable(s); a partial one leaves a recorded outstanding balance + variance; a net-zero-or-below outcome reaches `flagged`, never an indeterminate state (§4 edge cases, FR-014). Idempotent (G5).
-             *     A claim not in a reconcilable state (e.g. not `claimed`, or a remittance arriving before the claim is acknowledged) returns `409 conflict`, deterministic, no side effect. Rejection of a claim line does NOT define a new workflow here — it routes to DP-026 + Connector Arc A + POS-014 (FR-015, NG-1).
-             */
-            post: operations["consoleReconcileRemittance"];
-            delete?: never;
-            options?: never;
-            head?: never;
-            patch?: never;
-            trace?: never;
-        };
-        "/api/v1/settlement/settlement-intent": {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            get?: never;
-            put?: never;
-            /**
-             * Capture settlement intent + payer metadata at the till (intent only).
-             * @description Record the settlement intent for a captured sale — tender split, payer reference, co-pay vs covered amounts, claim metadata — opening the receivable(s) for the unpaid balance against the named payer account (FR-003/005/016). POS captures INTENT ONLY: it never applies cash, authorizes a receivable, or posts money. The sale fact itself is captured by `captureSale` (`pos-sales/sales.yaml`) and is NOT mutated here (FR-006, §1 core principle).
-             *     Authorized by the 031 operator-authorization envelope; the backend re-evaluates the full operator predicate live (G-4). Idempotent on `Idempotency-Key` — replay yields the same single receivable outcome, no duplicate (FR-020, G5). An unknown / cross-tenant payer reference is a deterministic safe outcome (`409 conflict` unknown-payer), never a silent post to the wrong account (§4 edge cases, §II/§XII).
-             */
-            post: operations["posRecordSettlementIntent"];
             delete?: never;
             options?: never;
             head?: never;
@@ -2951,149 +2834,40 @@ export namespace SettlementSchema {
              * @enum {string}
              */
             PayerCategory: "credit_customer" | "corporate" | "insurer";
-            /**
-             * @description The non-reversal receivable lifecycle (035-DR-SETTLEMENT §OQ-4 CARVE). `reversal_consumed` is intentionally EXCLUDED — it lands in a later additive bump after DP-026 closes (FR-024). Transitions are deterministic (FR-005): open → partially_applied → settled; open → claimed → (settled | partially_applied + variance); variance/net-zero-or-below → flagged.
-             * @enum {string}
-             */
-            ReceivableState: "open" | "partially_applied" | "settled" | "claimed" | "flagged";
-            /** @description Signed exact-decimal money as a string (no floats, §III), stored as `numeric(19,4)` — at most 15 integer digits and 4 fractional digits. A leading `-` is allowed: `variance` is legitimately negative. Tax is NOT apportioned into this value in v1 (tax-pending, §OQ-2). */
-            Money: string;
-            /** @description Non-negative exact-decimal money (`numeric(19,4)`). Zero is valid: a 0 `remittedAmount` is a full rejection, and `cashTendered`, `outstandingBalance`, and `claimedAmount` may be zero. No leading `-`. */
-            NonNegativeMoney: string;
-            /** @description Strictly positive exact-decimal money (`numeric(19,4)`). Zero and negatives are rejected, matching apply-payment `amount` and settlement-intent `owedAmount` (`> 0`). A zero apply would trip `payment_application_amount_positive`. */
-            PositiveMoney: string;
-            /** @description Create-a-payer-account request. `tenant_id` + actor are server-resolved (§XII) and MUST NOT appear here. */
+            /** @description Create-a-payer-account request. `tenant_id` + actor are server-resolved (§XII) and MUST NOT appear here. RT-417 (2.0.0): `creditTerms` is removed; ERPNext owns payment terms and credit limits. */
             PayerAccountCreate: {
                 category: components["schemas"]["PayerCategory"];
                 displayName: string;
-                /** @description Optional provider-neutral external identity reference for the payer (e.g. insurer code). Opaque; no FK semantics. */
+                /** @description The payer's ERPNext Customer link (RT-413 §2): the identifier the Connector resolves to the ERPNext Customer that a sale's responsibility is posted against (RT-419). Opaque to Backend-Core (no FK, never looked up here). Null = not yet linked; the Connector fails closed for an unlinked or unknown payer and never falls back to the store's Customer (see `erpnext-connector/posting-feed.yaml`). When present it must contain a non-whitespace character: a blank or whitespace-only value is a 400 `validation_error`, because it could never resolve to a Customer (Codex review of #779). */
                 externalRef?: string | null;
-                /** @description Tax-/terms placeholder (FR-004). Shape intentionally deferred to a later slice; carried as an opaque object or null in v1. */
-                creditTerms?: {
-                    [key: string]: unknown;
-                } | null;
                 /**
                  * Format: uuid
                  * @description Optional store scope; null = tenant-wide payer.
                  */
                 storeId?: string | null;
             };
-            /** @description Wire projection of a payer account. No `tenant_id` (implicit in scope). */
+            /** @description Wire projection of a payer account. No `tenant_id` (implicit in scope), no credit terms. */
             PayerAccount: {
-                /** Format: uuid */
+                /**
+                 * Format: uuid
+                 * @description Stable server-issued payer reference. A sale names its payers by this value (`pos-sales/sales.yaml` `SaleResponsibility.payerRef`).
+                 */
                 payerRef: string;
                 category: components["schemas"]["PayerCategory"];
                 displayName: string;
+                /** @description The payer's ERPNext Customer link (see `PayerAccountCreate.externalRef`). */
                 externalRef?: string | null;
                 /** @enum {string} */
                 status: "active" | "suspended";
                 /** Format: uuid */
                 storeId?: string | null;
-                /** @description Optimistic-concurrency version (§III). A stale version on update → 409. */
+                /** @description Optimistic-concurrency version (§III). */
                 version: number;
             };
             PayerAccountPage: {
                 items: components["schemas"]["PayerAccount"][];
                 /** @description Opaque cursor for the next page; null on the last page. */
                 nextCursor: string | null;
-            };
-            /** @description Wire projection of a receivable: money owed against a sale by a payer. Carries no `tenant_id`, no raw sale lines, no `payload_hash`. */
-            Receivable: {
-                /** Format: uuid */
-                receivableRef: string;
-                /**
-                 * Format: uuid
-                 * @description The originating immutable sale (008/032). Never mutated by settlement (FR-006).
-                 */
-                saleRef: string;
-                /** Format: uuid */
-                payerRef: string;
-                outstandingBalance: components["schemas"]["NonNegativeMoney"];
-                state: components["schemas"]["ReceivableState"];
-                /** @description 7-C external reference to the ERPNext accounting Payment Entry (the VALUATION projection ERPNext owns). DP-2 owns the operational record; this is a non-authoritative pointer, populated only once the connector posting gate (011-DR-POSTING-R1) clears — null until then. */
-                erpnextPaymentEntryRef?: string | null;
-                /** @description Tax-pending placeholder; no VAT allocation in v1 (§OQ-2, FR-023). */
-                taxPlaceholder?: {
-                    [key: string]: unknown;
-                } | null;
-                /** @description Optimistic-concurrency version (§III). A stale version on a write → 409. */
-                version: number;
-            };
-            ReceivablePage: {
-                items: components["schemas"]["Receivable"][];
-                nextCursor: string | null;
-            };
-            /** @description Apply a payment/cash against the path receivable (7-C operational truth). */
-            PaymentApplicationCreate: {
-                amount: components["schemas"]["PositiveMoney"];
-                /** @description The version the caller last observed on the receivable. The update is guarded `WHERE ... AND version = :version`; a mismatch is 409. */
-                version: number;
-                /** @description Optional human note; redacted in audit per §XIII/§XIV. */
-                note?: string | null;
-            };
-            /** @description POS-captured settlement intent over an already-captured sale. Intent only (FR-016): it opens receivables; it does not apply cash or post money. */
-            SettlementIntentCreate: {
-                /**
-                 * Format: uuid
-                 * @description The already-captured sale (pos-sales/sales.yaml captureSale). Not mutated.
-                 */
-                saleRef: string;
-                /** @description The cash portion settled at the till (part of the immutable sale); the owed remainder opens the receivable(s). Non-negative exact-decimal string; zero is valid. Null when no cash was tendered. */
-                cashTendered?: components["schemas"]["NonNegativeMoney"] | null;
-                /** @description Split settlement responsibility — one entry per payer (e.g. patient co-pay + insurer-covered). Each opens/contributes to a receivable. */
-                payers: components["schemas"]["SettlementIntentPayer"][];
-            };
-            SettlementIntentPayer: {
-                /**
-                 * Format: uuid
-                 * @description In-scope payer account; unknown/cross-tenant → 409 unknown-payer (safe).
-                 */
-                payerRef: string;
-                owedAmount: components["schemas"]["PositiveMoney"];
-                /** @description Optional payer claim metadata (e.g. policy ref); opaque in v1. */
-                claimMetadata?: {
-                    [key: string]: unknown;
-                } | null;
-            };
-            /** @description The receivable(s) opened from the captured settlement intent. */
-            SettlementIntentResult: {
-                /** Format: uuid */
-                saleRef: string;
-                receivables: components["schemas"]["Receivable"][];
-            };
-            /** @description Submit one or more open/partially-applied receivables as a claim. */
-            ClaimCreate: {
-                /** Format: uuid */
-                payerRef: string;
-                receivableRefs: string[];
-            };
-            Claim: {
-                /** Format: uuid */
-                claimRef: string;
-                /** Format: uuid */
-                payerRef: string;
-                /** @enum {string} */
-                status: "submitted" | "acknowledged" | "reconciled";
-                receivableRefs: string[];
-            };
-            /** @description Reconcile a remittance against the path claim; records variance. */
-            RemittanceReconcile: {
-                remittedAmount: components["schemas"]["NonNegativeMoney"];
-                /** @description Optional payer-side remittance advice reference; opaque. */
-                remittanceRef?: string | null;
-            };
-            /** @description Matched/variance outcome of a remittance vs claim (FR-014). Rejection of a line routes to DP-026 reuse (FR-015, NG-1) — not represented as a new state here. */
-            ReconciliationResult: {
-                /** Format: uuid */
-                claimRef: string;
-                claimedAmount: components["schemas"]["NonNegativeMoney"];
-                remittedAmount: components["schemas"]["NonNegativeMoney"];
-                variance: components["schemas"]["Money"];
-                /**
-                 * @description settled (variance zero) | partial (remaining balance + recorded variance) | flagged (net-zero-or-below / anomaly, §4 edge cases).
-                 * @enum {string}
-                 */
-                outcome: "settled" | "partial" | "flagged";
             };
             /** @description Canonical error envelope. Cross-tenant / out-of-scope refusals are non-disclosing (§II/§XII) — they never enumerate the underlying cause. */
             Error: {
@@ -3111,7 +2885,7 @@ export namespace SettlementSchema {
             };
         };
         responses: {
-            /** @description validation_error (400) — malformed body/query/path, unknown key (strict), bad cursor. */
+            /** @description validation_error (400) — malformed body/query, unknown key (strict, including a removed `creditTerms`), bad cursor. */
             ValidationFailure: {
                 headers: {
                     [name: string]: unknown;
@@ -3120,7 +2894,7 @@ export namespace SettlementSchema {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Unauthenticated (401) — missing/invalid credential, or a wrong-surface credential rejected (cookie on the POS route, or envelope on a Console route). Non-disclosing. 401 semantics owned by 028 (G10). */
+            /** @description Unauthenticated (401) — missing/invalid credential, or a wrong-surface credential (a POS envelope or machine bearer) rejected. Non-disclosing. 401 semantics owned by 028 (G10). */
             Unauthorized: {
                 headers: {
                     [name: string]: unknown;
@@ -3147,18 +2921,7 @@ export namespace SettlementSchema {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description too_many_requests (429) — per-device write rate limit exceeded on the POS settlement-intent route (ADR 0009 / audit M-2). Keyed PER DEVICE, not per IP or operator token. Non-disclosing `Error` body; `Retry-After` carries the back-off (seconds, [1, 300]). A POS client MUST treat this as TRANSIENT/retryable, never a permanent dead-letter. The limiter FAILS OPEN on a rate-limiter datastore outage (ADR 0009 D3), so a 429 is always a real budget breach. */
-            TooManyRequests: {
-                headers: {
-                    /** @description Seconds to wait before retry; clamped [1, 300]. */
-                    "Retry-After"?: number;
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description not_found (404) — the ref does not resolve within the operator's (tenant, store) scope. Non-disclosing: identical for cross-tenant, out-of-scope, and genuinely-absent ids (§II/§XII, FR-022). */
+            /** @description not_found (404) — an out-of-scope `storeId` on create: a store that does not exist, belongs to another tenant, or is outside the caller's store scope. Non-disclosing: one body for every cause (§II/§XII). */
             NotFound: {
                 headers: {
                     [name: string]: unknown;
@@ -3167,7 +2930,7 @@ export namespace SettlementSchema {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description conflict (409) — a deterministic, side-effect-free refusal. Covers: stale optimistic-concurrency `version`; unknown / cross-tenant payer at intent (`unknown-payer`); over-application (amount > outstanding balance); claim/remittance not in a reconcilable state; `idempotency_key_conflict`. `error.code = "conflict"` (or the specific sub-code). DISTINCT from any reversal/void conflict on the POS terminal surface, which is NOT touched by this contract (NG-1). */
+            /** @description conflict (409) — a deterministic, side-effect-free refusal: `idempotency_key_conflict` (the key reused with a different payload). */
             Conflict: {
                 headers: {
                     [name: string]: unknown;
@@ -3189,22 +2952,10 @@ export namespace SettlementSchema {
         parameters: {
             /** @description Optional payer-category filter. */
             PayerCategoryQuery: components["schemas"]["PayerCategory"];
-            /** @description Optional receivable lifecycle-state filter. */
-            ReceivableStateQuery: components["schemas"]["ReceivableState"];
-            /** @description Optional in-scope payer-account filter; out-of-scope id → non-disclosing 404. */
-            PayerRefQuery: string;
-            /** @description Optional in-scope store filter; out-of-scope id → non-disclosing 404. */
-            StoreIdQuery: string;
             /** @description Opaque keyset cursor from a prior page's `nextCursor`. Omit for the first page. */
             Cursor: string;
-            /** @description Opaque keyset cursor from a prior page's `nextCursor`. Omit for the first page. The value is a receivable reference (a UUID); anything else is a 400 `validation_error`. */
-            ReceivableCursor: string;
             /** @description Maximum items per page (bounded). The server MAY return fewer. */
             PageSize: number;
-            /** @description Stable server-issued receivable reference. Resolves only within the operator's (tenant, store) scope — out-of-scope refs are non-disclosing 404s (§II/§XII). */
-            ReceivableRef: string;
-            /** @description Stable server-issued claim reference; out-of-scope refs are non-disclosing 404s. */
-            ClaimRef: string;
             /** @description REQUIRED on every write. Reuses the existing IdempotencyInterceptor — identical retry replays the stored response; key-reuse with a different logical payload returns 409 `idempotency_key_conflict`. */
             IdempotencyKey: string;
         };
@@ -3273,208 +3024,8 @@ export namespace SettlementSchema {
                 400: components["responses"]["ValidationFailure"];
                 401: components["responses"]["Unauthorized"];
                 403: components["responses"]["ForbiddenOrOriginRejected"];
-                409: components["responses"]["Conflict"];
-                500: components["responses"]["SystemFailure"];
-            };
-        };
-        consoleListReceivables: {
-            parameters: {
-                query?: {
-                    /** @description Optional in-scope store filter; out-of-scope id → non-disclosing 404. */
-                    store_id?: components["parameters"]["StoreIdQuery"];
-                    /** @description Optional receivable lifecycle-state filter. */
-                    state?: components["parameters"]["ReceivableStateQuery"];
-                    /** @description Optional in-scope payer-account filter; out-of-scope id → non-disclosing 404. */
-                    payer_ref?: components["parameters"]["PayerRefQuery"];
-                    /** @description Opaque keyset cursor from a prior page's `nextCursor`. Omit for the first page. The value is a receivable reference (a UUID); anything else is a 400 `validation_error`. */
-                    cursor?: components["parameters"]["ReceivableCursor"];
-                    /** @description Maximum items per page (bounded). The server MAY return fewer. */
-                    page_size?: components["parameters"]["PageSize"];
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description A page of receivables, newest-first. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ReceivablePage"];
-                    };
-                };
-                400: components["responses"]["ValidationFailure"];
-                401: components["responses"]["Unauthorized"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-                500: components["responses"]["SystemFailure"];
-            };
-        };
-        consoleGetReceivable: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Stable server-issued receivable reference. Resolves only within the operator's (tenant, store) scope — out-of-scope refs are non-disclosing 404s (§II/§XII). */
-                    receivableRef: components["parameters"]["ReceivableRef"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description The receivable projection. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Receivable"];
-                    };
-                };
-                400: components["responses"]["ValidationFailure"];
-                401: components["responses"]["Unauthorized"];
-                403: components["responses"]["Forbidden"];
-                404: components["responses"]["NotFound"];
-                500: components["responses"]["SystemFailure"];
-            };
-        };
-        consoleApplyPayment: {
-            parameters: {
-                query?: never;
-                header: {
-                    /** @description REQUIRED on every write. Reuses the existing IdempotencyInterceptor — identical retry replays the stored response; key-reuse with a different logical payload returns 409 `idempotency_key_conflict`. */
-                    "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-                };
-                path: {
-                    /** @description Stable server-issued receivable reference. Resolves only within the operator's (tenant, store) scope — out-of-scope refs are non-disclosing 404s (§II/§XII). */
-                    receivableRef: components["parameters"]["ReceivableRef"];
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["PaymentApplicationCreate"];
-                };
-            };
-            responses: {
-                /** @description Payment applied; returns the updated receivable projection. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Receivable"];
-                    };
-                };
-                400: components["responses"]["ValidationFailure"];
-                401: components["responses"]["Unauthorized"];
-                403: components["responses"]["ForbiddenOrOriginRejected"];
                 404: components["responses"]["NotFound"];
                 409: components["responses"]["Conflict"];
-                500: components["responses"]["SystemFailure"];
-            };
-        };
-        consoleSubmitClaim: {
-            parameters: {
-                query?: never;
-                header: {
-                    /** @description REQUIRED on every write. Reuses the existing IdempotencyInterceptor — identical retry replays the stored response; key-reuse with a different logical payload returns 409 `idempotency_key_conflict`. */
-                    "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["ClaimCreate"];
-                };
-            };
-            responses: {
-                /** @description Claim submitted. */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Claim"];
-                    };
-                };
-                400: components["responses"]["ValidationFailure"];
-                401: components["responses"]["Unauthorized"];
-                403: components["responses"]["ForbiddenOrOriginRejected"];
-                404: components["responses"]["NotFound"];
-                409: components["responses"]["Conflict"];
-                500: components["responses"]["SystemFailure"];
-            };
-        };
-        consoleReconcileRemittance: {
-            parameters: {
-                query?: never;
-                header: {
-                    /** @description REQUIRED on every write. Reuses the existing IdempotencyInterceptor — identical retry replays the stored response; key-reuse with a different logical payload returns 409 `idempotency_key_conflict`. */
-                    "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-                };
-                path: {
-                    /** @description Stable server-issued claim reference; out-of-scope refs are non-disclosing 404s. */
-                    claimRef: components["parameters"]["ClaimRef"];
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["RemittanceReconcile"];
-                };
-            };
-            responses: {
-                /** @description Remittance reconciled; returns the reconciliation result. */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ReconciliationResult"];
-                    };
-                };
-                400: components["responses"]["ValidationFailure"];
-                401: components["responses"]["Unauthorized"];
-                403: components["responses"]["ForbiddenOrOriginRejected"];
-                404: components["responses"]["NotFound"];
-                409: components["responses"]["Conflict"];
-                500: components["responses"]["SystemFailure"];
-            };
-        };
-        posRecordSettlementIntent: {
-            parameters: {
-                query?: never;
-                header: {
-                    /** @description REQUIRED on every write. Reuses the existing IdempotencyInterceptor — identical retry replays the stored response; key-reuse with a different logical payload returns 409 `idempotency_key_conflict`. */
-                    "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["SettlementIntentCreate"];
-                };
-            };
-            responses: {
-                /** @description Settlement intent recorded; receivable(s) opened. */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["SettlementIntentResult"];
-                    };
-                };
-                400: components["responses"]["ValidationFailure"];
-                401: components["responses"]["Unauthorized"];
-                409: components["responses"]["Conflict"];
-                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };

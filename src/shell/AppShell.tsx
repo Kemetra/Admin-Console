@@ -23,6 +23,7 @@ import { canReadDevices } from "@/devices/deviceLogic";
 import { canReadErpStatus } from "@/erp-status/erpStatusLogic";
 import { type MessageKey, roleKey, useT } from "@/i18n";
 import { LocaleSwitch } from "@/i18n/LocaleSwitch";
+import { canReadPayers } from "@/payers/payerAccess";
 import { canReadShiftCloses } from "@/shift-closes/shiftCloseLogic";
 import { canReadStockDiscrepancies } from "@/stock-discrepancies/stockDiscrepancyLogic";
 import { ThemeToggle } from "@/theme/ThemeToggle";
@@ -42,8 +43,8 @@ const LIVE_NAV: { label: MessageKey; to: string; icon: IconName }[] = [
 /**
  * Role-gated destinations, each under its own section: shown only for the roles
  * the API lets read the surface (RT-178 stock discrepancies, RT-18 shift
- * closes, RT-560 ERP connection, RT-371 devices). The nav mirrors the API; it is not an
- * authorization decision.
+ * closes, RT-560 ERP connection, RT-371 devices, RT-421 payer accounts). The nav
+ * mirrors the API; it is not an authorization decision.
  */
 const ROLE_NAV: {
   section: MessageKey;
@@ -82,6 +83,14 @@ const ROLE_NAV: {
     to: "/devices",
     icon: "device",
     canRead: canReadDevices,
+  },
+  {
+    // RT-421: the 017 payer accounts, owner / tenant_admin only (the API's roles).
+    section: "payers.nav.section",
+    label: "payers.nav.label",
+    to: "/payer-accounts",
+    icon: "cash",
+    canRead: canReadPayers,
   },
 ];
 
