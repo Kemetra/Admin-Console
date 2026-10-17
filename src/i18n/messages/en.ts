@@ -8,6 +8,7 @@ import { audit } from "./en/audit";
 import { auth } from "./en/auth";
 import { common } from "./en/common";
 import { devices } from "./en/devices";
+import { sales } from "./en/sales";
 import { erp } from "./en/erp";
 import { money } from "./en/money";
 import { operators } from "./en/operators";
@@ -31,6 +32,7 @@ export const EN_MODULES = {
   overview,
   erp,
   devices,
+  sales,
 };
 
 export const en: MessagesOf<typeof ar> = {
@@ -46,4 +48,5 @@ export const en: MessagesOf<typeof ar> = {
   ...overview,
   ...erp,
   ...devices,
+  ...sales,
 };

@@ -32,6 +32,7 @@ import { rf2Routes } from "@/shell/rf2Routes";
 import { rf4aRoutes } from "@/shell/rf4aRoutes";
 import { rf5Routes } from "@/shell/rf5Routes";
 import { rf6Routes } from "@/shell/rf6Routes";
+import { saleRoutes } from "@/shell/saleRoutes";
 import { shiftCloseRoutes } from "@/shell/shiftCloseRoutes";
 import { stockDiscrepancyRoutes } from "@/shell/stockDiscrepancyRoutes";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -80,6 +81,7 @@ const router = createBrowserRouter(
         {shiftCloseRoutes}
         {erpStatusRoutes}
         {deviceRoutes}
+        {saleRoutes}
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Route>,
