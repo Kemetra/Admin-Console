@@ -99,9 +99,6 @@ export const sales = {
   "sales.tender.cash": "نقدًا",
   "sales.tender.card_external": "بطاقة (جهاز دفع خارجي)",
   "sales.tender.unknownMethod": "طريقة أخرى",
-  "sales.name.snapshot": "كما سُجِّل",
-  "sales.name.current": "الاسم الحالي",
-  "sales.name.unavailable": "غير مسجَّل",
 
   // --- Detail ------------------------------------------------------------------
   "sales.detail.back": "العودة إلى المبيعات",

@@ -93,9 +93,6 @@ export const sales: MessagesOf<typeof ar> = {
   "sales.tender.cash": "Cash",
   "sales.tender.card_external": "Card (external terminal)",
   "sales.tender.unknownMethod": "Other method",
-  "sales.name.snapshot": "As recorded",
-  "sales.name.current": "Current name",
-  "sales.name.unavailable": "Not recorded",
 
   // --- Detail ------------------------------------------------------------------
   "sales.detail.back": "Back to sales",

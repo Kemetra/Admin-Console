@@ -154,7 +154,7 @@ export function PaymentsSection({ detail }: Readonly<{ detail: SaleDetail }>): R
               key={`${tender.sequence ?? "x"}-${index}`}
               className="data-table__row data-table__row--static"
             >
-              <td>{t(tenderMethodKey(tender.method))}</td>
+              <td>{t(tenderMethodKey(tender))}</td>
               <td>
                 <Money value={tender.amount} currency={currency} />
               </td>

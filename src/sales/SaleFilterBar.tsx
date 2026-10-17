@@ -42,10 +42,15 @@ function zoneOf(stores: readonly StoreInfo[], storeId: string): string | undefin
   return stores.find((s) => s.id === storeId)?.timezone;
 }
 
+function hasAnyDate(draft: SaleFilters): boolean {
+  return draft.fromDate !== "" || draft.toDate !== "";
+}
+
 /** Today in the store's zone for a chosen store with no dates yet (J1 default proposal). */
 function propose(draft: SaleFilters, stores: readonly StoreInfo[]): SaleFilters {
   const store = stores.find((s) => s.id === draft.storeId);
-  if (!store || draft.fromDate || draft.toDate) return draft;
+  if (!store) return draft;
+  if (hasAnyDate(draft)) return draft;
   const today = todayIn(store.timezone ?? "UTC");
   return { ...draft, fromDate: today, toDate: today };
 }
@@ -216,7 +221,10 @@ function ValueFields({ draft, set, errors }: Readonly<FieldsProps>): React.JSX.E
         id="sl-sync"
         label={t("sales.filter.sync")}
         value={draft.syncStatus}
-        options={SYNC_STATUSES.map((v) => ({ value: v, label: t(syncStatusKey(v)) }))}
+        options={SYNC_STATUSES.map((v) => ({
+          value: v,
+          label: t(syncStatusKey({ syncStatus: v })),
+        }))}
         onChange={set("syncStatus")}
       />
       <Choice
@@ -233,14 +241,20 @@ function ValueFields({ draft, set, errors }: Readonly<FieldsProps>): React.JSX.E
         id="sl-returns"
         label={t("sales.filter.returns")}
         value={draft.returnState}
-        options={RETURN_STATES.map((v) => ({ value: v, label: t(returnStateKey(v)) }))}
+        options={RETURN_STATES.map((v) => ({
+          value: v,
+          label: t(returnStateKey({ returnState: v })),
+        }))}
         onChange={set("returnState")}
       />
       <Choice
         id="sl-erp"
         label={t("sales.filter.erp")}
         value={draft.erpState}
-        options={ERP_STATES.map((v) => ({ value: v, label: t(erpStateKey(v)) }))}
+        options={ERP_STATES.map((v) => ({
+          value: v,
+          label: t(erpStateKey({ erpPostingState: v })),
+        }))}
         onChange={set("erpState")}
       />
     </>

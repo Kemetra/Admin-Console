@@ -17,8 +17,9 @@ import {
   consoleGetSale,
   consoleListSales,
 } from "@/lib/sale-queries";
+import { requestIdOf } from "@/shift-closes/shiftCloseLogic";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { isSaleRef, listEnded, nextSaleCursor, requestIdOf } from "./saleLogic";
+import { isSaleRef, listEnded, nextSaleCursor } from "./saleLogic";
 
 export type SaleError = {
   kind: "not-found" | "session" | "rejected" | "generic";
@@ -106,6 +107,28 @@ export interface SaleListState {
   loadMore: () => void;
 }
 
+type PagesState = Pick<
+  SaleListState,
+  "rows" | "asOf" | "storeTimezone" | "hasPages" | "ended" | "error" | "inlineError"
+>;
+
+/**
+ * What the loaded pages say. With a page on screen a failure is inline (the
+ * rows stay); with none it is the error view.
+ */
+function pagesState(pages: readonly SalePage[], failure: SaleError | undefined): PagesState {
+  const last = pages.at(-1);
+  const failureSlot = pages.length > 0 ? { inlineError: failure } : { error: failure };
+  return {
+    rows: pages.flatMap((p) => p.items),
+    asOf: last?.asOf,
+    storeTimezone: last?.storeTimezone,
+    hasPages: pages.length > 0,
+    ended: listEnded(pages),
+    ...failureSlot,
+  };
+}
+
 /** The list for a ready query; `null` (no store or range yet) reads nothing. */
 export function useSaleList(scope: SaleScope, query: SaleListQuery | null): SaleListState {
   const active = Boolean(scope.tenantId) && query !== null;
@@ -119,21 +142,12 @@ export function useSaleList(scope: SaleScope, query: SaleListQuery | null): Sale
     retry: false,
   });
 
-  const pages = result.data?.pages ?? [];
-  const last = pages.at(-1);
-  const failure = errorOf(result.error);
   const loadMore = () => {
     if (result.hasNextPage && !result.isFetchingNextPage) void result.fetchNextPage();
   };
   return {
-    rows: pages.flatMap((p) => p.items),
-    asOf: last?.asOf,
-    storeTimezone: last?.storeTimezone,
-    hasPages: pages.length > 0,
-    ended: listEnded(pages),
+    ...pagesState(result.data?.pages ?? [], errorOf(result.error)),
     isLoading: active && result.isLoading,
-    // With a page on screen a failure is inline; with none it is the error view.
-    ...(pages.length > 0 ? { inlineError: failure } : { error: failure }),
     retry: () => (result.isFetchNextPageError ? loadMore() : void result.refetch()),
     hasMore: result.hasNextPage,
     isFetchingNextPage: result.isFetchingNextPage,

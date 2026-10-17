@@ -52,8 +52,8 @@ const SYNC_KEYS: Record<string, MessageKey> = {
   "failed-needs-repair": "sales.sync.failedNeedsRepair",
 };
 
-export function syncStatusKey(code: string): MessageKey {
-  return keyOf(SYNC_KEYS, code, "sales.sync.unknownCode");
+export function syncStatusKey({ syncStatus }: { syncStatus: string }): MessageKey {
+  return keyOf(SYNC_KEYS, syncStatus, "sales.sync.unknownCode");
 }
 
 const RETURN_KEYS: Record<string, MessageKey> = {
@@ -62,8 +62,8 @@ const RETURN_KEYS: Record<string, MessageKey> = {
   full: "sales.returns.full",
 };
 
-export function returnStateKey(code: string): MessageKey {
-  return keyOf(RETURN_KEYS, code, "sales.returns.unknownCode");
+export function returnStateKey({ returnState }: { returnState: string }): MessageKey {
+  return keyOf(RETURN_KEYS, returnState, "sales.returns.unknownCode");
 }
 
 const ERP_KEYS: Record<string, MessageKey> = {
@@ -74,8 +74,8 @@ const ERP_KEYS: Record<string, MessageKey> = {
 };
 
 /** An unrecognised code is shown as unknown: never as "not posted" (spec 012 §8). */
-export function erpStateKey(code: string): MessageKey {
-  return keyOf(ERP_KEYS, code, "sales.erp.unknown");
+export function erpStateKey({ erpPostingState }: { erpPostingState: string }): MessageKey {
+  return keyOf(ERP_KEYS, erpPostingState, "sales.erp.unknown");
 }
 
 const TENDER_KEYS: Record<string, MessageKey> = {
@@ -83,18 +83,8 @@ const TENDER_KEYS: Record<string, MessageKey> = {
   card_external: "sales.tender.card_external",
 };
 
-export function tenderMethodKey(code: string): MessageKey {
-  return keyOf(TENDER_KEYS, code, "sales.tender.unknownMethod");
-}
-
-const NAME_SOURCE_KEYS: Record<string, MessageKey> = {
-  snapshot: "sales.name.snapshot",
-  current: "sales.name.current",
-  unavailable: "sales.name.unavailable",
-};
-
-export function nameSourceKey(code: string): MessageKey {
-  return keyOf(NAME_SOURCE_KEYS, code, "sales.name.unavailable");
+export function tenderMethodKey({ method }: { method: string }): MessageKey {
+  return keyOf(TENDER_KEYS, method, "sales.tender.unknownMethod");
 }
 
 // --- Links ---------------------------------------------------------------------
@@ -103,13 +93,13 @@ export function nameSourceKey(code: string): MessageKey {
  * The shift-close exception list for the sale's store and business day (spec
  * 012 §7): the keys `ShiftCloseList` already reads. Not "this sale's shift".
  */
-export function shiftClosesHref(storeId: string, businessDate: string): string {
-  const search = new URLSearchParams({ store: storeId, from: businessDate, to: businessDate });
+export function shiftClosesHref({
+  storeRef,
+  businessDate,
+}: {
+  storeRef: string;
+  businessDate: string;
+}): string {
+  const search = new URLSearchParams({ store: storeRef, from: businessDate, to: businessDate });
   return `/shift-closes?${search.toString()}`;
-}
-
-// --- Errors --------------------------------------------------------------------
-
-export function requestIdOf(error: unknown): string | undefined {
-  return (error as { error?: { request_id?: string } } | undefined)?.error?.request_id;
 }

@@ -127,7 +127,9 @@ function RelatedSection({ detail }: Readonly<{ detail: Detail }>): React.JSX.Ele
     <Section id="sale-related" titleKey="sales.section.related">
       <ul className="sale-related">
         <li>
-          <Link to={shiftClosesHref(storeRef, businessDate)}>{t("sales.related.shiftCloses")}</Link>
+          <Link to={shiftClosesHref({ storeRef, businessDate })}>
+            {t("sales.related.shiftCloses")}
+          </Link>
         </li>
       </ul>
     </Section>

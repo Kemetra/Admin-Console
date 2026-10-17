@@ -15,7 +15,6 @@ import {
   erpStateKey,
   isSaleRef,
   listEnded,
-  nameSourceKey,
   nextSaleCursor,
   returnStateKey,
   shiftClosesHref,
@@ -181,18 +180,17 @@ describe("labels and gates", () => {
   });
 
   test("machine codes map to catalog keys, with a fallback for unknown codes", () => {
-    expect(syncStatusKey("failed-retryable")).toBe("sales.sync.failedRetryable");
-    expect(syncStatusKey("other")).toBe("sales.sync.unknownCode");
-    expect(returnStateKey("full")).toBe("sales.returns.full");
-    expect(erpStateKey("unknown")).toBe("sales.erp.unknown");
-    expect(erpStateKey("weird")).toBe("sales.erp.unknown");
-    expect(tenderMethodKey("card_external")).toBe("sales.tender.card_external");
-    expect(tenderMethodKey("voucher")).toBe("sales.tender.unknownMethod");
-    expect(nameSourceKey("current")).toBe("sales.name.current");
+    expect(syncStatusKey({ syncStatus: "failed-retryable" })).toBe("sales.sync.failedRetryable");
+    expect(syncStatusKey({ syncStatus: "other" })).toBe("sales.sync.unknownCode");
+    expect(returnStateKey({ returnState: "full" })).toBe("sales.returns.full");
+    expect(erpStateKey({ erpPostingState: "unknown" })).toBe("sales.erp.unknown");
+    expect(erpStateKey({ erpPostingState: "weird" })).toBe("sales.erp.unknown");
+    expect(tenderMethodKey({ method: "card_external" })).toBe("sales.tender.card_external");
+    expect(tenderMethodKey({ method: "voucher" })).toBe("sales.tender.unknownMethod");
   });
 
   test("the shift-close exception link names the store and the one business day", () => {
-    expect(shiftClosesHref(CAIRO_STORE, "2026-10-07")).toBe(
+    expect(shiftClosesHref({ storeRef: CAIRO_STORE, businessDate: "2026-10-07" })).toBe(
       `/shift-closes?store=${CAIRO_STORE}&from=2026-10-07&to=2026-10-07`,
     );
   });

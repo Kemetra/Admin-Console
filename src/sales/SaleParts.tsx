@@ -71,13 +71,13 @@ export function StatusChips({ sale }: Readonly<{ sale: SaleItem }>): React.JSX.E
   return (
     <span className="sale-chips">
       <span className={WARNING_SYNC.has(sale.syncStatus) ? "badge badge--suspended" : "badge"}>
-        {t(syncStatusKey(sale.syncStatus))}
+        {t(syncStatusKey(sale))}
       </span>
       {sale.voided ? (
         <span className="badge badge--suspended">{t("sales.chip.voided")}</span>
       ) : null}
       {sale.returnState === "none" ? null : (
-        <span className="badge">{t(returnStateKey(sale.returnState))}</span>
+        <span className="badge">{t(returnStateKey(sale))}</span>
       )}
       <ErpChip state={sale.erpPostingState} />
     </span>
@@ -92,5 +92,9 @@ const ERP_BADGES: Record<string, string> = {
 
 export function ErpChip({ state }: Readonly<{ state: string }>): React.JSX.Element {
   const t = useT();
-  return <span className={ERP_BADGES[state] ?? "badge"}>{t(erpStateKey(state))}</span>;
+  return (
+    <span className={ERP_BADGES[state] ?? "badge"}>
+      {t(erpStateKey({ erpPostingState: state }))}
+    </span>
+  );
 }
