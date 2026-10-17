@@ -169,6 +169,33 @@ describe("StorePolicySection", () => {
     expect(screen.queryByRole("button", { name: "Apply now" })).toBeNull();
   });
 
+  test("the override form starts from the active override, not the tenant default", async () => {
+    get.mockResolvedValue({ status: 200, data: overriddenStoreRead() });
+    publish.mockResolvedValue({ status: 201, data: overriddenStoreRead(), headers: new Headers() });
+    mount();
+    await screen.findByRole("button", { name: "Apply now" });
+    // The override is 500, the tenant default 1250: editing only the reason must not reset the limit.
+    expect((screen.getByLabelText("Variance limit") as HTMLInputElement).value).toBe("500");
+    fireEvent.change(screen.getByLabelText("Reason"), { target: { value: "Extend" } });
+    fireEvent.change(screen.getByLabelText("Expiry (optional)"), {
+      target: { value: "2026-12-01T10:30" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Apply now" }));
+    await waitFor(() => expect(publish).toHaveBeenCalledTimes(1));
+    expect(publish.mock.calls[0][1].policyValue).toEqual({
+      mode: "limit",
+      limitAmount: "500",
+      currencyCode: "EGP",
+    });
+  });
+
+  test("a store with no override starts from the tenant default", async () => {
+    get.mockResolvedValue({ status: 200, data: plainStoreRead });
+    mount();
+    await screen.findByRole("button", { name: "Apply now" });
+    expect((screen.getByLabelText("Variance limit") as HTMLInputElement).value).toBe("1250");
+  });
+
   test("a 200 whose body is not a store policy is a load failure, not a crash", async () => {
     get.mockResolvedValue({ status: 200, data: {} });
     mount();

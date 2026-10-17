@@ -20,7 +20,7 @@ import type {
   StoreCashVariancePolicy,
 } from "@/lib/cash-variance-policy-queries";
 import { useState } from "react";
-import { PolicyForm } from "./PolicyForm";
+import { PolicyForm, type PolicyFormProps } from "./PolicyForm";
 import { PolicyHistory } from "./PolicyHistory";
 import { type Notice, PolicyNotice, noticeFor } from "./PolicyNotice";
 import { Field, MachineId, PolicyValue, SourceBadge } from "./PolicyParts";
@@ -121,6 +121,16 @@ function ClearOverrideForm({
   );
 }
 
+/**
+ * The value the override form starts from: the active override when there is
+ * one (so editing only its reason or expiry cannot silently reset its limit),
+ * else the tenant default. Both are server values; nothing is resolved here.
+ */
+function startingValue(policy: StoreCashVariancePolicy): PolicyFormProps["initial"] {
+  const { mode, limitAmount } = (policy.activeOverride ?? policy.tenantDefault).policyValue;
+  return { mode, limitAmount: amountForInput(limitAmount) };
+}
+
 function StorePolicyBody({
   storeId,
   timeZone,
@@ -194,10 +204,7 @@ function StorePolicyBody({
                 key={`set-${formKey}`}
                 idPrefix="cash-policy-store"
                 titleKey="cashPolicy.form.overrideTitle"
-                initial={{
-                  mode: policy.tenantDefault.policyValue.mode,
-                  limitAmount: amountForInput(policy.tenantDefault.policyValue.limitAmount),
-                }}
+                initial={startingValue(policy)}
                 pending={publisher.pending}
                 expiry={{
                   timeZone,
