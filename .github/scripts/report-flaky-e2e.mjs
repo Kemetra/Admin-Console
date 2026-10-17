@@ -5,14 +5,22 @@
 // emits one `::warning::` per flaky test and a table in the step summary.
 // Policy: WARN, never fail (the job's pass/fail is still Playwright's own).
 //
-// Usage: node .github/scripts/report-flaky-e2e.mjs [report.json]
+// Usage (from the repo root): node .github/scripts/report-flaky-e2e.mjs
+// The report path is fixed (no CLI argument) to match playwright.config.ts.
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
+import { join, relative } from "node:path";
 
-const reportPath = process.argv[2] ?? "playwright-report/e2e-results.json";
+const reportPath = "playwright-report/e2e-results.json";
 
 /** Walk the nested suites and return every test whose final status is "flaky". */
 function collectFlaky(report) {
   const flaky = [];
+  // `spec.file` is relative to Playwright's rootDir (testDir), but `::warning
+  // file=` needs a repo-root-relative path to anchor the annotation.
+  const repoPath = (file) =>
+    report.config?.rootDir
+      ? relative(process.cwd(), join(report.config.rootDir, file)).replaceAll("\\", "/")
+      : file;
   const visit = (suite) => {
     for (const spec of suite.specs ?? []) {
       for (const test of spec.tests ?? []) {
@@ -21,7 +29,7 @@ function collectFlaky(report) {
           (r) => r.status !== "passed" && r.status !== "skipped",
         ).length;
         flaky.push({
-          file: spec.file,
+          file: repoPath(spec.file),
           line: spec.line,
           title: spec.title,
           project: test.projectName,
@@ -37,7 +45,8 @@ function collectFlaky(report) {
 
 const escapeData = (s) => String(s).replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A");
 const escapeProp = (s) => escapeData(s).replace(/:/g, "%3A").replace(/,/g, "%2C");
-const escapeCell = (s) => String(s).replace(/\|/g, "\\|").replace(/\n/g, " ");
+const escapeCell = (s) =>
+  String(s).replaceAll("\\", "\\\\").replaceAll("|", "\\|").replaceAll("\n", " ");
 
 function writeSummary(markdown) {
   if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, markdown);
