@@ -9,3 +9,8 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+// RT-633: the build's full commit SHA (GITHUB_SHA in CI), injected by
+// vite.config.ts `define`. Not a secret: it is the release artifact's own
+// commit, already public in /version.json. Empty outside CI.
+declare const __CONSOLE_RELEASE_SHA__: string | undefined;

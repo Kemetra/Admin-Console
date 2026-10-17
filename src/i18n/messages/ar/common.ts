@@ -16,6 +16,11 @@ export const common = {
 
   "theme.darkMode": "الوضع الداكن",
 
+  // RT-633: the top-level error fallback. Never shows the error itself.
+  "app.crash.title": "حدث خطأ غير متوقع",
+  "app.crash.body": "أعد تحميل الصفحة للمتابعة. إذا تكرر الخطأ فتواصل مع الدعم.",
+  "app.crash.reload": "إعادة تحميل الصفحة",
+
   "common.cancel": "إلغاء",
   "common.close": "إغلاق",
   "common.save": "حفظ",

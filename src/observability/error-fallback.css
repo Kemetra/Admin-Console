@@ -1,0 +1,6 @@
+/* RT-633: the top-level error fallback; centred, readable width. */
+.rtc-crash {
+  max-width: 40rem;
+  margin: var(--space-8) auto;
+  padding: 0 var(--space-5);
+}

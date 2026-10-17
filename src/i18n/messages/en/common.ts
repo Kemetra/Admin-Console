@@ -10,6 +10,10 @@ export const common: MessagesOf<typeof ar> = {
 
   "theme.darkMode": "Dark mode",
 
+  "app.crash.title": "Something went wrong",
+  "app.crash.body": "Reload the page to continue. If it happens again, contact support.",
+  "app.crash.reload": "Reload the page",
+
   "common.cancel": "Cancel",
   "common.close": "Close",
   "common.save": "Save",

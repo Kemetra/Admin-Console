@@ -61,6 +61,11 @@ Serving rules for the host:
 No secrets, hostnames, environment values or tenant data belong in the bundle or
 in `version.json`.
 
+The bundle embeds only its own commit SHA (`GITHUB_SHA` at build time) as the
+Sentry release (RT-633). The Sentry DSN, `env` and tunnel path are never in the
+bundle: they arrive at runtime from the source that Backend-Core's OBS-3 contract
+(RT-632) defines. Until then the Console sends no telemetry.
+
 ## Verifying before deployment
 
 ```bash

@@ -2,6 +2,7 @@ import { AcceptInvitation } from "@/auth/AcceptInvitation";
 import { ActiveContextProvider } from "@/context/ActiveContextProvider";
 import { DocumentLocale } from "@/i18n";
 import { createQueryClient } from "@/lib/query";
+import { RouteErrorFallback } from "@/observability/RouteErrorFallback";
 import { Overview } from "@/shell/Overview";
 import { ProtectedArea } from "@/shell/ProtectedArea";
 import { SignInRoute } from "@/shell/SignInRoute";
@@ -64,7 +65,9 @@ function RootLayout(): React.JSX.Element {
 
 const router = createBrowserRouter(
   createRoutesFromElements(
-    <Route element={<RootLayout />}>
+    // RT-633: a data router catches route errors itself; report them and show
+    // the safe fallback instead of the router's default error screen.
+    <Route element={<RootLayout />} errorElement={<RouteErrorFallback />}>
       <Route path="/signin" element={<SignInRoute />} />
       {/* Public accept-invitation (SF5-4, security: []) — sibling of /signin. */}
       <Route path="/accept-invitation" element={<AcceptInvitation />} />
