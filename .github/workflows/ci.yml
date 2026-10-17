@@ -107,5 +107,5 @@ jobs:
         run: |
           node .github/scripts/report-flaky-e2e.mjs
           if [ -f playwright-report/e2e-retries.md ]; then
-            cat playwright-report/e2e-retries.md >> "$GITHUB_STEP_SUMMARY"
+            tee -a "$GITHUB_STEP_SUMMARY" < playwright-report/e2e-retries.md
           fi
