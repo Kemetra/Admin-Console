@@ -160,10 +160,11 @@ export async function listAuditEvents(query: AuditQuery) {
 }
 
 // --- 017 settlement: payer accounts (consume-only) --------------------------
-// Exactly the two payer ops of the DP-2 035 settlement contract. Create is
+// Exactly the two payer ops of settlement.yaml 2.0.0 (RT-417): create is
 // idempotency-keyed (mirrors createInvitation); the outcome classifier +
-// list/form logic live in src/payers/*. NO other settlement op is reachable
-// from here (017 boundary, SC-001/VG-2).
+// list/form logic live in src/payers/*. The receivable / claim / remittance /
+// cash-application ops were retired with RT-413 (ERPNext owns A/R) and have no
+// wrapper here (RT-421). Cookie auth only.
 
 export interface PayerListQuery {
   category?: "credit_customer" | "corporate" | "insurer";
@@ -195,100 +196,14 @@ export async function consoleCreatePayerAccount(
   return { status: response.status, data, error, headers: response.headers };
 }
 
+/**
+ * `PayerAccountCreate` (strict: `additionalProperties: false`). `creditTerms` was
+ * removed in 2.0.0 — a client that still sent it would get a 400. `externalRef`
+ * is the payer's ERPNext Customer link; `storeId` null = tenant-wide.
+ */
 export interface PayerAccountCreateBody {
   category: "credit_customer" | "corporate" | "insurer";
   displayName: string;
   externalRef?: string | null;
   storeId?: string | null;
-  creditTerms?: Record<string, unknown> | null;
-}
-
-// --- 018 settlement: receivables & claims (consume-only) --------------------
-// The four 018 ops of the DP-2 035 settlement contract: two receivable reads +
-// the claim/remittance write pair. 018 does NOT call consoleApplyPayment (that
-// is 019's cash-application op) nor the payer-CRUD ops (017). All cookie auth.
-
-export type ReceivableState = "open" | "partially_applied" | "settled" | "claimed" | "flagged";
-
-export interface ReceivableListQuery {
-  store_id?: string;
-  state?: ReceivableState;
-  payerRef?: string;
-  cursor?: string;
-  page_size?: number;
-}
-
-/** GET /api/v1/settlement/receivables — tenant-scoped, state filter + keyset cursor. */
-export async function consoleListReceivables(query: ReceivableListQuery = {}) {
-  const { data, error, response } = await apiClient.GET("/api/v1/settlement/receivables", {
-    params: { query },
-  });
-  return { status: response.status, data, error };
-}
-
-/** GET /api/v1/settlement/receivables/{receivableRef} — non-disclosing 404 out of scope. */
-export async function consoleGetReceivable(receivableRef: string) {
-  const { data, error, response } = await apiClient.GET(
-    "/api/v1/settlement/receivables/{receivableRef}",
-    { params: { path: { receivableRef } } },
-  );
-  return { status: response.status, data, error };
-}
-
-export interface ClaimCreateBody {
-  payerRef: string;
-  receivableRefs: string[];
-}
-
-/** POST /api/v1/settlement/claims — submit a claim. `x-idempotency: required`. */
-export async function consoleSubmitClaim(body: ClaimCreateBody, idempotencyKey: string) {
-  const { data, error, response } = await apiClient.POST("/api/v1/settlement/claims", {
-    params: { header: { "Idempotency-Key": idempotencyKey } },
-    body,
-  });
-  return { status: response.status, data, error, headers: response.headers };
-}
-
-export interface RemittanceReconcileBody {
-  remittedAmount: string;
-  remittanceRef?: string | null;
-}
-
-/** POST .../claims/{claimRef}/reconcile-remittance — records variance. `x-idempotency: required`. */
-export async function consoleReconcileRemittance(
-  claimRef: string,
-  body: RemittanceReconcileBody,
-  idempotencyKey: string,
-) {
-  const { data, error, response } = await apiClient.POST(
-    "/api/v1/settlement/claims/{claimRef}/reconcile-remittance",
-    { params: { path: { claimRef }, header: { "Idempotency-Key": idempotencyKey } }, body },
-  );
-  return { status: response.status, data, error, headers: response.headers };
-}
-
-// --- 019 settlement-reconciliation: apply-payment (consume-only) ------------
-// 019's OWN op — DP-2-owned cash application (7-C): reduces a receivable's
-// outstanding balance; clearing → settled, partial → partially_applied.
-// `x-idempotency: required`. 019's posting-retry op (consoleRepairSaleSync, 032)
-// is NOT here — it lives in a separate sale-sync-ops contract not yet generated
-// into the Console client (GATED on 032/G7).
-
-export interface PaymentApplicationBody {
-  amount: string;
-  version: number;
-  note?: string | null;
-}
-
-/** POST .../receivables/{receivableRef}/apply-payment — apply cash against a receivable. */
-export async function consoleApplyPayment(
-  receivableRef: string,
-  body: PaymentApplicationBody,
-  idempotencyKey: string,
-) {
-  const { data, error, response } = await apiClient.POST(
-    "/api/v1/settlement/receivables/{receivableRef}/apply-payment",
-    { params: { path: { receivableRef }, header: { "Idempotency-Key": idempotencyKey } }, body },
-  );
-  return { status: response.status, data, error, headers: response.headers };
 }

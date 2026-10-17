@@ -20,7 +20,6 @@ import type { PageCount } from "./overviewLogic";
 import {
   type OverviewSession,
   type StockPanel,
-  useReceivablesPanel,
   useShiftPanel,
   useStockPanel,
   useUnknownItemsPanel,
@@ -201,8 +200,7 @@ export function AttentionLedger({
   const stock = useStockPanel(session);
   const shift = useShiftPanel(session, nowMs);
   const unknown = useUnknownItemsPanel(session);
-  const receivables = useReceivablesPanel(session);
-  const allHidden = [stock, shift.state, unknown, receivables].every((s) => s.status === "hidden");
+  const allHidden = [stock, shift.state, unknown].every((s) => s.status === "hidden");
 
   return (
     <section className="overview__section" aria-labelledby="overview-attention">
@@ -225,16 +223,6 @@ export function AttentionLedger({
             label={t("overview.unknown.label")}
             noun="overview.unknown.noun"
             link={{ to: "/unknown-items", text: t("overview.unknown.open") }}
-          />
-          <CountRow
-            state={receivables}
-            label={t("overview.receivables.label")}
-            noun="overview.receivables.noun"
-            // `/receivables` has no URL filter yet (spec 018 slice): the copy names the subset.
-            link={{
-              to: "/receivables",
-              text: t("overview.receivables.open", { state: t("receivables.state.flagged") }),
-            }}
           />
         </ul>
       )}

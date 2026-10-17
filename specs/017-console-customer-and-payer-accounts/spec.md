@@ -13,6 +13,29 @@
 | Owning repo | Retail-Tower-Console (admin SPA) |
 | Upstream producer | [Data-Pulse-2 `035-sale-settlement-and-receivables-model`](https://github.com/ahmed-shaaban-94/Data-Pulse-2/tree/main/specs/035-sale-settlement-and-receivables-model) |
 
+> **Amended by RT-421 (2026-10-17) — settlement.yaml 2.0.0 (RT-417) and the RT-418 runtime.**
+> The payer screens now call the two implemented routes (`consoleCreatePayerAccount`,
+> `consoleListPayerAccounts`). Changes to this spec:
+>
+> - **`creditTerms` is removed** (FR-004 retired): ERPNext owns payment terms and credit
+>   limits, and the create body is strict (`additionalProperties: false`), so a client that
+>   sent it would get a 400. No credit-terms field exists in the form.
+> - **`externalRef` is the payer's ERPNext Customer link** (labelled so in en/ar; blank is
+>   sent as `null`, never as whitespace, which the contract rejects with a 400). Null means
+>   "not linked yet"; the Console never resolves or calls ERPNext (Backend-Core is the
+>   boundary, the Connector the only adapter).
+> - **Scope.** Create offers "Whole tenant" (`storeId: null`) or one of the caller's stores;
+>   the list shows each payer's scope. An out-of-scope store is a non-disclosing 404.
+> - **Idempotent create.** The `Idempotency-Key` identifies the payer being created: a retry of
+>   the same body reuses its key; a different body or a key conflict mints a new one.
+> - **Keyset paging.** A page can be empty while `nextCursor` is non-null; "no more" is a
+>   null cursor. The list offers "Load more" and keeps rows already fetched on a failure.
+> - **Errors never disclose.** 400, 401, 404, 422 (not in the contract, handled the same
+>   as a validation failure), 403 and 5xx show catalog copy and the request id only.
+> - **Roles.** Owner and tenant_admin only (both routes are `@Roles("owner", "tenant_admin")`):
+>   the nav entry (`ROLE_NAV`) and the page gate mirror the API.
+> - The 018/019 screens that shared the settlement contract are superseded (RT-413).
+
 > **Mode contract**: Planning-only. This spec specifies the Console
 > customer-and-payer-accounts surface — the **first** of the settlement
 > work-package's Console children (DP-2 035 §12). It must NOT be used to justify

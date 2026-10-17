@@ -1,10 +1,11 @@
 /**
  * 017 create-payer form validation — pure, no client (PayerAccountCreate shape).
  * Validates only what the consumed contract constrains: required `category`
- * (v1 enum) + `displayName` (1..200, trimmed). `externalRef`/`storeId`/
- * `creditTerms` are optional/opaque — no tax/credit-terms field is invented
- * (NG-8). The server remains authoritative; this is a fail-fast UX guard, not a
- * second source of truth.
+ * (v1 enum) + `displayName` (1..200, trimmed — the trimmed value is what is
+ * sent). `externalRef` (the ERPNext Customer link) and `storeId` (null =
+ * tenant-wide) are optional/opaque. There is no credit-terms field: ERPNext owns
+ * payment terms (settlement.yaml 2.0.0, RT-417). The server remains
+ * authoritative; this is a fail-fast UX guard, not a second source of truth.
  *
  * RT-399: errors are message keys (plus params), translated at render time, so
  * a locale switch never leaves an error behind in the old language.
@@ -20,7 +21,6 @@ export interface PayerCreateDraft {
   displayName: string;
   externalRef?: string | null;
   storeId?: string | null;
-  creditTerms?: Record<string, unknown> | null;
 }
 
 /** A field error: the catalog key and its params, rendered with `t()` at display time. */
@@ -44,7 +44,7 @@ export function validatePayerDraft(draft: PayerCreateDraft): PayerDraftErrors {
   const name = (draft.displayName ?? "").trim();
   if (name.length === 0) {
     errors.displayName = { messageKey: "payers.form.displayNameRequired" };
-  } else if (draft.displayName.length > DISPLAY_NAME_MAX) {
+  } else if (name.length > DISPLAY_NAME_MAX) {
     errors.displayName = {
       messageKey: "payers.form.displayNameTooLong",
       params: { max: DISPLAY_NAME_MAX },

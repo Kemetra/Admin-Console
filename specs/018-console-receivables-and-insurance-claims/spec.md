@@ -5,7 +5,7 @@
 | Feature ID | 018 |
 | Short name | console-receivables-and-insurance-claims |
 | Branch | `018-console-receivables-and-insurance-claims` |
-| Status | **Proposed / Draft** |
+| Status | **SUPERSEDED** by RT-413 (removed in RT-421) |
 | Owner | Ahmed Shaaban |
 | Mode | Specify |
 | Created | 2026-06-16 |
@@ -13,6 +13,15 @@
 | Owning repo | Retail-Tower-Console |
 | Upstream producer | Data-Pulse-2 **035** sale-settlement-and-receivables-model (G2 **RATIFIED** 2026-06-15, PR #574 `cb4a7e5`) |
 | Consumed contract | `packages/contracts/openapi/settlement/settlement.yaml` (`1.0.0-draft`) |
+
+> **SUPERSEDED (RT-413 Option B; removed by RT-421, 2026-10-17).** Cash application,
+> claims, remittance and receivable balances left Backend-Core: ERPNext owns A/R
+> (Payment & Receivables baseline). `settlement.yaml` 2.0.0 (Backend-Core #779,
+> RT-417) retired `consoleListReceivables`, `consoleGetReceivable`,
+> `consoleSubmitClaim` and `consoleReconcileRemittance`; the receivable list,
+> SubmitClaim and ReconcileRemittance screens, their routes, client wrappers, i18n
+> keys and tests are deleted from the Console. This spec is kept as history only
+> and MUST NOT be implemented. The surviving payer screens are spec 017.
 
 > **Mode contract.** Specify. This spec defines the Console
 > **receivable-tracking + insurance-claim review/submission/remittance-reconciliation**

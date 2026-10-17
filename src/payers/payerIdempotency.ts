@@ -7,10 +7,14 @@
  *
  *   201                              → created
  *   201 + Idempotent-Replayed:true   → replayed (same account, not a duplicate)
- *   400 validation_failure           → inline field error
+ *   400 validation_error             → form-level error with the request id
  *   400 idempotency_key_*            → regenerate key + retry (not user-facing)
+ *   422                              → the same form-level error (a 422 is not in the
+ *                                       contract; never its cause)
  *   401                              → re-authenticate (session)
  *   403                              → permission banner
+ *   404                              → non-disclosing "store unavailable" (an
+ *                                       out-of-scope storeId; one body for every cause)
  *   409 idempotency_key_conflict     → terminal; generate a NEW key, do not auto-retry
  *   409 (other)                      → non-disclosing conflict banner (never reveal
  *                                       cross-tenant existence — §II/§XII)
@@ -44,6 +48,7 @@ export type PayerCreateOutcome =
   | { kind: "regenerate-key" }
   | { kind: "unauthenticated"; messageKey: MessageKey }
   | { kind: "forbidden"; messageKey: MessageKey; requestId?: string }
+  | { kind: "not-found"; messageKey: MessageKey; requestId?: string }
   | { kind: "key-conflict"; messageKey: MessageKey; requestId?: string }
   | { kind: "conflict"; messageKey: MessageKey; requestId?: string }
   | { kind: "error"; messageKey: MessageKey; requestId?: string };
@@ -51,6 +56,27 @@ export type PayerCreateOutcome =
 /** Generate an Idempotency-Key (v4 UUID; satisfies `^[\x21-\x7E]{16,128}$`). */
 export function newIdempotencyKey(): string {
   return crypto.randomUUID();
+}
+
+/** One create attempt: its body fingerprint and the key that identifies it to the server. */
+export interface KeyedAttempt {
+  fingerprint: string;
+  key: string;
+}
+
+/**
+ * The key for this body. A retry of the SAME body (after a dropped response or a
+ * 5xx) reuses the previous key, so the server replays instead of creating a
+ * second payer; a different body gets a new key (the same key with another
+ * payload is a 409). The caller drops the attempt on a terminal outcome.
+ */
+export function reuseOrNewKey(
+  previous: KeyedAttempt | undefined,
+  fingerprint: string,
+): KeyedAttempt {
+  return previous?.fingerprint === fingerprint
+    ? previous
+    : { fingerprint, key: newIdempotencyKey() };
 }
 
 function codeOf(result: PayerCreateResult): string | undefined {
@@ -71,7 +97,7 @@ export function classifyPayerCreateOutcome(result: PayerCreateResult): PayerCrea
       : { kind: "created", replayed: false };
   }
 
-  if (result.status === 400) {
+  if (result.status === 400 || result.status === 422) {
     const code = codeOf(result);
     // A malformed/missing key is a client-internal fault: regenerate + retry,
     // not a message to the operator (they did not type the key).
@@ -87,6 +113,10 @@ export function classifyPayerCreateOutcome(result: PayerCreateResult): PayerCrea
 
   if (result.status === 403) {
     return { kind: "forbidden", messageKey: "payers.create.errors.forbidden", requestId };
+  }
+
+  if (result.status === 404) {
+    return { kind: "not-found", messageKey: "payers.create.errors.storeUnavailable", requestId };
   }
 
   if (result.status === 409) {

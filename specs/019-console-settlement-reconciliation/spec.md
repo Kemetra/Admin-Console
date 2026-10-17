@@ -5,7 +5,7 @@
 | Feature ID | 019 |
 | Short name | console-settlement-reconciliation |
 | Branch | `019-console-settlement-reconciliation` |
-| Status | **Proposed / Draft** |
+| Status | **SUPERSEDED** by RT-413 (removed in RT-421) |
 | Owner | Ahmed Shaaban |
 | Mode | Specify (residual blockers: 019 G-client/G-boundary + DP-2 032 G7) |
 | Created | 2026-06-16 |
@@ -14,6 +14,12 @@
 | Upstream producer | Data-Pulse-2 **035** sale-settlement-and-receivables-model (G2 **RATIFIED** 2026-06-15, PR #574 `cb4a7e5`) |
 | Consumed contract | `packages/contracts/openapi/settlement/settlement.yaml` (`1.0.0-draft`) |
 | Extra upstream | Data-Pulse-2 **032** sale-sync-ops runtime wiring (G7) — `packages/contracts/openapi/sale-sync-ops/sale-sync-ops.yaml` (`1.0.0-draft`) |
+
+> **SUPERSEDED (RT-413 Option B; removed by RT-421, 2026-10-17).** Cash application
+> (ApplyPayment) left Backend-Core: ERPNext owns cash application and A/R.
+> `settlement.yaml` 2.0.0 (Backend-Core #779, RT-417) retired `consoleApplyPayment`;
+> the ApplyPayment screen, its client wrapper, i18n keys and tests are deleted from
+> the Console. This spec is kept as history only and MUST NOT be implemented.
 
 > **Mode contract.** Specify. This spec defines the Console
 > **settlement-reconciliation** surface — the **LAST** of the five DP-2 035

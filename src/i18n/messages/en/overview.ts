@@ -33,8 +33,4 @@ export const overview: MessagesOf<typeof ar> = {
   "overview.unknown.label": "Unknown items pending review",
   "overview.unknown.noun": "Items",
   "overview.unknown.open": "Review items",
-
-  "overview.receivables.label": "Receivables needing review",
-  "overview.receivables.noun": "Receivables",
-  "overview.receivables.open": "Open receivables and filter by the “{state}” state",
 };

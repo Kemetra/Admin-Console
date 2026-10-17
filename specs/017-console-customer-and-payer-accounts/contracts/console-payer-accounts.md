@@ -1,7 +1,7 @@
 # 017 — Consumed Contract: Payer Accounts (CON-G1 pin)
 
 **Slice:** 017 · **Date:** 2026-06-17 · **Gate:** CON-G1 (pin the consumed boundary).
-**This is a CONSUME-ONLY design doc — it authors NO OpenAPI YAML.** The authoritative contract is DP-2 `packages/contracts/openapi/settlement/settlement.yaml` (`1.0.0-draft`, @ `cb4a7e5`). Shapes below are transcribed read-only for the Console consumer; if they ever diverge from DP-2 `origin/main`, DP-2 is authority — re-run the recheck.
+**This is a CONSUME-ONLY design doc — it authors NO OpenAPI YAML.** The authoritative contract is DP-2 `packages/contracts/openapi/settlement/settlement.yaml` (**`2.0.0`** since RT-417, Backend-Core #779; payer routes implemented by RT-418, #787; the `1.0.0-draft` @ `cb4a7e5` this doc was first written against is superseded). Shapes below are transcribed read-only for the Console consumer; if they ever diverge from DP-2 `origin/main`, DP-2 is authority — re-run the recheck.
 
 ---
 
@@ -12,8 +12,8 @@
 - **Body `PayerAccountCreate`** (`additionalProperties:false`):
   - `category` *(required)* — `PayerCategory` enum `credit_customer | corporate | insurer`.
   - `displayName` *(required)* — string, 1..200.
-  - `externalRef` — string | null (opaque; e.g. insurer code; no FK semantics).
-  - `creditTerms` — object | null (tax/terms **placeholder**, shape deferred; carry opaque).
+  - `externalRef` — string | null: the payer's **ERPNext Customer link** (opaque to Backend-Core; null = not linked; a blank or whitespace-only value is a 400).
+  - ~~`creditTerms`~~ — **removed in 2.0.0 (RT-417)**: ERPNext owns payment terms; the body is strict, so sending it is a 400.
   - `storeId` — uuid | null (null = tenant-wide).
   - **NOT sent:** `tenant_id`, actor — server-resolved (§XII).
 - **Responses:**
