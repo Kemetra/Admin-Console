@@ -13,14 +13,17 @@
 import {
   type DeviceImpactPreview,
   type DeviceLifecycleAction,
+  type PairingCodeIssueRequest,
   type RevokeReason,
   consoleGetDeviceImpact,
+  consoleIssuePairingCode,
   consoleListPairingCodes,
   consoleRetireDevice,
   consoleRevokeDevice,
 } from "@/lib/device-queries";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type MutationFailure, type RevokeBody, classifyMutationFailure } from "./lifecycleLogic";
+import { newIdempotencyKey } from "./pairingLogic";
 import type { DeviceScope } from "./useDevices";
 
 type ScopeKey = Pick<DeviceScope, "tenantId" | "activeStoreId">;
@@ -149,4 +152,23 @@ export function useReplacementCodes(
     failed: result.isError,
     retry: () => void result.refetch(),
   };
+}
+
+/**
+ * Issues one pairing code. The Idempotency-Key is non-replayable, so a NEW key is
+ * made for every call (never reused, never kept), and a failed or unanswered
+ * call is never retried automatically. The result carries the secret code: the
+ * mutation is not kept in the cache (`gcTime: 0`) and the caller resets it as
+ * soon as it has moved the code into its own state.
+ */
+export function useIssuePairingCode() {
+  const client = useQueryClient();
+  return useMutation({
+    gcTime: 0,
+    mutationFn: (body: PairingCodeIssueRequest) =>
+      consoleIssuePairingCode(body, newIdempotencyKey()),
+    onSuccess: (res) => {
+      if (res.status === 201) void client.invalidateQueries({ queryKey: ["devices"] });
+    },
+  });
 }

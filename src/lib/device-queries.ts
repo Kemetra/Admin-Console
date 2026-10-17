@@ -31,6 +31,13 @@ export type DeviceRevokeRequest = Schemas["DeviceRevokeRequest"];
 export type DeviceRevokeResult = Schemas["DeviceRevokeResult"];
 export type DeviceRetireResult = Schemas["DeviceRetireResult"];
 export type PairingCodePage = Schemas["PairingCodePage"];
+export type PairingCodeSummary = Schemas["PairingCodeSummary"];
+/** `ttlMinutes` has a server default (60), so the console may omit it. */
+export type PairingCodeIssueRequest = Omit<Schemas["PairingCodeIssueRequest"], "ttlMinutes"> & {
+  ttlMinutes?: number;
+};
+export type PairingCodeIssued = Schemas["PairingCodeIssued"];
+export type PairingCodeCancelResult = Schemas["PairingCodeCancelResult"];
 export type PairingCodeListQuery = NonNullable<
   DevicesSchema.operations["consoleListPairingCodes"]["parameters"]["query"]
 >;
@@ -99,5 +106,32 @@ export async function consoleListPairingCodes(query: PairingCodeListQuery = {}) 
   const { data, error, response } = await apiClient.GET("/api/v1/pairing-codes", {
     params: { query },
   });
+  return { status: response.status, data, error };
+}
+
+/**
+ * POST /api/v1/pairing-codes: issues a one-time code. The 201 body carries the
+ * code ONCE (it is never stored server-side), so the caller shows it and drops
+ * it. The `Idempotency-Key` is non-replayable: the caller sends a new key for
+ * every attempt and never retries with the same one.
+ */
+export async function consoleIssuePairingCode(
+  body: PairingCodeIssueRequest,
+  idempotencyKey: string,
+) {
+  const { data, error, response } = await apiClient.POST("/api/v1/pairing-codes", {
+    params: { header: { "Idempotency-Key": idempotencyKey } },
+    // The generated type marks the defaulted `ttlMinutes` required; the server applies 60.
+    body: body as Schemas["PairingCodeIssueRequest"],
+  });
+  return { status: response.status, data, error };
+}
+
+/** POST /api/v1/pairing-codes/{pairingCodeId}/cancel: idempotent; no body. */
+export async function consoleCancelPairingCode(pairingCodeId: string) {
+  const { data, error, response } = await apiClient.POST(
+    "/api/v1/pairing-codes/{pairingCodeId}/cancel",
+    { params: { path: { pairingCodeId } } },
+  );
   return { status: response.status, data, error };
 }

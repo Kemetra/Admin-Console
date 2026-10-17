@@ -15,11 +15,12 @@ import { requestIdOf } from "./deviceLogic";
 
 // --- Which actions a device offers ---------------------------------------------
 
-export type LifecycleActionId = "revoke" | "retire";
+export type LifecycleActionId = "revoke" | "replace" | "move" | "retire";
 
 /**
  * The actions that exist for a device in each trust state, from the lifecycle's
- * own shape: nothing un-revokes (D-Q5), a revoked device can still be retired,
+ * own shape: nothing un-revokes (D-Q5), a revoked device can still be replaced,
+ * moved or retired (the replacement after a security revoke is the point),
  * and a retired device is closed out. This is availability, not a verdict:
  * whether an offered action may proceed is always the server's answer, and an
  * unknown trust state offers nothing.
@@ -27,9 +28,9 @@ export type LifecycleActionId = "revoke" | "retire";
 export function actionsFor(trustState: string): readonly LifecycleActionId[] {
   switch (trustState) {
     case "active":
-      return ["revoke", "retire"];
+      return ["revoke", "replace", "move", "retire"];
     case "revoked":
-      return ["retire"];
+      return ["replace", "move", "retire"];
     default:
       return [];
   }
@@ -209,6 +210,7 @@ export type MutationFailure =
   | { kind: "not-found"; requestId?: string }
   | { kind: "validation"; requestId?: string }
   | { kind: "session"; requestId?: string }
+  | { kind: "in-progress"; retryAfterSec?: number }
   | { kind: "generic"; requestId?: string };
 
 interface Envelope {
@@ -252,7 +254,61 @@ export function classifyMutationFailure({ status, error }: WrapperFailure): Muta
       return withRequestId({ kind: "validation" as const }, error);
     case 401:
       return withRequestId({ kind: "session" as const }, error);
+    case 425: {
+      // The platform idempotency interceptor's own body, not the canonical envelope.
+      const retry = (error as { retryAfterSec?: unknown } | undefined)?.retryAfterSec;
+      return {
+        kind: "in-progress" as const,
+        ...(typeof retry === "number" ? { retryAfterSec: retry } : {}),
+      };
+    }
     default:
       return withRequestId({ kind: "generic" as const }, error);
   }
+}
+
+/** The server's correlation id when its refusal carried one (a 425 does not). */
+export function requestIdOfFailure(failure: MutationFailure): string | undefined {
+  return "requestId" in failure ? failure.requestId : undefined;
+}
+
+const CONFLICT_KEYS: Record<string, MessageKey> = {
+  replacement_already_pending: "devices.issue.error.alreadyPending",
+  device_already_replaced: "devices.issue.error.alreadyReplaced",
+  idempotency_key_conflict: "devices.issue.error.keyConflict",
+  pairing_code_used: "devices.codes.error.used",
+};
+
+/**
+ * The message a refusal reads as. A 409 is one of two things: a verdict the
+ * server re-decided (`unresolved_cash_session`, `device_retired`: the situation
+ * changed, its fresh preview is shown) or a refusal that has its own words
+ * (a replacement already pending, an idempotency conflict, a used code).
+ */
+export function noticeKeyFor(failure: MutationFailure): MessageKey {
+  switch (failure.kind) {
+    case "conflict":
+      return CONFLICT_KEYS[failure.code] ?? "devices.flow.error.changed";
+    case "forbidden-recovery":
+      return "devices.impact.verdict.forbidden";
+    case "unmet":
+      return failure.code === "recovery_note_required"
+        ? "devices.flow.error.unmetNote"
+        : "devices.flow.error.unmetAcknowledge";
+    case "not-found":
+      return "devices.flow.error.notFound";
+    case "validation":
+      return "devices.flow.error.validation";
+    case "session":
+      return "devices.flow.error.session";
+    case "in-progress":
+      return "devices.issue.error.inProgress";
+    default:
+      return "devices.flow.error.generic";
+  }
+}
+
+/** Whether a 409 is a verdict the server re-decided (its fresh preview replaces the old one). */
+export function isReDecided(failure: MutationFailure): boolean {
+  return failure.kind === "conflict" && !(failure.code in CONFLICT_KEYS);
 }

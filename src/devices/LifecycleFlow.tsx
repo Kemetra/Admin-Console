@@ -1,33 +1,66 @@
 /**
- * RT-372 — One lifecycle action as three steps in a drawer: details (the reason
- * or text the server needs), review (the server's impact preview and, when the
- * server's `requires` says so, the note and the acknowledgement) and done.
+ * RT-372 — One lifecycle action as three steps in a drawer: details (the reason,
+ * text or pairing-code form the action needs), review (the server's impact
+ * preview and, when the server's `requires` says so, the note and the
+ * acknowledgement) and done.
  *
  * The console never decides what an action does. The review step asks
  * `/impact` when it opens (a snapshot, asked again each time) and renders the
  * verdict; the confirm button exists only for a verdict that proceeds. What the
  * mutation answers wins over the preview: a 409 carries a fresh preview, which
  * replaces the one on screen. No override exists for a blocked verdict.
+ *
+ * Replace and Move issue a pairing code for the replaced device. An issue is
+ * non-replayable: a refused, unanswered or conflicting attempt is never retried
+ * with the same key, and the operator is pointed at the pending codes instead.
  */
 import { Banner } from "@/components/Banner";
 import { Drawer } from "@/components/Drawer";
-import { InlineError } from "@/components/InlineError";
 import { type MessageKey, useT } from "@/i18n";
-import type { DeviceDetail, DeviceImpactPreview, RevokeReason } from "@/lib/device-queries";
+import type {
+  DeviceDetail,
+  DeviceImpactPreview,
+  PairingCodeIssued,
+  RevokeReason,
+} from "@/lib/device-queries";
+import { useStoreDirectory } from "@/shift-closes/useShiftCloses";
 import { useState } from "react";
-import { ImpactPanel } from "./ImpactPanel";
-import { RetireDetails, RevokeDetails, TextArea } from "./RevokeFields";
+import { Link } from "react-router";
+import { IssueFields } from "./IssueFields";
+import { IssuedCode } from "./IssuedCode";
+import { ReviewBody } from "./LifecycleReview";
+import { RetireDetails, RevokeDetails } from "./RevokeFields";
+import {
+  type Draft,
+  EMPTY_DRAFT,
+  type FlowAction,
+  type Notice,
+  type Problems,
+  type Step,
+  isIssueAction,
+} from "./flowTypes";
 import {
   type ImpactDecision,
   type MutationFailure,
   buildRevokeBody,
   classifyMutationFailure,
   decideImpact,
+  isReDecided,
+  noticeKeyFor,
+  requestIdOfFailure,
   textProblemKey,
   validateOperatorText,
 } from "./lifecycleLogic";
 import {
+  EMPTY_ISSUE_DRAFT,
+  type IssueDraft,
+  type IssueProblems,
+  buildIssueBody,
+  validateIssueDraft,
+} from "./pairingLogic";
+import {
   useImpact,
+  useIssuePairingCode,
   useReplacementCodes,
   useRetireDevice,
   useRevokeDevice,
@@ -35,47 +68,26 @@ import {
 import { useDeviceScope } from "./useDevices";
 import "./devices.css";
 
-export type FlowAction = "revoke" | "retire";
-type Step = "details" | "review" | "done";
-
-interface Draft {
-  reason: RevokeReason | "";
-  note: string;
-  retireReason: string;
-  acknowledge: boolean;
-  confirmCodes: boolean;
-}
-
-interface Problems {
-  reason?: MessageKey;
-  note?: MessageKey;
-  retireReason?: MessageKey;
-  acknowledge?: MessageKey;
-  codes?: MessageKey;
-}
-
-interface Notice {
-  key: MessageKey;
-  requestId?: string;
-  variant: "danger" | "warning";
-}
-
-const EMPTY_DRAFT: Draft = {
-  reason: "",
-  note: "",
-  retireReason: "",
-  acknowledge: false,
-  confirmCodes: false,
-};
-
 const TITLE: Record<FlowAction, MessageKey> = {
   revoke: "devices.revoke.title",
   retire: "devices.retire.title",
+  replace: "devices.issue.title.replace",
+  move: "devices.issue.title.move",
 };
 const CONFIRM: Record<FlowAction, MessageKey> = {
   revoke: "devices.revoke.confirm",
   retire: "devices.retire.confirm",
+  replace: "devices.issue.confirm",
+  move: "devices.issue.confirm",
 };
+
+/** After these revokes a replacement is the natural next step (security or recovery). */
+const OFFERS_REPLACE: ReadonlySet<string> = new Set([
+  "lost",
+  "stolen",
+  "suspected_compromise",
+  "hardware_failure",
+]);
 
 /** The first problem with what the details step collected, or none. */
 function detailsProblems(action: FlowAction, draft: Draft): Problems {
@@ -103,38 +115,20 @@ function reviewProblems(decision: ImpactDecision, draft: Draft, codesToConfirm: 
   return problems;
 }
 
-/** The notice a refused mutation leaves, and whether the preview must be asked for again. */
-function noticeFor(failure: MutationFailure): Notice & { refresh: boolean } {
-  const { requestId } = failure;
-  switch (failure.kind) {
-    case "conflict":
-      return { key: "devices.flow.error.changed", variant: "warning", requestId, refresh: true };
-    case "forbidden-recovery":
-      return {
-        key: "devices.impact.verdict.forbidden",
-        variant: "danger",
-        requestId,
-        refresh: true,
-      };
-    case "unmet":
-      return {
-        key:
-          failure.code === "recovery_note_required"
-            ? "devices.flow.error.unmetNote"
-            : "devices.flow.error.unmetAcknowledge",
-        variant: "danger",
-        requestId,
-        refresh: false,
-      };
-    case "not-found":
-      return { key: "devices.flow.error.notFound", variant: "danger", requestId, refresh: false };
-    case "validation":
-      return { key: "devices.flow.error.validation", variant: "danger", requestId, refresh: false };
-    case "session":
-      return { key: "devices.flow.error.session", variant: "danger", requestId, refresh: false };
-    default:
-      return { key: "devices.flow.error.generic", variant: "danger", requestId, refresh: false };
+/** Refusals after which the issue's outcome may be unknown or a stray code may exist. */
+function pointsAtCodes(failure: MutationFailure): boolean {
+  if (failure.kind === "in-progress") return true;
+  return (
+    failure.kind === "conflict" &&
+    (failure.code === "idempotency_key_conflict" || failure.code === "replacement_already_pending")
+  );
+}
+
+function doneKey(action: FlowAction, outcome: string): MessageKey {
+  if (action === "revoke") {
+    return outcome === "already_revoked" ? "devices.revoke.alreadyRevoked" : "devices.revoke.done";
   }
+  return outcome === "already_retired" ? "devices.retire.alreadyRetired" : "devices.retire.done";
 }
 
 export interface LifecycleFlowProps {
@@ -142,6 +136,8 @@ export interface LifecycleFlowProps {
   device: DeviceDetail;
   timeZone?: string;
   onClose: () => void;
+  /** Hand over to another action (after a revoke, the replacement). */
+  onSwitch?: (action: FlowAction) => void;
 }
 
 export function LifecycleFlow({
@@ -149,21 +145,33 @@ export function LifecycleFlow({
   device,
   timeZone,
   onClose,
+  onSwitch,
 }: Readonly<LifecycleFlowProps>): React.JSX.Element {
   const t = useT();
   const scope = useDeviceScope();
+  const directory = useStoreDirectory(scope.tenantId);
+  const issuing = isIssueAction(action);
   const [step, setStep] = useState<Step>("details");
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
+  const [issueDraft, setIssueDraft] = useState<IssueDraft>({
+    ...EMPTY_ISSUE_DRAFT,
+    // A replace stays in the device's own store; a move picks another one.
+    storeId: action === "replace" ? device.storeId : "",
+  });
   const [problems, setProblems] = useState<Problems>({});
+  const [issueProblems, setIssueProblems] = useState<IssueProblems>({});
   const [notice, setNotice] = useState<Notice | undefined>();
   const [fresh, setFresh] = useState<DeviceImpactPreview | undefined>();
   const [gone, setGone] = useState(false);
   const [nonce, setNonce] = useState(0);
   const [outcome, setOutcome] = useState<MessageKey | undefined>();
+  // The secret code lives here only, until the drawer closes.
+  const [issued, setIssued] = useState<PairingCodeIssued | undefined>();
 
   const revoke = useRevokeDevice(device.deviceId);
   const retire = useRetireDevice(device.deviceId);
-  const pending = revoke.isPending || retire.isPending;
+  const issue = useIssuePairingCode();
+  const pending = revoke.isPending || retire.isPending || issue.isPending;
 
   const reviewing = step === "review";
   const reason = action === "revoke" && draft.reason !== "" ? draft.reason : undefined;
@@ -183,11 +191,18 @@ export function LifecycleFlow({
     action === "retire" && device.trustState === "revoked" && (codes.isLoading || codes.failed);
 
   const patch = (next: Partial<Draft>) => setDraft((d) => ({ ...d, ...next }));
+  const patchIssue = (next: Partial<IssueDraft>) => setIssueDraft((d) => ({ ...d, ...next }));
 
   function review(): void {
-    const found = detailsProblems(action, draft);
-    setProblems(found);
-    if (Object.keys(found).length > 0) return;
+    if (issuing) {
+      const found = validateIssueDraft(issueDraft);
+      setIssueProblems(found);
+      if (Object.keys(found).length > 0) return;
+    } else {
+      const found = detailsProblems(action, draft);
+      setProblems(found);
+      if (Object.keys(found).length > 0) return;
+    }
     setNotice(undefined);
     setFresh(undefined);
     setNonce((n) => n + 1);
@@ -197,29 +212,52 @@ export function LifecycleFlow({
   function back(): void {
     setStep("details");
     setProblems({});
+    setIssueProblems({});
     setNotice(undefined);
     setFresh(undefined);
     setGone(false);
   }
 
   function refuse(failure: MutationFailure): void {
-    const next = noticeFor(failure);
-    setNotice(next);
+    const reDecided = isReDecided(failure);
+    const key =
+      issuing && failure.kind === "not-found"
+        ? "devices.issue.error.notFound"
+        : noticeKeyFor(failure);
+    setNotice({
+      key,
+      variant: reDecided ? "warning" : "danger",
+      requestId: requestIdOfFailure(failure),
+      codesLink: pointsAtCodes(failure),
+    });
     if (failure.kind === "not-found") setGone(true);
-    if (failure.kind === "conflict" && failure.preview) {
+    if (reDecided && failure.kind === "conflict" && failure.preview) {
       setFresh(failure.preview as DeviceImpactPreview);
-    } else if (next.refresh) {
+    } else if (reDecided || failure.kind === "forbidden-recovery") {
       setFresh(undefined);
       setNonce((n) => n + 1);
     }
   }
 
-  async function confirm(): Promise<void> {
-    if (!decision || decision.kind !== "ready") return;
-    const found = reviewProblems(decision, draft, codesToConfirm);
-    setProblems(found);
-    if (Object.keys(found).length > 0) return;
-    setNotice(undefined);
+  async function submitIssue(): Promise<void> {
+    try {
+      const res = await issue.mutateAsync(buildIssueBody(issueDraft, device.deviceId));
+      if (res.status === 201 && res.data) {
+        setIssued(res.data);
+        issue.reset();
+        setStep("done");
+        return;
+      }
+      refuse(classifyMutationFailure(res));
+    } catch {
+      // No answer: the code may or may not exist. Never retried with the same key.
+      setNotice({ key: "devices.issue.error.unknownOutcome", variant: "danger", codesLink: true });
+    }
+  }
+
+  async function submitDeviceAction(
+    decided: Extract<ImpactDecision, { kind: "ready" }>,
+  ): Promise<void> {
     try {
       const res =
         action === "revoke"
@@ -227,7 +265,7 @@ export function LifecycleFlow({
               buildRevokeBody({
                 reason: draft.reason as RevokeReason,
                 note: draft.note,
-                acknowledge: decision.needs.acknowledge && draft.acknowledge,
+                acknowledge: decided.needs.acknowledge && draft.acknowledge,
               }),
             )
           : await retire.mutateAsync(draft.retireReason.trim());
@@ -242,6 +280,19 @@ export function LifecycleFlow({
     }
   }
 
+  async function confirm(): Promise<void> {
+    if (!decision || decision.kind !== "ready") return;
+    const found = reviewProblems(decision, draft, codesToConfirm);
+    setProblems(found);
+    if (Object.keys(found).length > 0) return;
+    setNotice(undefined);
+    await (issuing ? submitIssue() : submitDeviceAction(decision));
+  }
+
+  const storeName = directory.nameOf(issued?.storeId ?? issueDraft.storeId);
+  const offerReplace =
+    action === "revoke" && outcome === "devices.revoke.done" && OFFERS_REPLACE.has(draft.reason);
+
   return (
     <Drawer title={t(TITLE[action])} onClose={onClose}>
       <form
@@ -255,7 +306,16 @@ export function LifecycleFlow({
       >
         {step === "details" ? (
           <>
-            {action === "revoke" ? (
+            {issuing ? (
+              <IssueFields
+                mode={action}
+                draft={issueDraft}
+                problems={issueProblems}
+                stores={directory.stores.filter((s) => s.id !== device.storeId)}
+                fixedStoreName={directory.nameOf(device.storeId)}
+                onChange={patchIssue}
+              />
+            ) : action === "revoke" ? (
               <RevokeDetails
                 reason={draft.reason}
                 note={draft.note}
@@ -288,6 +348,13 @@ export function LifecycleFlow({
                 variant={notice.variant}
                 message={t(notice.key)}
                 requestId={notice.requestId}
+                action={
+                  notice.codesLink ? (
+                    <Link to="/devices/pairing-codes" className="btn-secondary">
+                      {t("devices.issue.viewCodes")}
+                    </Link>
+                  ) : undefined
+                }
               />
             ) : null}
             <ReviewBody
@@ -304,7 +371,11 @@ export function LifecycleFlow({
             />
             <div className="surface__actions">
               {decision?.kind === "ready" && !gone && !checkingCodes ? (
-                <button type="submit" className="btn-destructive" disabled={pending}>
+                <button
+                  type="submit"
+                  className={issuing ? "btn-primary" : "btn-destructive"}
+                  disabled={pending}
+                >
                   {pending ? <span className="spinner" aria-hidden="true" /> : null}
                   {t(CONFIRM[action])}
                 </button>
@@ -321,9 +392,25 @@ export function LifecycleFlow({
 
         {step === "done" ? (
           <>
-            <output className="device-impact__verdict">{outcome ? t(outcome) : null}</output>
+            {issued ? (
+              <IssuedCode issued={issued} storeName={storeName} timeZone={timeZone} />
+            ) : (
+              <output className="device-impact__verdict">{outcome ? t(outcome) : null}</output>
+            )}
+            {offerReplace && onSwitch ? (
+              <p className="content__sub">{t("devices.revoke.nextStep")}</p>
+            ) : null}
             <div className="surface__actions">
-              <button type="button" className="btn-primary" onClick={onClose}>
+              {offerReplace && onSwitch ? (
+                <button type="button" className="btn-primary" onClick={() => onSwitch("replace")}>
+                  {t("devices.revoke.offerReplace")}
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className={offerReplace ? "btn-secondary" : "btn-primary"}
+                onClick={onClose}
+              >
                 {t("devices.flow.done")}
               </button>
             </div>
@@ -331,162 +418,5 @@ export function LifecycleFlow({
         ) : null}
       </form>
     </Drawer>
-  );
-}
-
-function doneKey(action: FlowAction, outcome: string): MessageKey {
-  if (action === "revoke") {
-    return outcome === "already_revoked" ? "devices.revoke.alreadyRevoked" : "devices.revoke.done";
-  }
-  return outcome === "already_retired" ? "devices.retire.alreadyRetired" : "devices.retire.done";
-}
-
-interface ReviewBodyProps {
-  action: FlowAction;
-  preview?: DeviceImpactPreview;
-  decision?: ImpactDecision;
-  impact: ReturnType<typeof useImpact>;
-  codes: ReturnType<typeof useReplacementCodes>;
-  codesToConfirm: boolean;
-  timeZone?: string;
-  draft: Draft;
-  problems: Problems;
-  onPatch: (next: Partial<Draft>) => void;
-}
-
-function ReviewBody(props: Readonly<ReviewBodyProps>): React.JSX.Element {
-  const { action, preview, decision, impact, codes, codesToConfirm, timeZone, draft, problems } =
-    props;
-  const t = useT();
-  if (impact.error && !preview) {
-    return <ImpactFailure failure={impact.error} onRetry={impact.retry} />;
-  }
-  if (!preview || !decision) {
-    return (
-      <output className="content__sub">
-        <span className="spinner" aria-hidden="true" /> {t("devices.flow.checking")}
-      </output>
-    );
-  }
-  const ready = decision.kind === "ready";
-  return (
-    <>
-      <ImpactPanel preview={preview} timeZone={timeZone} />
-      {ready && decision.needs.note ? (
-        <TextArea
-          id="review-note"
-          label={t("devices.revoke.noteRecovery")}
-          help={t("devices.revoke.noteHelpRequired")}
-          value={draft.note}
-          problem={problems.note}
-          required
-          onChange={(note) => props.onPatch({ note })}
-        />
-      ) : null}
-      {ready && decision.needs.acknowledge ? (
-        <div className="field">
-          <label className="drawer__radio">
-            <input
-              type="checkbox"
-              checked={draft.acknowledge}
-              aria-invalid={problems.acknowledge ? "true" : undefined}
-              onChange={(e) => props.onPatch({ acknowledge: e.target.checked })}
-            />
-            {t("devices.revoke.acknowledge")}
-          </label>
-          <InlineError message={problems.acknowledge ? t(problems.acknowledge) : undefined} />
-        </div>
-      ) : null}
-      {action === "retire" ? (
-        <ReplacementCodes
-          codes={codes}
-          codesToConfirm={codesToConfirm}
-          confirmed={draft.confirmCodes}
-          problem={problems.codes}
-          onConfirm={(confirmCodes) => props.onPatch({ confirmCodes })}
-        />
-      ) : null}
-    </>
-  );
-}
-
-function ImpactFailure({
-  failure,
-  onRetry,
-}: Readonly<{ failure: MutationFailure; onRetry: () => void }>): React.JSX.Element {
-  const t = useT();
-  const next = noticeFor(failure);
-  const key: MessageKey =
-    failure.kind === "generic" || failure.kind === "validation"
-      ? "devices.impact.loadFailed"
-      : next.key;
-  const retryable = failure.kind === "generic" || failure.kind === "validation";
-  return (
-    <Banner
-      variant="danger"
-      message={t(key)}
-      requestId={failure.requestId}
-      action={
-        retryable ? (
-          <button type="button" className="btn-secondary" onClick={onRetry}>
-            {t("devices.impact.retry")}
-          </button>
-        ) : undefined
-      }
-    />
-  );
-}
-
-interface ReplacementCodesProps {
-  codes: ReturnType<typeof useReplacementCodes>;
-  codesToConfirm: boolean;
-  confirmed: boolean;
-  problem?: MessageKey;
-  onConfirm: (confirmed: boolean) => void;
-}
-
-/** The retire of a revoked device cancels its replacement codes: say so, and ask. */
-function ReplacementCodes({
-  codes,
-  codesToConfirm,
-  confirmed,
-  problem,
-  onConfirm,
-}: Readonly<ReplacementCodesProps>): React.JSX.Element | null {
-  const t = useT();
-  if (codes.isLoading) {
-    return <output className="content__sub">{t("devices.retire.checkingCodes")}</output>;
-  }
-  if (codes.failed) {
-    return (
-      <Banner
-        variant="danger"
-        message={t("devices.retire.codesLoadFailed")}
-        action={
-          <button type="button" className="btn-secondary" onClick={codes.retry}>
-            {t("devices.impact.retry")}
-          </button>
-        }
-      />
-    );
-  }
-  if (!codesToConfirm) return null;
-  return (
-    <div className="field">
-      <Banner
-        variant="warning"
-        message={`${t("devices.retire.pendingCodes", { count: codes.count ?? 0 })} ${t("devices.retire.pendingCodesHelp")}`}
-      />
-      <label className="drawer__radio">
-        <input
-          type="checkbox"
-          checked={confirmed}
-          aria-invalid={problem ? "true" : undefined}
-          onChange={(e) => onConfirm(e.target.checked)}
-        />
-        {t("devices.retire.pendingCodesConfirm")}
-      </label>
-      <InlineError message={problem ? t(problem) : undefined} />
-    </div>
   );
 }

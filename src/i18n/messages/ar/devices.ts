@@ -243,4 +243,108 @@ export const devices = {
   "devices.retire.pendingCodesHelp": "اربط الجهاز الجديد أولًا، أو أكّد أدناه.",
   "devices.retire.pendingCodesConfirm": "أخرجه من الخدمة وألغِ رموز الاستبدال",
   "devices.retire.pendingCodesRequired": "أكّد إلغاء رموز الاستبدال قبل المتابعة.",
+
+  // --- Replace, move and pairing codes (RT-372 part B) ---------------------------
+  "devices.actions.replace": "استبدال",
+  "devices.actions.move": "نقل إلى متجر آخر",
+  "devices.list.pairingCodes": "رموز الربط",
+
+  "devices.issue.title.replace": "استبدال الجهاز",
+  "devices.issue.title.move": "نقل الجهاز إلى متجر آخر",
+  "devices.issue.title.pair": "إصدار رمز ربط",
+  "devices.issue.intro.replace":
+    "الاستبدال يربط جهازًا جديدًا في المتجر نفسه برمز ربط. عندما يُربط الجهاز الجديد تُوقف صلاحية هذا الجهاز، وتبقى مبيعاته ورديّاته ووقائع نقده معه.",
+  "devices.issue.intro.move":
+    "النقل يربط جهازًا جديدًا في متجر آخر برمز ربط. لا يغيّر الجهاز متجره أبدًا: الجهاز الجديد جهاز جديد، وتُوقف صلاحية هذا الجهاز عند الربط.",
+  "devices.issue.intro.pair": "يُنشئ رمز الربط جهازًا جديدًا في المتجر الذي تختاره.",
+  "devices.issue.field.store": "المتجر",
+  "devices.issue.field.targetStore": "المتجر الهدف",
+  "devices.issue.field.storeChoose": "اختر متجرًا",
+  "devices.issue.field.terminalLabel": "اسم الجهاز الجديد (اختياري)",
+  "devices.issue.field.terminalLabelHelp":
+    "يُطبع على الإيصالات وفي رقم البيع، فاجعله فريدًا داخل المتجر. إن تُرك فارغًا يولّد الخادم اسمًا.",
+  "devices.issue.field.ttl": "مدة الصلاحية بالدقائق (اختياري)",
+  "devices.issue.field.ttlHelp": "الافتراضي 60، وبحد أقصى 1440.",
+  "devices.issue.bindingTitle": "بيانات الإيصال والطابعة",
+  "devices.issue.bindingHelp":
+    "يثبّتها الجهاز عند الربط ويطبعها على الإيصالات. لا يحتفظ الخادم بها، لذلك تُدخلها هنا.",
+  "devices.issue.field.branchName": "اسم المتجر على الإيصال",
+  "devices.issue.field.branchAddress": "عنوان المتجر على الإيصال",
+  "devices.issue.field.taxRegistrationId": "رقم التسجيل الضريبي",
+  "devices.issue.field.printerVendorId": "معرّف مورّد الطابعة ({bus})",
+  "devices.issue.field.printerProductId": "معرّف منتج الطابعة ({bus})",
+  "devices.issue.field.usbHelp": "بالصيغة 0x متبوعة بأربعة أرقام ست عشرية، مثل 0x04B8.",
+  "devices.issue.field.printerComPort": "منفذ {port} للطابعة (اختياري)",
+  "devices.issue.problem.usbId": "استخدم الصيغة 0x متبوعة بأربعة أرقام ست عشرية.",
+  "devices.issue.problem.tooLong": "استخدم {max} حرفًا على الأكثر.",
+  "devices.issue.problem.ttl": "أدخل عددًا صحيحًا من 1 إلى 1440.",
+  "devices.issue.confirm": "إصدار رمز الربط",
+  "devices.issue.issuing": "جارٍ الإصدار…",
+  "devices.issue.error.notFound": "الجهاز أو المتجر غير متاح لك.",
+  "devices.issue.error.alreadyPending":
+    "يوجد رمز ربط حيّ لاستبدال هذا الجهاز. ألغِه من قائمة الرموز المعلّقة أولًا، أو انتظر انتهاءه.",
+  "devices.issue.error.alreadyReplaced": "استُبدل هذا الجهاز من قبل. يُستبدل الجهاز مرة واحدة فقط.",
+  "devices.issue.error.keyConflict":
+    "لم يؤكّد الخادم هذه المحاولة، ولا يمكن إعادتها بالمفتاح نفسه. افتح قائمة الرموز المعلّقة، وألغِ أي رمز زائد، ثم أصدر رمزًا جديدًا.",
+  "devices.issue.error.inProgress":
+    "ما زال الخادم يعالج طلبًا سابقًا. لا تُعد المحاولة الآن: افتح قائمة الرموز المعلّقة بعد قليل، وألغِ أي رمز زائد، ثم أصدر رمزًا جديدًا.",
+  "devices.issue.error.unknownOutcome":
+    "لم نتلقَّ ردًّا من الخادم، فلا نعرف إن أُصدر الرمز. افتح قائمة الرموز المعلّقة، وألغِ أي رمز زائد، ثم أصدر رمزًا جديدًا.",
+  "devices.issue.viewCodes": "عرض رموز الربط المعلّقة",
+  "devices.issue.issued.title": "أُصدر رمز الربط",
+  "devices.issue.issued.code": "رمز الربط",
+  "devices.issue.issued.once":
+    "يظهر مرة واحدة فقط ولا يحتفظ به الخادم. اكتبه في الجهاز الجديد الآن. إن ضاع فألغِه من قائمة الرموز المعلّقة وأصدر رمزًا جديدًا.",
+  "devices.issue.issued.valid": {
+    zero: "صالح لمدة {count} دقيقة، حتى {time}.",
+    one: "صالح لمدة دقيقة واحدة، حتى {time}.",
+    two: "صالح لمدة دقيقتين، حتى {time}.",
+    few: "صالح لمدة {count} دقائق، حتى {time}.",
+    many: "صالح لمدة {count} دقيقة، حتى {time}.",
+    other: "صالح لمدة {count} دقيقة، حتى {time}.",
+  },
+  "devices.issue.issued.replaceHelp":
+    "سيُربط الجهاز الجديد في المتجر {store}. عند ربطه تُوقف صلاحية الجهاز الحالي.",
+  "devices.issue.issued.blockedHelp":
+    "إن فُتحت وردية على الجهاز الحالي قبل ربط الجهاز الجديد، يرفض الربط ({code}) ويبقى الرمز معلّقًا. أقفل الوردية على الجهاز الحالي واترك المزامنة تكتمل، ثم أدخل الرمز مرة أخرى قبل انتهاء صلاحيته.",
+
+  "devices.revoke.nextStep": "الخطوة التالية: ربط جهاز بديل.",
+  "devices.revoke.offerReplace": "استبدال هذا الجهاز",
+
+  // --- Pending pairing codes ---------------------------------------------------------
+  "devices.codes.title": "رموز الربط",
+  "devices.codes.sub":
+    "رموز الربط الحيّة المعلّقة في {tenant}. يظهر الرمز عند إصداره فقط، ولا يُعرض في هذه القائمة أبدًا.",
+  "devices.codes.back": "العودة إلى الأجهزة",
+  "devices.codes.issue": "إصدار رمز ربط",
+  "devices.codes.caption": "رموز الربط الحيّة المعلّقة، الأحدث أولًا",
+  "devices.codes.loadingNoun": "رموز الربط",
+  "devices.codes.empty": "لا توجد رموز ربط معلّقة.",
+  "devices.codes.emptyHint": "يظهر هنا كل رمز صادر لم يُستخدم بعد ولم تنتهِ صلاحيته.",
+  "devices.codes.unavailable": "رموز الربط غير متاحة لك.",
+  "devices.codes.loadFailed": "تعذّر تحميل رموز الربط.",
+  "devices.codes.retry": "إعادة المحاولة",
+  "devices.codes.loaded": "المحمّل: {count}",
+  "devices.codes.loadMore": "تحميل المزيد",
+  "devices.codes.col.terminal": "الجهاز الجديد",
+  "devices.codes.col.kind": "النوع",
+  "devices.codes.col.store": "المتجر",
+  "devices.codes.col.replaces": "يحلّ محل",
+  "devices.codes.col.expires": "تنتهي صلاحيته",
+  "devices.codes.col.actions": "إجراء",
+  "devices.codes.kind.pair": "ربط جديد",
+  "devices.codes.kind.replace": "استبدال",
+  "devices.codes.kind.move": "نقل",
+  "devices.codes.kind.unknown": "نوع غير معروف",
+  "devices.codes.replaces.none": "لا يوجد",
+  "devices.codes.replaces.outside": "جهاز خارج صلاحيتك",
+  "devices.codes.cancel": "إلغاء الرمز",
+  "devices.codes.cancelConfirm": "إلغاء رمز الربط {label}؟ لا يمكن استخدامه بعد ذلك.",
+  "devices.codes.cancelKeep": "إبقاء الرمز",
+  "devices.codes.cancelled": "أُلغي الرمز.",
+  "devices.codes.alreadyCancelled": "الرمز ملغى أصلًا. لم يتغيّر شيء.",
+  "devices.codes.error.used":
+    "استُخدم هذا الرمز من قبل فلا يمكن إلغاؤه. أوقف صلاحية الجهاز الذي ربطه بدلًا من ذلك.",
+  "devices.codes.error.notFound": "هذا الرمز غير متاح لك.",
+  "devices.codes.error.generic": "تعذّر إلغاء الرمز. حاول مرة أخرى.",
 } satisfies Messages;
