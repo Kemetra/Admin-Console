@@ -1,5 +1,5 @@
 import { decideImpact } from "@/devices/impactDecision";
-import { classifyMutationFailure } from "@/devices/lifecycleFailure";
+import { classifyMutationFailure, noticeKeyFor } from "@/devices/lifecycleFailure";
 import {
   REVOKE_REASON_GROUPS,
   buildRevokeBody,
@@ -191,6 +191,14 @@ describe("classifyMutationFailure", () => {
     expect(
       classifyMutationFailure({ status: 422, error: body("custody_exception_not_acknowledged") }),
     ).toMatchObject({ kind: "unmet", code: "custody_exception_not_acknowledged" });
+  });
+
+  test("each 422 reads as what it names; an unrecognised 422 is a rejected value, not a custody acknowledgement", () => {
+    const key = (code: string) =>
+      noticeKeyFor(classifyMutationFailure({ status: 422, error: body(code) }));
+    expect(key("recovery_note_required")).toBe("devices.flow.error.unmetNote");
+    expect(key("custody_exception_not_acknowledged")).toBe("devices.flow.error.unmetAcknowledge");
+    expect(key("something_else")).toBe("devices.flow.error.validation");
   });
 
   test("404 is the one non-disclosing refusal; 400 a rejected value; 401 an ended session", () => {

@@ -93,12 +93,14 @@ const OWN_CONFLICT_KEYS: Readonly<Record<string, MessageKey>> = {
 
 const UNMET_KEYS: Readonly<Record<string, MessageKey>> = {
   recovery_note_required: "devices.flow.error.unmetNote",
+  custody_exception_not_acknowledged: "devices.flow.error.unmetAcknowledge",
 };
 
 const KIND_KEYS: Readonly<Record<MutationFailure["kind"], MessageKey>> = {
   conflict: "devices.flow.error.changed",
   "forbidden-recovery": "devices.impact.verdict.forbidden",
-  unmet: "devices.flow.error.unmetAcknowledge",
+  // An unrecognised 422 is a rejected value; only the named codes above say more.
+  unmet: "devices.flow.error.validation",
   "not-found": "devices.flow.error.notFound",
   validation: "devices.flow.error.validation",
   session: "devices.flow.error.session",
