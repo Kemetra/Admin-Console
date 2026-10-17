@@ -1,0 +1,87 @@
+// RT-584: surface Playwright tests that passed only after a retry.
+//
+// CI runs Playwright with `retries: 2`, so a flaky test goes green silently.
+// This reads the JSON report written by the CI reporter (playwright.config.ts),
+// emits one `::warning::` per flaky test and a table in the step summary.
+// Policy: WARN, never fail (the job's pass/fail is still Playwright's own).
+//
+// Usage: node .github/scripts/report-flaky-e2e.mjs [report.json]
+import { appendFileSync, existsSync, readFileSync } from "node:fs";
+
+const reportPath = process.argv[2] ?? "playwright-report/e2e-results.json";
+
+/** Walk the nested suites and return every test whose final status is "flaky". */
+function collectFlaky(report) {
+  const flaky = [];
+  const visit = (suite) => {
+    for (const spec of suite.specs ?? []) {
+      for (const test of spec.tests ?? []) {
+        if (test.status !== "flaky") continue;
+        const failedAttempts = (test.results ?? []).filter(
+          (r) => r.status !== "passed" && r.status !== "skipped",
+        ).length;
+        flaky.push({
+          file: spec.file,
+          line: spec.line,
+          title: spec.title,
+          project: test.projectName,
+          failedAttempts,
+        });
+      }
+    }
+    for (const child of suite.suites ?? []) visit(child);
+  };
+  for (const suite of report.suites ?? []) visit(suite);
+  return flaky;
+}
+
+const escapeData = (s) => String(s).replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A");
+const escapeProp = (s) => escapeData(s).replace(/:/g, "%3A").replace(/,/g, "%2C");
+const escapeCell = (s) => String(s).replace(/\|/g, "\\|").replace(/\n/g, " ");
+
+function writeSummary(markdown) {
+  if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, markdown);
+}
+
+function main() {
+  if (!existsSync(reportPath)) {
+    console.log(`No Playwright JSON report at ${reportPath}; nothing to report.`);
+    return;
+  }
+
+  let report;
+  try {
+    report = JSON.parse(readFileSync(reportPath, "utf8"));
+  } catch (error) {
+    console.log(`::warning title=E2E retry report::Could not parse ${reportPath}: ${error.message}`);
+    return;
+  }
+
+  const flaky = collectFlaky(report);
+  if (flaky.length === 0) {
+    writeSummary("### E2E retries\n\nNo test needed a retry to pass.\n");
+    console.log("No flaky E2E tests.");
+    return;
+  }
+
+  for (const t of flaky) {
+    const message = `[${t.project}] ${t.title} passed only on retry (${t.failedAttempts} failed attempt(s))`;
+    console.log(
+      `::warning file=${escapeProp(t.file)},line=${t.line},title=Flaky E2E test::${escapeData(message)}`,
+    );
+  }
+
+  const rows = flaky
+    .map(
+      (t) =>
+        `| ${escapeCell(t.project)} | ${escapeCell(t.title)} | \`${escapeCell(t.file)}:${t.line}\` | ${t.failedAttempts} |`,
+    )
+    .join("\n");
+  writeSummary(
+    `### E2E retries: ${flaky.length} flaky test(s)\n\n` +
+      "These tests failed at least once and passed on retry. The job stays green; fix or quarantine them.\n\n" +
+      `| Project | Test | Location | Failed attempts |\n| --- | --- | --- | --- |\n${rows}\n`,
+  );
+}
+
+main();

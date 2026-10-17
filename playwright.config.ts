@@ -11,7 +11,11 @@ export default defineConfig<Pick<LocaleFixtures, "appLocale">>({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  reporter: process.env.CI ? "github" : "list",
+  // RT-584: CI also writes a JSON report so flaky (retry-passed) tests can be
+  // listed by .github/scripts/report-flaky-e2e.mjs instead of passing silently.
+  reporter: process.env.CI
+    ? [["github"], ["json", { outputFile: "playwright-report/e2e-results.json" }]]
+    : "list",
   use: {
     baseURL: "http://localhost:4173",
     trace: "on-first-retry",
