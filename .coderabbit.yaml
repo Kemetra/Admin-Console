@@ -1,7 +1,8 @@
 # yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
 # RT-590 (RT-586 c12206 §1): CodeRabbit is the primary AI reviewer but capped at
 # about one included review per hour, so spend it on first pushes and on
-# High-tier PRs (manual `@coderabbitai review` on the final head, see README).
+# High-tier PRs (manual `@coderabbitai full review` for a complete final-head
+# pass, see README).
 language: "en-US"
 reviews:
   profile: "assertive"
@@ -61,15 +62,20 @@ reviews:
       instructions: |
         Generated-client drift. `src/generated/**` is committed output and must
         only change by running `pnpm generate:client` at the pinned Backend-Core
-        commit, never by hand. If the pin or the source list changes, the PR must
-        also contain the regenerated `src/generated/` and say whether the change
-        is a re-pin or a regeneration at the same SHA. Flag a pin bump without
-        regenerated output, and any manual edit to generated files.
+        commits, never by hand. The pins are the global `DATA_PULSE_2_PIN` plus
+        any temporary per-source `pin` hold, resolved through `pinOf`. If a pin,
+        a per-source hold (added, changed or removed) or the source list changes,
+        the PR must also contain the regenerated `src/generated/` and say whether
+        the change is a re-pin or a regeneration at the same SHA. Flag a pin
+        change without regenerated output, and any manual edit to generated
+        files.
     - path: ".github/scripts/fetch-pinned-contracts.sh"
       instructions: |
-        Feeds the CI client-drift check. The commit it fetches must equal the pin
-        in `openapi-ts.config.ts`. Flag any divergence, any unpinned or branch-
-        relative fetch, and any change that makes the drift check pass without
-        regenerating.
+        Feeds the CI client-drift check. It must fetch exactly the set of commits
+        that `openapi-ts.config.ts` derives (`pinOf` over `OPENAPI_SOURCE_SPECS`:
+        the global pin plus any per-source hold), so several distinct commits are
+        legitimate. Flag a hard-coded pin, any unpinned or branch-relative fetch,
+        a fetch set that differs from the derived one, and any change that makes
+        the drift check pass without regenerating.
 chat:
   auto_reply: true
