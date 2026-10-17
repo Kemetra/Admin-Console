@@ -8,8 +8,9 @@ import { useStoreOf } from "@/shift-closes/useShiftCloses";
  * RT-371 — One device (read-only): an Overview tab and a History tab, the
  * selected tab kept in the URL (`?tab=history`) so it can be linked and Back
  * restores it. There is no Health tab: it arrives with RT-327, and a disabled
- * placeholder would be a dead destination. No lifecycle action is offered here
- * (revoke / replace / move / retire are RT-372).
+ * placeholder would be a dead destination. The lifecycle actions (RT-372) sit
+ * under the heading: each one shows the server's impact preview before it is
+ * confirmed.
  *
  * An open custody exception is stated above the tabs as what it is: the open
  * shift stays on this revoked device until it is closed. Nothing here resolves
@@ -17,6 +18,7 @@ import { useStoreOf } from "@/shift-closes/useShiftCloses";
  */
 import { useState } from "react";
 import { Link, useLocation, useParams, useSearchParams } from "react-router";
+import { DeviceActions } from "./DeviceActions";
 import { DeviceHistory } from "./DeviceHistory";
 import { DeviceOverview } from "./DeviceOverview";
 import {
@@ -85,6 +87,7 @@ function Loaded(props: Readonly<LoadedProps>): React.JSX.Element {
     <div className="surface">
       <BackToDevices />
       <DeviceHeading {...props} />
+      <DeviceActions device={device} timeZone={timeZone} />
       {device.custodyExceptionShiftId ? (
         <CustodyException shiftId={device.custodyExceptionShiftId} />
       ) : null}

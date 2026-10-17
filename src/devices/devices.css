@@ -135,3 +135,92 @@
     border-block-end-color: Highlight;
   }
 }
+
+/* RT-372 lifecycle: the action bar, the reason picker and the impact panel. Text
+ * carries every state; colour only reinforces. Existing tokens only. */
+.device-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.device-actions__bar {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.device-reasons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.device-reasons__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-object);
+}
+.device-reasons__group legend {
+  padding-inline: var(--space-2);
+  font: var(--weight-strong) var(--text-control) / var(--leading-tight) var(--font-sans);
+}
+/* The security class is set apart by a heavier, danger-role edge as well as by its legend and warning copy. */
+.device-reasons__group--security {
+  border-color: var(--color-danger);
+  border-width: 2px;
+}
+.device-textarea {
+  resize: vertical;
+}
+
+.device-impact {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.device-impact__title {
+  margin: 0;
+  font: var(--weight-strong) var(--text-section-title) / var(--leading-title) var(--font-sans);
+}
+.device-impact__verdict {
+  margin: 0;
+  font-weight: var(--weight-strong);
+}
+.device-impact__facts {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+.device-impact__fact {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-block-end: 1px solid var(--color-border);
+}
+.device-impact__fact dt {
+  color: var(--color-text-muted);
+  font: var(--weight-strong) var(--text-control) / var(--leading-title) var(--font-sans);
+}
+.device-impact__fact dd {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+}
+.device-impact__id {
+  font-family: var(--font-mono);
+  font-size: var(--text-machine);
+  color: var(--color-text-muted);
+}
+.device-impact__snapshot {
+  margin: 0;
+  font-size: var(--text-control);
+}

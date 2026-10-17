@@ -111,14 +111,16 @@ describe("DeviceDetail (RT-371)", () => {
     expect(unknown.className).toContain("device-flag--danger");
   });
 
-  test("the custody exception is stated above the tabs, with the shift id, and nothing to act on", async () => {
+  test("the custody exception is stated above the tabs, with the shift id, and nothing resolves it", async () => {
     consoleGetDevice.mockResolvedValue({ status: 200, data: revokedDetail });
     renderDetail(`/devices/${DEVICE_2}`);
     expect(await screen.findByText("Open custody exception")).toBeDefined();
     expect(screen.getByText(SHIFT_OPEN)).toBeDefined();
     expect(screen.getByText(/stays open on this device until it is closed/)).toBeDefined();
+    // Nothing here resolves the exception (no force-seal, no custody reconciliation, no
+    // un-revoke). Retire is offered like any action, and the server blocks it (RT-372).
     expect(
-      screen.queryByRole("button", { name: /revoke|retire|replace|move|resolve/i }),
+      screen.queryByRole("button", { name: /resolve|seal|reconcile|revoke|override/i }),
     ).toBeNull();
   });
 

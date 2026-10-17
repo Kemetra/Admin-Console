@@ -231,6 +231,38 @@ describe("DeviceList (RT-371)", () => {
     );
   });
 
+  test("retired devices are hidden by default: no trust_state is sent, and the copy says so", async () => {
+    renderList();
+    await tableReady();
+    expect(lastQuery()).not.toHaveProperty("trust_state");
+    expect(screen.getByText(/Retired devices are hidden by default/)).toBeDefined();
+    const trust = screen.getByLabelText("Trust state") as HTMLSelectElement;
+    expect(
+      within(trust).getByRole("option", { name: "Active and revoked (default)" }),
+    ).toBeDefined();
+    expect(screen.queryByRole("option", { name: "All states" })).toBeNull();
+  });
+
+  test("the trust state filter includes retired and sends it to the server", async () => {
+    renderList();
+    await tableReady();
+    fireEvent.change(screen.getByLabelText("Trust state"), { target: { value: "retired" } });
+    consoleListDevices.mockResolvedValue(
+      page([
+        summary({
+          trustState: "retired",
+          revokedAt: "2026-10-01T00:00:00Z",
+          retiredAt: "2026-10-02T00:00:00Z",
+        }),
+      ]),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    await waitFor(() =>
+      expect(lastQuery()).toEqual({ page_size: 50, trust_state: "retired", cursor: undefined }),
+    );
+    expect(screen.getByTestId("location").textContent).toBe("/devices?state=retired");
+  });
+
   test("filters: Clear resets the URL and asks for every device again", async () => {
     renderList(`/devices?store=${DUBAI_STORE}&state=active`);
     await tableReady();

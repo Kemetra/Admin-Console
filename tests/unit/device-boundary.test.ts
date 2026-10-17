@@ -3,38 +3,57 @@ import { describe, expect, test } from "vitest";
 import { readSource, sourcesUnder } from "./source-scan";
 
 /**
- * RT-371 boundary. The registry is read-only and consumes exactly the two
- * device reads of the generated client: no revoke (RT-372), no write verb, no
- * hand-rolled fetch, no Authorization header (cookie transport). The revoke
- * note is operator text returned on the detail only: it renders in the History
- * tab and nowhere else. Static source scan, comments stripped.
+ * RT-371 / RT-372 boundary. The registry consumes the device operations of the
+ * generated client and nothing else: the two reads, the impact preview, the
+ * revoke and retire writes and the pending pairing-code read. No DELETE (a device row is never removed), no bulk
+ * action, no hand-rolled fetch, no Authorization header (cookie transport). The
+ * revoke note is operator text returned on the detail only: it renders in the
+ * History tab and nowhere else. Static source scan, comments stripped.
  */
 const wrapperSrc = readSource("src/lib/device-queries.ts");
 const featureFiles = sourcesUnder("src/devices");
 const featureSrc = featureFiles.map((f) => f.src).join("\n");
 
-describe("device registry boundary (RT-371)", () => {
-  test("the data layer wraps the two device reads and nothing else", () => {
+describe("device registry boundary (RT-371, RT-372 revoke and retire)", () => {
+  test("the data layer wraps the device reads and the revoke / retire writes", () => {
     const wrappers = new Set(
       Object.keys(queries).filter((name) => typeof Reflect.get(queries, name) === "function"),
     );
-    expect(wrappers).toEqual(new Set(["consoleListDevices", "consoleGetDevice"]));
+    expect(wrappers).toEqual(
+      new Set([
+        "consoleListDevices",
+        "consoleGetDevice",
+        "consoleGetDeviceImpact",
+        "consoleRevokeDevice",
+        "consoleRetireDevice",
+        "consoleListPairingCodes",
+      ]),
+    );
   });
 
-  test("the wrappers call the generated device paths with GET only", () => {
-    expect(wrapperSrc).toContain('"/api/v1/devices"');
-    expect(wrapperSrc).toContain('"/api/v1/devices/{deviceId}"');
-    for (const src of [wrapperSrc, featureSrc]) {
-      expect(src).not.toMatch(/apiClient\.(POST|PUT|PATCH|DELETE)/);
+  test("the wrappers call the generated device paths; writes are POST on revoke and retire only", () => {
+    for (const path of [
+      '"/api/v1/devices"',
+      '"/api/v1/devices/{deviceId}"',
+      '"/api/v1/devices/{deviceId}/impact"',
+      '"/api/v1/devices/{deviceId}/revoke"',
+      '"/api/v1/devices/{deviceId}/retire"',
+      '"/api/v1/pairing-codes"',
+    ]) {
+      expect(wrapperSrc).toContain(path);
     }
+    for (const src of [wrapperSrc, featureSrc]) {
+      expect(src).not.toMatch(/apiClient\.(PUT|PATCH|DELETE)/);
+    }
+    const posts = [...wrapperSrc.matchAll(/apiClient\.POST\(\s*"([^"]+)"/g)].map((m) => m[1]);
+    expect(posts.sort()).toEqual([
+      "/api/v1/devices/{deviceId}/retire",
+      "/api/v1/devices/{deviceId}/revoke",
+    ]);
   });
 
-  test("no lifecycle action: revoke / replace / move / retire / pairing are RT-372", () => {
-    for (const src of [wrapperSrc, featureSrc]) {
-      expect(src).not.toMatch(
-        /consoleRevokeDevice|\/revoke"|pairing-code|acknowledgeCustodyException/,
-      );
-    }
+  test("no bulk action: nothing sends more than one device id", () => {
+    expect(featureSrc).not.toMatch(/bulk|deviceIds|selectAll|select-all/i);
   });
 
   test("no hand-rolled fetch, and no Authorization/Bearer header", () => {

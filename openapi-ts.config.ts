@@ -35,7 +35,7 @@ import openapiTS, { astToString, COMMENT_HEADER } from "openapi-typescript";
  *     consoleListPostingBacklog, consoleListReconciliationRuns) — RT-560
  *     (spec 016 Phase A); added at the existing pin, no re-pin
  *   - devices.openapi.yaml (consoleListDevices, consoleGetDevice; the
- *     consoleRevokeDevice write is in the document but not wrapped) — RT-371
+ *     lifecycle writes are wrapped from RT-372) — RT-371
  *   - console-sales.openapi.yaml (consoleListSales, consoleGetSale) — RT-587
  *     (spec 012 sales search and sale detail)
  *
@@ -93,17 +93,18 @@ import openapiTS, { astToString, COMMENT_HEADER } from "openapi-typescript";
  * and a 409 payload), additive and not wrapped here. Every other source is
  * byte-identical.
  *
- * SIXTH deliberate re-pin (RT-389, 2026-10-17): bumped a959959 -> 3499d17
- * (Backend-Core main, after RT-387 #797 shift variance policy runtime and
- * RT-368 #802) for the shift variance policy console reads and publishes
- * (`cash-variance-policy.openapi.yaml`, contract RT-384, added to the composed
- * sources below). Drift across the composed sources, checked against the
- * contracts between a959959 and 3499d17: only `devices.openapi.yaml` moved, and
- * additively (RT-368 retire runtime: `consoleRetireDevice`, the pairing-code
- * operations and their schemas, none wrapped by RT-371); no existing Devices
- * wire shape changed. Every other source is byte-identical, `console-sales`
- * included. The same SHA is adopted by RT-372 (device lifecycle), which wraps
- * the new Devices operations; whichever of the two lands second regenerates.
+ * SIXTH deliberate re-pin (RT-389 and RT-372, 2026-10-17): bumped a959959 ->
+ * 3499d17 (Backend-Core main, after RT-387 #797 shift variance policy runtime,
+ * RT-367 #789 / #798 pairing codes and RT-368 #799 / #802 retire). RT-389 adds
+ * the shift variance policy source (`cash-variance-policy.openapi.yaml`,
+ * contract RT-384) to the composed sources below; RT-372 wraps the new Devices
+ * operations for the device lifecycle flows (`consoleRetireDevice`,
+ * `consoleIssuePairingCode`, `consoleListPairingCodes`,
+ * `consoleCancelPairingCode`). Drift across the composed sources between
+ * a959959 and 3499d17: only `devices.openapi.yaml` 1.3.0-draft moved, and
+ * additively, except that `consoleListDevices` no longer lists retired devices
+ * by default (`trust_state=retired` still does). Every other source is
+ * byte-identical, `console-sales` included.
  */
 export const DATA_PULSE_2_PIN = "3499d17ca4f62a49100004bd93ba6cc3b7f90184" as const;
 
