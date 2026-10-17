@@ -104,4 +104,8 @@ jobs:
       # only on retry and list them in the step summary. Warn-only by policy.
       - name: Report E2E retries
         if: ${{ !cancelled() }}
-        run: node .github/scripts/report-flaky-e2e.mjs
+        run: |
+          node .github/scripts/report-flaky-e2e.mjs
+          if [ -f playwright-report/e2e-retries.md ]; then
+            cat playwright-report/e2e-retries.md >> "$GITHUB_STEP_SUMMARY"
+          fi

@@ -7,10 +7,11 @@
 //
 // Usage (from the repo root): node .github/scripts/report-flaky-e2e.mjs
 // The report path is fixed (no CLI argument) to match playwright.config.ts.
-import { appendFileSync, existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 
 const reportPath = "playwright-report/e2e-results.json";
+const summaryPath = "playwright-report/e2e-retries.md";
 
 /** Walk the nested suites and return every test whose final status is "flaky". */
 function collectFlaky(report) {
@@ -48,8 +49,10 @@ const escapeProp = (s) => escapeData(s).replace(/:/g, "%3A").replace(/,/g, "%2C"
 const escapeCell = (s) =>
   String(s).replaceAll("\\", "\\\\").replaceAll("|", "\\|").replaceAll("\n", " ");
 
+// The workflow appends this file to $GITHUB_STEP_SUMMARY; the script itself
+// never writes to an environment-supplied path.
 function writeSummary(markdown) {
-  if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, markdown);
+  writeFileSync(summaryPath, markdown);
 }
 
 function main() {
