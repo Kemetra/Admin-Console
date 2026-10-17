@@ -383,6 +383,30 @@ describe("Replace and Move (RT-372 part B)", () => {
     expect(consoleIssuePairingCode).toHaveBeenCalledTimes(1);
   });
 
+  test("nothing closes the drawer while the issue is in flight: the answer would be lost", async () => {
+    consoleGetDeviceImpact.mockResolvedValue({
+      status: 200,
+      data: impact({ action: "replace", revokeReason: "replaced" }),
+    });
+    const pendingAnswer: { resolve: (value: unknown) => void } = { resolve: () => undefined };
+    consoleIssuePairingCode.mockReturnValue(
+      new Promise((resolve) => {
+        pendingAnswer.resolve = resolve;
+      }),
+    );
+    await openAction("Replace");
+    fillBinding();
+    click("Review impact");
+    await within(dialog()).findByText("Allowed by the server.");
+    click("Issue pairing code");
+    await waitFor(() => expect(consoleIssuePairingCode).toHaveBeenCalledTimes(1));
+    fireEvent.keyDown(dialog(), { key: "Escape" });
+    fireEvent.click(within(dialog()).getByRole("button", { name: "Close" }));
+    expect(screen.queryByRole("dialog")).not.toBeNull();
+    pendingAnswer.resolve({ status: 201, data: issued() });
+    expect(await within(dialog()).findByText("FAKE-TEST-CODE-0000")).toBeDefined();
+  });
+
   test("a lost response says the outcome is unknown and points at the pending list", async () => {
     consoleGetDeviceImpact.mockResolvedValue({
       status: 200,

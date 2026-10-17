@@ -57,7 +57,11 @@ export function PairDrawer({ onClose }: Readonly<{ onClose: () => void }>): Reac
   }
 
   return (
-    <Drawer title={t("devices.issue.title.pair")} onClose={onClose}>
+    // While the server is answering, nothing closes the drawer: an issued code would be lost.
+    <Drawer
+      title={t("devices.issue.title.pair")}
+      onClose={issue.isPending ? () => undefined : onClose}
+    >
       <form
         className="surface__form"
         noValidate
@@ -107,7 +111,12 @@ export function PairDrawer({ onClose }: Readonly<{ onClose: () => void }>): Reac
                 {issue.isPending ? <span className="spinner" aria-hidden="true" /> : null}
                 {t("devices.issue.confirm")}
               </button>
-              <button type="button" className="btn-secondary" onClick={onClose}>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={onClose}
+                disabled={issue.isPending}
+              >
                 {t("common.cancel")}
               </button>
             </div>
