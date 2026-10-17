@@ -9,7 +9,7 @@ import { Banner } from "@/components/Banner";
 import { Drawer } from "@/components/Drawer";
 import { useT } from "@/i18n";
 import type { PairingCodeIssued } from "@/lib/device-queries";
-import { useStoreDirectory } from "@/shift-closes/useShiftCloses";
+import { type StoreDirectory, useStoreDirectory } from "@/shift-closes/useShiftCloses";
 import { useState } from "react";
 import { Link } from "react-router";
 import { IssueFields } from "./IssueFields";
@@ -27,16 +27,108 @@ import { useIssuePairingCode } from "./useDeviceLifecycle";
 import { useDeviceScope } from "./useDevices";
 import "./devices.css";
 
+function NoticeBanner({
+  notice,
+  onClose,
+}: Readonly<{ notice?: Notice; onClose: () => void }>): React.JSX.Element | null {
+  const t = useT();
+  if (!notice) return null;
+  return (
+    <Banner
+      variant={notice.variant}
+      message={t(notice.key)}
+      requestId={notice.requestId}
+      action={
+        notice.codesLink ? (
+          <Link to="/devices/pairing-codes" onClick={onClose} className="btn-secondary">
+            {t("devices.issue.viewCodes")}
+          </Link>
+        ) : undefined
+      }
+    />
+  );
+}
+
+interface FormProps {
+  draft: IssueDraft;
+  problems: IssueProblems;
+  notice?: Notice;
+  directory: StoreDirectory;
+  pending: boolean;
+  onChange: (patch: Partial<IssueDraft>) => void;
+  onClose: () => void;
+}
+
+function IssueForm({
+  draft,
+  problems,
+  notice,
+  directory,
+  pending,
+  onChange,
+  onClose,
+}: Readonly<FormProps>): React.JSX.Element {
+  const t = useT();
+  return (
+    <>
+      <NoticeBanner notice={notice} onClose={onClose} />
+      <IssueFields
+        mode="pair"
+        draft={draft}
+        problems={problems}
+        stores={directory.stores}
+        onChange={onChange}
+      />
+      <div className="surface__actions">
+        <button type="submit" className="btn-primary" disabled={pending}>
+          {pending ? <span className="spinner" aria-hidden="true" /> : null}
+          {t("devices.issue.confirm")}
+        </button>
+        <button type="button" className="btn-secondary" onClick={onClose} disabled={pending}>
+          {t("common.cancel")}
+        </button>
+      </div>
+    </>
+  );
+}
+
+function IssuedView({
+  issued,
+  directory,
+  onClose,
+}: Readonly<{
+  issued: PairingCodeIssued;
+  directory: StoreDirectory;
+  onClose: () => void;
+}>): React.JSX.Element {
+  const t = useT();
+  return (
+    <>
+      <IssuedCode
+        issued={issued}
+        storeName={directory.nameOf(issued.storeId)}
+        timeZone={directory.timeZoneOf(issued.storeId)}
+      />
+      <div className="surface__actions">
+        <button type="button" className="btn-primary" onClick={onClose}>
+          {t("devices.flow.done")}
+        </button>
+      </div>
+    </>
+  );
+}
+
 export function PairDrawer({ onClose }: Readonly<{ onClose: () => void }>): React.JSX.Element {
   const t = useT();
-  const scope = useDeviceScope();
-  const directory = useStoreDirectory(scope.tenantId);
+  const directory = useStoreDirectory(useDeviceScope().tenantId);
   const issue = useIssuePairingCode();
   const [draft, setDraft] = useState<IssueDraft>(EMPTY_ISSUE_DRAFT);
   const [problems, setProblems] = useState<IssueProblems>({});
   const [notice, setNotice] = useState<Notice | undefined>();
   // The secret code lives here only, until the drawer closes.
   const [issued, setIssued] = useState<PairingCodeIssued | undefined>();
+  // While the server is answering, nothing closes the drawer: an issued code would be lost.
+  const close = issue.isPending ? () => undefined : onClose;
 
   async function submit(): Promise<void> {
     const found = validateIssueDraft(draft);
@@ -45,23 +137,19 @@ export function PairDrawer({ onClose }: Readonly<{ onClose: () => void }>): Reac
     setNotice(undefined);
     try {
       const res = await issue.mutateAsync(buildIssueBody(draft));
-      if (res.status === 201 && res.data) {
-        setIssued(res.data);
-        issue.reset();
+      if (res.status !== 201 || !res.data) {
+        setNotice(noticeOf(classifyMutationFailure(res), true));
         return;
       }
-      setNotice(noticeOf(classifyMutationFailure(res), true));
+      setIssued(res.data);
+      issue.reset();
     } catch {
       setNotice(noticeOf({ kind: "no-answer" }, true));
     }
   }
 
   return (
-    // While the server is answering, nothing closes the drawer: an issued code would be lost.
-    <Drawer
-      title={t("devices.issue.title.pair")}
-      onClose={issue.isPending ? () => undefined : onClose}
-    >
+    <Drawer title={t("devices.issue.title.pair")} onClose={close}>
       <form
         className="surface__form"
         noValidate
@@ -71,56 +159,17 @@ export function PairDrawer({ onClose }: Readonly<{ onClose: () => void }>): Reac
         }}
       >
         {issued ? (
-          <>
-            <IssuedCode
-              issued={issued}
-              storeName={directory.nameOf(issued.storeId)}
-              timeZone={directory.timeZoneOf(issued.storeId)}
-            />
-            <div className="surface__actions">
-              <button type="button" className="btn-primary" onClick={onClose}>
-                {t("devices.flow.done")}
-              </button>
-            </div>
-          </>
+          <IssuedView issued={issued} directory={directory} onClose={onClose} />
         ) : (
-          <>
-            {notice ? (
-              <Banner
-                variant={notice.variant}
-                message={t(notice.key)}
-                requestId={notice.requestId}
-                action={
-                  notice.codesLink ? (
-                    <Link to="/devices/pairing-codes" onClick={onClose} className="btn-secondary">
-                      {t("devices.issue.viewCodes")}
-                    </Link>
-                  ) : undefined
-                }
-              />
-            ) : null}
-            <IssueFields
-              mode="pair"
-              draft={draft}
-              problems={problems}
-              stores={directory.stores}
-              onChange={(patch) => setDraft((d) => ({ ...d, ...patch }))}
-            />
-            <div className="surface__actions">
-              <button type="submit" className="btn-primary" disabled={issue.isPending}>
-                {issue.isPending ? <span className="spinner" aria-hidden="true" /> : null}
-                {t("devices.issue.confirm")}
-              </button>
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={onClose}
-                disabled={issue.isPending}
-              >
-                {t("common.cancel")}
-              </button>
-            </div>
-          </>
+          <IssueForm
+            draft={draft}
+            problems={problems}
+            notice={notice}
+            directory={directory}
+            pending={issue.isPending}
+            onChange={(patch) => setDraft((d) => ({ ...d, ...patch }))}
+            onClose={onClose}
+          />
         )}
       </form>
     </Drawer>
