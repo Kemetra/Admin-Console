@@ -2,6 +2,7 @@ import {
   type PayerCreateResult,
   classifyPayerCreateOutcome,
   newIdempotencyKey,
+  reuseOrNewKey,
 } from "@/payers/payerIdempotency";
 import { describe, expect, test } from "vitest";
 
@@ -24,6 +25,26 @@ describe("newIdempotencyKey (payer)", () => {
   });
 });
 
+describe("reuseOrNewKey", () => {
+  test("the first attempt for a body mints a key", () => {
+    const attempt = reuseOrNewKey(undefined, '{"displayName":"A"}');
+    expect(attempt.key).toMatch(/^[!-~]{16,128}$/);
+    expect(attempt.fingerprint).toBe('{"displayName":"A"}');
+  });
+
+  test("a retry of the SAME body reuses its key (a dropped response never double-creates)", () => {
+    const first = reuseOrNewKey(undefined, "body-1");
+    expect(reuseOrNewKey(first, "body-1")).toBe(first);
+  });
+
+  test("a different body gets a new key (the same key with another payload would 409)", () => {
+    const first = reuseOrNewKey(undefined, "body-1");
+    const second = reuseOrNewKey(first, "body-2");
+    expect(second.key).not.toBe(first.key);
+    expect(second.fingerprint).toBe("body-2");
+  });
+});
+
 function res(partial: Partial<PayerCreateResult>): PayerCreateResult {
   return { status: 0, headers: new Headers(), error: undefined, ...partial };
 }
@@ -38,9 +59,9 @@ describe("classifyPayerCreateOutcome", () => {
     expect(classifyPayerCreateOutcome(res({ status: 201, headers })).kind).toBe("replayed");
   });
 
-  test("400 validation_error -> inline field error", () => {
+  test("400 validation_error -> form-level error", () => {
     const o = classifyPayerCreateOutcome(
-      res({ status: 400, error: { error: { code: "validation_failure" } } }),
+      res({ status: 400, error: { error: { code: "validation_error" } } }),
     );
     expect(o.kind).toBe("validation");
     expect(o).toMatchObject({ messageKey: "payers.create.errors.validation" });
@@ -57,6 +78,28 @@ describe("classifyPayerCreateOutcome", () => {
     expect(classifyPayerCreateOutcome(res({ status: 401 }))).toEqual({
       kind: "unauthenticated",
       messageKey: "payers.create.errors.sessionExpired",
+    });
+  });
+
+  test("404 (an out-of-scope store) -> its own non-disclosing outcome, not the generic error", () => {
+    const o = classifyPayerCreateOutcome(
+      res({ status: 404, error: { error: { code: "not_found", request_id: "req-404" } } }),
+    );
+    expect(o).toEqual({
+      kind: "not-found",
+      messageKey: "payers.create.errors.storeUnavailable",
+      requestId: "req-404",
+    });
+  });
+
+  test("422 is handled like a validation failure (the contract defines none; never the cause)", () => {
+    const o = classifyPayerCreateOutcome(
+      res({ status: 422, error: { error: { code: "anything", message: "secret detail" } } }),
+    );
+    expect(o).toEqual({
+      kind: "validation",
+      messageKey: "payers.create.errors.validation",
+      requestId: undefined,
     });
   });
 
@@ -92,7 +135,7 @@ describe("classifyPayerCreateOutcome", () => {
   });
 
   test("RT-399: outcomes carry message keys, never translated copy", () => {
-    for (const status of [400, 401, 403, 409, 500]) {
+    for (const status of [400, 401, 403, 404, 409, 422, 500]) {
       const o = classifyPayerCreateOutcome(res({ status })) as { messageKey?: string };
       expect(o.messageKey).toMatch(/^payers\.create\.errors\./);
     }

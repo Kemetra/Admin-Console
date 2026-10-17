@@ -1,15 +1,14 @@
 /**
- * RT-559 the Overview's four reads (spec 009 §5.1–§5.2; P-5 is deferred, OD-009-3). Each uses an
+ * RT-559 the Overview's reads (spec 009 §5.1–§5.2; P-5 is deferred, OD-009-3). Each uses an
  * operation that already exists in the generated client, through its existing
  * typed wrapper, and each is narrowed by the active store when one is selected
- * (§6.1): `store_id` on P-2…P-4, only that store's row on P-1.
+ * (§6.1): `store_id` on P-2 and P-3, only that store's row on P-1.
  *
  * Roles: the nav's own helpers skip the two reads the API is known to refuse
  * (stock discrepancies, shift closes); everything else asks the backend, and a
  * 403/404 omits the panel (§6.2).
  */
 import { useActiveContextValue } from "@/context/ActiveContextProvider";
-import { consoleListReceivables } from "@/lib/client";
 import { consoleListShiftCloses } from "@/lib/shift-close-queries";
 import {
   type SnapshotStatusCode,
@@ -188,7 +187,7 @@ export function useShiftPanel(session: OverviewSession, nowMs: number): ShiftPan
   return { state, href: attention.href };
 }
 
-// --- P-3 Unknown items, P-4 Flagged receivables ---------------------------------------
+// --- P-3 Unknown items (P-4 withdrawn, RT-421) ---------------------------------------
 
 /** A one-page count panel every role may ask for (the backend decides). */
 function useCountPanel(
@@ -207,9 +206,4 @@ function useCountPanel(
 export function useUnknownItemsPanel(session: OverviewSession): PanelState<PageCount> {
   const list = () => listUnknownItems({ status: "pending", ...storeQuery(session) });
   return useCountPanel("unknown-items", session, list as () => Promise<ApiResult>, "next_cursor");
-}
-
-export function useReceivablesPanel(session: OverviewSession): PanelState<PageCount> {
-  const list = () => consoleListReceivables({ state: "flagged", ...storeQuery(session) });
-  return useCountPanel("receivables", session, list, "nextCursor");
 }

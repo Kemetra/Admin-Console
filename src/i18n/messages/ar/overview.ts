@@ -38,8 +38,4 @@ export const overview = {
   "overview.unknown.label": "أصناف غير معروفة بانتظار المراجعة",
   "overview.unknown.noun": "الأصناف",
   "overview.unknown.open": "مراجعة الأصناف",
-
-  "overview.receivables.label": "ذمم مدينة تحتاج إلى مراجعة",
-  "overview.receivables.noun": "الذمم",
-  "overview.receivables.open": "فتح الذمم المدينة وتصفيتها بالحالة «{state}»",
 } satisfies Messages;
