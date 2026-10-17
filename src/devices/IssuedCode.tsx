@@ -2,13 +2,13 @@
  * RT-372 — The issued pairing code, shown ONCE with its time to live. The code
  * is a secret the server keeps only as a hash: it lives in the component's
  * state while this panel is open, never in the URL, storage, the page title, a
- * log or a query cache, and it is gone when the drawer closes. A replace or
+ * log or a query cache, and it is gone when the drawer closes. Nothing on the
+ * panel navigates away: leaving would destroy the code before it was typed in. A replace or
  * move also carries the contract's REPLACEMENT_BLOCKED note: that refusal is the
  * POS's, at pairing, when a shift opened on the old device after the issue.
  */
 import { DateTime, useT } from "@/i18n";
 import type { PairingCodeIssued } from "@/lib/device-queries";
-import { Link } from "react-router";
 import "./devices.css";
 
 const MS_PER_MINUTE = 60_000;
@@ -64,9 +64,6 @@ export function IssuedCode({
           </p>
         </>
       ) : null}
-      <Link to="/devices/pairing-codes" className="btn-secondary device-issued__link">
-        {t("devices.issue.viewCodes")}
-      </Link>
     </section>
   );
 }

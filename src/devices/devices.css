@@ -247,7 +247,3 @@
   user-select: all;
   overflow-wrap: anywhere;
 }
-.device-issued__link {
-  align-self: flex-start;
-  text-decoration: none;
-}

@@ -17,7 +17,7 @@ import { type StoreDirectory, useStoreDirectory } from "@/shift-closes/useShiftC
 import { useState } from "react";
 import { Link } from "react-router";
 import { PairDrawer } from "./PairDrawer";
-import { classifyMutationFailure, requestIdOfFailure } from "./lifecycleLogic";
+import { classifyMutationFailure, requestIdOfFailure } from "./lifecycleFailure";
 import { type DeviceError, useDeviceScope } from "./useDevices";
 import {
   type PairingCodeListState,

@@ -7,82 +7,92 @@
 import { Banner } from "@/components/Banner";
 import { InlineError } from "@/components/InlineError";
 import { type MessageKey, useT } from "@/i18n";
-import type { DeviceImpactPreview } from "@/lib/device-queries";
 import { ImpactPanel } from "./ImpactPanel";
 import { TextArea } from "./RevokeFields";
 import type { Draft, FlowAction, Problems } from "./flowTypes";
-import {
-  type ImpactDecision,
-  type MutationFailure,
-  noticeKeyFor,
-  requestIdOfFailure,
-} from "./lifecycleLogic";
-import type { ImpactState, ReplacementCodesState } from "./useDeviceLifecycle";
+import type { ImpactDecision } from "./impactDecision";
+import { type MutationFailure, noticeKeyFor, requestIdOfFailure } from "./lifecycleFailure";
+import type { ReplacementCodesState } from "./useDeviceLifecycle";
+import type { LifecycleFlowState } from "./useLifecycleFlow";
 import "./devices.css";
 
-export interface ReviewBodyProps {
-  action: FlowAction;
-  preview?: DeviceImpactPreview;
-  decision?: ImpactDecision;
-  impact: ImpactState;
-  codes: ReplacementCodesState;
-  codesToConfirm: boolean;
-  timeZone?: string;
+type Ready = Extract<ImpactDecision, { kind: "ready" }>;
+
+function NoteField({
+  draft,
+  problems,
+  onPatch,
+}: Readonly<{
   draft: Draft;
   problems: Problems;
   onPatch: (next: Partial<Draft>) => void;
+}>): React.JSX.Element {
+  const t = useT();
+  return (
+    <TextArea
+      id="review-note"
+      label={t("devices.revoke.noteRecovery")}
+      help={t("devices.revoke.noteHelpRequired")}
+      value={draft.note}
+      problem={problems.note}
+      required
+      onChange={(note) => onPatch({ note })}
+    />
+  );
 }
 
-export function ReviewBody(props: Readonly<ReviewBodyProps>): React.JSX.Element {
-  const { action, preview, decision, impact, codes, codesToConfirm, timeZone, draft, problems } =
-    props;
+function ConfirmBox({
+  label,
+  checked,
+  problem,
+  onChange,
+}: Readonly<{
+  label: string;
+  checked: boolean;
+  problem?: MessageKey;
+  onChange: (checked: boolean) => void;
+}>): React.JSX.Element {
   const t = useT();
-  if (impact.error && !preview) {
-    return <ImpactFailure failure={impact.error} onRetry={impact.retry} />;
-  }
-  if (!preview || !decision) {
-    return (
-      <output className="content__sub">
-        <span className="spinner" aria-hidden="true" /> {t("devices.flow.checking")}
-      </output>
-    );
-  }
-  const ready = decision.kind === "ready";
+  return (
+    <div className="field">
+      <label className="drawer__radio">
+        <input
+          type="checkbox"
+          checked={checked}
+          aria-invalid={problem ? "true" : undefined}
+          onChange={(e) => onChange(e.target.checked)}
+        />
+        {label}
+      </label>
+      <InlineError message={problem ? t(problem) : undefined} />
+    </div>
+  );
+}
+
+/** What the server's `requires` asks of the operator: the note, the acknowledgement. */
+function Requirements({
+  decision,
+  draft,
+  problems,
+  onPatch,
+}: Readonly<{
+  decision: Ready;
+  draft: Draft;
+  problems: Problems;
+  onPatch: (next: Partial<Draft>) => void;
+}>): React.JSX.Element {
+  const t = useT();
   return (
     <>
-      <ImpactPanel preview={preview} timeZone={timeZone} />
-      {ready && decision.needs.note ? (
-        <TextArea
-          id="review-note"
-          label={t("devices.revoke.noteRecovery")}
-          help={t("devices.revoke.noteHelpRequired")}
-          value={draft.note}
-          problem={problems.note}
-          required
-          onChange={(note) => props.onPatch({ note })}
-        />
+      {decision.needs.note ? (
+        <NoteField draft={draft} problems={problems} onPatch={onPatch} />
       ) : null}
-      {ready && decision.needs.acknowledge ? (
-        <div className="field">
-          <label className="drawer__radio">
-            <input
-              type="checkbox"
-              checked={draft.acknowledge}
-              aria-invalid={problems.acknowledge ? "true" : undefined}
-              onChange={(e) => props.onPatch({ acknowledge: e.target.checked })}
-            />
-            {t("devices.revoke.acknowledge")}
-          </label>
-          <InlineError message={problems.acknowledge ? t(problems.acknowledge) : undefined} />
-        </div>
-      ) : null}
-      {action === "retire" ? (
-        <ReplacementCodes
-          codes={codes}
-          codesToConfirm={codesToConfirm}
-          confirmed={draft.confirmCodes}
-          problem={problems.codes}
-          onConfirm={(confirmCodes) => props.onPatch({ confirmCodes })}
+      {decision.needs.acknowledge ? (
+        <ConfirmBox
+          label={t("devices.revoke.acknowledge")}
+          checked={draft.acknowledge}
+          problem={problems.acknowledge}
+          onChange={(acknowledge) => onPatch({ acknowledge })}
         />
       ) : null}
     </>
@@ -147,21 +157,57 @@ function ReplacementCodes({
   }
   if (!codesToConfirm) return null;
   return (
-    <div className="field">
+    <>
       <Banner
         variant="warning"
         message={`${t("devices.retire.pendingCodes", { count: codes.count ?? 0 })} ${t("devices.retire.pendingCodesHelp")}`}
       />
-      <label className="drawer__radio">
-        <input
-          type="checkbox"
-          checked={confirmed}
-          aria-invalid={problem ? "true" : undefined}
-          onChange={(e) => onConfirm(e.target.checked)}
+      <ConfirmBox
+        label={t("devices.retire.pendingCodesConfirm")}
+        checked={confirmed}
+        problem={problem}
+        onChange={onConfirm}
+      />
+    </>
+  );
+}
+
+export function ReviewBody({
+  action,
+  flow,
+  timeZone,
+}: Readonly<{
+  action: FlowAction;
+  flow: LifecycleFlowState;
+  timeZone?: string;
+}>): React.JSX.Element {
+  const t = useT();
+  const { preview, decision, impact, draft, problems, patch } = flow;
+  if (impact.error && !preview) {
+    return <ImpactFailure failure={impact.error} onRetry={impact.retry} />;
+  }
+  if (!preview || !decision) {
+    return (
+      <output className="content__sub">
+        <span className="spinner" aria-hidden="true" /> {t("devices.flow.checking")}
+      </output>
+    );
+  }
+  return (
+    <>
+      <ImpactPanel preview={preview} timeZone={timeZone} />
+      {decision.kind === "ready" ? (
+        <Requirements decision={decision} draft={draft} problems={problems} onPatch={patch} />
+      ) : null}
+      {action === "retire" ? (
+        <ReplacementCodes
+          codes={flow.codes}
+          codesToConfirm={flow.codesToConfirm}
+          confirmed={draft.confirmCodes}
+          problem={problems.codes}
+          onConfirm={(confirmCodes) => patch({ confirmCodes })}
         />
-        {t("devices.retire.pendingCodesConfirm")}
-      </label>
-      <InlineError message={problem ? t(problem) : undefined} />
-    </div>
+      ) : null}
+    </>
   );
 }

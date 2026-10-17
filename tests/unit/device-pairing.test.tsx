@@ -193,9 +193,8 @@ describe("Replace and Move (RT-372 part B)", () => {
     expect(within(dialog()).getByText(/Shown only once/)).toBeDefined();
     expect(within(dialog()).getByText(/Valid for 30 minutes, until/)).toBeDefined();
     expect(within(dialog()).getByText(/REPLACEMENT_BLOCKED/)).toBeDefined();
-    expect(
-      within(dialog()).getByRole("link", { name: "View pending pairing codes" }),
-    ).toBeDefined();
+    // Nothing on the panel navigates away: leaving would destroy a code not yet typed in.
+    expect(within(dialog()).queryByRole("link")).toBeNull();
   });
 
   test("the code is dropped when the drawer closes: it is never kept, stored or put in the title", async () => {

@@ -79,27 +79,27 @@ const revokedWithCustody = detail({
   custodyExceptionShiftId: SHIFT_OPEN,
 });
 
+/** Every mock back to its default: an active device, an owner, no live pairing codes. */
+function resetMocks(): void {
+  for (const fn of [
+    consoleGetDevice,
+    consoleGetDeviceImpact,
+    consoleRevokeDevice,
+    consoleRetireDevice,
+    consoleListPairingCodes,
+    readStore,
+    activeContext,
+  ]) {
+    fn.mockReset();
+  }
+  activeContext.mockReturnValue(ctx());
+  readStore.mockResolvedValue({ status: 200, data: stores[0] });
+  consoleGetDevice.mockResolvedValue({ status: 200, data: detail() });
+  consoleListPairingCodes.mockResolvedValue({ status: 200, data: { items: [], nextCursor: null } });
+}
+
 describe("device lifecycle actions (RT-372): the action bar", () => {
-  beforeEach(() => {
-    for (const fn of [
-      consoleGetDevice,
-      consoleGetDeviceImpact,
-      consoleRevokeDevice,
-      consoleRetireDevice,
-      consoleListPairingCodes,
-      readStore,
-      activeContext,
-    ]) {
-      fn.mockReset();
-    }
-    activeContext.mockReturnValue(ctx());
-    readStore.mockResolvedValue({ status: 200, data: stores[0] });
-    consoleGetDevice.mockResolvedValue({ status: 200, data: detail() });
-    consoleListPairingCodes.mockResolvedValue({
-      status: 200,
-      data: { items: [], nextCursor: null },
-    });
-  });
+  beforeEach(resetMocks);
 
   test("an active device offers Revoke and Retire as separate actions, never a generic Deactivate", async () => {
     renderDetail();
@@ -131,22 +131,7 @@ describe("device lifecycle actions (RT-372): the action bar", () => {
 });
 
 describe("Revoke (RT-372)", () => {
-  beforeEach(() => {
-    for (const fn of [
-      consoleGetDevice,
-      consoleGetDeviceImpact,
-      consoleRevokeDevice,
-      consoleRetireDevice,
-      consoleListPairingCodes,
-      readStore,
-      activeContext,
-    ]) {
-      fn.mockReset();
-    }
-    activeContext.mockReturnValue(ctx());
-    readStore.mockResolvedValue({ status: 200, data: stores[0] });
-    consoleGetDevice.mockResolvedValue({ status: 200, data: detail() });
-  });
+  beforeEach(resetMocks);
 
   test("the security class is a separate group with its real-event warning; replaced, moved and retired are not offered", async () => {
     await openRevoke();
@@ -311,24 +296,11 @@ describe("Revoke (RT-372)", () => {
     expect(consoleRevokeDevice).not.toHaveBeenCalled();
   });
 
-  test("an unknown verdict is treated as blocked: no action is offered", async () => {
-    consoleGetDeviceImpact.mockResolvedValue({
-      status: 200,
-      data: impact({ verdict: "allowed_after_review" }),
-    });
-    await openRevoke();
-    await chooseReason("Lost");
-    expect(
-      await within(dialog()).findByText(/for a reason this console doesn't know/),
-    ).toBeDefined();
-    expect(within(dialog()).queryByRole("button", { name: "Revoke device" })).toBeNull();
-  });
-
-  test("an unknown requirement is unmet: no action is offered", async () => {
-    consoleGetDeviceImpact.mockResolvedValue({
-      status: 200,
-      data: impact({ requires: ["second_approver"] }),
-    });
+  test.each([
+    ["an unknown verdict is treated as blocked", { verdict: "allowed_after_review" }],
+    ["an unknown requirement is unmet", { requires: ["second_approver"] }],
+  ])("%s: no action is offered", async (_name, over) => {
+    consoleGetDeviceImpact.mockResolvedValue({ status: 200, data: impact(over) });
     await openRevoke();
     await chooseReason("Lost");
     expect(
@@ -374,32 +346,20 @@ describe("Revoke (RT-372)", () => {
     expect(consoleRevokeDevice).toHaveBeenCalledTimes(1);
   });
 
-  test("a 403 recovery_revoke_forbidden from the mutation shows the role refusal", async () => {
+  test.each([
+    [403, "recovery_revoke_forbidden", /can only be made by an owner or a tenant admin/],
+    [422, "recovery_note_required", /needs a note for this revoke/],
+  ])("a %s %s from the mutation reads as the server's refusal", async (status, code, message) => {
     consoleGetDeviceImpact.mockResolvedValue({ status: 200, data: impact() });
     consoleRevokeDevice.mockResolvedValue({
-      status: 403,
-      error: { error: { code: "recovery_revoke_forbidden", message: "x", request_id: "r" } },
+      status,
+      error: { error: { code, message: "x", request_id: "r" } },
     });
     await openRevoke();
     await chooseReason("Lost");
     await within(dialog()).findByText("Allowed by the server.");
     click("Revoke device");
-    expect(
-      await within(dialog()).findByText(/can only be made by an owner or a tenant admin/),
-    ).toBeDefined();
-  });
-
-  test("a 422 names the first requirement the server found unmet", async () => {
-    consoleGetDeviceImpact.mockResolvedValue({ status: 200, data: impact() });
-    consoleRevokeDevice.mockResolvedValue({
-      status: 422,
-      error: { error: { code: "recovery_note_required", message: "x", request_id: "r" } },
-    });
-    await openRevoke();
-    await chooseReason("Lost");
-    await within(dialog()).findByText("Allowed by the server.");
-    click("Revoke device");
-    expect(await within(dialog()).findByText(/needs a note for this revoke/)).toBeDefined();
+    expect(await within(dialog()).findByText(message)).toBeDefined();
   });
 
   test("already_revoked is idempotent and says nothing changed", async () => {
@@ -432,26 +392,7 @@ describe("Revoke (RT-372)", () => {
 });
 
 describe("Retire (RT-372)", () => {
-  beforeEach(() => {
-    for (const fn of [
-      consoleGetDevice,
-      consoleGetDeviceImpact,
-      consoleRevokeDevice,
-      consoleRetireDevice,
-      consoleListPairingCodes,
-      readStore,
-      activeContext,
-    ]) {
-      fn.mockReset();
-    }
-    activeContext.mockReturnValue(ctx());
-    readStore.mockResolvedValue({ status: 200, data: stores[0] });
-    consoleGetDevice.mockResolvedValue({ status: 200, data: detail() });
-    consoleListPairingCodes.mockResolvedValue({
-      status: 200,
-      data: { items: [], nextCursor: null },
-    });
-  });
+  beforeEach(resetMocks);
 
   async function openRetire(): Promise<void> {
     renderDetail();
@@ -479,6 +420,35 @@ describe("Retire (RT-372)", () => {
     click("Retire device");
     await waitFor(() => expect(consoleRetireDevice).toHaveBeenCalledWith(DEVICE_1, "End of life"));
     expect(await within(dialog()).findByText("The device is retired.")).toBeDefined();
+  });
+
+  test("the done step survives the device turning retired: the drawer is not unmounted by the refetch", async () => {
+    consoleGetDeviceImpact.mockResolvedValue({
+      status: 200,
+      data: impact({ action: "retire", revokeReason: "retired" }),
+    });
+    consoleRetireDevice.mockResolvedValue(retired());
+    // After the retire, the detail the server returns is the retired device.
+    consoleGetDevice.mockReset();
+    consoleGetDevice.mockResolvedValueOnce({ status: 200, data: detail() }).mockResolvedValue({
+      status: 200,
+      data: detail({ trustState: "retired", revokedAt: REVOKED_AT, retiredAt: REVOKED_AT }),
+    });
+    await openRetire();
+    fireEvent.change(within(dialog()).getByLabelText("Why is this device retired?"), {
+      target: { value: "End of life" },
+    });
+    click("Review impact");
+    await within(dialog()).findByText("Allowed by the server.");
+    click("Retire device");
+    await waitFor(() => expect(consoleGetDevice).toHaveBeenCalledTimes(2));
+    expect(await within(dialog()).findByText("The device is retired.")).toBeDefined();
+    // The page behind it now says the device is closed out, and the drawer is still the way out.
+    expect(await screen.findByText(/There are no further actions on it/)).toBeDefined();
+    click("Done");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    // The Retire button is gone: focus stays on the actions region, not the page body.
+    expect(document.activeElement?.className).toContain("device-actions");
   });
 
   test("blocked by an open shift on an active device: close the shift first, no override", async () => {

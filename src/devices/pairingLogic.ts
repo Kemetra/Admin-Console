@@ -59,33 +59,41 @@ function textProblem(value: string, max: number, required: boolean): FieldProble
   return value.length > max ? { key: "devices.issue.problem.tooLong", params: { max } } : undefined;
 }
 
+function usbProblem(value: string): FieldProblem | undefined {
+  const id = value.trim();
+  if (id === "") return { key: "devices.text.required" };
+  return USB_ID.test(id) ? undefined : { key: "devices.issue.problem.usbId" };
+}
+
+/** Empty is the server default; anything else is a whole number of minutes in range. */
+function ttlProblem(value: string): FieldProblem | undefined {
+  const ttl = value.trim();
+  if (ttl === "") return undefined;
+  const minutes = Number(ttl);
+  const ok = /^\d+$/.test(ttl) && minutes >= TTL_MIN && minutes <= TTL_MAX;
+  return ok ? undefined : { key: "devices.issue.problem.ttl" };
+}
+
+/** The checks per field; a field with no entry has nothing to check. */
+const CHECKS: Readonly<
+  Partial<Record<keyof IssueDraft, (value: string) => FieldProblem | undefined>>
+> = {
+  storeId: (v) => (v === "" ? { key: "devices.text.required" } : undefined),
+  branchName: (v) => textProblem(v, LIMITS.branchName, true),
+  branchAddress: (v) => textProblem(v, LIMITS.branchAddress, true),
+  taxRegistrationId: (v) => textProblem(v, LIMITS.taxRegistrationId, true),
+  printerVendorId: usbProblem,
+  printerProductId: usbProblem,
+  terminalLabel: (v) => textProblem(v, LIMITS.terminalLabel, false),
+  printerComPort: (v) => textProblem(v, LIMITS.printerComPort, false),
+  ttlMinutes: ttlProblem,
+};
+
 export function validateIssueDraft(draft: IssueDraft): IssueProblems {
   const problems: IssueProblems = {};
-  const set = (field: keyof IssueDraft, problem: FieldProblem | undefined) => {
-    if (problem) problems[field] = problem;
-  };
-  set("storeId", draft.storeId === "" ? { key: "devices.text.required" } : undefined);
-  set("branchName", textProblem(draft.branchName, LIMITS.branchName, true));
-  set("branchAddress", textProblem(draft.branchAddress, LIMITS.branchAddress, true));
-  set("taxRegistrationId", textProblem(draft.taxRegistrationId, LIMITS.taxRegistrationId, true));
-  for (const field of ["printerVendorId", "printerProductId"] as const) {
-    const value = draft[field].trim();
-    set(
-      field,
-      value === ""
-        ? { key: "devices.text.required" }
-        : USB_ID.test(value)
-          ? undefined
-          : { key: "devices.issue.problem.usbId" },
-    );
-  }
-  set("terminalLabel", textProblem(draft.terminalLabel, LIMITS.terminalLabel, false));
-  set("printerComPort", textProblem(draft.printerComPort, LIMITS.printerComPort, false));
-  const ttl = draft.ttlMinutes.trim();
-  if (ttl !== "") {
-    const minutes = Number(ttl);
-    const ok = /^\d+$/.test(ttl) && minutes >= TTL_MIN && minutes <= TTL_MAX;
-    set("ttlMinutes", ok ? undefined : { key: "devices.issue.problem.ttl" });
+  for (const [field, check] of Object.entries(CHECKS)) {
+    const problem = check(draft[field as keyof IssueDraft]);
+    if (problem) problems[field as keyof IssueDraft] = problem;
   }
   return problems;
 }

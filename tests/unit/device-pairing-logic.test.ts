@@ -1,4 +1,4 @@
-import { classifyMutationFailure, noticeKeyFor } from "@/devices/lifecycleLogic";
+import { classifyMutationFailure, noticeKeyFor } from "@/devices/lifecycleFailure";
 import {
   EMPTY_ISSUE_DRAFT,
   type IssueDraft,

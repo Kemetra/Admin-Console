@@ -1,8 +1,8 @@
+import { decideImpact } from "@/devices/impactDecision";
+import { classifyMutationFailure } from "@/devices/lifecycleFailure";
 import {
   REVOKE_REASON_GROUPS,
   buildRevokeBody,
-  classifyMutationFailure,
-  decideImpact,
   validateOperatorText,
 } from "@/devices/lifecycleLogic";
 import { describe, expect, test } from "vitest";

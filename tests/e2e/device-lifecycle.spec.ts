@@ -1,3 +1,5 @@
+import type { MessageKey } from "../../src/i18n/translate";
+import type { RevokeReason } from "../../src/lib/device-queries";
 import { DEVICE_1, DEVICE_2, DUBAI_STORE, SHIFT_OPEN, detail } from "../unit/device-fixtures";
 import { conflict, impact, openShift, retired, revoked } from "../unit/device-lifecycle-fixtures";
 import { type Page, expect, test } from "./fixtures";
@@ -81,6 +83,28 @@ async function route(
   });
 }
 
+type Translate = (key: MessageKey) => string;
+
+/** Open Revoke on Till 1 as `role`, pick `reason`, and ask the server for the impact it is given. */
+async function reviewRevoke(
+  page: Page,
+  t: Translate,
+  {
+    role,
+    reason,
+    preview,
+  }: { role: string; reason: RevokeReason; preview: Record<string, unknown> },
+) {
+  const calls = await mockDevice(page, role, detail());
+  await page.route(`**/api/v1/devices/${DEVICE_1}/impact?**`, (r) => r.fulfill(json(preview)));
+  await page.goto(`/devices/${DEVICE_1}`);
+  await page.getByRole("button", { name: t("devices.actions.revoke") }).click();
+  const drawer = page.getByRole("dialog");
+  await drawer.getByRole("radio", { name: t(`devices.reason.${reason}`) }).check();
+  await drawer.getByRole("button", { name: t("devices.flow.review") }).click();
+  return { calls, drawer };
+}
+
 test("S1: owner revokes a device: reason → the server's impact → confirm", async ({ page, t }) => {
   const calls = await mockDevice(page, "owner", detail());
   await route(page, `**/api/v1/devices/${DEVICE_1}/revoke`, (body) => {
@@ -110,25 +134,16 @@ test("S1: owner revokes a device: reason → the server's impact → confirm", a
 });
 
 test("S2: a blocked verdict says what to do and offers no override", async ({ page, t }) => {
-  const calls = await mockDevice(page, "owner", detail());
-  await page.route(`**/api/v1/devices/${DEVICE_1}/impact?**`, (r) =>
-    r.fulfill(
-      json(
-        impact({
-          revokeReason: "admin_error",
-          verdict: "blocked",
-          blockCode: "unresolved_cash_session",
-          openShift: openShift(),
-        }),
-      ),
-    ),
-  );
-  await page.goto(`/devices/${DEVICE_1}`);
-  await page.getByRole("button", { name: t("devices.actions.revoke") }).click();
-  const drawer = page.getByRole("dialog");
-  await drawer.getByRole("radio", { name: t("devices.reason.admin_error") }).check();
-  await drawer.getByRole("button", { name: t("devices.flow.review") }).click();
-
+  const { calls, drawer } = await reviewRevoke(page, t, {
+    role: "owner",
+    reason: "admin_error",
+    preview: impact({
+      revokeReason: "admin_error",
+      verdict: "blocked",
+      blockCode: "unresolved_cash_session",
+      openShift: openShift(),
+    }),
+  });
   await expect(drawer.getByText(t("devices.impact.blocked.cashSession"))).toBeVisible();
   await expect(drawer.getByRole("button", { name: t("devices.revoke.confirm") })).toHaveCount(0);
   expect(calls.revoke).toEqual([]);
@@ -215,24 +230,16 @@ test("S4: forbidden_recovery for a store manager: an owner or tenant admin must 
   page,
   t,
 }) => {
-  await mockDevice(page, "store_manager", detail());
-  await page.route(`**/api/v1/devices/${DEVICE_1}/impact?**`, (r) =>
-    r.fulfill(
-      json(
-        impact({
-          verdict: "forbidden_recovery",
-          revokeReason: "hardware_failure",
-          requires: ["owner_or_tenant_admin", "note", "acknowledge_custody_exception"],
-          openShift: openShift(),
-        }),
-      ),
-    ),
-  );
-  await page.goto(`/devices/${DEVICE_1}`);
-  await page.getByRole("button", { name: t("devices.actions.revoke") }).click();
-  const drawer = page.getByRole("dialog");
-  await drawer.getByRole("radio", { name: t("devices.reason.hardware_failure") }).check();
-  await drawer.getByRole("button", { name: t("devices.flow.review") }).click();
+  const { drawer } = await reviewRevoke(page, t, {
+    role: "store_manager",
+    reason: "hardware_failure",
+    preview: impact({
+      verdict: "forbidden_recovery",
+      revokeReason: "hardware_failure",
+      requires: ["owner_or_tenant_admin", "note", "acknowledge_custody_exception"],
+      openShift: openShift(),
+    }),
+  });
   await expect(drawer.getByText(t("devices.impact.verdict.forbidden"))).toBeVisible();
   await expect(drawer.getByRole("button", { name: t("devices.revoke.confirm") })).toHaveCount(0);
 });
@@ -257,8 +264,13 @@ test("S6: retire needs a reason, shows the impact, and is terminal", async ({ pa
   await page.route(`**/api/v1/devices/${DEVICE_1}/impact?**`, (r) =>
     r.fulfill(json(impact({ action: "retire", revokeReason: "retired" }))),
   );
+  let isRetired = false;
+  await page.route(`**/api/v1/devices/${DEVICE_1}`, (r) =>
+    r.fulfill(json(isRetired ? retired().data.device : detail())),
+  );
   await route(page, `**/api/v1/devices/${DEVICE_1}/retire`, (body) => {
     calls.retire.push(body);
+    isRetired = true;
     return retired().data;
   });
   await page.goto(`/devices/${DEVICE_1}`);
@@ -270,8 +282,12 @@ test("S6: retire needs a reason, shows the impact, and is terminal", async ({ pa
   await drawer.getByRole("button", { name: t("devices.flow.review") }).click();
   await expect(drawer.getByText(t("devices.impact.verdict.allowed"))).toBeVisible();
   await drawer.getByRole("button", { name: t("devices.retire.confirm") }).click();
+  // The detail refetches as retired behind the drawer; the done step must outlive that.
+  await expect(page.getByText(t("devices.actions.closed"))).toBeVisible();
   await expect(drawer.getByText(t("devices.retire.done"))).toBeVisible();
   expect(calls.retire).toEqual([{ retireReason: "End of life" }]);
+  await drawer.getByRole("button", { name: t("devices.flow.done") }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
 });
 
 test("S6b: retire of a revoked device with a custody exception is blocked by the server", async ({

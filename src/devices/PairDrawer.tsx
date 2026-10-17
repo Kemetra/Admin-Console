@@ -7,14 +7,15 @@
  */
 import { Banner } from "@/components/Banner";
 import { Drawer } from "@/components/Drawer";
-import { type MessageKey, useT } from "@/i18n";
+import { useT } from "@/i18n";
 import type { PairingCodeIssued } from "@/lib/device-queries";
 import { useStoreDirectory } from "@/shift-closes/useShiftCloses";
 import { useState } from "react";
 import { Link } from "react-router";
 import { IssueFields } from "./IssueFields";
 import { IssuedCode } from "./IssuedCode";
-import { classifyMutationFailure, noticeKeyFor, requestIdOfFailure } from "./lifecycleLogic";
+import { type Notice, noticeOf } from "./flowTypes";
+import { classifyMutationFailure } from "./lifecycleFailure";
 import {
   EMPTY_ISSUE_DRAFT,
   type IssueDraft,
@@ -25,12 +26,6 @@ import {
 import { useIssuePairingCode } from "./useDeviceLifecycle";
 import { useDeviceScope } from "./useDevices";
 import "./devices.css";
-
-interface Notice {
-  key: MessageKey;
-  requestId?: string;
-  codesLink: boolean;
-}
 
 export function PairDrawer({ onClose }: Readonly<{ onClose: () => void }>): React.JSX.Element {
   const t = useT();
@@ -55,16 +50,9 @@ export function PairDrawer({ onClose }: Readonly<{ onClose: () => void }>): Reac
         issue.reset();
         return;
       }
-      const failure = classifyMutationFailure(res);
-      setNotice({
-        key: failure.kind === "not-found" ? "devices.issue.error.notFound" : noticeKeyFor(failure),
-        requestId: requestIdOfFailure(failure),
-        codesLink:
-          failure.kind === "in-progress" ||
-          (failure.kind === "conflict" && failure.code === "idempotency_key_conflict"),
-      });
+      setNotice(noticeOf(classifyMutationFailure(res), true));
     } catch {
-      setNotice({ key: "devices.issue.error.unknownOutcome", codesLink: true });
+      setNotice(noticeOf({ kind: "no-answer" }, true));
     }
   }
 
@@ -95,7 +83,7 @@ export function PairDrawer({ onClose }: Readonly<{ onClose: () => void }>): Reac
           <>
             {notice ? (
               <Banner
-                variant="danger"
+                variant={notice.variant}
                 message={t(notice.key)}
                 requestId={notice.requestId}
                 action={

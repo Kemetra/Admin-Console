@@ -46,31 +46,38 @@ function errorOf(error: unknown): DeviceError | undefined {
   return error instanceof CodesFetchError ? error.detail : { kind: "generic" };
 }
 
+/** One page, or the typed error: a refusal is never an empty list. */
+async function fetchPage(cursor: string | undefined): Promise<PairingCodePage> {
+  const res = await consoleListPairingCodes({ page_size: CODES_PAGE_SIZE, cursor });
+  if (res.status >= 400 || !res.data) {
+    throw new CodesFetchError({
+      kind: STATUS_KINDS[res.status] ?? "generic",
+      requestId: requestIdOf(res.error),
+    });
+  }
+  return res.data;
+}
+
+/** The server's order, never re-sorted; a code seen twice across pages is shown once. */
+function flattenCodePages(pages: readonly PairingCodePage[]): PairingCodePage["items"] {
+  const seen = new Set<string>();
+  return pages
+    .flatMap((page) => page.items)
+    .filter((code) => !seen.has(code.pairingCodeId) && seen.add(code.pairingCodeId));
+}
+
 export function usePairingCodes(scope: ScopeKey): PairingCodeListState {
   const active = Boolean(scope.tenantId);
   const result = useInfiniteQuery({
     queryKey: ["devices", "pairing-codes", "list", scope.tenantId, scope.activeStoreId],
     enabled: active,
     initialPageParam: undefined as string | undefined,
-    queryFn: async ({ pageParam }: { pageParam: string | undefined }) => {
-      const res = await consoleListPairingCodes({ page_size: CODES_PAGE_SIZE, cursor: pageParam });
-      if (res.status >= 400 || !res.data) {
-        throw new CodesFetchError({
-          kind: STATUS_KINDS[res.status] ?? "generic",
-          requestId: requestIdOf(res.error),
-        });
-      }
-      return res.data;
-    },
+    queryFn: ({ pageParam }: { pageParam: string | undefined }) => fetchPage(pageParam),
     getNextPageParam: (page: PairingCodePage) => page.nextCursor ?? undefined,
     retry: false,
   });
 
-  // The server's order, never re-sorted; a code seen twice across pages is shown once.
-  const seen = new Set<string>();
-  const rows = (result.data?.pages ?? [])
-    .flatMap((page) => page.items)
-    .filter((code) => !seen.has(code.pairingCodeId) && seen.add(code.pairingCodeId));
+  const rows = flattenCodePages(result.data?.pages ?? []);
   const failure = errorOf(result.error);
   const loadMore = () => {
     if (result.hasNextPage && !result.isFetchingNextPage) void result.fetchNextPage();
