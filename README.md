@@ -165,7 +165,7 @@ pnpm test:e2e        # Playwright end-to-end tests
 pnpm generate:client # regenerate the typed client from pinned contracts (needs a Backend-Core checkout)
 ```
 
-`pnpm generate:client` reads the OpenAPI sources from a local Backend-Core git checkout at the commit pinned in [`openapi-ts.config.ts`](openapi-ts.config.ts). It looks in `../Data-Pulse-2` by default (the legacy directory name); set `DATA_PULSE_2_REPO` to point at your checkout. The generated output is committed, so day-to-day development does not need this step.
+`pnpm generate:client` reads the OpenAPI sources from a local Backend-Core git checkout at the commit pinned in [`contracts/backend-core/PIN`](contracts/backend-core/PIN) (the same format as POS). It looks in `../Data-Pulse-2` by default (the legacy directory name); set `DATA_PULSE_2_REPO` to point at your checkout. Before generating it checks every source's blob SHA against the PIN, and `pnpm generate:client --repin <ref>` rewrites the PIN at `<ref>` and regenerates. The generated output is committed, so day-to-day development does not need this step.
 
 Then review:
 

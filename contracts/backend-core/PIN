@@ -1,0 +1,22 @@
+# Backend-Core OpenAPI contracts the Admin-Console generated client is built from
+# (src/generated/schema.d.ts, RT-677). Rewritten by `pnpm generate:client --repin <ref>`.
+# Do not hand-edit: the generator checks every file below against its git blob SHA.
+repo: Kemetra/Backend-Core
+commit: 3499d17ca4f62a49100004bd93ba6cc3b7f90184
+source: packages/contracts/openapi
+file: audit.openapi.yaml 0da371ef22b432b4bafa2308e26f15d68f0ef759
+file: auth.openapi.yaml 5d8858be107b1d19d10bfa79c004b0b4eb91e7c7
+file: cash-variance-policy.openapi.yaml fd35a99fa8f238dfc0e30bb8969b35928e59950e
+file: catalog/unknown-items.yaml 5d264f510235470ee2a0fc161779a87ae60b076d
+file: connector/connector-admin.yaml db10d8e12e39cc4ed92c0714980b0d7cc0d976ec
+file: console-sales.openapi.yaml 6440d613e2da344d47b8da643d123a776e942f00
+file: context.openapi.yaml f6f021820c692cebd3094789057e92414a85ab54
+file: devices.openapi.yaml d90ab3edabe8dda1cf4da5d112fee1d65a92847a
+file: erpnext-connector/connector-health.yaml 352e823253631170e491e4b20f433d473b78f84e
+file: erpnext-reconciliation/reconciliation.yaml 33280a2ab8dbe911ed81332474040738d867002d
+file: erpnext-sync-ops/console-sync-ops.yaml 64aaa624dc0b0904fa2b6a67831dfe1272e6a6f7
+file: memberships.openapi.yaml c9770fd9a8070c95643652bc0395265d89b70d93
+file: settlement/settlement.yaml bf8ee5016259eecd8fd29f264a3c27b072e25db2
+file: shift-closes.openapi.yaml 584b184f37959c5c94df32c6d8f447ace9c6a314
+file: stores.openapi.yaml 13f7815ffccc803c78e7fde299f640fa240f1642
+file: tenants.openapi.yaml cea4bb919ac905255ba96060e3f876ad19b5202c

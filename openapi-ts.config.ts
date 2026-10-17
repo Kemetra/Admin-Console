@@ -5,13 +5,32 @@
 // openapi-typescript output for each source, and composes the path types into
 // `src/generated/schema.d.ts`. Keeping the runner here avoids adding an
 // extra scripts directory outside the slice 002 scaffold surface.
+//
+//   pnpm generate:client                 regenerate at the pinned commit
+//   pnpm generate:client --repin <ref>   resolve <ref> in DATA_PULSE_2_REPO,
+//                                        rewrite contracts/backend-core/PIN, regenerate
 
-import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, writeFileSync } from "node:fs";
+import { type ExecFileSyncOptionsWithStringEncoding, execFileSync } from "node:child_process";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import openapiTS, { astToString, COMMENT_HEADER } from "openapi-typescript";
+import {
+  BACKEND_CORE_OPENAPI_ROOT,
+  BACKEND_CORE_REPO,
+  type ContractsPin,
+  type PinnedFile,
+  comparePinFiles,
+  formatPin,
+  parsePin,
+} from "./src/lib/contracts-pin.ts";
+
+const thisFilePath = fileURLToPath(import.meta.url);
+const repoRoot = dirname(thisFilePath);
+
+/** Where the Backend-Core pin lives (RT-677); same grammar as POS. */
+export const PIN_FILE_PATH = "contracts/backend-core/PIN" as const;
 
 /**
  * Data-Pulse-2 pin (C-4). The generator reads OpenAPI sources from this
@@ -105,8 +124,21 @@ import openapiTS, { astToString, COMMENT_HEADER } from "openapi-typescript";
  * additively, except that `consoleListDevices` no longer lists retired devices
  * by default (`trust_state=retired` still does). Every other source is
  * byte-identical, `console-sales` included.
+ *
+ * PIN FILE (RT-677, 2026-10-18): the pin no longer lives in this file as a
+ * literal. It is `contracts/backend-core/PIN` (the same grammar as POS, RT-217),
+ * holding the commit plus the git blob SHA of every composed source, so
+ * Backend-Core's consumer-impact check and the repin bot can read it without
+ * parsing TypeScript. The generator verifies each source's blob SHA against the
+ * PIN before generating, and `pnpm generate:client --repin <ref>` rewrites the
+ * PIN, then regenerates. Moving the pin did not move it: still 3499d17.
  */
-export const DATA_PULSE_2_PIN = "3499d17ca4f62a49100004bd93ba6cc3b7f90184" as const;
+export const BACKEND_CORE_PIN: ContractsPin = parsePin(
+  readFileSync(resolve(repoRoot, PIN_FILE_PATH), "utf8"),
+);
+
+/** The pinned Backend-Core commit (the `commit:` line of the PIN file). */
+export const DATA_PULSE_2_PIN: string = BACKEND_CORE_PIN.commit;
 
 /**
  * The OpenAPI sources composed into the generated client, one entry per
@@ -122,8 +154,8 @@ export const DATA_PULSE_2_PIN = "3499d17ca4f62a49100004bd93ba6cc3b7f90184" as co
  *
  * `path` is relative to the Data-Pulse-2 repo root at the pinned SHA; `name` is
  * the TypeScript namespace the source is emitted under; an optional `pin`
- * overrides `DATA_PULSE_2_PIN` for that one source (a temporary hold only; none
- * is held today).
+ * overrides `DATA_PULSE_2_PIN` for that one source. Since RT-677 the single-commit
+ * PIN file cannot describe a hold, so the generator refuses one (re-pin instead).
  */
 /** One composed OpenAPI source; `pin` is an optional per-source hold. */
 export interface OpenApiSourceSpec {
@@ -199,9 +231,6 @@ export const CREDENTIALS_MODE = "include" as const;
 
 const DATA_PULSE_2_REPO_ENV = "DATA_PULSE_2_REPO" as const;
 
-const thisFilePath = fileURLToPath(import.meta.url);
-const repoRoot = dirname(thisFilePath);
-
 function resolveDataPulseRepo(): string {
   const configuredRepo = process.env[DATA_PULSE_2_REPO_ENV];
   const candidate = configuredRepo
@@ -222,11 +251,84 @@ export function pinOf(spec: OpenApiSourceSpec): string {
   return spec.pin ?? DATA_PULSE_2_PIN;
 }
 
+const GIT_OPTIONS: ExecFileSyncOptionsWithStringEncoding = {
+  encoding: "utf8",
+  stdio: ["ignore", "pipe", "pipe"],
+  windowsHide: true,
+};
+
+function git(dataPulseRepo: string, args: readonly string[]): string {
+  // `git` is resolved from PATH on purpose: this is a developer/CI tool run from the
+  // caller's own shell (as release-artifact.ts does), so PATH is theirs to trust.
+  return execFileSync("git", ["-C", dataPulseRepo, ...args], GIT_OPTIONS); // NOSONAR S4036
+}
+
 function readPinnedSource(dataPulseRepo: string, sourcePath: string, pin: string): string {
-  return execFileSync("git", ["-C", dataPulseRepo, "show", `${pin}:${sourcePath}`], {
-    encoding: "utf8",
-    windowsHide: true,
+  return git(dataPulseRepo, ["show", `${pin}:${sourcePath}`]);
+}
+
+/**
+ * Every composed source. A per-source hold reads a different commit, which the
+ * single-commit PIN cannot describe (and consumers of the PIN would be misled),
+ * so a hold is refused rather than silently left out of the PIN: re-pin instead.
+ */
+function pinnedSpecs(): readonly OpenApiSourceSpec[] {
+  const held = OPENAPI_SOURCE_SPECS.filter((spec) => spec.pin !== undefined);
+  if (held.length > 0) {
+    throw new Error(
+      `${PIN_FILE_PATH} cannot describe per-source pin holds (${held.map((s) => s.name).join(", ")}); re-pin instead of holding`,
+    );
+  }
+  return OPENAPI_SOURCE_SPECS;
+}
+
+/** The blob SHA of every pinned source in Backend-Core at `commit`. */
+function readBlobShas(dataPulseRepo: string, pin: ContractsPin, commit: string): PinnedFile[] {
+  const prefix = `${pin.source}/`;
+  return pinnedSpecs().map((spec) => {
+    if (!spec.path.startsWith(prefix)) {
+      throw new Error(`${spec.path} is outside the PIN source root ${pin.source}`);
+    }
+    try {
+      return {
+        path: spec.path.slice(prefix.length),
+        blobSha: git(dataPulseRepo, ["rev-parse", "--verify", `${commit}:${spec.path}`]).trim(),
+      };
+    } catch {
+      throw new Error(`${spec.path} does not exist in Backend-Core at ${commit}`);
+    }
   });
+}
+
+/** Fail unless the repo holds exactly the PIN's contracts: right commit, right blobs. */
+function verifyPin(dataPulseRepo: string, pin: ContractsPin): void {
+  if (pin.repo !== BACKEND_CORE_REPO || pin.source !== BACKEND_CORE_OPENAPI_ROOT) {
+    throw new Error(
+      `${PIN_FILE_PATH} must pin ${BACKEND_CORE_REPO} ${BACKEND_CORE_OPENAPI_ROOT}, found ${pin.repo} ${pin.source}`,
+    );
+  }
+  try {
+    git(dataPulseRepo, ["cat-file", "-e", `${pin.commit}^{commit}`]);
+  } catch {
+    throw new Error(`Backend-Core commit ${pin.commit} not found in ${dataPulseRepo}`);
+  }
+  const problems = comparePinFiles(pin.files, readBlobShas(dataPulseRepo, pin, pin.commit));
+  if (problems.length > 0) {
+    throw new Error(
+      `${PIN_FILE_PATH} does not match Backend-Core @ ${pin.commit}:\n  ${problems.join("\n  ")}\nRun 'pnpm generate:client --repin <ref>' to rewrite it.`,
+    );
+  }
+}
+
+/** The PIN for `ref` in `dataPulseRepo`, with fresh blob SHAs. Does not write it. */
+function resolveRepin(dataPulseRepo: string, current: ContractsPin, ref: string): ContractsPin {
+  let commit: string;
+  try {
+    commit = git(dataPulseRepo, ["rev-parse", "--verify", `${ref}^{commit}`]).trim();
+  } catch {
+    throw new Error(`--repin: cannot resolve "${ref}" to a commit in ${dataPulseRepo}`);
+  }
+  return { ...current, commit, files: readBlobShas(dataPulseRepo, current, commit) };
 }
 
 async function generateSourceTypes(sourceFilePath: string): Promise<string> {
@@ -247,7 +349,7 @@ function indent(text: string): string {
     .join("\n");
 }
 
-function composeSchema(generatedTypesBySource: readonly string[]): string {
+function composeSchema(generatedTypesBySource: readonly string[], pinCommit: string): string {
   const sourceList = OPENAPI_SOURCE_SPECS.map((spec) =>
     spec.pin ? `// - ${spec.path} (held @ ${spec.pin})` : `// - ${spec.path}`,
   ).join("\n");
@@ -258,7 +360,7 @@ function composeSchema(generatedTypesBySource: readonly string[]): string {
   const intersection = (member: string): string =>
     OPENAPI_SOURCE_SPECS.map((spec) => `${spec.name}Schema.${member}`).join(" & ");
 
-  return `${COMMENT_HEADER}// Source: Data-Pulse-2 @ ${DATA_PULSE_2_PIN}
+  return `${COMMENT_HEADER}// Source: Data-Pulse-2 @ ${pinCommit}
 // Sources:
 ${sourceList}
 //
@@ -274,13 +376,10 @@ export type operations = ${intersection("operations")};
 `;
 }
 
-async function generateClientSchema(): Promise<void> {
-  const dataPulseRepo = resolveDataPulseRepo();
-  for (const pin of new Set(OPENAPI_SOURCE_SPECS.map(pinOf))) {
-    execFileSync("git", ["-C", dataPulseRepo, "cat-file", "-e", `${pin}^{commit}`], {
-      stdio: "ignore",
-      windowsHide: true,
-    });
+async function generateClientSchema(dataPulseRepo: string, pin: ContractsPin): Promise<void> {
+  const pinOfSpec = (spec: OpenApiSourceSpec): string => spec.pin ?? pin.commit;
+  for (const held of new Set(OPENAPI_SOURCE_SPECS.map(pinOfSpec))) {
+    git(dataPulseRepo, ["cat-file", "-e", `${held}^{commit}`]);
   }
 
   const tempDir = mkdtempSync(join(tmpdir(), "retail-tower-console-openapi-"));
@@ -289,17 +388,40 @@ async function generateClientSchema(): Promise<void> {
       const sourceFilePath = join(tempDir, `${spec.name.toLowerCase()}.openapi.yaml`);
       writeFileSync(
         sourceFilePath,
-        readPinnedSource(dataPulseRepo, spec.path, pinOf(spec)),
+        readPinnedSource(dataPulseRepo, spec.path, pinOfSpec(spec)),
         "utf8",
       );
       return generateSourceTypes(sourceFilePath);
     }),
   );
 
-  writeFileSync(resolve(repoRoot, OUTPUT_PATH), composeSchema(generatedTypes), "utf8");
-  console.log(`Generated ${OUTPUT_PATH} from Data-Pulse-2 @ ${DATA_PULSE_2_PIN}`);
+  writeFileSync(resolve(repoRoot, OUTPUT_PATH), composeSchema(generatedTypes, pin.commit), "utf8");
+  console.log(`Generated ${OUTPUT_PATH} from Data-Pulse-2 @ ${pin.commit}`);
+}
+
+/** `--repin <ref>` or nothing; anything else is a typo worth failing on. */
+function parseCliArgs(argv: readonly string[]): { readonly repinRef?: string } {
+  if (argv.length === 0) return {};
+  const [flag, ref, ...rest] = argv;
+  if (flag !== "--repin" || ref === undefined || ref.startsWith("--") || rest.length > 0) {
+    throw new Error("usage: pnpm generate:client [--repin <ref>]");
+  }
+  return { repinRef: ref };
+}
+
+async function main(argv: readonly string[]): Promise<void> {
+  const { repinRef } = parseCliArgs(argv);
+  const dataPulseRepo = resolveDataPulseRepo();
+  let pin = BACKEND_CORE_PIN;
+  if (repinRef !== undefined) {
+    pin = resolveRepin(dataPulseRepo, BACKEND_CORE_PIN, repinRef);
+    writeFileSync(resolve(repoRoot, PIN_FILE_PATH), formatPin(pin), "utf8");
+    console.log(`Re-pinned ${PIN_FILE_PATH}: ${BACKEND_CORE_PIN.commit} -> ${pin.commit}`);
+  }
+  verifyPin(dataPulseRepo, pin);
+  await generateClientSchema(dataPulseRepo, pin);
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === thisFilePath) {
-  await generateClientSchema();
+  await main(process.argv.slice(2));
 }
