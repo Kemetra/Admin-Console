@@ -18,7 +18,7 @@ export const devices = {
   "devices.list.title": "الأجهزة",
   "devices.list.sub": "أجهزة نقاط البيع المربوطة في {tenant}.",
   "devices.list.orderNote":
-    "الترتيب من الخادم: استثناءات العهدة أولًا، ثم الأجهزة الفعّالة الأقرب انتهاءً، ثم الموقوفة، ثم التي خارج الخدمة.",
+    "الترتيب من الخادم: استثناءات العهدة أولًا، ثم الأجهزة الفعّالة الأقرب انتهاءً، ثم الموقوفة. الأجهزة التي خارج الخدمة مخفية افتراضيًا؛ اختر حالة «خارج الخدمة» لعرضها.",
   "devices.list.staleNote": "لا يمكن ترتيب الأجهزة حسب آخر نشاط بعد، لأن الخادم لا يسجّله حتى الآن.",
   "devices.list.scopePrompt": "اختر مؤسسة لعرض الأجهزة.",
   "devices.list.caption": "أجهزة نقاط البيع، الاستثناءات أولًا",
@@ -58,7 +58,7 @@ export const devices = {
   "devices.filter.allStores": "كل المتاجر",
   "devices.filter.unlistedStore": "متجر غير موجود في قائمتك",
   "devices.filter.trust": "حالة الصلاحية",
-  "devices.filter.trustAny": "كل الحالات",
+  "devices.filter.trustAny": "فعّالة وموقوفة (الافتراضي)",
   "devices.filter.apply": "تطبيق",
   "devices.filter.clear": "مسح",
 
@@ -127,4 +127,120 @@ export const devices = {
   "devices.history.replaces": "يحلّ محل",
   "devices.history.replacedBy": "حلّ محله",
   "devices.history.noLink": "لا يوجد، أو الجهاز في متجر خارج صلاحيتك.",
+
+  // --- Lifecycle actions (RT-372) -------------------------------------------------
+  // Glossary: Revoke → «إيقاف الصلاحية»; Retire → «إخراج من الخدمة»; Replace →
+  // «استبدال»; Move → «نقل»; Pairing code → «رمز ربط»; Shift → «وردية».
+  "devices.actions.label": "إجراءات دورة حياة الجهاز",
+  "devices.actions.hint": "كل إجراء منفصل، ويعرض ما يقوله الخادم عن أثره قبل أن تؤكّده.",
+  "devices.actions.revoke": "إيقاف الصلاحية",
+  "devices.actions.retire": "إخراج من الخدمة",
+  "devices.actions.closed": "هذا الجهاز خارج الخدمة. لا توجد إجراءات أخرى عليه.",
+
+  "devices.flow.review": "مراجعة الأثر",
+  "devices.flow.back": "رجوع",
+  "devices.flow.done": "تم",
+  "devices.flow.checking": "جارٍ سؤال الخادم عمّا سيحدث…",
+  "devices.flow.error.notFound": "هذا الجهاز لم يعد متاحًا لك.",
+  "devices.flow.error.generic":
+    "تعذّر على الخادم إكمال الإجراء. راجع حالة الجهاز قبل أن تحاول مرة أخرى.",
+  "devices.flow.error.session": "انتهت جلستك. سجّل الدخول مرة أخرى.",
+  "devices.flow.error.validation": "رفض الخادم قيمة. راجع الحقول ثم حاول مرة أخرى.",
+  "devices.flow.error.unmetNote": "يحتاج الخادم إلى ملاحظة لهذا الإيقاف: ماذا حدث وأين نقد الدرج.",
+  "devices.flow.error.unmetAcknowledge":
+    "يحتاج الخادم إلى تأكيدك أن الوردية تبقى استثناء عهدة غير محلول.",
+  "devices.flow.error.changed": "تغيّر الوضع بعد المعاينة. إجابة الخادم المحدّثة معروضة أدناه.",
+  "devices.flow.error.unknownRefusal":
+    "رفض الخادم الإجراء بسبب لا تعرفه هذه اللوحة. لا يُعرض أي إجراء.",
+  "devices.text.required": "هذا الحقل مطلوب.",
+  "devices.text.tooLong": "استخدم 500 حرف على الأكثر.",
+  "devices.text.invalid": "يحتوي النص على حرف غير مسموح به.",
+
+  // --- Impact (the server's answer, rendered) ---------------------------------------
+  "devices.impact.title": "ما يقوله الخادم عمّا سيحدث",
+  "devices.impact.loadFailed": "تعذّر الحصول على الأثر من الخادم.",
+  "devices.impact.retry": "إعادة المحاولة",
+  "devices.impact.snapshot": "حتى {time}. هذه لقطة لا حجز: يقرّر الخادم مرة أخرى عند التأكيد.",
+  "devices.impact.verdict.allowed": "مسموح به من الخادم.",
+  "devices.impact.verdict.allowedCustody":
+    "مسموح به مع استثناء عهدة. تبقى الوردية المفتوحة على هذا الجهاز استثناءً غير محلول: لا تُقفل ولا تُعدّ ولا تنتقل.",
+  "devices.impact.verdict.forbidden":
+    "غير متاح لدورك. إيقاف الصلاحية للاسترداد (عطل في الجهاز مع وردية مفتوحة) لا يقوم به إلا المالك أو مسؤول المؤسسة. اطلب من أحدهما تنفيذه.",
+  "devices.impact.verdict.noChange": "لن يتغيّر شيء: حدث هذا من قبل.",
+  "devices.impact.blocked.cashSession":
+    "محظور: على هذا الجهاز وردية مفتوحة. أقفل الوردية على الجهاز واترك المزامنة تكتمل، ثم حاول مرة أخرى. إن كان الجهاز مفقودًا فأوقف صلاحيته أولًا بسبب أمني. لا يوجد تجاوز.",
+  "devices.impact.blocked.custodyException":
+    "محظور: لهذا الجهاز الموقوف وردية ما زالت مفتوحة (استثناء عهدة غير محلول). لا يمكن إخراجه من الخدمة قبل حلّ ذلك. لا يوجد تجاوز.",
+  "devices.impact.blocked.retired": "محظور: هذا الجهاز خارج الخدمة.",
+  "devices.impact.blocked.unknown":
+    "محظور: رفض الخادم هذا الإجراء بسبب لا تعرفه هذه اللوحة. لا يُعرض أي إجراء.",
+  "devices.impact.field.state": "حالة الصلاحية الآن",
+  "devices.impact.field.openShift": "الوردية المفتوحة",
+  "devices.impact.openShift.none": "لا توجد",
+  "devices.impact.openShift.line": "فُتحت {time} ({source})",
+  "devices.impact.source.cash_up": "تقفيل النقد",
+  "devices.impact.source.legacy": "قديمة",
+  "devices.impact.field.cashFacts": "وقائع النقد",
+  "devices.impact.cashFacts.value": {
+    zero: "استلم الخادم {count} واقعة، آخرها {time}",
+    one: "استلم الخادم واقعة واحدة، آخرها {time}",
+    two: "استلم الخادم واقعتين، آخرها {time}",
+    few: "استلم الخادم {count} وقائع، آخرها {time}",
+    many: "استلم الخادم {count} واقعة، آخرها {time}",
+    other: "استلم الخادم {count} واقعة، آخرها {time}",
+  },
+  "devices.impact.cashFacts.note": "ما استلمه الخادم فقط. ما لم يُزامنه الجهاز بعد لا يُحتسب.",
+  "devices.impact.cashFacts.unknown":
+    "غير معروف: الوردية القديمة لا تحمل وقائع تقفيل نقد مستلمة (وليس صفرًا).",
+  "devices.impact.field.custody": "استثناء العهدة الآن",
+  "devices.impact.custody.none": "لا يوجد",
+  "devices.impact.custody.shift": "الوردية {shift} مفتوحة على هذا الجهاز",
+  "devices.impact.field.sessions": "جلسات المشغّلين التي ستنتهي",
+  "devices.impact.field.codes": "رموز الربط المعلّقة التي ستُلغى",
+  "devices.impact.cascade.none": "لا ينطبق: صلاحية الجهاز موقوفة أصلًا.",
+
+  // --- Revoke ---------------------------------------------------------------------
+  "devices.revoke.title": "إيقاف صلاحية الجهاز",
+  "devices.revoke.intro": "إيقاف الصلاحية يُنهي اعتماد هذا الجهاز نهائيًا. لا يوجد تراجع عنه.",
+  "devices.revoke.group.security": "أحداث أمنية",
+  "devices.revoke.group.securityHelp":
+    "للأحداث الأمنية الحقيقية فقط: جهاز مفقود أو مسروق أو يُشتبه في اختراقه. ليست حلًّا بديلًا حين يُحظر سبب آخر.",
+  "devices.revoke.group.other": "أسباب أخرى",
+  "devices.revoke.reasonRequired": "اختر سببًا.",
+  "devices.revoke.reasonLegend": "سبب إيقاف الصلاحية",
+  "devices.revoke.note": "الملاحظة",
+  "devices.revoke.noteHelp": "اختيارية. بلا بيانات شخصية أو رقم سري.",
+  "devices.revoke.noteHelpRequired": "مطلوبة. بلا بيانات شخصية أو رقم سري.",
+  "devices.revoke.noteRecovery": "ماذا حدث، وأين نقد الدرج؟",
+  "devices.revoke.acknowledge":
+    "أفهم أن الوردية المفتوحة تبقى استثناء عهدة غير محلول على هذا الجهاز.",
+  "devices.revoke.acknowledgeRequired": "أكّد أنك تفهم ذلك قبل إيقاف الصلاحية.",
+  "devices.revoke.confirm": "إيقاف صلاحية الجهاز",
+  "devices.revoke.done": "أُوقفت صلاحية الجهاز.",
+  "devices.revoke.alreadyRevoked": "صلاحية هذا الجهاز موقوفة أصلًا. لم يتغيّر شيء.",
+
+  // --- Retire ---------------------------------------------------------------------
+  "devices.retire.title": "إخراج الجهاز من الخدمة",
+  "devices.retire.intro":
+    "الإخراج من الخدمة يُغلق الجهاز نهائيًا: لا يُربط ولا يُستبدل ولا يُنقل بعد ذلك. يبقى سجلّه كما هو. لا يوجد تراجع عنه.",
+  "devices.retire.reason": "لماذا يخرج هذا الجهاز من الخدمة؟",
+  "devices.retire.reasonHelp": "مثلًا: انتهى عمره، أُعيد إلى المورّد. بلا بيانات شخصية أو رقم سري.",
+  "devices.retire.confirm": "إخراج الجهاز من الخدمة",
+  "devices.retire.done": "أُخرج الجهاز من الخدمة.",
+  "devices.retire.alreadyRetired": "هذا الجهاز خارج الخدمة أصلًا. لم يتغيّر شيء.",
+  "devices.retire.checkingCodes": "جارٍ التحقق من رموز الربط المعلّقة…",
+  "devices.retire.codesLoadFailed":
+    "تعذّر التحقق من رموز الربط المعلّقة. حاول مرة أخرى قبل الإخراج من الخدمة.",
+  "devices.retire.pendingCodes": {
+    zero: "هناك {count} رمز ربط حيّ لاستبدال هذا الجهاز أو نقله. الإخراج من الخدمة يُلغيها، ولا يمكن بعدها استبدال هذا الجهاز أو نقله.",
+    one: "هناك رمز ربط حيّ واحد لاستبدال هذا الجهاز أو نقله. الإخراج من الخدمة يُلغيه، ولا يمكن بعدها استبدال هذا الجهاز أو نقله.",
+    two: "هناك رمزا ربط حيّان لاستبدال هذا الجهاز أو نقله. الإخراج من الخدمة يُلغيهما، ولا يمكن بعدها استبدال هذا الجهاز أو نقله.",
+    few: "هناك {count} رموز ربط حيّة لاستبدال هذا الجهاز أو نقله. الإخراج من الخدمة يُلغيها، ولا يمكن بعدها استبدال هذا الجهاز أو نقله.",
+    many: "هناك {count} رمز ربط حيّ لاستبدال هذا الجهاز أو نقله. الإخراج من الخدمة يُلغيها، ولا يمكن بعدها استبدال هذا الجهاز أو نقله.",
+    other:
+      "هناك {count} رمز ربط حيّ لاستبدال هذا الجهاز أو نقله. الإخراج من الخدمة يُلغيها، ولا يمكن بعدها استبدال هذا الجهاز أو نقله.",
+  },
+  "devices.retire.pendingCodesHelp": "اربط الجهاز الجديد أولًا، أو أكّد أدناه.",
+  "devices.retire.pendingCodesConfirm": "أخرجه من الخدمة وألغِ رموز الاستبدال",
+  "devices.retire.pendingCodesRequired": "أكّد إلغاء رموز الاستبدال قبل المتابعة.",
 } satisfies Messages;
