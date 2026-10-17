@@ -25,13 +25,13 @@ export function isCalendarDate(value: string): boolean {
 }
 
 /** An instant and the zone to read it in. */
-interface ZonedInstant {
+export interface ZonedInstant {
   instantMs: number;
   timeZone: string;
 }
 
 /** The zone's offset from UTC at an instant, in ms (positive east of UTC). */
-function zoneOffsetMs({ instantMs, timeZone }: ZonedInstant): number {
+export function zoneOffsetMs({ instantMs, timeZone }: ZonedInstant): number {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone,
     hourCycle: "h23",

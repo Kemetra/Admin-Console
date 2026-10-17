@@ -4,6 +4,14 @@ import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
+// RT-389: TenantDetail hosts the shift variance policy section, which reads the
+// role; a cashier sees nothing there, so these tests stay about the tenant page.
+vi.mock("@/context/ActiveContextProvider", () => ({
+  useActiveContextValue: () => ({
+    context: { active_tenant: { id: "t1" }, active_role_code: "cashier" },
+  }),
+}));
+
 const readTenant = vi.fn();
 const softDeleteTenant = vi.fn();
 const navigate = vi.fn();

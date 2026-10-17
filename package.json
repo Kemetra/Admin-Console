@@ -28,6 +28,7 @@
   },
   "devDependencies": {
     "@ai-sdk/openai": "^4.0.0",
+    "@axe-core/playwright": "4.10.2",
     "@biomejs/biome": "^1.9.4",
     "@e2e-dev/web": "^0.14.0",
     "@playwright/test": "^1.49.1",
