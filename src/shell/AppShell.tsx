@@ -24,6 +24,7 @@ import { canReadErpStatus } from "@/erp-status/erpStatusLogic";
 import { type MessageKey, roleKey, useT } from "@/i18n";
 import { LocaleSwitch } from "@/i18n/LocaleSwitch";
 import { canReadPayers } from "@/payers/payerAccess";
+import { canReadSales } from "@/sales/saleLogic";
 import { canReadShiftCloses } from "@/shift-closes/shiftCloseLogic";
 import { canReadStockDiscrepancies } from "@/stock-discrepancies/stockDiscrepancyLogic";
 import { ThemeToggle } from "@/theme/ThemeToggle";
@@ -43,8 +44,8 @@ const LIVE_NAV: { label: MessageKey; to: string; icon: IconName }[] = [
 /**
  * Role-gated destinations, each under its own section: shown only for the roles
  * the API lets read the surface (RT-178 stock discrepancies, RT-18 shift
- * closes, RT-560 ERP connection, RT-371 devices, RT-421 payer accounts). The nav
- * mirrors the API; it is not an authorization decision.
+ * closes, RT-560 ERP connection, RT-371 devices, RT-421 payer accounts, RT-587
+ * sales). The nav mirrors the API; it is not an authorization decision.
  */
 const ROLE_NAV: {
   section: MessageKey;
@@ -53,6 +54,14 @@ const ROLE_NAV: {
   icon: IconName;
   canRead: (role: string | null | undefined) => boolean;
 }[] = [
+  {
+    // RT-587 (spec 012 FR-012, OD-556-3): sales search and sale detail.
+    section: "sales.nav.section",
+    label: "sales.nav.label",
+    to: "/sales",
+    icon: "receipt",
+    canRead: canReadSales,
+  },
   {
     section: "shell.nav.section.inventory",
     label: "shell.nav.stockDiscrepancies",

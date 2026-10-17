@@ -3,7 +3,7 @@
  * Do not make direct changes to the file.
  */
 
-// Source: Data-Pulse-2 @ ba22a8128179106978f1c87ca5ead2cbc3a00b6b
+// Source: Data-Pulse-2 @ a959959dc34d6ba1897543fe7320d3c602240834
 // Sources:
 // - packages/contracts/openapi/auth.openapi.yaml
 // - packages/contracts/openapi/context.openapi.yaml
@@ -19,6 +19,7 @@
 // - packages/contracts/openapi/erpnext-connector/connector-health.yaml
 // - packages/contracts/openapi/erpnext-sync-ops/console-sync-ops.yaml
 // - packages/contracts/openapi/devices.openapi.yaml
+// - packages/contracts/openapi/console-sales.openapi.yaml
 //
 // The upstream OpenAPI files are separate documents with overlapping component
 // names, so this file namespaces each generated source and composes their path
@@ -5494,6 +5495,26 @@ export namespace DevicesSchema {
             patch?: never;
             trace?: never;
         };
+        "/api/v1/devices/{deviceId}/impact": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * Preview a lifecycle action's impact (read-only).
+             * @description What a `revoke`, `replace`, `move` or `retire` of the device would do now, and the server's verdict (see "Impact preview" above). Read-only: nothing is written, locked or cascaded, and the read is not a reservation. The mutation decides again under its lock. A device of another tenant, of a store outside the caller's scope, or an absent device is the same non-disclosing 404. A malformed path or query, a `revoke` without a `reason`, or a `reason` with any other action is 400 before any read.
+             */
+            get: operations["consoleGetDeviceImpact"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
     }
     export type webhooks = Record<string, never>;
     export interface components {
@@ -5640,6 +5661,140 @@ export namespace DevicesSchema {
                     trustState?: "revoked" | "retired";
                 };
             };
+            /**
+             * @description A lifecycle action. `revoke` is `consoleRevokeDevice`. `replace` and `move` are a pairing code whose `replaces_device_id` is this device, in the same store or another store of the tenant (RT-367, RT-287 D-Q1). `retire` is the RT-368 retire.
+             * @enum {string}
+             */
+            DeviceLifecycleAction: "revoke" | "replace" | "move" | "retire";
+            /**
+             * @description The server's verdict on the action now (see "Impact preview" above for the decision order and the mapping to the mutation's outcome). `allowed`: the action proceeds. `allowed_with_custody_exception`: the revoke proceeds, and the open shift becomes the unresolved custody exception (no count, no close, no cash fact edited); the request must also meet `requires`. `blocked`: the action is refused with `blockCode` (409). `forbidden_recovery`: a recovery revoke the caller's role may not make (403 `recovery_revoke_forbidden`). `no_change`: the action has already happened, so the mutation changes nothing.
+             *     **Extension policy:** adding a verdict is a minor contract version bump. A client MUST treat an unknown verdict as `blocked` (fail-safe): it never offers to proceed with an action whose verdict it doesn't know.
+             * @enum {string}
+             */
+            ImpactVerdict: "allowed" | "allowed_with_custody_exception" | "blocked" | "forbidden_recovery" | "no_change";
+            /**
+             * @description Why a `blocked` action is refused, equal to the mutation's 409 `error.code`. `unresolved_cash_session`: the active device has an open shift (close it on the till and let it sync first). `unresolved_custody_exception`: retire of a revoked device whose open shift is the custody exception, which stays until the deferred force-seal / custody-reconciliation slice resolves it. `device_retired`: a retired device cannot be replaced or moved.
+             *     **Extension policy:** adding a block code is a minor contract version bump. A client MUST treat an unknown block code as a refusal it cannot resolve. It shows the code, and doesn't offer the action.
+             * @enum {string}
+             */
+            ImpactBlockCode: "unresolved_cash_session" | "unresolved_custody_exception" | "device_retired";
+            /**
+             * @description A requirement on the request beyond the verdict (the recovery revoke, RT-287 D-Q4 amended). `owner_or_tenant_admin`: the caller's role. `note`: the body's `note`. `acknowledge_custody_exception`: the body's `acknowledgeCustodyException: true`.
+             *     **Extension policy:** adding a requirement is a minor contract version bump. A client MUST treat an unknown requirement as unmet, and doesn't offer the action.
+             * @enum {string}
+             */
+            ImpactRequirement: "owner_or_tenant_admin" | "note" | "acknowledge_custody_exception";
+            /** @description The cash-up facts the server has received for the open shift: its open and its cash movements. A server-received view, never "all synced": facts the till has not synced are not visible (see "Cash facts" above). */
+            ImpactCashFacts: {
+                /**
+                 * @description Always `server_received`, so a client labels the counts as such.
+                 * @enum {string}
+                 */
+                view: "server_received";
+                /** @description How many cash-up facts of the shift the server has received: the open, plus each cash movement. At least 1, because the open itself is one. */
+                receivedCount: number;
+                /**
+                 * Format: date-time
+                 * @description The latest server `received_at` among those facts.
+                 */
+                lastReceivedAt: string;
+            };
+            /** @description The open shift on the device: the most recently opened one, if a legacy device has several. The same shift the Cash Session rule reads. */
+            ImpactOpenShift: {
+                /** Format: uuid */
+                shiftId: string;
+                /**
+                 * @description How the shift was opened (`shifts.source`).
+                 * @enum {string}
+                 */
+                source: "cash_up" | "legacy";
+                /**
+                 * Format: date-time
+                 * @description When the shift opened (the till's stated time).
+                 */
+                openedAt: string;
+                /**
+                 * Format: uuid
+                 * @description The opening cashier's `users.id`. No name or contact field.
+                 */
+                openingCashierUserId: string;
+                /** @description The server-received cash-up facts. `null` for a `legacy` shift, which has none (unknown, never zero). */
+                cashFacts: components["schemas"]["ImpactCashFacts"] | null;
+            } & unknown;
+            /** @description What the revoke this action performs would cascade, counted now with the same predicates the revoke applies. Counts only: no token, session id, code or hash. On the same state they equal the `revoked_session_count` and `cancelled_pairing_code_count` that the `pos.device.revoked` audit row records. */
+            ImpactCascade: {
+                /** @description Live `pos_operator` sessions of the device that would be revoked (`revoked_at IS NULL AND expires_at > now()`). */
+                operatorSessionCount: number;
+                /** @description Pending pairing codes that would be cancelled: the device's own (`terminal_id`), and those whose `replaces_device_id` is the device. This is the count the revoke cancels, so it includes a pending move code issued for another store, even one outside the caller's scope. Only the number is disclosed, never the code, its store or its target. */
+                pendingPairingCodeCount: number;
+            };
+            /** @description The impact of one lifecycle action on the device now (see "Impact preview" above). Every key is always present; a value that does not apply is `null`. No tenant id, token, hash, code or note. */
+            DeviceImpactPreview: {
+                /** Format: uuid */
+                deviceId: string;
+                action: components["schemas"]["DeviceLifecycleAction"];
+                /** @description The revoke reason the action records: the `reason` query value for `revoke`, otherwise `replaced` / `moved` / `retired`. */
+                revokeReason: components["schemas"]["RevokeReason"];
+                /** @description The device's trust state now, before the action. */
+                trustState: components["schemas"]["TrustState"];
+                verdict: components["schemas"]["ImpactVerdict"];
+                /** @description Set exactly when `verdict` is `blocked`. */
+                blockCode: components["schemas"]["ImpactBlockCode"] | null;
+                /** @description The request requirements beyond the verdict, in the order the mutation checks them. For a recovery revoke (a `revoke` with `hardware_failure` while an active device has an open shift): [`owner_or_tenant_admin`, `note`, `acknowledge_custody_exception`], whatever the caller's role. For a `revoke` with `other`: [`note`], whatever the verdict, because the body schema requires it. Empty otherwise. */
+                requires: components["schemas"]["ImpactRequirement"][];
+                /** @description The open shift on the device; `null` when there is none. */
+                openShift: components["schemas"]["ImpactOpenShift"] | null;
+                /**
+                 * Format: uuid
+                 * @description The custody exception that exists now: the open shift of a revoked or retired device, as on `DeviceSummary`. `null` on an active device. A verdict of `allowed_with_custody_exception` means `openShift` would become one.
+                 */
+                custodyExceptionShiftId: string | null;
+                /** @description What the revoke this action performs would cascade. `null` when the action does not revoke the device, because it is already revoked or retired. Reported whatever the verdict, so a blocked action still shows what it would cascade once it is allowed. */
+                cascade: components["schemas"]["ImpactCascade"] | null;
+                /**
+                 * Format: uuid
+                 * @description As on `DeviceSummary` (out-of-scope reads as `null`).
+                 */
+                replacesDeviceId: string | null;
+                /**
+                 * Format: uuid
+                 * @description As on `DeviceSummary` (out-of-scope reads as `null`).
+                 */
+                replacedByDeviceId: string | null;
+                /**
+                 * Format: date-time
+                 * @description When the server evaluated the preview (server clock).
+                 */
+                evaluatedAt: string;
+            } & (components["schemas"]["ImpactVerdictConsistency"] & components["schemas"]["ImpactActionConsistency"] & components["schemas"]["ImpactStateConsistency"]);
+            /** @description `blockCode` is set exactly when the verdict is `blocked`. `requires` is the recovery revoke's three entries, or [`note`] for an `other` revoke, and empty otherwise. A custody-exception or forbidden-recovery verdict needs an open shift. A `no_change` verdict cascades nothing. */
+            ImpactVerdictConsistency: unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown;
+            /** @description Each action records its own revoke reason, and a block code belongs to the actions that can raise it. */
+            ImpactActionConsistency: unknown & unknown & unknown & unknown & unknown;
+            /** @description The device state pins what the verdict table leaves no choice about. An active device is the one a lifecycle action would revoke, so it has a cascade and no custody exception; a revoked or retired device has no cascade. A revoke of a revoked or retired device, and a retire of a retired one, is `no_change`. A retire of a revoked device is `allowed` or `blocked`, never `no_change`. A replace or move is `blocked` `device_retired` on a retired device and `allowed` on a revoked one. Each block code belongs to one state: `unresolved_cash_session` to an active device, `unresolved_custody_exception` to a revoked one and `device_retired` to a retired one. */
+            ImpactStateConsistency: unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown;
+            /** @description The 409 of `consoleRevokeDevice`: the canonical error envelope, plus the impact preview of the refused revoke as `error.details`. Its verdict is `blocked`, and its `blockCode` equals `error.code`. The RT-366 runtime always sends `details`. A server from before RT-366 omits it, so a client treats it as optional and falls back to `consoleGetDeviceImpact`. */
+            DeviceImpactConflict: {
+                error: {
+                    /** @description Stable machine-readable error code. */
+                    code: string;
+                    /** @description Human-readable summary. No sensitive data, no cause enumeration. */
+                    message: string;
+                    /**
+                     * Format: uuid
+                     * @description Server-side correlation id; the cause is recorded server-side.
+                     */
+                    request_id?: string;
+                    details?: components["schemas"]["DeviceImpactPreview"] & {
+                        /** @constant */
+                        action?: "revoke";
+                        /** @constant */
+                        verdict?: "blocked";
+                        /** @constant */
+                        blockCode?: "unresolved_cash_session";
+                    };
+                };
+            } & unknown;
             /** @description Canonical error envelope. Out-of-scope and cross-tenant refusals are non-disclosing (§II, §XII): they never name the cause. Open to additive fields (RT-366 adds the impact preview to the 409). */
             Error: {
                 error: {
@@ -5692,13 +5847,13 @@ export namespace DevicesSchema {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description unresolved_cash_session (409): the device has an open shift and the reason is neither a security reason nor a recovery revoke (`replaced`, `moved`, `retired`, `admin_error`, `other`). Close the shift on the till and let it sync, then revoke. Nothing was changed. */
+            /** @description unresolved_cash_session (409): the device has an open shift and the reason is neither a security reason nor a recovery revoke (`replaced`, `moved`, `retired`, `admin_error`, `other`). Close the shift on the till and let it sync, then revoke. Nothing was changed. The body carries the refused revoke's impact preview as `error.details` (RT-366), computed under the revoke's lock. */
             UnresolvedCashSession: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["DeviceImpactConflict"];
                 };
             };
             /** @description Unprocessable (422), with a stable code, for a recovery revoke by `owner` / `tenant_admin`: `recovery_note_required` — no `note`; `custody_exception_not_acknowledged` — `acknowledgeCustodyException` is not `true`. Nothing was changed. */
@@ -5731,6 +5886,10 @@ export namespace DevicesSchema {
             Cursor: string;
             /** @description Maximum items per page (bounded). The server MAY return fewer. */
             PageSize: number;
+            /** @description The lifecycle action to preview. */
+            ImpactActionQuery: components["schemas"]["DeviceLifecycleAction"];
+            /** @description The revoke reason. Required when `action` is `revoke`. Refused (400) with any other action, because `replace`, `move` and `retire` each record their own reason (`replaced`, `moved`, `retired`). There is no note parameter: the note and the acknowledgement are not verdict inputs (see `requires`). */
+            ImpactReasonQuery: components["schemas"]["RevokeReason"];
         };
         requestBodies: never;
         headers: never;
@@ -5832,9 +5991,444 @@ export namespace DevicesSchema {
                 500: components["responses"]["SystemFailure"];
             };
         };
+        consoleGetDeviceImpact: {
+            parameters: {
+                query: {
+                    /** @description The lifecycle action to preview. */
+                    action: components["parameters"]["ImpactActionQuery"];
+                    /** @description The revoke reason. Required when `action` is `revoke`. Refused (400) with any other action, because `replace`, `move` and `retire` each record their own reason (`replaced`, `moved`, `retired`). There is no note parameter: the note and the acknowledgement are not verdict inputs (see `requires`). */
+                    reason?: components["parameters"]["ImpactReasonQuery"];
+                };
+                header?: never;
+                path: {
+                    /** @description The device id (`devices.id`, which is the paired `terminal_id`). Case insensitive: normalised to lower case before the lookup. A value that is not a UUID is 400 `validation_error` and never reaches the database. */
+                    deviceId: components["parameters"]["DeviceIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The impact preview. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DeviceImpactPreview"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                404: components["responses"]["NotFound"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
     }
 }
 
-export type paths = AuthSchema.paths & ContextSchema.paths & TenantsSchema.paths & StoresSchema.paths & MembershipsSchema.paths & AuditSchema.paths & UnknownItemsSchema.paths & SettlementSchema.paths & ErpnextReconciliationSchema.paths & ShiftClosesSchema.paths & ConnectorAdminSchema.paths & ConnectorHealthSchema.paths & SyncOpsSchema.paths & DevicesSchema.paths;
-export type components = AuthSchema.components & ContextSchema.components & TenantsSchema.components & StoresSchema.components & MembershipsSchema.components & AuditSchema.components & UnknownItemsSchema.components & SettlementSchema.components & ErpnextReconciliationSchema.components & ShiftClosesSchema.components & ConnectorAdminSchema.components & ConnectorHealthSchema.components & SyncOpsSchema.components & DevicesSchema.components;
-export type operations = AuthSchema.operations & ContextSchema.operations & TenantsSchema.operations & StoresSchema.operations & MembershipsSchema.operations & AuditSchema.operations & UnknownItemsSchema.operations & SettlementSchema.operations & ErpnextReconciliationSchema.operations & ShiftClosesSchema.operations & ConnectorAdminSchema.operations & ConnectorHealthSchema.operations & SyncOpsSchema.operations & DevicesSchema.operations;
+export namespace ConsoleSalesSchema {
+    export interface paths {
+        "/api/v1/sales": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * List one store's received sales by business-date range (newest first, keyset paginated).
+             * @description The received sales of one store in the caller's scope, newest first by (`businessDate`, `occurredAt`, `saleRef`). `store_id`, `from` and `to` are REQUIRED. `from` and `to` are both inclusive, `to >= from`, and the range is at most 31 business days (`to - from <= 30`, OD-534-4 applied to the console). A wider range is 400 `validation_error`; it is never truncated, and any stored period stays reachable through another range. Every other filter is optional and they combine with AND. A `store_id` outside the caller's scope is the non-disclosing 404. An empty page (`items: []`, `nextCursor: null`) is a 200. A page may be short or empty with a non-null `nextCursor`; only `null` ends the walk, and every non-null cursor moves the position forward, so a walk always ends.
+             *     Audit: one `console_sales.listed` event per request, with `store_id`, the filters (the sale number only as a flag) and the item count in its metadata, and no row ids.
+             */
+            get: operations["consoleListSales"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/sales/{saleRef}": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * Read the full recorded detail of one sale in the caller's store scope.
+             * @description Every recorded fact of the sale: lines in receipt order when recorded, tenders, change, the receipt header snapshot, the void and returns summaries and the ERP posting state. A fact that was never recorded is null or `unavailable`, never guessed or filled from current values (OD-534-3/6). No reprint eligibility and no receipt-fact completeness: those are POS concerns. The sale resolves anywhere in the caller's store scope; a sale of another tenant, of a store outside the scope, or an absent ref is the same non-disclosing 404. The sale is read by one query predicated on the tenant, the `saleRef` and the caller's store scope; it is never fetched first and checked after, and the store's timezone is read only for a sale that matched. The operation takes no query parameter; any query key is 400 `validation_error`.
+             *     Audit: one `console_sales.detail_read` event per authorized open, with `sale_ref` and the sale's `store_id` in its metadata.
+             */
+            get: operations["consoleGetSale"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+    }
+    export type webhooks = Record<string, never>;
+    export interface components {
+        schemas: {
+            /** @description Exact-decimal monetary amount as a string (never a float); `numeric(19,4)` at rest. */
+            DecimalAmount: string;
+            /** @description ISO-4217 alphabetic currency code. */
+            CurrencyCode: string;
+            /**
+             * @description The server-authoritative sale status (spec 032), as on `Sale.syncStatus`.
+             * @enum {string}
+             */
+            SyncStatus: "captured" | "synced" | "failed-retryable" | "failed-needs-repair";
+            /**
+             * @description `none`: no return recorded. `partial`: at least one line has quantity left to return. `full`: every line is fully returned.
+             * @enum {string}
+             */
+            ReturnState: "none" | "partial" | "full";
+            /**
+             * @description Read-only operational ERP posting state (OD-534-5), NOT a tax or fiscal compliance claim. Mapped from `erpnext_posting_status`: `posted` -> posted; `pending` and `failed_transient` -> pending; `permanently_rejected` -> failed; no posting row (including a tenant without ERP, or a sale stranded before its posting intent) -> unknown. `unknown` never means "not posted".
+             * @enum {string}
+             */
+            ErpPostingState: "posted" | "pending" | "failed" | "unknown";
+            /**
+             * @description Where a displayed name or label comes from (OD-534-6). `snapshot`: the value recorded when the sale was made. `current`: today's value, shown for a sale captured without a snapshot. `unavailable`: no value. A current value is never presented as the historical one.
+             * @enum {string}
+             */
+            NameSource: "snapshot" | "current" | "unavailable";
+            DeviceView: {
+                /**
+                 * Format: uuid
+                 * @description Null for a sale captured before RT-77 device attribution.
+                 */
+                deviceRef: string | null;
+                label: string | null;
+                labelSource: components["schemas"]["NameSource"];
+            };
+            OperatorView: {
+                /** Format: uuid */
+                userRef: string | null;
+                /** @description Never an email address, not even as a fallback (OD-534-6). */
+                displayName: string | null;
+                nameSource: components["schemas"]["NameSource"];
+            };
+            SaleHistoryLine: {
+                /** Format: uuid */
+                lineRef: string;
+                /** @description 1-based position on the original receipt; null when not recorded. */
+                sequence: number | null;
+                lineName: string;
+                unitPrice: components["schemas"]["DecimalAmount"];
+                currencyCode: components["schemas"]["CurrencyCode"];
+                quantity: string;
+                lineAmount: components["schemas"]["DecimalAmount"];
+                taxAmount: components["schemas"]["DecimalAmount"] | null;
+                unit: string;
+                /** @description Cumulative quantity returned on this line ("0" when none). */
+                returnedQuantity: string;
+            };
+            /** @description A captured tender line (RT-10 D1); the amount is NET of change, as captured. */
+            SaleTenderView: {
+                /** @enum {string} */
+                method: "cash" | "card_external";
+                amount: components["schemas"]["DecimalAmount"];
+                /** @description The short card-terminal reference for `card_external`; never card data. */
+                reference: string | null;
+                sequence: number | null;
+            };
+            /** @description The receipt header captured with the sale. Never today's store values: a sale without a snapshot has no header. */
+            ReceiptHeader: {
+                branchName: string;
+                branchAddress: string;
+                taxRegistrationId: string;
+            };
+            VoidSummary: {
+                /** Format: date-time */
+                voidedAt: string;
+                /** Format: date */
+                voidBusinessDate: string | null;
+                /** @description True for an RT-530 manager-approved void; false for a legacy void. */
+                approved: boolean;
+                /**
+                 * @description The approver's role only; no approver name or id is exposed.
+                 * @enum {string|null}
+                 */
+                approverRole: "owner" | "tenant_admin" | "store_manager" | null;
+            };
+            ReturnSummary: {
+                /** Format: uuid */
+                returnRef: string;
+                /** Format: date-time */
+                recordedAt: string;
+                /** Format: date */
+                businessDate: string;
+                returnTotal: components["schemas"]["DecimalAmount"];
+                lines: components["schemas"]["ReturnSummaryLine"][];
+            };
+            ReturnSummaryLine: {
+                /** Format: uuid */
+                lineRef: string;
+                quantity: string;
+                lineAmount: components["schemas"]["DecimalAmount"];
+            };
+            ErpPostingView: {
+                sale: components["schemas"]["ErpPostingState"];
+                /** @description The ERPNext document id; present only when `sale` is `posted`. */
+                saleDocumentRef: string | null;
+                /** @description The void's reversal posting state; null unless the sale is voided. */
+                reversal: components["schemas"]["ErpPostingState"] | null;
+                /** @description The ERPNext reversal document id; present only when `reversal` is `posted`. */
+                reversalDocumentRef: string | null;
+            };
+            /** @description One page of `consoleListSales`. */
+            ConsoleSalePage: {
+                items: components["schemas"]["ConsoleSaleItem"][];
+                /** @description Opaque cursor for the next page; `null` on the last page. A non-null cursor may come with fewer than `page_size` items, or none; only `null` ends the walk. */
+                nextCursor: string | null;
+                /**
+                 * Format: date-time
+                 * @description Server time of this read. The page covers the sales the server had received by then; sales still queued on any terminal are not included.
+                 */
+                asOf: string;
+                /**
+                 * Format: uuid
+                 * @description The listed store (the `store_id` query value, lower case).
+                 */
+                storeRef: string;
+                /** @description The store's current IANA time zone (for example `Africa/Cairo`), for showing times. Business dates were fixed at capture in the timezone of that time and are not recomputed if it later changed. */
+                storeTimezone: string;
+                /** Format: date */
+                from: string;
+                /** Format: date */
+                to: string;
+            };
+            /** @description One sale in a console list, and the summary of its detail: the `SaleHistoryItem` fields of `pos-sales/sale-history.yaml` plus the sale's store. */
+            ConsoleSaleItem: {
+                /** Format: uuid */
+                saleRef: string;
+                /**
+                 * Format: uuid
+                 * @description The sale's store.
+                 */
+                storeRef: string;
+                /** @description The receipt sale number; null when the sale was captured without a receipt snapshot. */
+                saleNumber: string | null;
+                /** Format: date */
+                businessDate: string;
+                /** Format: date-time */
+                occurredAt: string;
+                /**
+                 * Format: date-time
+                 * @description Server clock at receipt.
+                 */
+                receivedAt: string;
+                device: components["schemas"]["DeviceView"];
+                operator: components["schemas"]["OperatorView"];
+                currencyCode: components["schemas"]["CurrencyCode"];
+                posTotal: components["schemas"]["DecimalAmount"];
+                syncStatus: components["schemas"]["SyncStatus"];
+                voided: boolean;
+                returnState: components["schemas"]["ReturnState"];
+                erpPostingState: components["schemas"]["ErpPostingState"];
+            };
+            /** @description The full recorded detail of one sale: the `SaleHistoryDetail` facts of `pos-sales/sale-history.yaml` without the POS-only `receiptFacts` and `reprint`, plus the store's timezone. */
+            ConsoleSaleDetail: {
+                summary: components["schemas"]["ConsoleSaleItem"];
+                /** @description The sale's store's current IANA time zone, for showing times. Business dates were fixed at capture and are not recomputed. */
+                storeTimezone: string;
+                lines: components["schemas"]["SaleHistoryLine"][];
+                /**
+                 * @description `not_recorded`: the lines are in a stable order that is not the original receipt order.
+                 * @enum {string}
+                 */
+                lineOrder: "recorded" | "not_recorded";
+                /**
+                 * @description `unknown`: a tender-unknown sale (RT-10 D8); `tenders` is empty.
+                 * @enum {string}
+                 */
+                tenderState: "recorded" | "unknown";
+                tenders: components["schemas"]["SaleTenderView"][];
+                /** @description Cash change given, from the receipt snapshot. "0" when a snapshot was captured without `changeGiven`; null ONLY when the sale has no receipt snapshot. */
+                changeGiven: components["schemas"]["DecimalAmount"] | null;
+                /**
+                 * Format: date-time
+                 * @description The time printed on the original receipt; null when not recorded.
+                 */
+                settledAt: string | null;
+                /** @description The receipt number printed on the original receipt. Equals `summary.saleNumber` when the snapshot omitted `receiptNumber`; null ONLY when the sale has no receipt snapshot. */
+                receiptNumber: string | null;
+                /** @description The receipt header captured with the sale; null when not recorded. */
+                receiptHeader: components["schemas"]["ReceiptHeader"] | null;
+                /** @description Present when the sale is voided. */
+                void: components["schemas"]["VoidSummary"] | null;
+                returns: components["schemas"]["ReturnSummary"][];
+                erpPosting: components["schemas"]["ErpPostingView"];
+            };
+            /** @description Canonical error envelope. Out-of-scope and cross-tenant refusals are non-disclosing (§II, §XII): they never name the cause. */
+            Error: {
+                error: {
+                    /** @description Stable machine-readable error code. */
+                    code: string;
+                    /** @description Human-readable summary. No sensitive data, no cause enumeration. */
+                    message: string;
+                    /**
+                     * Format: uuid
+                     * @description Server-side correlation id; the cause is recorded server-side.
+                     */
+                    request_id?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description validation_error (400): a malformed path or query value, an unknown query key, a query key given more than once, a missing `store_id`, `from` or `to`, a date that is not a calendar date (`2026-02-30`), `to` before `from`, a range wider than 31 business days, a `voided` value other than `true` or `false`, or a cursor the server did not issue for this operation, tenant, store and filters. Checked after the guards and before any database read. */
+            ValidationFailure: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Unauthenticated (401): a missing or invalid session cookie, or a non-cookie credential. Non-disclosing. Owned by 028 (G10). */
+            Unauthorized: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description not_found (404), non-disclosing: identical for a role outside `owner` / `tenant_admin` / `store_manager`, a `store_id` outside the caller's scope or of another tenant, a sale of a store outside the scope, a sale of another tenant and an absent ref. */
+            NotFound: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description system_failure (500): unexpected server error; the cause is recorded server-side under `request_id`. */
+            SystemFailure: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+        parameters: {
+            /** @description REQUIRED in v1 (OD-556-2). The one store whose sales are listed. Validated against the caller's store scope: a store outside it, or of another tenant, is the non-disclosing 404. Case insensitive: the one lower-cased value is the one scope-checked, cursor-bound and queried. A missing, malformed or repeated value is 400 `validation_error`. */
+            StoreIdQuery: string;
+            /** @description First business day of the range, inclusive, in the store timezone. */
+            BusinessDateFrom: string;
+            /** @description Last business day of the range, inclusive. `to >= from` and `to - from <= 30` (31 business days), else 400 `validation_error`. Never truncated. */
+            BusinessDateTo: string;
+            /** @description Exact match on the captured receipt `saleNumber` (`CaptureSaleReceipt.saleNumber` in `pos-sales/sales.yaml`), within the store and range. A sale captured without a receipt snapshot has none and never matches. */
+            SaleNumberQuery: string;
+            /** @description Only sales with this server-authoritative sync status (spec 032). */
+            SyncStatusQuery: components["schemas"]["SyncStatus"];
+            /** @description `true`: only voided sales. `false`: only sales that are not voided. Only the literal values `true` and `false` are accepted; any other value is 400 `validation_error`. */
+            VoidedQuery: boolean;
+            /** @description Only sales whose projected `returnState` is this value. */
+            ReturnStateQuery: components["schemas"]["ReturnState"];
+            /** @description Only sales whose PROJECTED `erpPostingState` is this value, never the raw posting status: `pending` matches a `pending` or `failed_transient` posting, `failed` a `permanently_rejected` one, and `unknown` a sale with no sale posting row (see `ErpPostingState`). */
+            ErpPostingStateQuery: components["schemas"]["ErpPostingState"];
+            /** @description Opaque keyset cursor from a prior page's `nextCursor`, bound to the operation, the tenant, the store and every filter (`from`, `to`, `sale_number`, `sync_status`, `voided`, `return_state`, `erp_posting_state`). Do not decode or construct it; omit it for the first page. A value the server did not issue, cannot decode, or that is reused with another store or other filters is 400 `validation_error`. The caller's store scope is checked on every request and is never carried by the cursor. The cursor carries only a keyset position and a digest of the filters; its position is ANDed with the tenant, the store scope and the `from` / `to` range and never replaces them, so a hand-built cursor can only reposition the walk inside rows the caller may already read. It is never used to look a sale up. */
+            Cursor: string;
+            /** @description Maximum items per page. The server MAY return fewer. */
+            PageSize: number;
+            /** @description Stable server-issued sale reference. Case insensitive. Resolves only within the caller's store scope; any other ref is the non-disclosing 404. A value that is not a UUID is 400 `validation_error` and never reaches the database. */
+            SaleRef: string;
+        };
+        requestBodies: never;
+        headers: {
+            /** @description `no-store` on every 200: the bodies carry staff display names and the receipt header (tax registration id), so no shared or browser cache keeps them. */
+            CacheControlNoStore: "no-store";
+        };
+        pathItems: never;
+    }
+    export type $defs = Record<string, never>;
+    export interface operations {
+        consoleListSales: {
+            parameters: {
+                query: {
+                    /** @description REQUIRED in v1 (OD-556-2). The one store whose sales are listed. Validated against the caller's store scope: a store outside it, or of another tenant, is the non-disclosing 404. Case insensitive: the one lower-cased value is the one scope-checked, cursor-bound and queried. A missing, malformed or repeated value is 400 `validation_error`. */
+                    store_id: components["parameters"]["StoreIdQuery"];
+                    /** @description First business day of the range, inclusive, in the store timezone. */
+                    from: components["parameters"]["BusinessDateFrom"];
+                    /** @description Last business day of the range, inclusive. `to >= from` and `to - from <= 30` (31 business days), else 400 `validation_error`. Never truncated. */
+                    to: components["parameters"]["BusinessDateTo"];
+                    /** @description Exact match on the captured receipt `saleNumber` (`CaptureSaleReceipt.saleNumber` in `pos-sales/sales.yaml`), within the store and range. A sale captured without a receipt snapshot has none and never matches. */
+                    sale_number?: components["parameters"]["SaleNumberQuery"];
+                    /** @description Only sales with this server-authoritative sync status (spec 032). */
+                    sync_status?: components["parameters"]["SyncStatusQuery"];
+                    /** @description `true`: only voided sales. `false`: only sales that are not voided. Only the literal values `true` and `false` are accepted; any other value is 400 `validation_error`. */
+                    voided?: components["parameters"]["VoidedQuery"];
+                    /** @description Only sales whose projected `returnState` is this value. */
+                    return_state?: components["parameters"]["ReturnStateQuery"];
+                    /** @description Only sales whose PROJECTED `erpPostingState` is this value, never the raw posting status: `pending` matches a `pending` or `failed_transient` posting, `failed` a `permanently_rejected` one, and `unknown` a sale with no sale posting row (see `ErpPostingState`). */
+                    erp_posting_state?: components["parameters"]["ErpPostingStateQuery"];
+                    /** @description Opaque keyset cursor from a prior page's `nextCursor`, bound to the operation, the tenant, the store and every filter (`from`, `to`, `sale_number`, `sync_status`, `voided`, `return_state`, `erp_posting_state`). Do not decode or construct it; omit it for the first page. A value the server did not issue, cannot decode, or that is reused with another store or other filters is 400 `validation_error`. The caller's store scope is checked on every request and is never carried by the cursor. The cursor carries only a keyset position and a digest of the filters; its position is ANDed with the tenant, the store scope and the `from` / `to` range and never replaces them, so a hand-built cursor can only reposition the walk inside rows the caller may already read. It is never used to look a sale up. */
+                    cursor?: components["parameters"]["Cursor"];
+                    /** @description Maximum items per page. The server MAY return fewer. */
+                    page_size?: components["parameters"]["PageSize"];
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description One page of the store's received sales, newest first. */
+                200: {
+                    headers: {
+                        "Cache-Control": components["headers"]["CacheControlNoStore"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ConsoleSalePage"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                404: components["responses"]["NotFound"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+        consoleGetSale: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Stable server-issued sale reference. Case insensitive. Resolves only within the caller's store scope; any other ref is the non-disclosing 404. A value that is not a UUID is 400 `validation_error` and never reaches the database. */
+                    saleRef: components["parameters"]["SaleRef"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The detail projection. */
+                200: {
+                    headers: {
+                        "Cache-Control": components["headers"]["CacheControlNoStore"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ConsoleSaleDetail"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                404: components["responses"]["NotFound"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+    }
+}
+
+export type paths = AuthSchema.paths & ContextSchema.paths & TenantsSchema.paths & StoresSchema.paths & MembershipsSchema.paths & AuditSchema.paths & UnknownItemsSchema.paths & SettlementSchema.paths & ErpnextReconciliationSchema.paths & ShiftClosesSchema.paths & ConnectorAdminSchema.paths & ConnectorHealthSchema.paths & SyncOpsSchema.paths & DevicesSchema.paths & ConsoleSalesSchema.paths;
+export type components = AuthSchema.components & ContextSchema.components & TenantsSchema.components & StoresSchema.components & MembershipsSchema.components & AuditSchema.components & UnknownItemsSchema.components & SettlementSchema.components & ErpnextReconciliationSchema.components & ShiftClosesSchema.components & ConnectorAdminSchema.components & ConnectorHealthSchema.components & SyncOpsSchema.components & DevicesSchema.components & ConsoleSalesSchema.components;
+export type operations = AuthSchema.operations & ContextSchema.operations & TenantsSchema.operations & StoresSchema.operations & MembershipsSchema.operations & AuditSchema.operations & UnknownItemsSchema.operations & SettlementSchema.operations & ErpnextReconciliationSchema.operations & ShiftClosesSchema.operations & ConnectorAdminSchema.operations & ConnectorHealthSchema.operations & SyncOpsSchema.operations & DevicesSchema.operations & ConsoleSalesSchema.operations;

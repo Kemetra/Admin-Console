@@ -13,6 +13,7 @@ import { erp } from "./ar/erp";
 import { money } from "./ar/money";
 import { operators } from "./ar/operators";
 import { overview } from "./ar/overview";
+import { sales } from "./ar/sales";
 import { shell } from "./ar/shell";
 import { shift } from "./ar/shift";
 import { stock } from "./ar/stock";
@@ -31,6 +32,7 @@ export const AR_MODULES = {
   overview,
   erp,
   devices,
+  sales,
 };
 
 export const ar = {
@@ -46,4 +48,5 @@ export const ar = {
   ...overview,
   ...erp,
   ...devices,
+  ...sales,
 };

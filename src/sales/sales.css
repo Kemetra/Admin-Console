@@ -1,0 +1,105 @@
+/* RT-587 sales search and sale detail. Built from existing tokens only; no new
+ * colour, font or dependency. Status chips carry their meaning in text; colour
+ * only reinforces it. Logical properties throughout (RTL by structure). */
+
+.sale-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-object);
+}
+.sale-filters__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-inline-size: 280px;
+}
+.sale-filters__field label {
+  font: var(--weight-strong) var(--text-meta) / var(--leading-tight) var(--font-sans);
+  color: var(--color-text-muted);
+}
+.sale-filters__field .input {
+  inline-size: auto;
+  min-inline-size: 150px;
+}
+.sale-filters__note,
+.sale-filters__zone {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-meta);
+}
+.sale-filters__zone {
+  flex-basis: 100%;
+}
+.sale-filters__actions {
+  display: flex;
+  gap: var(--space-2);
+  align-self: flex-end;
+  margin-inline-start: auto;
+}
+
+.sale-freshness {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.sale-freshness .content__sub {
+  margin: 0;
+}
+
+.sale-chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.sale-partial {
+  display: block;
+  margin: 0;
+  padding: var(--space-4);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-object);
+  color: var(--color-text-muted);
+}
+
+.sale-pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--text-control);
+}
+
+/* Detail: a section per concern, read-first field rows. */
+.sale-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.sale-section .content__sub {
+  margin: 0;
+}
+.sale-return {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--color-border);
+}
+.sale-amount {
+  font-variant-numeric: tabular-nums;
+}
+.sale-related {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.surface__head .sale-chips {
+  margin-block: var(--space-2);
+}
