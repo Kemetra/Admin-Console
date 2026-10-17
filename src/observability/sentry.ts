@@ -5,9 +5,12 @@
  * errors (`cause`) and dedupe. No breadcrumbs, HTTP context, browser session,
  * tracing or session replay (owner decision D7).
  *
- * Runtime config: Backend-Core's OBS-3 contract (RT-632) defines where the
- * Console reads its DSN, env and tunnel path. Until it exists the source below
- * returns nothing, so the Console stays inert (no SDK init, no egress).
+ * Runtime config: Backend-Core's OBS-3 contract (RT-632) serves
+ * `GET /api/v1/console/telemetry/config`: 204 (Sentry off) or
+ * `{ tunnel, environment }` with no DSN (see ./config.ts). Reading it through
+ * the generated client waits for that contract to merge and the pin bump, so
+ * until then the source below returns nothing and the Console stays inert (no
+ * SDK init, no egress).
  */
 import {
   dedupeIntegration,
@@ -17,7 +20,7 @@ import {
 } from "@sentry/react";
 import { type ConfigSource, type InitResult, initObservability } from "./init";
 
-/** Placeholder source until RT-632 lands: no runtime config, so inert. */
+/** Source until the RT-632 config endpoint is wired in: no config, so inert. */
 export const noRuntimeConfig: ConfigSource = () => Promise.resolve(null);
 
 /** Full commit SHA injected at build time (vite.config.ts); absent in tests/dev. */

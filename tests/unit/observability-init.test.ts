@@ -1,16 +1,23 @@
-import { releaseFromSha, resolveObservabilityConfig } from "@/observability/config";
+import {
+  PLACEHOLDER_DSN,
+  releaseFromSha,
+  resolveObservabilityConfig,
+} from "@/observability/config";
 import { type InitDeps, buildInitOptions, initObservability } from "@/observability/init";
 import { scrubSentryEvent } from "@/observability/scrub";
 import { describe, expect, test, vi } from "vitest";
 
 /**
- * RT-633 (OBS-4): the DSN, env and tunnel arrive at runtime (never baked into
- * the bundle). No config means no SDK init and no egress (contract section 5);
- * a malformed DSN logs one warning that never echoes it.
+ * RT-633 (OBS-4), aligned to the RT-632 contract: `GET /api/v1/console/telemetry/config`
+ * answers 204 (inert: the source yields null) or `{ tunnel, environment }`. The
+ * real DSN never reaches the browser; the tunnel ignores the envelope DSN, so the
+ * Console initialises with a fixed placeholder. No config means no SDK init and
+ * no egress (contract section 5).
  */
-const DSN = "https://abc123publickey@o1.ingest.de.sentry.io/4500000000000001";
 const SHA = "0123456789abcdef0123456789abcdef01234567";
-const VALID = { dsn: DSN, environment: "staging", tunnel: "/api/v1/observability/sentry" };
+const TUNNEL = "/api/v1/console/telemetry/envelope";
+const VALID = { tunnel: TUNNEL, environment: "staging" };
+const ENABLED = { dsn: PLACEHOLDER_DSN, environment: "staging", tunnel: TUNNEL };
 
 function deps(overrides: Partial<InitDeps> = {}): InitDeps & {
   sentryInit: ReturnType<typeof vi.fn>;
@@ -37,25 +44,29 @@ describe("releaseFromSha", () => {
   });
 });
 
+describe("PLACEHOLDER_DSN", () => {
+  test("is a well-formed Sentry DSN that names no real host", () => {
+    const url = new URL(PLACEHOLDER_DSN);
+    expect(url.protocol).toBe("https:");
+    expect(url.username).toMatch(/^[0-9a-f]{32}$/);
+    expect(url.hostname.endsWith(".invalid")).toBe(true);
+    expect(url.pathname).toMatch(/^\/\d+$/);
+  });
+});
+
 describe("resolveObservabilityConfig", () => {
-  test("no config, no DSN or a blank DSN is silently disabled", () => {
-    for (const raw of [null, undefined, "x", 42, {}, { dsn: "  " }, { dsn: 7 }]) {
+  test("no config (204) or a non-object is silently disabled", () => {
+    for (const raw of [null, undefined, "x", 42, true]) {
       expect(resolveObservabilityConfig(raw, SHA)).toEqual({ kind: "disabled" });
     }
   });
 
-  test("a malformed DSN is disabled with a warning that never echoes it", () => {
-    for (const dsn of ["not a url", "https://o1.ingest.de.sentry.io/1", "https://k@h.test/abc"]) {
-      const result = resolveObservabilityConfig({ ...VALID, dsn }, SHA);
-      expect(result.kind).toBe("invalid");
-      expect(JSON.stringify(result)).not.toContain(dsn);
-    }
-  });
-
-  test("the tunnel must be a same-origin absolute path", () => {
+  test("the tunnel is required and must be a same-origin absolute path", () => {
     for (const tunnel of [
       undefined,
       "",
+      "  ",
+      7,
       "https://evil.test/t",
       "//evil.test/t",
       "relative",
@@ -64,28 +75,37 @@ describe("resolveObservabilityConfig", () => {
       "/\n/evil.test/t",
       "/\\evil.test/t",
     ]) {
-      expect(resolveObservabilityConfig({ ...VALID, tunnel }, SHA).kind).toBe("invalid");
+      const result = resolveObservabilityConfig({ ...VALID, tunnel }, SHA);
+      expect(result.kind).toBe("invalid");
+      expect(JSON.stringify(result)).not.toContain("evil.test");
     }
   });
 
-  test("a valid config carries dsn, env, tunnel and the release SHA12", () => {
+  test("a valid config uses the placeholder DSN, env, tunnel and the release SHA12", () => {
     expect(resolveObservabilityConfig(VALID, SHA)).toEqual({
       kind: "enabled",
-      config: { ...VALID, release: "0123456789ab" },
+      config: { ...ENABLED, release: "0123456789ab" },
     });
   });
 
+  test("a DSN in the runtime config is ignored: the placeholder is always used", () => {
+    const leaked = "https://realkey@o1.ingest.de.sentry.io/4500000000000001";
+    const result = resolveObservabilityConfig({ ...VALID, dsn: leaked }, SHA);
+    expect(result).toEqual({ kind: "enabled", config: { ...ENABLED, release: "0123456789ab" } });
+    expect(JSON.stringify(result)).not.toContain("realkey");
+  });
+
   test("env falls back to unknown and the release is omitted without a SHA", () => {
-    expect(resolveObservabilityConfig({ dsn: DSN, tunnel: VALID.tunnel }, undefined)).toEqual({
+    expect(resolveObservabilityConfig({ tunnel: TUNNEL }, undefined)).toEqual({
       kind: "enabled",
-      config: { dsn: DSN, environment: "unknown", tunnel: VALID.tunnel },
+      config: { ...ENABLED, environment: "unknown" },
     });
   });
 });
 
 describe("buildInitOptions", () => {
   const integrations = [{ name: "GlobalHandlers" }];
-  const options = buildInitOptions({ ...VALID, release: "0123456789ab" }, integrations);
+  const options = buildInitOptions({ ...ENABLED, release: "0123456789ab" }, integrations);
 
   test("errors only: no default integrations, replay, tracing or breadcrumbs", () => {
     expect(options.defaultIntegrations).toBe(false);
@@ -111,10 +131,10 @@ describe("buildInitOptions", () => {
 
   test("sends through the tunnel, scrubs and tags service/env/version", () => {
     expect(options).toMatchObject({
-      dsn: DSN,
+      dsn: PLACEHOLDER_DSN,
       environment: "staging",
       release: "0123456789ab",
-      tunnel: VALID.tunnel,
+      tunnel: TUNNEL,
       beforeSend: scrubSentryEvent,
       initialScope: {
         tags: { service: "admin-console", env: "staging", version: "0123456789ab" },
@@ -123,7 +143,7 @@ describe("buildInitOptions", () => {
   });
 
   test("omits the version tag and release when there is no release", () => {
-    const bare = buildInitOptions(VALID, integrations);
+    const bare = buildInitOptions(ENABLED, integrations);
     expect(bare).not.toHaveProperty("release");
     expect(bare.initialScope).toEqual({ tags: { service: "admin-console", env: "staging" } });
   });
@@ -147,13 +167,13 @@ describe("initObservability", () => {
     expect(d.warn).toHaveBeenCalledTimes(1);
   });
 
-  test("a malformed DSN warns once without echoing it", async () => {
+  test("a bad tunnel warns once without echoing it", async () => {
     const d = deps();
-    const dsn = "https://secret-key@h.test/not-a-project";
-    expect(await initObservability(async () => ({ ...VALID, dsn }), d)).toBe("disabled");
+    const tunnel = "https://secret-host.test/t";
+    expect(await initObservability(async () => ({ ...VALID, tunnel }), d)).toBe("disabled");
     expect(d.sentryInit).not.toHaveBeenCalled();
     expect(d.warn).toHaveBeenCalledTimes(1);
-    expect(String(d.warn.mock.calls[0]?.[0])).not.toContain("secret-key");
+    expect(String(d.warn.mock.calls[0]?.[0])).not.toContain("secret-host");
   });
 
   test("a valid config initialises the SDK once with the built options", async () => {
@@ -161,9 +181,10 @@ describe("initObservability", () => {
     expect(await initObservability(async () => VALID, d)).toBe("initialized");
     expect(d.sentryInit).toHaveBeenCalledTimes(1);
     expect(d.sentryInit.mock.calls[0]?.[0]).toMatchObject({
-      dsn: DSN,
+      dsn: PLACEHOLDER_DSN,
+      environment: "staging",
       release: "0123456789ab",
-      tunnel: VALID.tunnel,
+      tunnel: TUNNEL,
       defaultIntegrations: false,
       integrations: [{ name: "GlobalHandlers" }],
     });
@@ -173,11 +194,11 @@ describe("initObservability", () => {
   test("an SDK failure is contained and warns once", async () => {
     const d = deps({
       sentryInit: vi.fn(() => {
-        throw new Error(DSN);
+        throw new Error("sdk exploded");
       }),
     });
     expect(await initObservability(async () => VALID, d)).toBe("failed");
     expect(d.warn).toHaveBeenCalledTimes(1);
-    expect(String(d.warn.mock.calls[0]?.[0])).not.toContain(DSN);
+    expect(String(d.warn.mock.calls[0]?.[0])).not.toContain("sdk exploded");
   });
 });

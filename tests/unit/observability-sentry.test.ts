@@ -14,11 +14,8 @@ vi.mock("@sentry/react", () => ({
   dedupeIntegration: () => ({ name: "Dedupe" }),
 }));
 
-const CONFIG = {
-  dsn: "https://abc123publickey@o1.ingest.de.sentry.io/4500000000000001",
-  environment: "staging",
-  tunnel: "/api/v1/observability/sentry",
-};
+// The RT-632 config answer: no DSN, only the tunnel path and env.
+const CONFIG = { tunnel: "/api/v1/console/telemetry/envelope", environment: "staging" };
 
 beforeEach(() => {
   init.mockClear();
@@ -49,12 +46,12 @@ describe("startObservability", () => {
     expect(options).not.toHaveProperty("release");
   });
 
-  test("a malformed DSN warns once on the console without echoing it", async () => {
+  test("a bad tunnel warns once on the console without echoing it", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    const dsn = "https://hidden-key@h.test/x";
-    expect(await startObservability(async () => ({ ...CONFIG, dsn }))).toBe("disabled");
+    const tunnel = "https://hidden-host.test/t";
+    expect(await startObservability(async () => ({ ...CONFIG, tunnel }))).toBe("disabled");
     expect(warn).toHaveBeenCalledTimes(1);
-    expect(String(warn.mock.calls[0]?.[0])).not.toContain("hidden-key");
+    expect(String(warn.mock.calls[0]?.[0])).not.toContain("hidden-host");
     expect(init).not.toHaveBeenCalled();
   });
 });

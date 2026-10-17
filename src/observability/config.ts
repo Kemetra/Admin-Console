@@ -1,15 +1,26 @@
 /**
  * Runtime observability config for the Console (RT-633, OBS-4). Pure.
  *
- * The DSN, `env` and tunnel path arrive at runtime and are never baked into the
- * immutable release bundle. Their source is defined by Backend-Core's OBS-3
- * contract (RT-632); until it exists the Console's config source returns
- * nothing and the Console stays inert. Only the release SHA is a build-time
- * value: it equals the artifact's own commit and is already public in
- * `/version.json`.
+ * Backend-Core's OBS-3 contract (RT-632) answers
+ * `GET /api/v1/console/telemetry/config` with 204 (Sentry off: the source yields
+ * null, so no SDK init) or `{ tunnel, environment }`. The real DSN never reaches
+ * the browser: the tunnel (`/api/v1/console/telemetry/envelope`) ignores the
+ * envelope DSN and forwards to the configured Console project, so the SDK is
+ * initialised with a fixed placeholder. Any DSN in the config is ignored. Only the
+ * release SHA is a build-time value: it equals the artifact's own commit and is
+ * already public in `/version.json`.
  */
 
+/**
+ * Well-formed but fake DSN (`.invalid` host, zero key). The SDK needs one to
+ * init; with a tunnel it is only echoed in the envelope header, which the
+ * Backend-Core tunnel ignores.
+ */
+export const PLACEHOLDER_DSN =
+  "https://00000000000000000000000000000000@console-telemetry.invalid/1";
+
 export interface ObservabilityConfig {
+  /** Always PLACEHOLDER_DSN; never a real DSN. */
   dsn: string;
   /** The `DEPLOYMENT_ENVIRONMENT` value from the release configuration. */
   environment: string;
@@ -25,29 +36,11 @@ export type ResolvedConfig =
   | { kind: "enabled"; config: ObservabilityConfig };
 
 const FULL_SHA = /^[0-9a-f]{40}$/;
-const PROJECT_ID = /^\d+$/;
-const DSN_PROTOCOLS: ReadonlySet<string> = new Set(["https:", "http:"]);
 const RELEASE_LENGTH = 12;
 
 /** The 12-char release id of a full 40-hex commit SHA; otherwise undefined. */
 export function releaseFromSha(sha: string | undefined): string | undefined {
   return sha !== undefined && FULL_SHA.test(sha) ? sha.slice(0, RELEASE_LENGTH) : undefined;
-}
-
-function parseUrl(value: string): URL | null {
-  try {
-    return new URL(value);
-  } catch {
-    return null;
-  }
-}
-
-/** A DSN carries a public key (username) and ends in a numeric project id. */
-function isUsableDsn(dsn: string): boolean {
-  const url = parseUrl(dsn);
-  if (url === null || !DSN_PROTOCOLS.has(url.protocol)) return false;
-  const projectId = url.pathname.split("/").pop() ?? "";
-  return url.username.length > 0 && PROJECT_ID.test(projectId);
 }
 
 // Placeholder origin used only to resolve a path; never contacted.
@@ -76,8 +69,8 @@ function trimmedString(value: unknown): string | undefined {
 }
 
 /**
- * Validate an untrusted runtime config. No config or no DSN is `disabled`
- * (silent). A bad DSN or tunnel is `invalid`; the reason never echoes a value.
+ * Validate an untrusted runtime config. No config (204) is `disabled` (silent).
+ * A missing or cross-origin tunnel is `invalid`; the reason never echoes a value.
  */
 export function resolveObservabilityConfig(
   raw: unknown,
@@ -85,10 +78,6 @@ export function resolveObservabilityConfig(
 ): ResolvedConfig {
   if (raw === null || typeof raw !== "object") return { kind: "disabled" };
   const source = raw as Record<string, unknown>;
-  const dsn = trimmedString(source.dsn);
-  if (dsn === undefined) return { kind: "disabled" };
-  if (!isUsableDsn(dsn)) return { kind: "invalid", reason: "the DSN is not a valid Sentry DSN" };
-
   const tunnel = trimmedString(source.tunnel);
   if (tunnel === undefined || !isSameOriginPath(tunnel)) {
     return { kind: "invalid", reason: "the tunnel is not a same-origin path" };
@@ -98,7 +87,7 @@ export function resolveObservabilityConfig(
   return {
     kind: "enabled",
     config: {
-      dsn,
+      dsn: PLACEHOLDER_DSN,
       environment: trimmedString(source.environment) ?? "unknown",
       tunnel,
       ...(release ? { release } : {}),
