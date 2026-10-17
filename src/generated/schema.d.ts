@@ -3,7 +3,7 @@
  * Do not make direct changes to the file.
  */
 
-// Source: Data-Pulse-2 @ ba22a8128179106978f1c87ca5ead2cbc3a00b6b
+// Source: Data-Pulse-2 @ a959959dc34d6ba1897543fe7320d3c602240834
 // Sources:
 // - packages/contracts/openapi/auth.openapi.yaml
 // - packages/contracts/openapi/context.openapi.yaml
@@ -5495,6 +5495,26 @@ export namespace DevicesSchema {
             patch?: never;
             trace?: never;
         };
+        "/api/v1/devices/{deviceId}/impact": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * Preview a lifecycle action's impact (read-only).
+             * @description What a `revoke`, `replace`, `move` or `retire` of the device would do now, and the server's verdict (see "Impact preview" above). Read-only: nothing is written, locked or cascaded, and the read is not a reservation. The mutation decides again under its lock. A device of another tenant, of a store outside the caller's scope, or an absent device is the same non-disclosing 404. A malformed path or query, a `revoke` without a `reason`, or a `reason` with any other action is 400 before any read.
+             */
+            get: operations["consoleGetDeviceImpact"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
     }
     export type webhooks = Record<string, never>;
     export interface components {
@@ -5641,6 +5661,140 @@ export namespace DevicesSchema {
                     trustState?: "revoked" | "retired";
                 };
             };
+            /**
+             * @description A lifecycle action. `revoke` is `consoleRevokeDevice`. `replace` and `move` are a pairing code whose `replaces_device_id` is this device, in the same store or another store of the tenant (RT-367, RT-287 D-Q1). `retire` is the RT-368 retire.
+             * @enum {string}
+             */
+            DeviceLifecycleAction: "revoke" | "replace" | "move" | "retire";
+            /**
+             * @description The server's verdict on the action now (see "Impact preview" above for the decision order and the mapping to the mutation's outcome). `allowed`: the action proceeds. `allowed_with_custody_exception`: the revoke proceeds, and the open shift becomes the unresolved custody exception (no count, no close, no cash fact edited); the request must also meet `requires`. `blocked`: the action is refused with `blockCode` (409). `forbidden_recovery`: a recovery revoke the caller's role may not make (403 `recovery_revoke_forbidden`). `no_change`: the action has already happened, so the mutation changes nothing.
+             *     **Extension policy:** adding a verdict is a minor contract version bump. A client MUST treat an unknown verdict as `blocked` (fail-safe): it never offers to proceed with an action whose verdict it doesn't know.
+             * @enum {string}
+             */
+            ImpactVerdict: "allowed" | "allowed_with_custody_exception" | "blocked" | "forbidden_recovery" | "no_change";
+            /**
+             * @description Why a `blocked` action is refused, equal to the mutation's 409 `error.code`. `unresolved_cash_session`: the active device has an open shift (close it on the till and let it sync first). `unresolved_custody_exception`: retire of a revoked device whose open shift is the custody exception, which stays until the deferred force-seal / custody-reconciliation slice resolves it. `device_retired`: a retired device cannot be replaced or moved.
+             *     **Extension policy:** adding a block code is a minor contract version bump. A client MUST treat an unknown block code as a refusal it cannot resolve. It shows the code, and doesn't offer the action.
+             * @enum {string}
+             */
+            ImpactBlockCode: "unresolved_cash_session" | "unresolved_custody_exception" | "device_retired";
+            /**
+             * @description A requirement on the request beyond the verdict (the recovery revoke, RT-287 D-Q4 amended). `owner_or_tenant_admin`: the caller's role. `note`: the body's `note`. `acknowledge_custody_exception`: the body's `acknowledgeCustodyException: true`.
+             *     **Extension policy:** adding a requirement is a minor contract version bump. A client MUST treat an unknown requirement as unmet, and doesn't offer the action.
+             * @enum {string}
+             */
+            ImpactRequirement: "owner_or_tenant_admin" | "note" | "acknowledge_custody_exception";
+            /** @description The cash-up facts the server has received for the open shift: its open and its cash movements. A server-received view, never "all synced": facts the till has not synced are not visible (see "Cash facts" above). */
+            ImpactCashFacts: {
+                /**
+                 * @description Always `server_received`, so a client labels the counts as such.
+                 * @enum {string}
+                 */
+                view: "server_received";
+                /** @description How many cash-up facts of the shift the server has received: the open, plus each cash movement. At least 1, because the open itself is one. */
+                receivedCount: number;
+                /**
+                 * Format: date-time
+                 * @description The latest server `received_at` among those facts.
+                 */
+                lastReceivedAt: string;
+            };
+            /** @description The open shift on the device: the most recently opened one, if a legacy device has several. The same shift the Cash Session rule reads. */
+            ImpactOpenShift: {
+                /** Format: uuid */
+                shiftId: string;
+                /**
+                 * @description How the shift was opened (`shifts.source`).
+                 * @enum {string}
+                 */
+                source: "cash_up" | "legacy";
+                /**
+                 * Format: date-time
+                 * @description When the shift opened (the till's stated time).
+                 */
+                openedAt: string;
+                /**
+                 * Format: uuid
+                 * @description The opening cashier's `users.id`. No name or contact field.
+                 */
+                openingCashierUserId: string;
+                /** @description The server-received cash-up facts. `null` for a `legacy` shift, which has none (unknown, never zero). */
+                cashFacts: components["schemas"]["ImpactCashFacts"] | null;
+            } & unknown;
+            /** @description What the revoke this action performs would cascade, counted now with the same predicates the revoke applies. Counts only: no token, session id, code or hash. On the same state they equal the `revoked_session_count` and `cancelled_pairing_code_count` that the `pos.device.revoked` audit row records. */
+            ImpactCascade: {
+                /** @description Live `pos_operator` sessions of the device that would be revoked (`revoked_at IS NULL AND expires_at > now()`). */
+                operatorSessionCount: number;
+                /** @description Pending pairing codes that would be cancelled: the device's own (`terminal_id`), and those whose `replaces_device_id` is the device. This is the count the revoke cancels, so it includes a pending move code issued for another store, even one outside the caller's scope. Only the number is disclosed, never the code, its store or its target. */
+                pendingPairingCodeCount: number;
+            };
+            /** @description The impact of one lifecycle action on the device now (see "Impact preview" above). Every key is always present; a value that does not apply is `null`. No tenant id, token, hash, code or note. */
+            DeviceImpactPreview: {
+                /** Format: uuid */
+                deviceId: string;
+                action: components["schemas"]["DeviceLifecycleAction"];
+                /** @description The revoke reason the action records: the `reason` query value for `revoke`, otherwise `replaced` / `moved` / `retired`. */
+                revokeReason: components["schemas"]["RevokeReason"];
+                /** @description The device's trust state now, before the action. */
+                trustState: components["schemas"]["TrustState"];
+                verdict: components["schemas"]["ImpactVerdict"];
+                /** @description Set exactly when `verdict` is `blocked`. */
+                blockCode: components["schemas"]["ImpactBlockCode"] | null;
+                /** @description The request requirements beyond the verdict, in the order the mutation checks them. For a recovery revoke (a `revoke` with `hardware_failure` while an active device has an open shift): [`owner_or_tenant_admin`, `note`, `acknowledge_custody_exception`], whatever the caller's role. For a `revoke` with `other`: [`note`], whatever the verdict, because the body schema requires it. Empty otherwise. */
+                requires: components["schemas"]["ImpactRequirement"][];
+                /** @description The open shift on the device; `null` when there is none. */
+                openShift: components["schemas"]["ImpactOpenShift"] | null;
+                /**
+                 * Format: uuid
+                 * @description The custody exception that exists now: the open shift of a revoked or retired device, as on `DeviceSummary`. `null` on an active device. A verdict of `allowed_with_custody_exception` means `openShift` would become one.
+                 */
+                custodyExceptionShiftId: string | null;
+                /** @description What the revoke this action performs would cascade. `null` when the action does not revoke the device, because it is already revoked or retired. Reported whatever the verdict, so a blocked action still shows what it would cascade once it is allowed. */
+                cascade: components["schemas"]["ImpactCascade"] | null;
+                /**
+                 * Format: uuid
+                 * @description As on `DeviceSummary` (out-of-scope reads as `null`).
+                 */
+                replacesDeviceId: string | null;
+                /**
+                 * Format: uuid
+                 * @description As on `DeviceSummary` (out-of-scope reads as `null`).
+                 */
+                replacedByDeviceId: string | null;
+                /**
+                 * Format: date-time
+                 * @description When the server evaluated the preview (server clock).
+                 */
+                evaluatedAt: string;
+            } & (components["schemas"]["ImpactVerdictConsistency"] & components["schemas"]["ImpactActionConsistency"] & components["schemas"]["ImpactStateConsistency"]);
+            /** @description `blockCode` is set exactly when the verdict is `blocked`. `requires` is the recovery revoke's three entries, or [`note`] for an `other` revoke, and empty otherwise. A custody-exception or forbidden-recovery verdict needs an open shift. A `no_change` verdict cascades nothing. */
+            ImpactVerdictConsistency: unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown;
+            /** @description Each action records its own revoke reason, and a block code belongs to the actions that can raise it. */
+            ImpactActionConsistency: unknown & unknown & unknown & unknown & unknown;
+            /** @description The device state pins what the verdict table leaves no choice about. An active device is the one a lifecycle action would revoke, so it has a cascade and no custody exception; a revoked or retired device has no cascade. A revoke of a revoked or retired device, and a retire of a retired one, is `no_change`. A retire of a revoked device is `allowed` or `blocked`, never `no_change`. A replace or move is `blocked` `device_retired` on a retired device and `allowed` on a revoked one. Each block code belongs to one state: `unresolved_cash_session` to an active device, `unresolved_custody_exception` to a revoked one and `device_retired` to a retired one. */
+            ImpactStateConsistency: unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown;
+            /** @description The 409 of `consoleRevokeDevice`: the canonical error envelope, plus the impact preview of the refused revoke as `error.details`. Its verdict is `blocked`, and its `blockCode` equals `error.code`. The RT-366 runtime always sends `details`. A server from before RT-366 omits it, so a client treats it as optional and falls back to `consoleGetDeviceImpact`. */
+            DeviceImpactConflict: {
+                error: {
+                    /** @description Stable machine-readable error code. */
+                    code: string;
+                    /** @description Human-readable summary. No sensitive data, no cause enumeration. */
+                    message: string;
+                    /**
+                     * Format: uuid
+                     * @description Server-side correlation id; the cause is recorded server-side.
+                     */
+                    request_id?: string;
+                    details?: components["schemas"]["DeviceImpactPreview"] & {
+                        /** @constant */
+                        action?: "revoke";
+                        /** @constant */
+                        verdict?: "blocked";
+                        /** @constant */
+                        blockCode?: "unresolved_cash_session";
+                    };
+                };
+            } & unknown;
             /** @description Canonical error envelope. Out-of-scope and cross-tenant refusals are non-disclosing (§II, §XII): they never name the cause. Open to additive fields (RT-366 adds the impact preview to the 409). */
             Error: {
                 error: {
@@ -5693,13 +5847,13 @@ export namespace DevicesSchema {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description unresolved_cash_session (409): the device has an open shift and the reason is neither a security reason nor a recovery revoke (`replaced`, `moved`, `retired`, `admin_error`, `other`). Close the shift on the till and let it sync, then revoke. Nothing was changed. */
+            /** @description unresolved_cash_session (409): the device has an open shift and the reason is neither a security reason nor a recovery revoke (`replaced`, `moved`, `retired`, `admin_error`, `other`). Close the shift on the till and let it sync, then revoke. Nothing was changed. The body carries the refused revoke's impact preview as `error.details` (RT-366), computed under the revoke's lock. */
             UnresolvedCashSession: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": components["schemas"]["DeviceImpactConflict"];
                 };
             };
             /** @description Unprocessable (422), with a stable code, for a recovery revoke by `owner` / `tenant_admin`: `recovery_note_required` — no `note`; `custody_exception_not_acknowledged` — `acknowledgeCustodyException` is not `true`. Nothing was changed. */
@@ -5732,6 +5886,10 @@ export namespace DevicesSchema {
             Cursor: string;
             /** @description Maximum items per page (bounded). The server MAY return fewer. */
             PageSize: number;
+            /** @description The lifecycle action to preview. */
+            ImpactActionQuery: components["schemas"]["DeviceLifecycleAction"];
+            /** @description The revoke reason. Required when `action` is `revoke`. Refused (400) with any other action, because `replace`, `move` and `retire` each record their own reason (`replaced`, `moved`, `retired`). There is no note parameter: the note and the acknowledgement are not verdict inputs (see `requires`). */
+            ImpactReasonQuery: components["schemas"]["RevokeReason"];
         };
         requestBodies: never;
         headers: never;
@@ -5830,6 +5988,38 @@ export namespace DevicesSchema {
                 404: components["responses"]["NotFound"];
                 409: components["responses"]["UnresolvedCashSession"];
                 422: components["responses"]["RecoveryRequirementsUnmet"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+        consoleGetDeviceImpact: {
+            parameters: {
+                query: {
+                    /** @description The lifecycle action to preview. */
+                    action: components["parameters"]["ImpactActionQuery"];
+                    /** @description The revoke reason. Required when `action` is `revoke`. Refused (400) with any other action, because `replace`, `move` and `retire` each record their own reason (`replaced`, `moved`, `retired`). There is no note parameter: the note and the acknowledgement are not verdict inputs (see `requires`). */
+                    reason?: components["parameters"]["ImpactReasonQuery"];
+                };
+                header?: never;
+                path: {
+                    /** @description The device id (`devices.id`, which is the paired `terminal_id`). Case insensitive: normalised to lower case before the lookup. A value that is not a UUID is 400 `validation_error` and never reaches the database. */
+                    deviceId: components["parameters"]["DeviceIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The impact preview. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DeviceImpactPreview"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                404: components["responses"]["NotFound"];
                 500: components["responses"]["SystemFailure"];
             };
         };
