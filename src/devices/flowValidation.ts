@@ -4,9 +4,10 @@
  * asked for. Form checks; the server re-validates everything. No React.
  */
 import type { MessageKey } from "@/i18n";
-import type { Draft, FlowAction, Problems } from "./flowTypes";
+import { type Draft, type FlowAction, type Problems, hasProblems } from "./flowTypes";
 import type { ImpactDecision } from "./impactDecision";
 import { textProblemKey, validateOperatorText } from "./lifecycleLogic";
+import { validateIssueDraft } from "./pairingLogic";
 
 type Ready = Extract<ImpactDecision, { kind: "ready" }>;
 
@@ -26,9 +27,21 @@ function revokeProblems(draft: Draft): Problems {
   return note ? { note } : {};
 }
 
+function issueProblems(draft: Draft): Problems {
+  const issue = validateIssueDraft(draft.issue);
+  return hasProblems(issue) ? { issue } : {};
+}
+
+const DETAILS_PROBLEMS: Readonly<Record<FlowAction, (draft: Draft) => Problems>> = {
+  revoke: revokeProblems,
+  retire: retireProblems,
+  replace: issueProblems,
+  move: issueProblems,
+};
+
 /** The first problem with what the details step collected, or none. */
 export function detailsProblems(action: FlowAction, draft: Draft): Problems {
-  return action === "retire" ? retireProblems(draft) : revokeProblems(draft);
+  return DETAILS_PROBLEMS[action](draft);
 }
 
 function noteProblem(decision: Ready, draft: Draft): Problems {

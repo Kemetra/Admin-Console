@@ -12,17 +12,18 @@ import type { RevokeReason } from "@/lib/device-queries";
 
 // --- Which actions a device offers ---------------------------------------------
 
-export type LifecycleActionId = "revoke" | "retire";
+export type LifecycleActionId = "revoke" | "replace" | "move" | "retire";
 
 const ACTIONS_BY_TRUST: Readonly<Record<string, readonly LifecycleActionId[]>> = {
-  active: ["revoke", "retire"],
-  revoked: ["retire"],
+  active: ["revoke", "replace", "move", "retire"],
+  revoked: ["replace", "move", "retire"],
 };
 
 /**
  * The actions that exist for a device in each trust state, from the lifecycle's
- * own shape: nothing un-revokes (D-Q5), a revoked device can still be retired,
- * and a retired device is closed out. This is availability, not a verdict:
+ * own shape: nothing un-revokes (D-Q5), a revoked device can still be replaced,
+ * moved or retired (the replacement after a security revoke is the point), and
+ * a retired device is closed out. This is availability, not a verdict:
  * whether an offered action may proceed is always the server's answer, and an
  * unknown trust state offers nothing.
  */

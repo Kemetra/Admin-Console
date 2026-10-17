@@ -1,6 +1,6 @@
 /**
- * RT-372 — The lifecycle actions on a device: Revoke and Retire as separate
- * actions (there is no generic "Deactivate"), each opening its own flow where
+ * RT-372 — The lifecycle actions on a device: Revoke, Replace, Move and Retire as
+ * four separate actions (there is no generic "Deactivate"), each opening its own flow where
  * the server's impact preview is shown before anything is confirmed. A retired
  * device is closed out and offers nothing. No bulk action exists.
  *
@@ -19,6 +19,8 @@ import "./devices.css";
 
 const LABELS: Record<FlowAction, MessageKey> = {
   revoke: "devices.actions.revoke",
+  replace: "devices.actions.replace",
+  move: "devices.actions.move",
   retire: "devices.actions.retire",
 };
 
@@ -71,6 +73,7 @@ export function DeviceActions({
           device={device}
           timeZone={timeZone}
           onClose={() => setOpen(null)}
+          onSwitch={setOpen}
         />
       ) : null}
     </>

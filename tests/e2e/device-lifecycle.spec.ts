@@ -374,3 +374,58 @@ test("S7: axe finds no violations on the revoke details, the confirm steps and t
   await expect(drawer.getByText(t("devices.impact.blocked.cashSession"))).toBeVisible();
   await expectNoAxeViolations(page, "blocked confirm step");
 });
+
+test("S8: axe finds no violations on the retire details and the replacement-codes warning", async ({
+  page,
+  t,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await mockDevice(page, "owner", detail());
+  // The page loaded the device as active; the server's preview says it is revoked now.
+  await page.route(`**/api/v1/devices/${DEVICE_1}/impact?**`, (r) =>
+    r.fulfill(
+      json(
+        impact({
+          action: "retire",
+          revokeReason: "retired",
+          trustState: "revoked",
+          cascade: null,
+        }),
+      ),
+    ),
+  );
+  await page.route("**/api/v1/pairing-codes?**", (r) =>
+    r.fulfill(
+      json({
+        items: [
+          {
+            pairingCodeId: "0190f000-0000-7000-8000-0000000000d1",
+            kind: "replace",
+            storeId: DUBAI_STORE,
+            terminalId: "0190f000-0000-7000-8000-0000000000f1",
+            terminalLabel: "Till 9",
+            status: "pending",
+            replacesDeviceId: DEVICE_1,
+            expiresAt: "2099-01-01T00:00:00Z",
+            createdAt: "2026-10-17T09:00:00Z",
+          },
+        ],
+        nextCursor: null,
+      }),
+    ),
+  );
+  await page.goto(`/devices/${DEVICE_1}`);
+  await page.getByRole("button", { name: t("devices.actions.retire") }).click();
+  const drawer = page.getByRole("dialog");
+  await expectNoAxeViolations(page, "retire details");
+  await drawer.getByRole("button", { name: t("devices.flow.review") }).click();
+  await expect(drawer.getByText(t("devices.text.required"))).toBeVisible();
+  await expectNoAxeViolations(page, "retire details with an error");
+  await drawer.getByLabel(t("devices.retire.reason")).fill("End of life");
+  await drawer.getByRole("button", { name: t("devices.flow.review") }).click();
+  await expect(drawer.getByText(t("devices.retire.pendingCodesConfirm"))).toBeVisible();
+  await expectNoAxeViolations(page, "replacement-codes warning");
+  await drawer.getByRole("button", { name: t("devices.retire.confirm") }).click();
+  await expect(drawer.getByText(t("devices.retire.pendingCodesRequired"))).toBeVisible();
+  await expectNoAxeViolations(page, "replacement-codes warning with its error");
+});

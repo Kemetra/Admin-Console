@@ -224,3 +224,30 @@
   margin: 0;
   font-size: var(--text-control);
 }
+
+/* RT-372 B: the issued code is the one secret on screen: large, LTR, selectable. */
+.device-issued {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.device-issued__code {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 2px solid var(--color-primary);
+  border-radius: var(--radius-object);
+}
+.device-issued__value {
+  font-family: var(--font-mono);
+  font-size: var(--text-section-title);
+  font-weight: var(--weight-strong);
+  user-select: all;
+  overflow-wrap: anywhere;
+}
+
+.device-codes-region:focus-visible {
+  outline: none;
+}

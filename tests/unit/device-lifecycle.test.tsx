@@ -624,3 +624,169 @@ describe("Retire (RT-372)", () => {
     expect(within(dialog()).queryByRole("button", { name: "Retire device" })).toBeNull();
   });
 });
+
+describe("review fixes (RT-372)", () => {
+  beforeEach(resetMocks);
+
+  async function openRetireFor(id = DEVICE_1): Promise<void> {
+    renderDetail(id);
+    await screen.findByRole("heading", { level: 1 });
+    click("Retire");
+    fireEvent.change(within(dialog()).getByLabelText("Why is this device retired?"), {
+      target: { value: "End of life" },
+    });
+    click("Review impact");
+  }
+
+  const replacingCode = {
+    pairingCodeId: "c1",
+    kind: "replace",
+    storeId: DUBAI_STORE,
+    terminalId: "t9",
+    terminalLabel: "Till 9",
+    status: "pending",
+    replacesDeviceId: DEVICE_1,
+    expiresAt: "2099-01-01T00:00:00Z",
+    createdAt: "2026-10-17T09:00:00Z",
+  };
+
+  test("M1: the replacement-codes check follows the server's preview (revoked now), not the device loaded as active", async () => {
+    const codes: { resolve: (value: unknown) => void; promise?: Promise<unknown> } = {
+      resolve: () => undefined,
+    };
+    codes.promise = new Promise((resolve) => {
+      codes.resolve = resolve;
+    });
+    consoleGetDeviceImpact.mockResolvedValue({
+      status: 200,
+      data: impact({
+        action: "retire",
+        revokeReason: "retired",
+        trustState: "revoked",
+        cascade: null,
+      }),
+    });
+    consoleListPairingCodes.mockReturnValue(codes.promise);
+    await openRetireFor();
+    // The preview is in, the code check is not: nothing can be confirmed yet.
+    await within(dialog()).findByText(/Checking for pending pairing codes/);
+    expect(within(dialog()).queryByRole("button", { name: "Retire device" })).toBeNull();
+    codes.resolve({ status: 200, data: { items: [replacingCode], nextCursor: null } });
+    expect(
+      await within(dialog()).findByText(/1 live pairing code is set to replace or move/),
+    ).toBeDefined();
+    click("Retire device");
+    expect(consoleRetireDevice).not.toHaveBeenCalled();
+    expect(
+      within(dialog()).getByText("Confirm cancelling the replacement codes to continue."),
+    ).toBeDefined();
+  });
+
+  test("M2: the drawer-cash label is only for the recovery revoke; otherwise the field is a plain Note", async () => {
+    consoleGetDeviceImpact.mockResolvedValue({
+      status: 200,
+      data: impact({ revokeReason: "lost", requires: ["note"] }),
+    });
+    await openRevokeWithReason("Lost");
+    // The server asks for a note the details step left blank: a plain label, no custody wording.
+    expect(await within(dialog()).findByLabelText("Note")).toBeDefined();
+    expect(within(dialog()).queryByLabelText(/drawer cash/)).toBeNull();
+  });
+
+  test("M2: a note the details step already collected is not asked for twice", async () => {
+    consoleGetDeviceImpact.mockResolvedValue({
+      status: 200,
+      data: impact({ revokeReason: "other", requires: ["note"] }),
+    });
+    await openRevoke();
+    fireEvent.click(within(dialog()).getByRole("radio", { name: "Other reason" }));
+    fireEvent.change(within(dialog()).getByLabelText("Note"), { target: { value: "Spare unit" } });
+    click("Review impact");
+    await within(dialog()).findByText("Allowed by the server.");
+    expect(within(dialog()).queryByLabelText(/Note|drawer cash/)).toBeNull();
+  });
+
+  test("M3: a blocked retire says retire stays blocked until the shift is closed or reconciled", async () => {
+    consoleGetDeviceImpact.mockResolvedValue({
+      status: 200,
+      data: impact({
+        action: "retire",
+        revokeReason: "retired",
+        verdict: "blocked",
+        blockCode: "unresolved_cash_session",
+        openShift: openShift(),
+      }),
+    });
+    await openRetireFor();
+    const text = (await within(dialog()).findByText(/retire stays blocked/)).textContent;
+    expect(text).toContain("closed or the custody exception is reconciled");
+    expect(text).not.toContain("make a security revoke first");
+  });
+
+  test("an unknown block code is shown raw next to the refusal", async () => {
+    consoleGetDeviceImpact.mockResolvedValue({
+      status: 200,
+      data: impact({ verdict: "blocked", blockCode: "device_frozen" }),
+    });
+    await openRevokeWithReason("Lost");
+    expect(await within(dialog()).findByText("device_frozen")).toBeDefined();
+    expect(within(dialog()).getByText(/for a reason this console doesn't know/)).toBeDefined();
+  });
+
+  test("a rejected request (400) on the impact has no Retry; a server failure does", async () => {
+    consoleGetDeviceImpact.mockResolvedValueOnce({
+      status: 400,
+      error: { error: { code: "validation_error", message: "x", request_id: "r" } },
+    });
+    await openRevokeWithReason("Lost");
+    await within(dialog()).findByText(/rejected a value/);
+    expect(within(dialog()).queryByRole("button", { name: "Retry" })).toBeNull();
+  });
+
+  test("the reason error is tied to the radios that need it", async () => {
+    await openRevoke();
+    click("Review impact");
+    const radio = within(dialog()).getAllByRole("radio")[0];
+    expect(radio.getAttribute("aria-describedby")).toBe("revoke-reason-error");
+    expect(radio.getAttribute("aria-invalid")).toBe("true");
+  });
+
+  test("operator text and times are direction-safe", async () => {
+    consoleGetDeviceImpact.mockResolvedValue({
+      status: 200,
+      data: impact({ verdict: "allowed_with_custody_exception", openShift: openShift() }),
+    });
+    await openRevoke();
+    expect(within(dialog()).getByLabelText("Note").getAttribute("dir")).toBe("auto");
+    fireEvent.click(within(dialog()).getByRole("radio", { name: "Lost" }));
+    click("Review impact");
+    await within(dialog()).findByText(/stays on this device as an unresolved exception/);
+    const times = dialog().querySelectorAll("time");
+    expect(times.length).toBeGreaterThan(0);
+    for (const time of times) expect(time.closest("bdi")?.getAttribute("dir")).toBe("ltr");
+  });
+
+  test("M1 edge: Back then Review again while the codes are refetching keeps confirm hidden", async () => {
+    consoleGetDeviceImpact.mockResolvedValue({
+      status: 200,
+      data: impact({
+        action: "retire",
+        revokeReason: "retired",
+        trustState: "revoked",
+        cascade: null,
+      }),
+    });
+    consoleListPairingCodes.mockResolvedValueOnce({
+      status: 200,
+      data: { items: [], nextCursor: null },
+    });
+    await openRetireFor();
+    await within(dialog()).findByRole("button", { name: "Retire device" });
+    // The second look at the codes is still in flight.
+    consoleListPairingCodes.mockReturnValue(new Promise(() => undefined));
+    click("Back");
+    click("Review impact");
+    await within(dialog()).findByText("Allowed by the server.");
+    expect(within(dialog()).queryByRole("button", { name: "Retire device" })).toBeNull();
+  });
+});

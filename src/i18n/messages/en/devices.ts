@@ -149,8 +149,6 @@ export const devices: MessagesOf<typeof ar> = {
     "The server needs your confirmation that the shift stays as an unresolved exception.",
   "devices.flow.error.changed":
     "The situation changed since the preview. The server's fresh answer is below.",
-  "devices.flow.error.unknownRefusal":
-    "The server refused the action for a reason this console doesn't know. No action is offered.",
   "devices.text.required": "This field is required.",
   "devices.text.tooLong": "Use at most 500 characters.",
   "devices.text.invalid": "The text contains a character that isn't allowed.",
@@ -169,6 +167,8 @@ export const devices: MessagesOf<typeof ar> = {
   "devices.impact.verdict.noChange": "Nothing will change: this has already happened.",
   "devices.impact.blocked.cashSession":
     "Blocked: this device has an open shift. Close the shift on the till and let it sync, then try again. If the till is lost, make a security revoke first. There is no override.",
+  "devices.impact.blocked.cashSessionRetire":
+    "Blocked: this device has an open shift. Close the shift on the till and let it sync, then try again. A security revoke protects a lost till, but retire stays blocked until the shift is closed or the custody exception is reconciled. There is no override.",
   "devices.impact.blocked.custodyException":
     "Blocked: this revoked device still has an open shift (an unresolved custody exception). It can't be retired until that is resolved. There is no override.",
   "devices.impact.blocked.retired": "Blocked: this device is retired.",
@@ -204,7 +204,6 @@ export const devices: MessagesOf<typeof ar> = {
     "For real security events only: the device is lost, stolen or suspected compromised. They are not a workaround when another reason is blocked.",
   "devices.revoke.group.other": "Other reasons",
   "devices.revoke.reasonRequired": "Choose a reason.",
-  "devices.revoke.reasonLegend": "Reason for the revoke",
   "devices.revoke.note": "Note",
   "devices.revoke.noteHelp": "Optional. No personal data or PIN.",
   "devices.revoke.noteHelpRequired": "Required. No personal data or PIN.",
@@ -237,4 +236,106 @@ export const devices: MessagesOf<typeof ar> = {
   "devices.retire.pendingCodesHelp": "Pair the new terminal first, or confirm below.",
   "devices.retire.pendingCodesConfirm": "Retire anyway and cancel the replacement codes",
   "devices.retire.pendingCodesRequired": "Confirm cancelling the replacement codes to continue.",
+
+  // --- Replace, move and pairing codes (RT-372 part B) ---------------------------
+  "devices.actions.replace": "Replace",
+  "devices.actions.move": "Move to another store",
+  "devices.list.pairingCodes": "Pairing codes",
+
+  "devices.issue.title.replace": "Replace device",
+  "devices.issue.title.move": "Move device to another store",
+  "devices.issue.title.pair": "Issue pairing code",
+  "devices.issue.intro.replace":
+    "Replacing pairs a new terminal in the same store with a pairing code. When the new terminal pairs, this device is revoked; its sales, shifts and cash facts stay with it.",
+  "devices.issue.intro.move":
+    "Moving pairs a new terminal in another store with a pairing code. A device never changes store: the new terminal is a new device, and this one is revoked when it pairs.",
+  "devices.issue.intro.pair": "A pairing code creates a new device in the store you choose.",
+  "devices.issue.field.store": "Store",
+  "devices.issue.field.targetStore": "Target store",
+  "devices.issue.field.storeChoose": "Choose a store",
+  "devices.issue.field.terminalLabel": "New terminal's label (optional)",
+  "devices.issue.field.terminalLabelHelp":
+    "Printed on receipts and in the sale number, so keep it unique within the store. If empty, the server derives one.",
+  "devices.issue.field.ttl": "Valid for, in minutes (optional)",
+  "devices.issue.field.ttlHelp": "Default 60, at most 1440.",
+  "devices.issue.bindingTitle": "Receipt and printer details",
+  "devices.issue.bindingHelp":
+    "The terminal pins these at pairing and prints them on receipts. The server doesn't hold them, so you provide them here.",
+  "devices.issue.field.branchName": "Store name on receipts",
+  "devices.issue.field.branchAddress": "Store address on receipts",
+  "devices.issue.field.taxRegistrationId": "Tax registration id",
+  "devices.issue.field.printerVendorId": "Printer vendor id ({bus})",
+  "devices.issue.field.printerProductId": "Printer product id ({bus})",
+  "devices.issue.field.usbHelp": "As 0x followed by four hex digits, for example 0x04B8.",
+  "devices.issue.field.printerComPort": "Printer {port} port (optional)",
+  "devices.issue.problem.usbId": "Use 0x followed by four hex digits.",
+  "devices.issue.problem.tooLong": "Use at most {max} characters.",
+  "devices.issue.problem.ttl": "Enter a whole number from 1 to 1440.",
+  "devices.issue.confirm": "Issue pairing code",
+  "devices.issue.error.notFound": "The device or store is not available to you.",
+  "devices.issue.error.storeNotFound": "The store is not available to you.",
+  "devices.issue.error.alreadyPending":
+    "A live pairing code already replaces this device. Cancel it from the pending codes first, or wait for it to expire.",
+  "devices.issue.error.alreadyReplaced":
+    "This device has already been replaced. A device is replaced only once.",
+  "devices.issue.error.keyConflict":
+    "The server did not confirm this attempt, and it can't be repeated with the same key. Open the pending codes, cancel any stray code, then issue a new one.",
+  "devices.issue.error.inProgress":
+    "The server is still handling an earlier request. Don't retry now: open the pending codes shortly, cancel any stray code, then issue a new one.",
+  "devices.issue.error.unknownOutcome":
+    "No answer came from the server, so we don't know whether a code was issued. Open the pending codes, cancel any stray code, then issue a new one.",
+  "devices.issue.viewCodes": "View pending pairing codes",
+  "devices.issue.issued.title": "Pairing code issued",
+  "devices.issue.issued.code": "Pairing code",
+  "devices.issue.issued.once":
+    "Shown only once. The server does not keep it. Type it into the new terminal now. If you lose it, cancel it from the pending codes and issue a new one.",
+  "devices.issue.issued.valid": {
+    one: "Valid for {count} minute, until {time}.",
+    other: "Valid for {count} minutes, until {time}.",
+  },
+  "devices.issue.issued.replaceHelp":
+    "The new terminal will be paired in {store}. When it pairs, the current device is revoked.",
+  "devices.issue.issued.blockedHelp":
+    "If a shift opens on the current device before the new terminal is paired, pairing is refused ({code}) and the code stays pending. Close the shift on the current device, let it sync, then enter the code again before it expires.",
+
+  "devices.revoke.nextStep": "Next step: pair a replacement terminal.",
+  "devices.revoke.offerReplace": "Replace this device",
+
+  // --- Pending pairing codes ---------------------------------------------------------
+  "devices.codes.title": "Pairing codes",
+  "devices.codes.sub":
+    "Live pending pairing codes in {tenant}. A code is shown only when it is issued; it is never listed here.",
+  "devices.codes.back": "Back to devices",
+  "devices.codes.issue": "Issue pairing code",
+  "devices.codes.caption": "Live pending pairing codes, newest first",
+  "devices.codes.loadingNoun": "pairing codes",
+  "devices.codes.empty": "No pairing codes are pending.",
+  "devices.codes.emptyHint": "Every issued code that is not yet used or expired appears here.",
+  "devices.codes.unavailable": "Pairing codes are not available to you.",
+  "devices.codes.loadFailed": "Pairing codes could not be loaded.",
+  "devices.codes.retry": "Retry",
+  "devices.codes.loaded": "Loaded: {count}",
+  "devices.codes.loadMore": "Load more",
+  "devices.codes.col.terminal": "New terminal",
+  "devices.codes.col.kind": "Kind",
+  "devices.codes.col.store": "Store",
+  "devices.codes.col.replaces": "Replaces",
+  "devices.codes.col.expires": "Expires",
+  "devices.codes.col.actions": "Action",
+  "devices.codes.kind.pair": "New pairing",
+  "devices.codes.kind.replace": "Replace",
+  "devices.codes.kind.move": "Move",
+  "devices.codes.kind.unknown": "Unknown kind",
+  "devices.codes.replaces.none": "None",
+  "devices.codes.replaces.outside": "A device outside your access",
+  "devices.codes.cancel": "Cancel code",
+  "devices.codes.cancelConfirm":
+    "Cancel the pairing code for {label}? It can't be used afterwards.",
+  "devices.codes.cancelKeep": "Keep code",
+  "devices.codes.cancelled": "The code is cancelled.",
+  "devices.codes.alreadyCancelled": "The code was already cancelled. Nothing changed.",
+  "devices.codes.error.used":
+    "This code was already used, so it can't be cancelled. Revoke the device it paired instead.",
+  "devices.codes.error.notFound": "This code is not available to you.",
+  "devices.codes.error.generic": "The code could not be cancelled. Try again.",
 };

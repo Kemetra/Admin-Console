@@ -18,7 +18,7 @@ import { type StoreDirectory, useStoreDirectory } from "@/shift-closes/useShiftC
  * "this store's devices are not available to you", never as an empty list.
  */
 import { useState } from "react";
-import { useLocation, useNavigate, useSearchParams } from "react-router";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router";
 import { DeviceFilterBar } from "./DeviceFilterBar";
 import { Attention, DeviceName, LastSeen, TrustBadge } from "./DeviceParts";
 import {
@@ -294,6 +294,9 @@ export function DeviceList(): React.JSX.Element {
             {t.rich("devices.list.sub", { tenant: <bdi>{scope.tenantName}</bdi> })}
           </p>
         </div>
+        <Link to="/devices/pairing-codes" className="btn-secondary">
+          {t("devices.list.pairingCodes")}
+        </Link>
       </header>
       <p className="content__sub">{t("devices.list.orderNote")}</p>
       <p className="content__sub">{t("devices.list.staleNote")}</p>
