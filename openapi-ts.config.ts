@@ -36,6 +36,8 @@ import openapiTS, { astToString, COMMENT_HEADER } from "openapi-typescript";
  *     (spec 016 Phase A); added at the existing pin, no re-pin
  *   - devices.openapi.yaml (consoleListDevices, consoleGetDevice; the
  *     consoleRevokeDevice write is in the document but not wrapped) — RT-371
+ *   - console-sales.openapi.yaml (consoleListSales, consoleGetSale) — RT-587
+ *     (spec 012 sales search and sale detail)
  *
  * The pin is UNCHANGED across slices; new slices add their contract source and
  * regenerate at the same SHA (regeneration, not a re-pin).
@@ -133,6 +135,10 @@ export const OPENAPI_SOURCE_SPECS = [
   // Console device registry (RT-365 contract #777 / runtime #781; RT-371): the
   // fleet list and device detail reads. Consume-only; no YAML authored here.
   { name: "Devices", path: "packages/contracts/openapi/devices.openapi.yaml" },
+  // Console sales read (RT-561 contract #780 / RT-562 runtime #783; RT-587,
+  // spec 012): `consoleListSales`, `consoleGetSale`. Read-only consumption;
+  // no YAML authored here.
+  { name: "ConsoleSales", path: "packages/contracts/openapi/console-sales.openapi.yaml" },
 ] as const;
 
 /** Upstream source paths (kept for back-compat / documentation references). */
