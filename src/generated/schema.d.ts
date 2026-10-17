@@ -3,7 +3,7 @@
  * Do not make direct changes to the file.
  */
 
-// Source: Data-Pulse-2 @ a959959dc34d6ba1897543fe7320d3c602240834
+// Source: Data-Pulse-2 @ 3499d17ca4f62a49100004bd93ba6cc3b7f90184
 // Sources:
 // - packages/contracts/openapi/auth.openapi.yaml
 // - packages/contracts/openapi/context.openapi.yaml
@@ -20,6 +20,7 @@
 // - packages/contracts/openapi/erpnext-sync-ops/console-sync-ops.yaml
 // - packages/contracts/openapi/devices.openapi.yaml
 // - packages/contracts/openapi/console-sales.openapi.yaml
+// - packages/contracts/openapi/cash-variance-policy.openapi.yaml
 //
 // The upstream OpenAPI files are separate documents with overlapping component
 // names, so this file namespaces each generated source and composes their path
@@ -5444,7 +5445,7 @@ export namespace DevicesSchema {
             };
             /**
              * List devices (exception-first, keyset paginated).
-             * @description The devices in the caller's tenant and store scope, exception-first (see the ordering rule above). Every filter is optional and they combine with AND. With no `store_id`, every store in the caller's scope is listed. An empty page (`items: []`, `nextCursor: null`) is a 200.
+             * @description The devices in the caller's tenant and store scope, exception-first (see the ordering rule above). Every filter is optional and they combine with AND. With no `store_id`, every store in the caller's scope is listed. With no `trust_state`, retired devices are not listed (RT-368, "Default filter"). An empty page (`items: []`, `nextCursor: null`) is a 200.
              */
             get: operations["consoleListDevices"];
             put?: never;
@@ -5495,6 +5496,26 @@ export namespace DevicesSchema {
             patch?: never;
             trace?: never;
         };
+        "/api/v1/devices/{deviceId}/retire": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            get?: never;
+            put?: never;
+            /**
+             * Retire (decommission) a device. Terminal; never a delete.
+             * @description Retires the device in one transaction under the Cash Session rule (see "Retire" above): revokes it first with reason `retired` when it is still active, cancels its pending codes, and records the retire attribution. Idempotent: a retired device answers 200 `already_retired` and changes nothing. A malformed path or body is 400 before any read; a device of another tenant, of a store outside the caller's scope, or absent is the non-disclosing 404.
+             */
+            post: operations["consoleRetireDevice"];
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
         "/api/v1/devices/{deviceId}/impact": {
             parameters: {
                 query?: never;
@@ -5509,6 +5530,50 @@ export namespace DevicesSchema {
             get: operations["consoleGetDeviceImpact"];
             put?: never;
             post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/pairing-codes": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * List the live pending pairing codes in scope.
+             * @description The `pending` codes that have not expired, in the caller's tenant and store scope, newest first (`createdAt` descending, then `pairingCodeId`). Never the code or its hash. With no `store_id`, every store in the caller's scope is listed. An empty page is a 200.
+             */
+            get: operations["consoleListPairingCodes"];
+            put?: never;
+            /**
+             * Issue a one-time pairing code (optionally replacing or moving a device).
+             * @description Issues a pairing code for a store in the caller's scope (see "Pairing codes" above). The code is in this 201 body only, once. With `replacesDeviceId` the code replaces (same store) or moves (another store) that device, under the Cash Session rule: an active device with an open shift, or a retired device, is 409 with the replace / move preview. The body is checked (400) before any read; a store or device that is absent, of another tenant or outside the caller's scope is the non-disclosing 404.
+             */
+            post: operations["consoleIssuePairingCode"];
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/pairing-codes/{pairingCodeId}/cancel": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            get?: never;
+            put?: never;
+            /**
+             * Cancel a pending pairing code.
+             * @description Sets a pending code `cancelled` (expired or not), so it can never be redeemed. Idempotent: an already cancelled code answers 200 `already_cancelled` and changes nothing. A used code is 409 `pairing_code_used`. A code of another tenant, of a store outside the caller's scope, or absent is the non-disclosing 404. No body.
+             */
+            post: operations["consoleCancelPairingCode"];
             delete?: never;
             options?: never;
             head?: never;
@@ -5567,7 +5632,7 @@ export namespace DevicesSchema {
                 revokedAt: string | null;
                 /**
                  * Format: uuid
-                 * @description The `users.id` who revoked it. `null` while active, and on a revoke recorded before RT-365 (actor unknown).
+                 * @description The `users.id` who revoked it. `null` while active, on a revoke recorded before RT-365 (actor unknown), and on the auto-revoke of a replaced or moved device at pairing (RT-367: the terminal's redemption has no session user; the issuer is on the code's `pos.device.pairing_code.issued` audit row).
                  */
                 revokedByUserId: string | null;
                 /** @description The structured reason. `null` while active, and on a revoke recorded before RT-365 (no reason recorded, never guessed). */
@@ -5795,6 +5860,195 @@ export namespace DevicesSchema {
                     };
                 };
             } & unknown;
+            /** @description The retire. `retireReason` is free operator text (0040 `devices_retire_reason_shape`), not a `RevokeReason`: the revoke a retire makes always records `retired`. */
+            DeviceRetireRequest: {
+                /** @description Why the device is decommissioned (e.g. "End of life, returned to vendor"): 1..500 characters, not blank, no NUL. No PII, no token, PIN or secret; returned on the detail as `retireReason`, never logged or audited. */
+                retireReason: string;
+            };
+            /** @description The retire outcome and the device's state after the request. */
+            DeviceRetireResult: {
+                /**
+                 * @description `retired`: this request retired the device. `already_retired`: it was retired already; nothing changed.
+                 * @enum {string}
+                 */
+                outcome: "retired" | "already_retired";
+                /** @description The device after the request. Always retired. */
+                device: components["schemas"]["DeviceDetail"] & {
+                    /** @constant */
+                    trustState?: "retired";
+                };
+            };
+            /** @description The 409 of `consoleRetireDevice`: the canonical error envelope plus the retire preview of the refused state as `error.details` (computed under the retire's lock). Its verdict is `blocked` and its `blockCode` equals `error.code`. */
+            DeviceRetireConflict: {
+                error: {
+                    /**
+                     * @description Stable machine-readable error code.
+                     * @enum {string}
+                     */
+                    code: "unresolved_cash_session" | "unresolved_custody_exception";
+                    /** @description Human-readable summary. No sensitive data, no cause enumeration. */
+                    message: string;
+                    /**
+                     * Format: uuid
+                     * @description Server-side correlation id; the cause is recorded server-side.
+                     */
+                    request_id?: string;
+                    details: components["schemas"]["DeviceImpactPreview"] & {
+                        /** @constant */
+                        action?: "retire";
+                        /** @constant */
+                        verdict?: "blocked";
+                    };
+                };
+            } & (unknown & unknown);
+            /**
+             * @description What redeeming the code does. `pair`: a new device, nothing replaced. `replace`: a new device in the replaced device's store, which is revoked with reason `replaced`. `move`: a new device in another store of the tenant, and the replaced device is revoked with reason `moved` (RT-287 D-Q1). Derived by the server from the stores, never sent.
+             * @enum {string}
+             */
+            PairingCodeKind: "pair" | "replace" | "move";
+            /** @description The terminal's display name (e.g. "Counter 1"), printed on receipts and in the POS sale number (`<terminal_label>-<YYYY-MM-DD>-<NNNNNN>`), so keep it unique within the store. */
+            TerminalLabel: string;
+            /** @description Operator text pinned on the code, not blank, no NUL. */
+            BindingText: string;
+            /** @description A USB vendor or product id as `0xHHHH` (0024 CHECK). */
+            PrinterUsbId: string;
+            /** @description The code to issue. The tenant is the session's, never the request's. `branchName`, `branchAddress`, `taxRegistrationId` and the printer fields are the terminal binding `posPairTerminal` returns: the terminal pins them at pairing and prints them on receipts. Backend-Core holds no store address, tax registration or printer, so the issuer supplies them, as the bootstrap CLI does. */
+            PairingCodeIssueRequest: {
+                /**
+                 * Format: uuid
+                 * @description The store the new device is paired into (the code's store).
+                 */
+                storeId: string;
+                /** @description The new terminal's label. When omitted, the server derives it from the new `terminalId` prefix: `T-` + its first 8 hex digits, upper case. It is never the replaced device's label (the old till's sale numbers stay its own). Give an explicit label to keep labels distinct within a store. */
+                terminalLabel?: components["schemas"]["TerminalLabel"];
+                /**
+                 * @description How long the code stays redeemable, in minutes (at most 24 h).
+                 * @default 60
+                 */
+                ttlMinutes: number;
+                /**
+                 * Format: uuid
+                 * @description The device this code replaces (same store) or moves (another store of the tenant). It must be in the caller's tenant and store scope (404 otherwise). Omit it for a plain pairing.
+                 */
+                replacesDeviceId?: string;
+                /** @description The branch name printed on receipts. */
+                branchName: string;
+                /** @description The branch address printed on receipts (`\n` allowed). */
+                branchAddress: components["schemas"]["BindingText"];
+                /** @description The tenant's tax registration id printed on fiscal receipts. */
+                taxRegistrationId: string;
+                printerVendorId: components["schemas"]["PrinterUsbId"];
+                printerProductId: components["schemas"]["PrinterUsbId"];
+                /** @description The optional RS-232 port alongside the USB printer (e.g. `COM3`); omitted or null for a USB-only printer. */
+                printerComPort?: string | null;
+            };
+            /** @description The issued code. `code` is the SECRET, present here only, once. Every other field can be read again from the list while the code is live. */
+            PairingCodeIssued: {
+                /**
+                 * Format: uuid
+                 * @description The code's id (`pairing_codes.id`); cancel uses it.
+                 */
+                pairingCodeId: string;
+                /** @description The one-time pairing code (SECRET) the operator types into the terminal (`posPairTerminal` `pairing_code`). Server-generated: 16 characters from an alphabet without look-alike characters in v1; a client treats it as opaque. Shown once, never stored by the server (only its hash), never logged or audited. */
+                code: string;
+                kind: components["schemas"]["PairingCodeKind"];
+                /** Format: uuid */
+                storeId: string;
+                /**
+                 * Format: uuid
+                 * @description The id the new device will have once paired (`devices.id`).
+                 */
+                terminalId: string;
+                terminalLabel: components["schemas"]["TerminalLabel"];
+                /**
+                 * Format: uuid
+                 * @description The replaced or moved device; `null` for `pair`.
+                 */
+                replacesDeviceId: string | null;
+                /**
+                 * Format: date-time
+                 * @description When the code stops being redeemable (server clock).
+                 */
+                expiresAt: string;
+                /** Format: date-time */
+                createdAt: string;
+            } & unknown;
+            /** @description A pairing code without its secret: no code, no hash. */
+            PairingCodeSummary: {
+                /** Format: uuid */
+                pairingCodeId: string;
+                /** @description What redeeming the code does, derived as on the issue. Reported even when the replaced device is outside the caller's scope (then `replacesDeviceId` is null), so the list flags every code that will revoke a device. */
+                kind: components["schemas"]["PairingCodeKind"];
+                /** Format: uuid */
+                storeId: string;
+                /** Format: uuid */
+                terminalId: string;
+                terminalLabel: components["schemas"]["TerminalLabel"];
+                /**
+                 * @description `pending` on the list (live codes only); `cancelled` after a cancel.
+                 * @enum {string}
+                 */
+                status: "pending" | "cancelled";
+                /**
+                 * Format: uuid
+                 * @description The device the code replaces or moves. `null` for a plain pairing, and `null` when that device is in a store outside the caller's scope (out-of-scope reads as absent).
+                 */
+                replacesDeviceId: string | null;
+                /** Format: date-time */
+                expiresAt: string;
+                /** Format: date-time */
+                createdAt: string;
+            };
+            /** @description A keyset page of live pending codes, newest first. */
+            PairingCodePage: {
+                items: (components["schemas"]["PairingCodeSummary"] & {
+                    /** @constant */
+                    status?: "pending";
+                })[];
+                /** @description Opaque cursor for the next page; `null` on the last page. */
+                nextCursor: string | null;
+            };
+            /** @description The cancel outcome and the code after the request. */
+            PairingCodeCancelResult: {
+                /**
+                 * @description `cancelled`: this request cancelled the code. `already_cancelled`: it was cancelled already; nothing changed.
+                 * @enum {string}
+                 */
+                outcome: "cancelled" | "already_cancelled";
+                pairingCode: components["schemas"]["PairingCodeSummary"] & {
+                    /** @constant */
+                    status?: "cancelled";
+                };
+            };
+            /** @description The issue's 409: the canonical error envelope. For a refused replace or move (`unresolved_cash_session`, `device_retired`) it carries the replace / move impact preview, computed under the replaced device's lock, as `error.details`; its verdict is `blocked` and its `blockCode` equals `error.code`. `replacement_already_pending`, `device_already_replaced` and `idempotency_key_conflict` carry no details. */
+            PairingCodeIssueConflict: {
+                error: {
+                    /**
+                     * @description Stable machine-readable error code.
+                     * @enum {string}
+                     */
+                    code: "unresolved_cash_session" | "device_retired" | "replacement_already_pending" | "device_already_replaced" | "idempotency_key_conflict";
+                    /** @description Human-readable summary. No sensitive data, no cause enumeration. */
+                    message: string;
+                    /**
+                     * Format: uuid
+                     * @description Server-side correlation id; the cause is recorded server-side.
+                     */
+                    request_id?: string;
+                    details?: components["schemas"]["DeviceImpactPreview"] & {
+                        /** @enum {unknown} */
+                        action?: "replace" | "move";
+                        /** @constant */
+                        verdict?: "blocked";
+                    };
+                };
+            } & (unknown & unknown & unknown);
+            /** @description The platform idempotency interceptor's 425 body (not the canonical envelope). */
+            IdempotencyInProgress: {
+                /** @enum {string} */
+                error: "idempotency_in_progress";
+                retryAfterSec: number;
+            };
             /** @description Canonical error envelope. Out-of-scope and cross-tenant refusals are non-disclosing (§II, §XII): they never name the cause. Open to additive fields (RT-366 adds the impact preview to the 409). */
             Error: {
                 error: {
@@ -5874,13 +6128,69 @@ export namespace DevicesSchema {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description Bad request (400), checked before any read: `validation_error` (a malformed or unknown body key), `idempotency_key_required` (no `Idempotency-Key`) or `idempotency_key_malformed`. */
+            IssueValidationFailure: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description origin_rejected (403): a cookie-authenticated unsafe request without a trusted `Origin` (RT-430). */
+            OriginRejected: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Conflict (409), nothing issued. `unresolved_cash_session`: the replaced device is active and has an open shift (close it on the till and let it sync first). `device_retired`: the replaced device is retired. Both carry the replace / move preview as `error.details`. `replacement_already_pending`: a live pending code already replaces the device (cancel it first). `device_already_replaced`: a used code already replaced it (a device is replaced once). `idempotency_key_conflict`: the `Idempotency-Key` was already used (a retry is never replayed, because the code is never stored) or was used with another body; issue again with a new key. */
+            PairingCodeIssueConflict: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PairingCodeIssueConflict"];
+                };
+            };
+            /** @description Too Early (425): a request with this `Idempotency-Key` is still in progress. The key is non-replayable (RT-82 K3): once that request completes, any retry with the same key is 409 `idempotency_key_conflict` and never returns the code. Do not retry with the same key. After `Retry-After` seconds, check `consoleListPairingCodes`, cancel the stray code if one was issued, and issue again with a new key. */
+            IdempotencyInProgress: {
+                headers: {
+                    /** @description Seconds to wait before retrying. */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyInProgress"];
+                };
+            };
+            /** @description Conflict (409), nothing changed. `unresolved_cash_session`: the active device has an open shift (close it on the till and let it sync, or make a security revoke first if the till is lost). `unresolved_custody_exception`: the revoked device's open shift is an unresolved custody exception; retire waits for the deferred force-seal / custody-reconciliation slice. The body carries the retire preview as `error.details`. */
+            DeviceRetireConflict: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceRetireConflict"];
+                };
+            };
+            /** @description pairing_code_used (409): the code was already redeemed, so it cannot be cancelled. Revoke the device it paired instead. Nothing was changed. */
+            PairingCodeUsed: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
         parameters: {
             /** @description The device id (`devices.id`, which is the paired `terminal_id`). Case insensitive: normalised to lower case before the lookup. A value that is not a UUID is 400 `validation_error` and never reaches the database. */
             DeviceIdPath: string;
             /** @description Only devices of this store (the Store Detail deep link). Validated against the caller's store scope: a store outside it, or of another tenant, is the non-disclosing 404. */
             StoreIdQuery: string;
-            /** @description Only devices in this trust state. The states are mutually exclusive: `revoked` excludes retired devices. */
+            /** @description Only devices in this trust state. The states are mutually exclusive: `revoked` excludes retired devices. Omitted: `active` and `revoked` devices, never `retired` ones (RT-368); pass `retired` to list them. */
             TrustStateQuery: components["schemas"]["TrustState"];
             /** @description Opaque keyset cursor from a prior page's `nextCursor`. Do not decode or construct it; omit it for the first page. Reuse it only with the same filters. A value the server did not issue, or cannot decode, is 400 `validation_error`. */
             Cursor: string;
@@ -5890,6 +6200,10 @@ export namespace DevicesSchema {
             ImpactActionQuery: components["schemas"]["DeviceLifecycleAction"];
             /** @description The revoke reason. Required when `action` is `revoke`. Refused (400) with any other action, because `replace`, `move` and `retire` each record their own reason (`replaced`, `moved`, `retired`). There is no note parameter: the note and the acknowledgement are not verdict inputs (see `requires`). */
             ImpactReasonQuery: components["schemas"]["RevokeReason"];
+            /** @description The pairing code's id (`pairing_codes.id`), never the code itself. Case insensitive. A value that is not a UUID is 400 `validation_error`. */
+            PairingCodeIdPath: string;
+            /** @description Client-generated opaque token (UUIDv7 recommended). Missing → 400 `idempotency_key_required`; malformed → 400 `idempotency_key_malformed`. Non-replayable (RT-82 K3): the issued code is never stored, so a retry with the same key never issues a second code and never returns the first one; it is answered 409 `idempotency_key_conflict`, and so is the same key with a different body. A request still in progress under the key is 425. Never retry with the same key: list the live codes, cancel a stray one, and issue again with a new key. */
+            IdempotencyKey: string;
         };
         requestBodies: never;
         headers: never;
@@ -5902,7 +6216,7 @@ export namespace DevicesSchema {
                 query?: {
                     /** @description Only devices of this store (the Store Detail deep link). Validated against the caller's store scope: a store outside it, or of another tenant, is the non-disclosing 404. */
                     store_id?: components["parameters"]["StoreIdQuery"];
-                    /** @description Only devices in this trust state. The states are mutually exclusive: `revoked` excludes retired devices. */
+                    /** @description Only devices in this trust state. The states are mutually exclusive: `revoked` excludes retired devices. Omitted: `active` and `revoked` devices, never `retired` ones (RT-368); pass `retired` to list them. */
                     trust_state?: components["parameters"]["TrustStateQuery"];
                     /** @description Opaque keyset cursor from a prior page's `nextCursor`. Do not decode or construct it; omit it for the first page. Reuse it only with the same filters. A value the server did not issue, or cannot decode, is 400 `validation_error`. */
                     cursor?: components["parameters"]["Cursor"];
@@ -5991,6 +6305,39 @@ export namespace DevicesSchema {
                 500: components["responses"]["SystemFailure"];
             };
         };
+        consoleRetireDevice: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The device id (`devices.id`, which is the paired `terminal_id`). Case insensitive: normalised to lower case before the lookup. A value that is not a UUID is 400 `validation_error` and never reaches the database. */
+                    deviceId: components["parameters"]["DeviceIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DeviceRetireRequest"];
+                };
+            };
+            responses: {
+                /** @description The device is retired: by this request (`retired`) or already (`already_retired`). The body is the device's state after the request. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DeviceRetireResult"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["OriginRejected"];
+                404: components["responses"]["NotFound"];
+                409: components["responses"]["DeviceRetireConflict"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
         consoleGetDeviceImpact: {
             parameters: {
                 query: {
@@ -6020,6 +6367,100 @@ export namespace DevicesSchema {
                 400: components["responses"]["ValidationFailure"];
                 401: components["responses"]["Unauthorized"];
                 404: components["responses"]["NotFound"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+        consoleListPairingCodes: {
+            parameters: {
+                query?: {
+                    /** @description Only devices of this store (the Store Detail deep link). Validated against the caller's store scope: a store outside it, or of another tenant, is the non-disclosing 404. */
+                    store_id?: components["parameters"]["StoreIdQuery"];
+                    /** @description Opaque keyset cursor from a prior page's `nextCursor`. Do not decode or construct it; omit it for the first page. Reuse it only with the same filters. A value the server did not issue, or cannot decode, is 400 `validation_error`. */
+                    cursor?: components["parameters"]["Cursor"];
+                    /** @description Maximum items per page (bounded). The server MAY return fewer. */
+                    page_size?: components["parameters"]["PageSize"];
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description A page of live pending codes, newest first. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PairingCodePage"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                404: components["responses"]["NotFound"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+        consoleIssuePairingCode: {
+            parameters: {
+                query?: never;
+                header: {
+                    /** @description Client-generated opaque token (UUIDv7 recommended). Missing → 400 `idempotency_key_required`; malformed → 400 `idempotency_key_malformed`. Non-replayable (RT-82 K3): the issued code is never stored, so a retry with the same key never issues a second code and never returns the first one; it is answered 409 `idempotency_key_conflict`, and so is the same key with a different body. A request still in progress under the key is 425. Never retry with the same key: list the live codes, cancel a stray one, and issue again with a new key. */
+                    "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["PairingCodeIssueRequest"];
+                };
+            };
+            responses: {
+                /** @description The code is issued. The body carries the code ONCE (SECRET): show it to the operator to type into the terminal, never store or log it. */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PairingCodeIssued"];
+                    };
+                };
+                400: components["responses"]["IssueValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["OriginRejected"];
+                404: components["responses"]["NotFound"];
+                409: components["responses"]["PairingCodeIssueConflict"];
+                425: components["responses"]["IdempotencyInProgress"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+        consoleCancelPairingCode: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The pairing code's id (`pairing_codes.id`), never the code itself. Case insensitive. A value that is not a UUID is 400 `validation_error`. */
+                    pairingCodeId: components["parameters"]["PairingCodeIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The code is cancelled, by this request or already. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PairingCodeCancelResult"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["OriginRejected"];
+                404: components["responses"]["NotFound"];
+                409: components["responses"]["PairingCodeUsed"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -6429,6 +6870,729 @@ export namespace ConsoleSalesSchema {
     }
 }
 
-export type paths = AuthSchema.paths & ContextSchema.paths & TenantsSchema.paths & StoresSchema.paths & MembershipsSchema.paths & AuditSchema.paths & UnknownItemsSchema.paths & SettlementSchema.paths & ErpnextReconciliationSchema.paths & ShiftClosesSchema.paths & ConnectorAdminSchema.paths & ConnectorHealthSchema.paths & SyncOpsSchema.paths & DevicesSchema.paths & ConsoleSalesSchema.paths;
-export type components = AuthSchema.components & ContextSchema.components & TenantsSchema.components & StoresSchema.components & MembershipsSchema.components & AuditSchema.components & UnknownItemsSchema.components & SettlementSchema.components & ErpnextReconciliationSchema.components & ShiftClosesSchema.components & ConnectorAdminSchema.components & ConnectorHealthSchema.components & SyncOpsSchema.components & DevicesSchema.components & ConsoleSalesSchema.components;
-export type operations = AuthSchema.operations & ContextSchema.operations & TenantsSchema.operations & StoresSchema.operations & MembershipsSchema.operations & AuditSchema.operations & UnknownItemsSchema.operations & SettlementSchema.operations & ErpnextReconciliationSchema.operations & ShiftClosesSchema.operations & ConnectorAdminSchema.operations & ConnectorHealthSchema.operations & SyncOpsSchema.operations & DevicesSchema.operations & ConsoleSalesSchema.operations;
+export namespace CashVariancePolicySchema {
+    export interface paths {
+        "/api/pos/v1/store/cash-variance-policy": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * Read the paired terminal's resolved shift variance policy.
+             * @description Returns the effective policy of the device's own tenant and store, as resolved by Backend-Core (see the info description): `policySource` (`system` | `tenant` | `store`), `policyRevisionId` (`null` for `system`), the value and `serverTime`. Tenant and store come only from the device row; no query parameter is accepted. Send `If-None-Match` with the last `ETag`; an unchanged resolved policy is `304` with no body. The POS freezes the answer on its local open record at each cash-session open and sends it on `openShift` (pos-shifts 1.2.0-draft).
+             */
+            get: operations["posGetCashVariancePolicy"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/tenants/{tenant_id}/cash-variance-policy": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Must be the session's tenant; another tenant, or a role outside the operation's list, is the non-disclosing 404. */
+                    tenant_id: components["parameters"]["TenantId"];
+                };
+                cookie?: never;
+            };
+            /**
+             * Read the tenant default shift variance policy.
+             * @description The tenant level of the policy: the tenant's latest revision, or the System default (`none`) when the tenant never set one, with the latest revision (actor, time, reason) and the concurrency token for the next publish. Roles `owner` / `tenant_admin`.
+             */
+            get: operations["consoleGetTenantCashVariancePolicy"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/tenants/{tenant_id}/cash-variance-policy/revisions": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Must be the session's tenant; another tenant, or a role outside the operation's list, is the non-disclosing 404. */
+                    tenant_id: components["parameters"]["TenantId"];
+                };
+                cookie?: never;
+            };
+            /**
+             * List the tenant default's revisions (newest first).
+             * @description Every tenant-scope revision, newest first by (`createdAt`, `revisionId`), keyset paginated. Roles `owner` / `tenant_admin`.
+             */
+            get: operations["consoleListTenantCashVariancePolicyRevisions"];
+            put?: never;
+            /**
+             * Publish a new tenant default (Apply Now).
+             * @description Appends a tenant-scope revision with the given value and `reason`. Roles `owner` / `tenant_admin`. A tenant may choose `none` (DR-3). The new default applies from each terminal's next cash-session open; where it is stricter than an active store override, it wins that store's resolution (the info description).
+             *
+             *     Order of checks, each stopping the call: (1) session, `Origin`, tenant and role (`401` / `403 origin_rejected` / `404`); (2) the `Idempotency-Key` (a same-key retry replays the stored response with `Idempotent-Replayed: true`); (3) the body (`400 validation_error`); (4) under a lock on the tenant's policy scope, the currency (`422 policy_currency_unsupported`); (5) `expectedRevisionId` (`409 cash_variance_policy_changed_concurrently`); (6) write the revision and its `cash_variance_policy.changed` audit row in one transaction and answer `201` with the updated tenant read.
+             */
+            post: operations["consolePublishTenantCashVariancePolicy"];
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/stores/{store_id}/cash-variance-policy": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description A store of the session's tenant within the caller's store scope; anything else is the non-disclosing 404. */
+                    store_id: components["parameters"]["StoreId"];
+                };
+                cookie?: never;
+            };
+            /**
+             * Read a store's effective shift variance policy and its override.
+             * @description The store's effective policy (source, revision, value) as resolved by Backend-Core, the tenant level it inherits, the active store override if any (reason, `effectiveUntil`, `permanent`), the concurrency token for the next override publish, and the DR-4 horizon. Roles `owner` / `tenant_admin` (any store in their membership store scope) and `store_manager` (its own stores; read only). The store scope is the operator-surface rule of `shift-closes`.
+             */
+            get: operations["consoleGetStoreCashVariancePolicy"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/stores/{store_id}/cash-variance-policy/revisions": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description A store of the session's tenant within the caller's store scope; anything else is the non-disclosing 404. */
+                    store_id: components["parameters"]["StoreId"];
+                };
+                cookie?: never;
+            };
+            /**
+             * List a store's override revisions (newest first).
+             * @description Every store-scope revision of this store (`set` and `clear`), newest first by (`createdAt`, `revisionId`), keyset paginated. A permanent override is labelled `permanent: true`, never hidden. Roles `owner` / `tenant_admin`, within their membership store scope.
+             */
+            get: operations["consoleListStoreCashVariancePolicyRevisions"];
+            put?: never;
+            /**
+             * Set or clear the store override (Apply Now).
+             * @description Appends a store-scope revision: `kind: set` publishes an override (value, `reason`, optional `effectiveUntil`); `kind: clear` removes the active one (`reason` only), so the store inherits the tenant level again. Roles `owner` / `tenant_admin`, within their membership store scope.
+             *
+             *     **Permanent override (DR-4).** A `set` with no `effectiveUntil`, or with one more than 90 days after the server's publish time, is permanent: only an `owner` may publish it, in this single call, and a `tenant_admin` gets `403 owner_approval_required`. The revision records the owner as `approvedByUserId`. There is no pending state.
+             *
+             *     **Pending owner ratification (RT-384 review L3).** (a) The 90-day horizon is elapsed time: `effectiveUntil` more than 90 × 24 h after the server's publish instant (no calendar or DST arithmetic). (b) A `tenant_admin` may publish a new override within the horizon whenever the previous one expires or is replaced, so overrides can be chained; each one needs its own `reason` and audit row. (c) A `tenant_admin` may `clear` an override, including an owner-approved permanent one. The coordinator recommends the owner consider requiring owner approval to clear a permanent override, and auditing override chains; the owner decides at the `[GATED]` review.
+             *
+             *     **Stricter only (RT-284 comment 11887, Q5).** A `set` must not be looser than the tenant level at publish: `none` under a tenant `limit`, or a higher `limitAmount`, is `422 override_looser_than_tenant`. An equal value is accepted.
+             *
+             *     Order of checks, each stopping the call: (1) session, `Origin`, store scope and role (`401` / `403 origin_rejected` / `404`); (2) the `Idempotency-Key` (a same-key retry replays the stored response with `Idempotent-Replayed: true`); (3) the body (`400 validation_error`); (4) under a lock on the store's policy scope: the currency (`422 policy_currency_unsupported`), an `effectiveUntil` not after the server time (`422 override_expiry_invalid`), a `clear` with no active override (`422 override_not_active`), the stricter-only rule (`422 override_looser_than_tenant`), then the owner rule (`403 owner_approval_required`); (5) `expectedRevisionId` (`409 cash_variance_policy_changed_concurrently`); (6) write the revision and its `cash_variance_policy.changed` audit row in one transaction and answer `201` with the updated store read.
+             */
+            post: operations["consolePublishStoreCashVariancePolicyOverride"];
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+    }
+    export type webhooks = Record<string, never>;
+    export interface components {
+        schemas: {
+            /** @description ISO-4217 alphabetic currency code. V1 accepts only `EGP` on a publish (422 otherwise). */
+            CurrencyCode: string;
+            /** @description Exact-decimal amount as a string, never negative; at most 15 integer and 4 fractional digits, and at most the currency's ISO-4217 minor unit of fractional digits on a publish (400 `validation_error`). */
+            NonNegativeDecimalAmount: string;
+            /** @description The policy value (AD-CASH-001 D-1). `none`: the cashier always closes alone. `limit`: approval is required exactly when `|variance| > limitAmount` (a variance equal to the limit closes with the cashier alone; `limitAmount` `0` asks on every non-zero variance). `limitAmount` and `currencyCode` are required for `limit` and absent for `none`. */
+            CashVariancePolicyValue: {
+                /** @enum {string} */
+                mode: "none" | "limit";
+                limitAmount?: components["schemas"]["NonNegativeDecimalAmount"];
+                currencyCode?: components["schemas"]["CurrencyCode"];
+            };
+            /**
+             * @description Where a resolved policy comes from. `system` is the Backend-Core constant `none` (no revision). Never `fallback`: that is the POS's own never-fetched value (pos-shifts `openShift`).
+             * @enum {string}
+             */
+            PolicySource: "system" | "tenant" | "store";
+            /**
+             * @description The source of the tenant level.
+             * @enum {string}
+             */
+            TenantPolicySource: "system" | "tenant";
+            /** @description A policy as resolved by Backend-Core. `policyRevisionId` is `null` exactly when `policySource` is `system`, and a `system` value is always `none` (the System default, DR-2). */
+            ResolvedCashVariancePolicy: {
+                policySource: components["schemas"]["PolicySource"];
+                /** Format: uuid */
+                policyRevisionId: string | null;
+                policyValue: components["schemas"]["CashVariancePolicyValue"];
+            };
+            /** @description The tenant level of the policy: the tenant's latest revision, or the System default. Never `store`. `policyRevisionId` is `null` exactly when `policySource` is `system`. */
+            TenantResolvedCashVariancePolicy: {
+                policySource: components["schemas"]["TenantPolicySource"];
+                /** Format: uuid */
+                policyRevisionId: string | null;
+                policyValue: components["schemas"]["CashVariancePolicyValue"];
+            };
+            /** @description The POS read: the resolved effective policy of the device's store and the server time. The POS freezes `policySource`, `policyRevisionId` and `policyValue` at each cash-session open. */
+            DeviceCashVariancePolicy: {
+                policySource: components["schemas"]["PolicySource"];
+                /** Format: uuid */
+                policyRevisionId: string | null;
+                policyValue: components["schemas"]["CashVariancePolicyValue"];
+                /**
+                 * Format: date-time
+                 * @description The server clock when the policy was resolved.
+                 */
+                serverTime: string;
+            };
+            /** @description One immutable revision. Every key is always present; a value that does not apply is `null`. A tenant revision is always a `set`, has no store and no expiry. A `clear` has no value. `permanent` is `true` only for a store `set` with no `effectiveUntil` or one beyond the 90-day horizon, and then `approvedByUserId` is the publishing owner; a store `set` with no `effectiveUntil` is always `permanent`. */
+            CashVariancePolicyRevision: {
+                /**
+                 * Format: uuid
+                 * @description The id a cash session freezes as `policyRevisionId` (K-2).
+                 */
+                revisionId: string;
+                /** @enum {string} */
+                scope: "tenant" | "store";
+                /**
+                 * Format: uuid
+                 * @description The store of a store-scope revision; `null` for a tenant revision.
+                 */
+                storeId: string | null;
+                /** @enum {string} */
+                kind: "set" | "clear";
+                /** @description The value; `null` for a `clear`. */
+                policyValue: components["schemas"]["CashVariancePolicyValue"] | null;
+                reason: components["schemas"]["Reason"];
+                /**
+                 * Format: date-time
+                 * @description Server time at publish (Apply Now).
+                 */
+                effectiveFrom: string;
+                /**
+                 * Format: date-time
+                 * @description A store override's expiry; `null` when none or not applicable.
+                 */
+                effectiveUntil: string | null;
+                permanent: boolean;
+                /**
+                 * Format: uuid
+                 * @description The approving `owner` of a permanent override; otherwise `null`.
+                 */
+                approvedByUserId: string | null;
+                /**
+                 * Format: uuid
+                 * @description The scope's previous latest revision (the publish's `expectedRevisionId`); `null` for the first.
+                 */
+                supersedesRevisionId: string | null;
+                /**
+                 * @description `current`: the scope's latest revision. `superseded`: a later revision of the same scope exists. `expired`: the scope's latest revision is a store `set` whose `effectiveUntil` has passed.
+                 * @enum {string}
+                 */
+                state: "current" | "superseded" | "expired";
+                /**
+                 * Format: uuid
+                 * @description The `users.id` who published the revision.
+                 */
+                createdByUserId: string;
+                /** Format: date-time */
+                createdAt: string;
+            } & (unknown & unknown & unknown & unknown & unknown);
+            /** @description A `CashVariancePolicyRevision` of the tenant scope. */
+            TenantCashVariancePolicyRevision: components["schemas"]["CashVariancePolicyRevision"] & {
+                /** @constant */
+                scope?: "tenant";
+            };
+            /** @description A `CashVariancePolicyRevision` of the store scope. */
+            StoreCashVariancePolicyRevision: components["schemas"]["CashVariancePolicyRevision"] & {
+                /** @constant */
+                scope?: "store";
+            };
+            /** @description A keyset page of tenant-scope revisions only, newest first. */
+            TenantCashVariancePolicyRevisionPage: {
+                items: components["schemas"]["TenantCashVariancePolicyRevision"][];
+                /** @description Opaque cursor for the next page; `null` on the last page. */
+                nextCursor: string | null;
+            };
+            /** @description A keyset page of this store's revisions only, newest first (the path store; the runtime never mixes in another scope or store). */
+            StoreCashVariancePolicyRevisionPage: {
+                items: components["schemas"]["StoreCashVariancePolicyRevision"][];
+                /** @description Opaque cursor for the next page; `null` on the last page. */
+                nextCursor: string | null;
+            };
+            /** @description The tenant default. `latestRevisionId` is the `expectedRevisionId` of the next tenant publish and the id of `latestRevision`. With a `system` default (the tenant never set one) both are `null`; with a `tenant` default both are set. */
+            TenantCashVariancePolicy: {
+                tenantDefault: components["schemas"]["TenantResolvedCashVariancePolicy"];
+                latestRevision: components["schemas"]["TenantCashVariancePolicyRevision"] | null;
+                /** Format: uuid */
+                latestRevisionId: string | null;
+            };
+            /** @description The store's active override (a `set` revision not yet expired). An override with no `effectiveUntil` is always `permanent`, and a permanent one names its approving owner. */
+            ActiveStoreOverride: {
+                /** Format: uuid */
+                revisionId: string;
+                policyValue: components["schemas"]["CashVariancePolicyValue"];
+                reason: components["schemas"]["Reason"];
+                /** Format: date-time */
+                effectiveUntil: string | null;
+                /** @description No expiry, or one beyond the 90-day horizon; the Console labels it "permanent". */
+                permanent: boolean;
+                /** Format: uuid */
+                approvedByUserId: string | null;
+                /** Format: uuid */
+                createdByUserId: string;
+                /** Format: date-time */
+                createdAt: string;
+            } & (unknown & unknown);
+            /** @description A store's policy. `effective` is what the store's terminals receive (the stricter of `activeOverride` and `tenantDefault`, a tie to the store). `latestRevisionId` is the `expectedRevisionId` of the next override publish: the store's latest revision of any kind or state (`null` before the first). */
+            StoreCashVariancePolicy: {
+                /** Format: uuid */
+                storeId: string;
+                effective: components["schemas"]["ResolvedCashVariancePolicy"];
+                tenantDefault: components["schemas"]["TenantResolvedCashVariancePolicy"];
+                activeOverride: components["schemas"]["ActiveStoreOverride"] | null;
+                /** Format: uuid */
+                latestRevisionId: string | null;
+                /**
+                 * @description The DR-4 maximum horizon (coordinator decision 1). An override whose `effectiveUntil` is more than this many days after publish, or absent, is permanent and owner-only.
+                 * @constant
+                 */
+                permanentOverrideHorizonDays: 90;
+            };
+            /** @description Why the policy changed, 1 to 200 characters. No PII. Required on every publish (D-3). */
+            Reason: string;
+            /** @description A new tenant default. The tenant comes from the path and the session, never the body. */
+            PublishTenantCashVariancePolicyRequest: {
+                /**
+                 * Format: uuid
+                 * @description The tenant read's `latestRevisionId` (`null` when the tenant has no revision yet).
+                 */
+                expectedRevisionId: string | null;
+                policyValue: components["schemas"]["CashVariancePolicyValue"];
+                reason: components["schemas"]["Reason"];
+            };
+            /** @description Set (`policyValue`, optional `effectiveUntil`) or clear (neither) the store override. The store comes from the path, never the body. */
+            PublishStoreCashVariancePolicyOverrideRequest: {
+                /**
+                 * Format: uuid
+                 * @description The store read's `latestRevisionId` (`null` when the store has no revision yet).
+                 */
+                expectedRevisionId: string | null;
+                /** @enum {string} */
+                kind: "set" | "clear";
+                policyValue?: components["schemas"]["CashVariancePolicyValue"];
+                reason: components["schemas"]["Reason"];
+                /**
+                 * Format: date-time
+                 * @description Optional expiry of a `set`, RFC 3339 with an offset; must be after the server time (422 `override_expiry_invalid`). Absent, or more than 90 days after publish: the override is permanent and owner-only.
+                 */
+                effectiveUntil?: string;
+            };
+            /** @description Canonical error envelope. Out-of-scope and cross-tenant refusals are non-disclosing (§II, §XII). */
+            Error: {
+                error: {
+                    /** @description Stable machine-readable error code. */
+                    code: string;
+                    /** @description Human-readable summary. No sensitive data, no cause enumeration. */
+                    message: string;
+                    /**
+                     * Format: uuid
+                     * @description Server-side correlation id.
+                     */
+                    request_id?: string;
+                };
+            };
+            /** @description The shared `IdempotencyInterceptor`'s 425 body (not the `Error` envelope). */
+            IdempotencyInProgressBody: {
+                /** @constant */
+                error: "idempotency_in_progress";
+                retryAfterSec: number;
+            };
+        };
+        responses: {
+            /** @description 400 `validation_error`: a malformed path id, an unknown or malformed query parameter, a cursor the server cannot decode, or a bad `If-None-Match`. Checked before any database read. */
+            ReadValidationFailure: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 400: `validation_error` (a malformed path id or body, an unknown key, a `limit` without an amount or currency, a `clear` with a value or an expiry, more fractional digits than the currency's minor unit), or the `IdempotencyInterceptor`'s `idempotency_key_required` / `idempotency_key_malformed`. Nothing is written. */
+            WriteValidationFailure: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 401 `unauthorized`: no human dashboard session. A bearer-only request (`dashboard_api` included) is refused (`SessionOnlyAdminGuard`). Non-disclosing. */
+            Unauthorized: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 401 `unauthorized`: a missing, invalid or revoked device token, or a non-device credential. Non-disclosing. */
+            DeviceUnauthorized: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 403 `origin_rejected` (RT-430): a cookie-authenticated publish whose `Origin` is missing or not allowed. Nothing is written. */
+            OriginRejected: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 403, `error.code` one of: `origin_rejected` (RT-430, as on the tenant publish); `owner_approval_required` (a permanent override — no `effectiveUntil`, or one more than 90 days ahead — published by a `tenant_admin`; only an `owner` may publish it, DR-4). Nothing is written. */
+            StoreWriteForbidden: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 404 `not_found`, non-disclosing: identical for another tenant, a store of another tenant or outside the caller's store scope, an absent id and a role outside the operation's list. */
+            NotFound: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 409, `error.code` one of: `cash_variance_policy_changed_concurrently` (`expectedRevisionId` is not the scope's latest revision; reload and retry); `idempotency_key_conflict` (the same `Idempotency-Key` with a different body). Nothing is written. */
+            Conflict: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 422 `policy_currency_unsupported`: a `limit` in a currency other than `EGP` (V1, K-5). Nothing is written. */
+            TenantPolicyUnprocessable: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 422, `error.code` one of: `policy_currency_unsupported` (a `limit` not in `EGP`, V1); `override_looser_than_tenant` (the value is looser than the tenant level, RT-284 Q5); `override_expiry_invalid` (`effectiveUntil` is not after the server time); `override_not_active` (a `clear` while the store has no active override). Nothing is written. */
+            StoreOverrideUnprocessable: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 425 `idempotency_in_progress`: the first request with this `Idempotency-Key` is still being processed. Retry after `Retry-After` seconds with the same key and body. Nothing is written by this request. */
+            IdempotencyInProgress: {
+                headers: {
+                    "Retry-After": components["headers"]["RetryAfterInProgress"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyInProgressBody"];
+                };
+            };
+            /** @description 500 `internal_error`: an unexpected server error, recorded server-side under `request_id` and never returned. */
+            SystemFailure: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+        parameters: {
+            /** @description Must be the session's tenant; another tenant, or a role outside the operation's list, is the non-disclosing 404. */
+            TenantId: string;
+            /** @description A store of the session's tenant within the caller's store scope; anything else is the non-disclosing 404. */
+            StoreId: string;
+            /** @description The last `ETag` received; omit it when the cached policy was lost. */
+            IfNoneMatch: string;
+            /** @description Opaque keyset cursor from a prior page's `nextCursor`; omit it for the first page. A value the server did not issue is 400 `validation_error`. */
+            Cursor: string;
+            /** @description Maximum revisions per page. The server MAY return fewer. */
+            PageSize: number;
+            /** @description REQUIRED on every publish (G5): 16 to 128 printable ASCII characters with no whitespace, as the shared `IdempotencyInterceptor` enforces. Keyed on the verified actor. An identical retry replays the stored response with `Idempotent-Replayed: true`; key reuse with a different body is 409 `idempotency_key_conflict`; a key still being processed is 425 `idempotency_in_progress`. A missing key is 400 `idempotency_key_required`, a malformed one 400 `idempotency_key_malformed`. */
+            IdempotencyKey: string;
+        };
+        requestBodies: never;
+        headers: {
+            /** @description Strong ETag: the quoted lowercase hex SHA-256 of the canonical JSON (keys sorted, no whitespace) of the resolved `policySource`, `policyRevisionId` and `policyValue`. `serverTime` is not part of it. Because it is computed over the resolved policy, it changes when a store override expires, with no write. */
+            ETag: string;
+            /** @description Always `no-cache, private`; the POS revalidates every read. */
+            CacheControl: "no-cache, private";
+            /** @description Present and `true` on a same-`Idempotency-Key` replay, which carries the stored status (`201`). Absent on a first-time publish. */
+            IdempotentReplayed: boolean;
+            /** @description Seconds to wait before retrying a 425 with the same `Idempotency-Key` and body. */
+            RetryAfterInProgress: number;
+        };
+        pathItems: never;
+    }
+    export type $defs = Record<string, never>;
+    export interface operations {
+        posGetCashVariancePolicy: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description The last `ETag` received; omit it when the cached policy was lost. */
+                    "If-None-Match"?: components["parameters"]["IfNoneMatch"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The resolved policy. */
+                200: {
+                    headers: {
+                        ETag: components["headers"]["ETag"];
+                        "Cache-Control": components["headers"]["CacheControl"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DeviceCashVariancePolicy"];
+                    };
+                };
+                /** @description Unchanged since the `If-None-Match` ETag. No body. */
+                304: {
+                    headers: {
+                        ETag: components["headers"]["ETag"];
+                        "Cache-Control": components["headers"]["CacheControl"];
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                400: components["responses"]["ReadValidationFailure"];
+                401: components["responses"]["DeviceUnauthorized"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+        consoleGetTenantCashVariancePolicy: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Must be the session's tenant; another tenant, or a role outside the operation's list, is the non-disclosing 404. */
+                    tenant_id: components["parameters"]["TenantId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The tenant default. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TenantCashVariancePolicy"];
+                    };
+                };
+                400: components["responses"]["ReadValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                404: components["responses"]["NotFound"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+        consoleListTenantCashVariancePolicyRevisions: {
+            parameters: {
+                query?: {
+                    /** @description Opaque keyset cursor from a prior page's `nextCursor`; omit it for the first page. A value the server did not issue is 400 `validation_error`. */
+                    cursor?: components["parameters"]["Cursor"];
+                    /** @description Maximum revisions per page. The server MAY return fewer. */
+                    page_size?: components["parameters"]["PageSize"];
+                };
+                header?: never;
+                path: {
+                    /** @description Must be the session's tenant; another tenant, or a role outside the operation's list, is the non-disclosing 404. */
+                    tenant_id: components["parameters"]["TenantId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description A page of revisions. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TenantCashVariancePolicyRevisionPage"];
+                    };
+                };
+                400: components["responses"]["ReadValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                404: components["responses"]["NotFound"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+        consolePublishTenantCashVariancePolicy: {
+            parameters: {
+                query?: never;
+                header: {
+                    /** @description REQUIRED on every publish (G5): 16 to 128 printable ASCII characters with no whitespace, as the shared `IdempotencyInterceptor` enforces. Keyed on the verified actor. An identical retry replays the stored response with `Idempotent-Replayed: true`; key reuse with a different body is 409 `idempotency_key_conflict`; a key still being processed is 425 `idempotency_in_progress`. A missing key is 400 `idempotency_key_required`, a malformed one 400 `idempotency_key_malformed`. */
+                    "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                };
+                path: {
+                    /** @description Must be the session's tenant; another tenant, or a role outside the operation's list, is the non-disclosing 404. */
+                    tenant_id: components["parameters"]["TenantId"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["PublishTenantCashVariancePolicyRequest"];
+                };
+            };
+            responses: {
+                /** @description Published. A same-key retry replays this `201` with `Idempotent-Replayed: true`. */
+                201: {
+                    headers: {
+                        "Idempotent-Replayed": components["headers"]["IdempotentReplayed"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TenantCashVariancePolicy"];
+                    };
+                };
+                400: components["responses"]["WriteValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["OriginRejected"];
+                404: components["responses"]["NotFound"];
+                409: components["responses"]["Conflict"];
+                422: components["responses"]["TenantPolicyUnprocessable"];
+                425: components["responses"]["IdempotencyInProgress"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+        consoleGetStoreCashVariancePolicy: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description A store of the session's tenant within the caller's store scope; anything else is the non-disclosing 404. */
+                    store_id: components["parameters"]["StoreId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The store's policy. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StoreCashVariancePolicy"];
+                    };
+                };
+                400: components["responses"]["ReadValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                404: components["responses"]["NotFound"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+        consoleListStoreCashVariancePolicyRevisions: {
+            parameters: {
+                query?: {
+                    /** @description Opaque keyset cursor from a prior page's `nextCursor`; omit it for the first page. A value the server did not issue is 400 `validation_error`. */
+                    cursor?: components["parameters"]["Cursor"];
+                    /** @description Maximum revisions per page. The server MAY return fewer. */
+                    page_size?: components["parameters"]["PageSize"];
+                };
+                header?: never;
+                path: {
+                    /** @description A store of the session's tenant within the caller's store scope; anything else is the non-disclosing 404. */
+                    store_id: components["parameters"]["StoreId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description A page of revisions. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StoreCashVariancePolicyRevisionPage"];
+                    };
+                };
+                400: components["responses"]["ReadValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                404: components["responses"]["NotFound"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+        consolePublishStoreCashVariancePolicyOverride: {
+            parameters: {
+                query?: never;
+                header: {
+                    /** @description REQUIRED on every publish (G5): 16 to 128 printable ASCII characters with no whitespace, as the shared `IdempotencyInterceptor` enforces. Keyed on the verified actor. An identical retry replays the stored response with `Idempotent-Replayed: true`; key reuse with a different body is 409 `idempotency_key_conflict`; a key still being processed is 425 `idempotency_in_progress`. A missing key is 400 `idempotency_key_required`, a malformed one 400 `idempotency_key_malformed`. */
+                    "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                };
+                path: {
+                    /** @description A store of the session's tenant within the caller's store scope; anything else is the non-disclosing 404. */
+                    store_id: components["parameters"]["StoreId"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["PublishStoreCashVariancePolicyOverrideRequest"];
+                };
+            };
+            responses: {
+                /** @description Published. A same-key retry replays this `201` with `Idempotent-Replayed: true`. */
+                201: {
+                    headers: {
+                        "Idempotent-Replayed": components["headers"]["IdempotentReplayed"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StoreCashVariancePolicy"];
+                    };
+                };
+                400: components["responses"]["WriteValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["StoreWriteForbidden"];
+                404: components["responses"]["NotFound"];
+                409: components["responses"]["Conflict"];
+                422: components["responses"]["StoreOverrideUnprocessable"];
+                425: components["responses"]["IdempotencyInProgress"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+    }
+}
+
+export type paths = AuthSchema.paths & ContextSchema.paths & TenantsSchema.paths & StoresSchema.paths & MembershipsSchema.paths & AuditSchema.paths & UnknownItemsSchema.paths & SettlementSchema.paths & ErpnextReconciliationSchema.paths & ShiftClosesSchema.paths & ConnectorAdminSchema.paths & ConnectorHealthSchema.paths & SyncOpsSchema.paths & DevicesSchema.paths & ConsoleSalesSchema.paths & CashVariancePolicySchema.paths;
+export type components = AuthSchema.components & ContextSchema.components & TenantsSchema.components & StoresSchema.components & MembershipsSchema.components & AuditSchema.components & UnknownItemsSchema.components & SettlementSchema.components & ErpnextReconciliationSchema.components & ShiftClosesSchema.components & ConnectorAdminSchema.components & ConnectorHealthSchema.components & SyncOpsSchema.components & DevicesSchema.components & ConsoleSalesSchema.components & CashVariancePolicySchema.components;
+export type operations = AuthSchema.operations & ContextSchema.operations & TenantsSchema.operations & StoresSchema.operations & MembershipsSchema.operations & AuditSchema.operations & UnknownItemsSchema.operations & SettlementSchema.operations & ErpnextReconciliationSchema.operations & ShiftClosesSchema.operations & ConnectorAdminSchema.operations & ConnectorHealthSchema.operations & SyncOpsSchema.operations & DevicesSchema.operations & ConsoleSalesSchema.operations & CashVariancePolicySchema.operations;

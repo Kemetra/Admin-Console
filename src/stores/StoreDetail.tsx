@@ -1,3 +1,4 @@
+import { StorePolicySection } from "@/cash-policy/StorePolicySection";
 import { BackArrow } from "@/components/BackArrow";
 import { Banner } from "@/components/Banner";
 import { ListState } from "@/components/ListState";
@@ -16,6 +17,10 @@ import { useT } from "@/i18n";
  * / VG-5): the device API's non-disclosing 404 is the authority, and the
  * registry renders it as "this store's devices are not available to you". The
  * link sets a filter in the URL, never the active scope.
+ *
+ * RT-389: the shift variance policy section sits under the fields. It decides
+ * its own visibility from the role (owner / tenant_admin edit, store_manager
+ * reads, others see nothing), so this page adds no role gate of its own.
  */
 import { Link, useParams } from "react-router";
 import { ScopePrompt } from "./ScopePrompt";
@@ -103,6 +108,8 @@ export function StoreDetail(): React.JSX.Element {
           </dd>
         </div>
       </dl>
+
+      <StorePolicySection storeId={store.id} timeZone={store.timezone} />
     </div>
   );
 }
