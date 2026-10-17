@@ -54,7 +54,7 @@ Serving rules for the host:
   "app": "retail-tower-console",
   "sha": "<40-char Admin Console commit>",
   "builtAt": "<ISO-8601 UTC build time>",
-  "backendContractPin": "<Backend-Core contract pin from openapi-ts.config.ts>"
+  "backendContractPin": "<Backend-Core contract pin from contracts/backend-core/PIN>"
 }
 ```
 
