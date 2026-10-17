@@ -255,7 +255,7 @@ describe("SaleDetail (RT-587, spec 012 J2)", () => {
     expect(within(voidSection).getByText("Store manager")).toBeDefined();
     const erp = section("ERPNext posting");
     expect(within(erp).getByText("Void reversal posting")).toBeDefined();
-    expect(within(erp).getByText("ERPNext: pending")).toBeDefined();
+    expect(within(erp).getByText("ERPNext posting pending")).toBeDefined();
     expect(within(erp).queryByText("ERPNext reversal document")).toBeNull();
   });
 

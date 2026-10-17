@@ -4,7 +4,7 @@
  * value. Names follow their source (OD-534-6): `snapshot` as recorded,
  * `current` labelled "current name", `unavailable` "not recorded".
  */
-import { type T, useLocale, useT } from "@/i18n";
+import { useLocale, useT } from "@/i18n";
 import { intlTag } from "@/i18n/locale";
 import type { SaleItem } from "@/lib/sale-queries";
 import { erpStateKey, returnStateKey, syncStatusKey } from "./saleLogic";
@@ -28,18 +28,23 @@ export function BusinessDate({ value }: Readonly<{ value: string }>): React.JSX.
   return <time dateTime={value}>{text}</time>;
 }
 
-/** A recorded name or label, by its source. */
-export function nameText(t: T, name: string | null, source: string): string {
-  if (name === null || source === "unavailable") return t("sales.value.notRecorded");
-  return source === "current" ? t("sales.value.currentName", { name }) : name;
-}
-
+/**
+ * A recorded name or label, by its source. The name is isolated (it may be
+ * Latin in Arabic copy, or the reverse), so the "current name" label keeps its
+ * place on either side of it.
+ */
 export function RecordedName({
   name,
   source,
 }: Readonly<{ name: string | null; source: string }>): React.JSX.Element {
   const t = useT();
-  return <bdi dir="auto">{nameText(t, name, source)}</bdi>;
+  if (name === null || source === "unavailable") return <>{t("sales.value.notRecorded")}</>;
+  const isolated = <bdi dir="auto">{name}</bdi>;
+  return source === "current" ? (
+    <>{t.rich("sales.value.currentName", { name: isolated })}</>
+  ) : (
+    isolated
+  );
 }
 
 /** The terminal: none for a sale captured before device attribution (RT-77). */

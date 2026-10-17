@@ -173,7 +173,7 @@ describe("SaleList (RT-587, spec 012 J1)", () => {
     expect(within(first).getByText("R-0042")).toBeDefined();
     expect(within(first).getByText("Till 1")).toBeDefined();
     expect(within(first).getByText("Mona Adel")).toBeDefined();
-    expect(within(first).getByText("ERPNext: posted")).toBeDefined();
+    expect(within(first).getByText("Posted to ERPNext")).toBeDefined();
     expect(
       within(first).getByText(
         formatDateTime("2026-10-07T10:30:00Z", { timeZone: "Africa/Cairo", locale: "en" }),
@@ -182,7 +182,12 @@ describe("SaleList (RT-587, spec 012 J1)", () => {
     // The missing number, the pre-RT-77 sale with no device and a current name are labelled.
     expect(within(second).getByText("Not recorded")).toBeDefined();
     expect(within(second).getByText("No device recorded")).toBeDefined();
-    expect(within(second).getByText("Omar Fathy (current name)")).toBeDefined();
+    // The name is isolated from its label, so match the cell's whole text.
+    expect(
+      within(second).getByText(
+        (_, el) => el?.tagName === "TD" && el.textContent === "Omar Fathy (current name)",
+      ),
+    ).toBeDefined();
     expect(within(second).getByText("Voided")).toBeDefined();
     expect(within(second).getByText("Partly returned")).toBeDefined();
     expect(within(second).getByText("Needs repair")).toBeDefined();

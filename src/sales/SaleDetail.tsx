@@ -24,7 +24,7 @@ import {
   VoidSection,
 } from "./SaleDetailSections";
 import { BusinessDate, DeviceName, RecordedName, SaleNumber, StatusChips } from "./SaleParts";
-import { returnStateKey, shiftClosesHref, syncStatusKey } from "./saleLogic";
+import { shiftClosesHref } from "./saleLogic";
 import { type SaleError, useSaleDetail, useSaleScope } from "./useSales";
 import "../shell/surface.css";
 import "./sales.css";
@@ -90,10 +90,7 @@ function SummarySection({ detail }: Readonly<{ detail: Detail }>): React.JSX.Ele
         <Field label={t("sales.field.total")}>
           <Money value={sale.posTotal} currency={sale.currencyCode} />
         </Field>
-        <Field label={t("sales.field.syncStatus")}>{t(syncStatusKey(sale.syncStatus))}</Field>
-        <Field label={t("sales.field.returnState")}>{t(returnStateKey(sale.returnState))}</Field>
       </dl>
-      <StatusChips sale={sale} />
     </Section>
   );
 }
@@ -148,6 +145,7 @@ function Loaded({ detail }: Readonly<{ detail: Detail }>): React.JSX.Element {
           <h1 className="content__title">
             {number ? t("sales.detail.title", { number }) : t("sales.detail.titleNoNumber")}
           </h1>
+          <StatusChips sale={detail.summary} />
           <p className="content__sub">
             {t.rich("sales.detail.zoneNote", {
               zone: <bdi dir="ltr">{detail.storeTimezone}</bdi>,

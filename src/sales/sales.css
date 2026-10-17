@@ -99,3 +99,6 @@
   padding: 0;
   list-style: none;
 }
+.surface__head .sale-chips {
+  margin-block: var(--space-2);
+}
