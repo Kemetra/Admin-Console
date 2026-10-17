@@ -257,8 +257,13 @@ test("S6: retire needs a reason, shows the impact, and is terminal", async ({ pa
   await page.route(`**/api/v1/devices/${DEVICE_1}/impact?**`, (r) =>
     r.fulfill(json(impact({ action: "retire", revokeReason: "retired" }))),
   );
+  let isRetired = false;
+  await page.route(`**/api/v1/devices/${DEVICE_1}`, (r) =>
+    r.fulfill(json(isRetired ? retired().data.device : detail())),
+  );
   await route(page, `**/api/v1/devices/${DEVICE_1}/retire`, (body) => {
     calls.retire.push(body);
+    isRetired = true;
     return retired().data;
   });
   await page.goto(`/devices/${DEVICE_1}`);
@@ -270,8 +275,12 @@ test("S6: retire needs a reason, shows the impact, and is terminal", async ({ pa
   await drawer.getByRole("button", { name: t("devices.flow.review") }).click();
   await expect(drawer.getByText(t("devices.impact.verdict.allowed"))).toBeVisible();
   await drawer.getByRole("button", { name: t("devices.retire.confirm") }).click();
+  // The detail refetches as retired behind the drawer; the done step must outlive that.
+  await expect(page.getByText(t("devices.actions.closed"))).toBeVisible();
   await expect(drawer.getByText(t("devices.retire.done"))).toBeVisible();
   expect(calls.retire).toEqual([{ retireReason: "End of life" }]);
+  await drawer.getByRole("button", { name: t("devices.flow.done") }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
 });
 
 test("S6b: retire of a revoked device with a custody exception is blocked by the server", async ({

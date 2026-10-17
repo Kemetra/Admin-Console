@@ -481,6 +481,35 @@ describe("Retire (RT-372)", () => {
     expect(await within(dialog()).findByText("The device is retired.")).toBeDefined();
   });
 
+  test("the done step survives the device turning retired: the drawer is not unmounted by the refetch", async () => {
+    consoleGetDeviceImpact.mockResolvedValue({
+      status: 200,
+      data: impact({ action: "retire", revokeReason: "retired" }),
+    });
+    consoleRetireDevice.mockResolvedValue(retired());
+    // After the retire, the detail the server returns is the retired device.
+    consoleGetDevice.mockReset();
+    consoleGetDevice.mockResolvedValueOnce({ status: 200, data: detail() }).mockResolvedValue({
+      status: 200,
+      data: detail({ trustState: "retired", revokedAt: REVOKED_AT, retiredAt: REVOKED_AT }),
+    });
+    await openRetire();
+    fireEvent.change(within(dialog()).getByLabelText("Why is this device retired?"), {
+      target: { value: "End of life" },
+    });
+    click("Review impact");
+    await within(dialog()).findByText("Allowed by the server.");
+    click("Retire device");
+    await waitFor(() => expect(consoleGetDevice).toHaveBeenCalledTimes(2));
+    expect(await within(dialog()).findByText("The device is retired.")).toBeDefined();
+    // The page behind it now says the device is closed out, and the drawer is still the way out.
+    expect(await screen.findByText(/There are no further actions on it/)).toBeDefined();
+    click("Done");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    // The Retire button is gone: focus stays on the actions region, not the page body.
+    expect(document.activeElement?.className).toContain("device-actions");
+  });
+
   test("blocked by an open shift on an active device: close the shift first, no override", async () => {
     consoleGetDeviceImpact.mockResolvedValue({
       status: 200,
