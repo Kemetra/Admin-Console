@@ -3,7 +3,7 @@ import { DEVICE_1, DUBAI_STORE } from "./device-fixtures";
 
 export const CODE_ID = "0190f000-0000-7000-8000-0000000000d1";
 export const TERMINAL_ID = "0190f000-0000-7000-8000-0000000000f1";
-export const SECRET_CODE = "K7M2-QX9P-4TRD-8WVN";
+export const SECRET_CODE = "FAKE-TEST-CODE-0000";
 
 /** The 201 body of an issue: the one place the secret code appears. */
 export function issued(over: Record<string, unknown> = {}) {

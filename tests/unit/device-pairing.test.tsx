@@ -188,7 +188,7 @@ describe("Replace and Move (RT-372 part B)", () => {
     expect(key).toMatch(/^[\x21-\x7E]{16,128}$/);
 
     // The code is shown once, with its TTL; the REPLACEMENT_BLOCKED help is a note on it.
-    const panel = await within(dialog()).findByText("K7M2-QX9P-4TRD-8WVN");
+    const panel = await within(dialog()).findByText("FAKE-TEST-CODE-0000");
     expect(panel.closest("[dir=ltr]")).not.toBeNull();
     expect(within(dialog()).getByText(/Shown only once/)).toBeDefined();
     expect(within(dialog()).getByText(/Valid for 30 minutes, until/)).toBeDefined();
@@ -208,14 +208,14 @@ describe("Replace and Move (RT-372 part B)", () => {
     click("Review impact");
     await within(dialog()).findByText("Allowed by the server.");
     click("Issue pairing code");
-    await within(dialog()).findByText("K7M2-QX9P-4TRD-8WVN");
-    expect(document.title).not.toContain("K7M2");
-    expect(JSON.stringify({ ...localStorage })).not.toContain("K7M2");
-    expect(JSON.stringify({ ...sessionStorage })).not.toContain("K7M2");
+    await within(dialog()).findByText("FAKE-TEST-CODE-0000");
+    expect(document.title).not.toContain("FAKE");
+    expect(JSON.stringify({ ...localStorage })).not.toContain("FAKE");
+    expect(JSON.stringify({ ...sessionStorage })).not.toContain("FAKE");
     click("Done");
-    expect(screen.queryByText("K7M2-QX9P-4TRD-8WVN")).toBeNull();
+    expect(screen.queryByText("FAKE-TEST-CODE-0000")).toBeNull();
     click("Replace");
-    expect(screen.queryByText("K7M2-QX9P-4TRD-8WVN")).toBeNull();
+    expect(screen.queryByText("FAKE-TEST-CODE-0000")).toBeNull();
   });
 
   test("Move: the target store excludes the device's own store, and the code is issued for it", async () => {
