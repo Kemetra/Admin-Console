@@ -51,9 +51,13 @@ const OFFERS_REPLACE: ReadonlySet<string> = new Set([
   "hardware_failure",
 ]);
 
-/** The retire of a REVOKED device also cancels the live codes that replace it. */
-function retiresRevoked(action: FlowAction, device: DeviceDetail): boolean {
-  return action === "retire" && device.trustState === "revoked";
+/**
+ * The retire of a REVOKED device also cancels the live codes that replace it. Whether
+ * the device is revoked now is the server's word (its preview), not the detail the
+ * page loaded earlier: the device may have been revoked since.
+ */
+function retiresRevoked(action: FlowAction, preview?: DeviceImpactPreview): boolean {
+  return action === "retire" && preview?.trustState === "revoked";
 }
 
 export interface FlowView {
@@ -66,7 +70,6 @@ export interface FlowView {
 
 interface ViewInputs {
   action: FlowAction;
-  device: DeviceDetail;
   impact: ImpactState;
   fresh?: DeviceImpactPreview;
   codes: ReplacementCodesState;
@@ -74,10 +77,10 @@ interface ViewInputs {
 }
 
 /** What the review step shows, from the server's answers only. */
-function deriveView({ action, device, impact, fresh, codes, gone }: ViewInputs): FlowView {
+function deriveView({ action, impact, fresh, codes, gone }: ViewInputs): FlowView {
   const preview = fresh ?? impact.preview;
   const decision = preview ? decideImpact(preview) : undefined;
-  const waitingOnCodes = retiresRevoked(action, device) && (codes.isLoading || codes.failed);
+  const waitingOnCodes = retiresRevoked(action, preview) && (codes.isLoading || codes.failed);
   return {
     preview,
     decision,
@@ -134,9 +137,9 @@ export function useLifecycleFlow(action: FlowAction, device: DeviceDetail): Life
   const codes = useReplacementCodes(
     scope,
     device.deviceId,
-    reviewing && retiresRevoked(action, device),
+    reviewing && retiresRevoked(action, fresh ?? impact.preview),
   );
-  const view = deriveView({ action, device, impact, fresh, codes, gone });
+  const view = deriveView({ action, impact, fresh, codes, gone });
 
   const askAgain = () => {
     setFresh(undefined);

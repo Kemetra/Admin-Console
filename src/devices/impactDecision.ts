@@ -33,10 +33,19 @@ const BLOCK_KEYS: Readonly<Record<string, MessageKey>> = {
   device_retired: "devices.impact.blocked.retired",
 };
 
-export function blockedMessageKey(code: string | null): MessageKey {
-  return code !== null && Object.hasOwn(BLOCK_KEYS, code)
-    ? BLOCK_KEYS[code]
-    : "devices.impact.blocked.unknown";
+/**
+ * A retire over an open shift reads differently: a security revoke protects a lost
+ * till, but it does not unblock the retire (that waits for the shift to close or the
+ * custody exception to be reconciled).
+ */
+const RETIRE_BLOCK_KEYS: Readonly<Record<string, MessageKey>> = {
+  unresolved_cash_session: "devices.impact.blocked.cashSessionRetire",
+};
+
+export function blockedMessageKey(code: string | null, action?: string): MessageKey {
+  if (code === null) return "devices.impact.blocked.unknown";
+  if (action === "retire" && Object.hasOwn(RETIRE_BLOCK_KEYS, code)) return RETIRE_BLOCK_KEYS[code];
+  return Object.hasOwn(BLOCK_KEYS, code) ? BLOCK_KEYS[code] : "devices.impact.blocked.unknown";
 }
 
 /**

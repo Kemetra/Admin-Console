@@ -149,8 +149,6 @@ export const devices: MessagesOf<typeof ar> = {
     "The server needs your confirmation that the shift stays as an unresolved exception.",
   "devices.flow.error.changed":
     "The situation changed since the preview. The server's fresh answer is below.",
-  "devices.flow.error.unknownRefusal":
-    "The server refused the action for a reason this console doesn't know. No action is offered.",
   "devices.text.required": "This field is required.",
   "devices.text.tooLong": "Use at most 500 characters.",
   "devices.text.invalid": "The text contains a character that isn't allowed.",
@@ -169,6 +167,8 @@ export const devices: MessagesOf<typeof ar> = {
   "devices.impact.verdict.noChange": "Nothing will change: this has already happened.",
   "devices.impact.blocked.cashSession":
     "Blocked: this device has an open shift. Close the shift on the till and let it sync, then try again. If the till is lost, make a security revoke first. There is no override.",
+  "devices.impact.blocked.cashSessionRetire":
+    "Blocked: this device has an open shift. Close the shift on the till and let it sync, then try again. A security revoke protects a lost till, but retire stays blocked until the shift is closed or the custody exception is reconciled. There is no override.",
   "devices.impact.blocked.custodyException":
     "Blocked: this revoked device still has an open shift (an unresolved custody exception). It can't be retired until that is resolved. There is no override.",
   "devices.impact.blocked.retired": "Blocked: this device is retired.",
@@ -204,7 +204,6 @@ export const devices: MessagesOf<typeof ar> = {
     "For real security events only: the device is lost, stolen or suspected compromised. They are not a workaround when another reason is blocked.",
   "devices.revoke.group.other": "Other reasons",
   "devices.revoke.reasonRequired": "Choose a reason.",
-  "devices.revoke.reasonLegend": "Reason for the revoke",
   "devices.revoke.note": "Note",
   "devices.revoke.noteHelp": "Optional. No personal data or PIN.",
   "devices.revoke.noteHelpRequired": "Required. No personal data or PIN.",

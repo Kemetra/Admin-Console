@@ -16,7 +16,19 @@ const SOURCE_KEYS: Record<string, MessageKey> = {
   legacy: "devices.impact.source.legacy",
 };
 
-function VerdictLine({ decision }: Readonly<{ decision: ImpactDecision }>): React.JSX.Element {
+/** A time is an LTR run inside either direction's sentence. */
+function Time({ value, timeZone }: Readonly<{ value: string; timeZone?: string }>) {
+  return (
+    <bdi dir="ltr">
+      <DateTime value={value} timeZone={timeZone} />
+    </bdi>
+  );
+}
+
+function VerdictLine({
+  decision,
+  action,
+}: Readonly<{ decision: ImpactDecision; action: string }>): React.JSX.Element {
   const t = useT();
   switch (decision.kind) {
     case "ready":
@@ -31,10 +43,17 @@ function VerdictLine({ decision }: Readonly<{ decision: ImpactDecision }>): Reac
       return <Banner variant="info" message={t("devices.impact.verdict.noChange")} />;
     case "blocked":
       return (
-        <Banner
-          variant="danger"
-          message={t(blockedMessageKey(decision.known ? decision.blockCode : null))}
-        />
+        <>
+          <Banner
+            variant="danger"
+            message={t(blockedMessageKey(decision.known ? decision.blockCode : null, action))}
+          />
+          {decision.known || decision.blockCode === null ? null : (
+            <bdi dir="ltr" className="device-impact__id">
+              {decision.blockCode}
+            </bdi>
+          )}
+        </>
       );
   }
 }
@@ -65,7 +84,7 @@ function OpenShiftFact({
     <>
       <Fact label={t("devices.impact.field.openShift")}>
         {t.rich("devices.impact.openShift.line", {
-          time: <DateTime value={shift.openedAt} timeZone={timeZone} />,
+          time: <Time value={shift.openedAt} timeZone={timeZone} />,
           source,
         })}
         <bdi dir="ltr" className="device-impact__id">
@@ -77,7 +96,7 @@ function OpenShiftFact({
           <>
             {t.rich("devices.impact.cashFacts.value", {
               count: shift.cashFacts.receivedCount,
-              time: <DateTime value={shift.cashFacts.lastReceivedAt} timeZone={timeZone} />,
+              time: <Time value={shift.cashFacts.lastReceivedAt} timeZone={timeZone} />,
             })}
             <small className="device-quiet">{t("devices.impact.cashFacts.note")}</small>
           </>
@@ -100,7 +119,7 @@ export function ImpactPanel({
   return (
     <section className="device-impact" aria-label={t("devices.impact.title")}>
       <h3 className="device-impact__title">{t("devices.impact.title")}</h3>
-      <VerdictLine decision={decision} />
+      <VerdictLine decision={decision} action={preview.action} />
       <dl className="device-impact__facts">
         <Fact label={t("devices.impact.field.state")}>
           <TrustBadge trustState={preview.trustState} />
@@ -138,7 +157,7 @@ export function ImpactPanel({
       </dl>
       <p className="device-quiet device-impact__snapshot">
         {t.rich("devices.impact.snapshot", {
-          time: <DateTime value={preview.evaluatedAt} timeZone={timeZone} />,
+          time: <Time value={preview.evaluatedAt} timeZone={timeZone} />,
         })}
       </p>
     </section>

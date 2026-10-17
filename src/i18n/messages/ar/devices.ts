@@ -150,8 +150,6 @@ export const devices = {
   "devices.flow.error.unmetAcknowledge":
     "يحتاج الخادم إلى تأكيدك أن الوردية تبقى استثناء عهدة غير محلول.",
   "devices.flow.error.changed": "تغيّر الوضع بعد المعاينة. إجابة الخادم المحدّثة معروضة أدناه.",
-  "devices.flow.error.unknownRefusal":
-    "رفض الخادم الإجراء بسبب لا تعرفه هذه اللوحة. لا يُعرض أي إجراء.",
   "devices.text.required": "هذا الحقل مطلوب.",
   "devices.text.tooLong": "استخدم 500 حرف على الأكثر.",
   "devices.text.invalid": "يحتوي النص على حرف غير مسموح به.",
@@ -169,6 +167,8 @@ export const devices = {
   "devices.impact.verdict.noChange": "لن يتغيّر شيء: حدث هذا من قبل.",
   "devices.impact.blocked.cashSession":
     "محظور: على هذا الجهاز وردية مفتوحة. أقفل الوردية على الجهاز واترك المزامنة تكتمل، ثم حاول مرة أخرى. إن كان الجهاز مفقودًا فأوقف صلاحيته أولًا بسبب أمني. لا يوجد تجاوز.",
+  "devices.impact.blocked.cashSessionRetire":
+    "محظور: على هذا الجهاز وردية مفتوحة. أقفل الوردية على الجهاز واترك المزامنة تكتمل، ثم حاول مرة أخرى. إيقاف الصلاحية بسبب أمني يحمي جهازًا مفقودًا، لكن الإخراج من الخدمة يبقى محظورًا حتى تُقفل الوردية أو تُسوّى استثناء العهدة. لا يوجد تجاوز.",
   "devices.impact.blocked.custodyException":
     "محظور: لهذا الجهاز الموقوف وردية ما زالت مفتوحة (استثناء عهدة غير محلول). لا يمكن إخراجه من الخدمة قبل حلّ ذلك. لا يوجد تجاوز.",
   "devices.impact.blocked.retired": "محظور: هذا الجهاز خارج الخدمة.",
@@ -207,7 +207,6 @@ export const devices = {
     "للأحداث الأمنية الحقيقية فقط: جهاز مفقود أو مسروق أو يُشتبه في اختراقه. ليست حلًّا بديلًا حين يُحظر سبب آخر.",
   "devices.revoke.group.other": "أسباب أخرى",
   "devices.revoke.reasonRequired": "اختر سببًا.",
-  "devices.revoke.reasonLegend": "سبب إيقاف الصلاحية",
   "devices.revoke.note": "الملاحظة",
   "devices.revoke.noteHelp": "اختيارية. بلا بيانات شخصية أو رقم سري.",
   "devices.revoke.noteHelpRequired": "مطلوبة. بلا بيانات شخصية أو رقم سري.",

@@ -98,7 +98,9 @@ export function useCancelPairingCode() {
   return useMutation({
     mutationFn: (pairingCodeId: string) => consoleCancelPairingCode(pairingCodeId),
     onSuccess: (res) => {
-      if (res.status === 200) void client.invalidateQueries({ queryKey: ["devices"] });
+      if (res.status === 200) {
+        void client.invalidateQueries({ queryKey: ["devices", "pairing-codes"] });
+      }
     },
   });
 }

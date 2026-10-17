@@ -7,6 +7,7 @@
 import { Banner } from "@/components/Banner";
 import { InlineError } from "@/components/InlineError";
 import { type MessageKey, useT } from "@/i18n";
+import { useId } from "react";
 import { ImpactPanel } from "./ImpactPanel";
 import { TextArea } from "./RevokeFields";
 import type { Draft, FlowAction, Problems } from "./flowTypes";
@@ -18,20 +19,28 @@ import "./devices.css";
 
 type Ready = Extract<ImpactDecision, { kind: "ready" }>;
 
+/**
+ * The note the server asked for on the review step. The drawer-cash question belongs to
+ * the recovery revoke (the one that also asks for the acknowledgement); any other
+ * request for a note gets the plain label. A note the details step already collected is
+ * not asked for twice.
+ */
 function NoteField({
   draft,
   problems,
+  recovery,
   onPatch,
 }: Readonly<{
   draft: Draft;
   problems: Problems;
+  recovery: boolean;
   onPatch: (next: Partial<Draft>) => void;
 }>): React.JSX.Element {
   const t = useT();
   return (
     <TextArea
       id="review-note"
-      label={t("devices.revoke.noteRecovery")}
+      label={t(recovery ? "devices.revoke.noteRecovery" : "devices.revoke.note")}
       help={t("devices.revoke.noteHelpRequired")}
       value={draft.note}
       problem={problems.note}
@@ -53,6 +62,7 @@ function ConfirmBox({
   onChange: (checked: boolean) => void;
 }>): React.JSX.Element {
   const t = useT();
+  const errorId = useId();
   return (
     <div className="field">
       <label className="drawer__radio">
@@ -60,11 +70,14 @@ function ConfirmBox({
           type="checkbox"
           checked={checked}
           aria-invalid={problem ? "true" : undefined}
+          aria-describedby={problem ? errorId : undefined}
           onChange={(e) => onChange(e.target.checked)}
         />
         {label}
       </label>
-      <InlineError message={problem ? t(problem) : undefined} />
+      <span id={errorId}>
+        <InlineError message={problem ? t(problem) : undefined} />
+      </span>
     </div>
   );
 }
@@ -84,8 +97,13 @@ function Requirements({
   const t = useT();
   return (
     <>
-      {decision.needs.note ? (
-        <NoteField draft={draft} problems={problems} onPatch={onPatch} />
+      {decision.needs.note && (decision.needs.acknowledge || draft.note.trim() === "") ? (
+        <NoteField
+          draft={draft}
+          problems={problems}
+          recovery={decision.needs.acknowledge}
+          onPatch={onPatch}
+        />
       ) : null}
       {decision.needs.acknowledge ? (
         <ConfirmBox
@@ -104,7 +122,8 @@ function ImpactFailure({
   onRetry,
 }: Readonly<{ failure: MutationFailure; onRetry: () => void }>): React.JSX.Element {
   const t = useT();
-  const retryable = failure.kind === "generic" || failure.kind === "validation";
+  // A rejected value (400) is not fixed by asking again; only a server failure is retried.
+  const retryable = failure.kind === "generic";
   const key: MessageKey = retryable ? "devices.impact.loadFailed" : noticeKeyFor(failure);
   return (
     <Banner

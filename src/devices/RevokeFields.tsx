@@ -44,6 +44,7 @@ export function TextArea({
       <textarea
         id={id}
         className="input device-textarea"
+        dir="auto"
         rows={3}
         maxLength={OPERATOR_TEXT_MAX}
         value={value}
@@ -101,6 +102,8 @@ export function RevokeDetails({
                   name="revoke-reason"
                   value={r}
                   checked={reason === r}
+                  aria-invalid={problems.reason ? "true" : undefined}
+                  aria-describedby={problems.reason ? "revoke-reason-error" : undefined}
                   onChange={() => onReason(r)}
                 />
                 {t(revokeReasonKey({ revokeReason: r }))}

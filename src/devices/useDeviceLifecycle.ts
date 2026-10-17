@@ -21,7 +21,7 @@ import {
   consoleRetireDevice,
   consoleRevokeDevice,
 } from "@/lib/device-queries";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type MutationFailure, classifyMutationFailure } from "./lifecycleFailure";
 import type { RevokeBody } from "./lifecycleLogic";
 import { newIdempotencyKey } from "./pairingLogic";
@@ -98,12 +98,23 @@ export function useImpact({
 }
 
 /** The wrapper's answer (not thrown): the flow classifies it, so a 409 keeps its payload. */
+/** The device read models, and the live pairing codes a revoke or retire cancels. */
+const DEVICE_AND_CODES: readonly (readonly string[])[] = [
+  ["devices", "list"],
+  ["devices", "detail"],
+  ["devices", "pairing-codes"],
+];
+
+function invalidateAll(client: QueryClient, keys: readonly (readonly string[])[]): void {
+  for (const queryKey of keys) void client.invalidateQueries({ queryKey });
+}
+
 export function useRevokeDevice(deviceId: string) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (body: RevokeBody) => consoleRevokeDevice(deviceId, body),
     onSuccess: (res) => {
-      if (res.status === 200) void client.invalidateQueries({ queryKey: ["devices"] });
+      if (res.status === 200) invalidateAll(client, DEVICE_AND_CODES);
     },
   });
 }
@@ -113,7 +124,7 @@ export function useRetireDevice(deviceId: string) {
   return useMutation({
     mutationFn: (retireReason: string) => consoleRetireDevice(deviceId, retireReason),
     onSuccess: (res) => {
-      if (res.status === 200) void client.invalidateQueries({ queryKey: ["devices"] });
+      if (res.status === 200) invalidateAll(client, DEVICE_AND_CODES);
     },
   });
 }
@@ -182,7 +193,7 @@ export function useIssuePairingCode() {
     mutationFn: (body: PairingCodeIssueRequest) =>
       consoleIssuePairingCode(body, newIdempotencyKey()),
     onSuccess: (res) => {
-      if (res.status === 201) void client.invalidateQueries({ queryKey: ["devices"] });
+      if (res.status === 201) invalidateAll(client, [["devices", "pairing-codes"]]);
     },
   });
 }
