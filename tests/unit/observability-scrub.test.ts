@@ -49,6 +49,13 @@ describe("scrubSentryEvent — message masks (contract 3.2)", () => {
     expect(scrubbedValue("Is it valid? no")).toBe("Is it valid? no");
   });
 
+  test("a token that is itself a query or fragment is dropped (key=value)", () => {
+    expect(scrubbedValue("bad params ?phone=01012345678&token=abc")).toBe("bad params ");
+    expect(scrubbedValue("hash #access_token=abc end")).toBe("hash  end");
+    // A bare "#42" or "?" carries no key=value and is kept.
+    expect(scrubbedValue("row #42 ? ok")).toBe("row #42 ? ok");
+  });
+
   test("masks a two-segment JWT (header + payload, no signature)", () => {
     expect(scrubbedValue("bad eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJqb2huQHguY29tIn0 here")).toBe(
       "bad [jwt] here",

@@ -151,10 +151,13 @@ class MessageToken {
 
   /**
    * Drop a query or fragment the URL pass did not see (`/v1/x?phone=…`,
-   * `host/x#token=…`). A `?` or `#` that opens or ends the token is not one
-   * ("valid?", "#42"), so ordinary sentences survive.
+   * `host/x#token=…`, `?phone=…`). A `?` or `#` that ends the token, or opens
+   * it without any `key=value` ("valid?", "#42"), is not one, so ordinary
+   * sentences survive.
    */
   withoutQuery(): MessageToken {
+    const first = this.text.charAt(0);
+    if ((first === "?" || first === "#") && this.text.includes("=")) return new MessageToken("");
     for (let i = 1; i < this.text.length - 1; i++) {
       const char = this.text.charAt(i);
       if (char === "?" || char === "#") return new MessageToken(this.text.slice(0, i));
