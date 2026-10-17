@@ -60,17 +60,20 @@ export interface Notice {
   codesLink: boolean;
 }
 
+/** What a 404 on an issue names: a replace or move names a device or a store; a plain pairing, a store. */
+const NOT_FOUND_KEYS = {
+  "replace-or-move": "devices.issue.error.notFound",
+  pair: "devices.issue.error.storeNotFound",
+} as const;
+
 /**
  * A refusal as a banner: the server re-deciding is a warning (the situation
  * changed), the rest danger. A 404 on an issue may name the device or the store,
  * so it reads as that, not as "this device".
  */
-export function noticeOf(failure: MutationFailure, issuing = false): Notice {
+export function noticeOf(failure: MutationFailure, issue?: "replace-or-move" | "pair"): Notice {
   return {
-    key:
-      issuing && failure.kind === "not-found"
-        ? "devices.issue.error.notFound"
-        : noticeKeyFor(failure),
+    key: failure.kind === "not-found" && issue ? NOT_FOUND_KEYS[issue] : noticeKeyFor(failure),
     variant: failure.kind === "conflict" && isReDecided(failure) ? "warning" : "danger",
     requestId: requestIdOfFailure(failure),
     codesLink: pointsAtCodes(failure),

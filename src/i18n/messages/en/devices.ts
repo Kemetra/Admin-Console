@@ -272,8 +272,8 @@ export const devices: MessagesOf<typeof ar> = {
   "devices.issue.problem.tooLong": "Use at most {max} characters.",
   "devices.issue.problem.ttl": "Enter a whole number from 1 to 1440.",
   "devices.issue.confirm": "Issue pairing code",
-  "devices.issue.issuing": "Issuing…",
   "devices.issue.error.notFound": "The device or store is not available to you.",
+  "devices.issue.error.storeNotFound": "The store is not available to you.",
   "devices.issue.error.alreadyPending":
     "A live pairing code already replaces this device. Cancel it from the pending codes first, or wait for it to expire.",
   "devices.issue.error.alreadyReplaced":

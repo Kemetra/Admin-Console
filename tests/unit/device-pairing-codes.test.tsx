@@ -274,3 +274,120 @@ describe("PairingCodes (RT-372 part B)", () => {
     expect(consoleIssuePairingCode).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("PairingCodes review fixes (RT-372)", () => {
+  beforeEach(() => {
+    for (const fn of [
+      consoleListPairingCodes,
+      consoleCancelPairingCode,
+      consoleIssuePairingCode,
+      listStores,
+      activeContext,
+    ]) {
+      fn.mockReset();
+    }
+    activeContext.mockReturnValue(ctx());
+    listStores.mockResolvedValue({ status: 200, data: stores });
+    consoleListPairingCodes.mockResolvedValue(
+      page([pending(), pending({ pairingCodeId: "c2", terminalLabel: "Counter 4" })]),
+    );
+  });
+
+  const rowOf = (label: string) => screen.getByText(label).closest("tr") as HTMLElement;
+
+  test("the cancel confirm opens in place, under its own row, with focus on the safe choice", async () => {
+    renderPage();
+    await screen.findByText("Counter 4");
+    const row = rowOf("Counter 4");
+    fireEvent.click(within(row).getByRole("button", { name: "Cancel code" }));
+    const confirm = screen.getByRole("group", { name: "Cancel code" });
+    // Directly after the row it belongs to, not above the table.
+    expect(row.nextElementSibling?.contains(confirm)).toBe(true);
+    expect(document.activeElement).toBe(within(confirm).getByRole("button", { name: "Keep code" }));
+  });
+
+  test("closing the confirm returns focus to that row's Cancel button", async () => {
+    renderPage();
+    await screen.findByText("Counter 4");
+    fireEvent.click(within(rowOf("Counter 4")).getByRole("button", { name: "Cancel code" }));
+    fireEvent.click(screen.getByRole("button", { name: "Keep code" }));
+    expect(document.activeElement).toBe(
+      within(rowOf("Counter 4")).getByRole("button", { name: "Cancel code" }),
+    );
+  });
+
+  test("while a cancel is pending the other rows cannot start another", async () => {
+    consoleCancelPairingCode.mockReturnValue(new Promise(() => undefined));
+    renderPage();
+    await screen.findByText("Counter 4");
+    fireEvent.click(within(rowOf("Counter 4")).getByRole("button", { name: "Cancel code" }));
+    fireEvent.click(
+      within(screen.getByRole("group", { name: "Cancel code" })).getByRole("button", {
+        name: "Cancel code",
+      }),
+    );
+    const other = within(rowOf("Counter 2")).getByRole("button", { name: "Cancel code" });
+    await waitFor(() => expect((other as HTMLButtonElement).disabled).toBe(true));
+  });
+
+  test.each([
+    [404, "not_found"],
+    [409, "pairing_code_used"],
+  ])(
+    "a %s on cancel refreshes the list: the code is no longer what the page thinks",
+    async (status, code) => {
+      consoleCancelPairingCode.mockResolvedValue({
+        status,
+        error: { error: { code, message: "x", request_id: "r" } },
+      });
+      renderPage();
+      await screen.findByText("Counter 4");
+      fireEvent.click(within(rowOf("Counter 4")).getByRole("button", { name: "Cancel code" }));
+      fireEvent.click(
+        within(screen.getByRole("group", { name: "Cancel code" })).getByRole("button", {
+          name: "Cancel code",
+        }),
+      );
+      await waitFor(() => expect(consoleListPairingCodes).toHaveBeenCalledTimes(2));
+    },
+  );
+
+  test("a rejected list request (400) offers no Retry; a server failure does", async () => {
+    consoleListPairingCodes.mockResolvedValueOnce(failure(400));
+    renderPage();
+    await screen.findByText("Pairing codes could not be loaded.");
+    expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+  });
+
+  test("expiry times are LTR runs inside either direction's row", async () => {
+    renderPage();
+    await screen.findByText("Counter 4");
+    for (const time of rowOf("Counter 4").querySelectorAll("time")) {
+      expect(time.closest("bdi")?.getAttribute("dir")).toBe("ltr");
+    }
+  });
+
+  test("a refused plain pairing (404) names the store, not a device", async () => {
+    consoleIssuePairingCode.mockResolvedValue({
+      status: 404,
+      error: { error: { code: "not_found", message: "x", request_id: "r" } },
+    });
+    renderPage();
+    await screen.findByText("Counter 4");
+    fireEvent.click(screen.getByRole("button", { name: "Issue pairing code" }));
+    const dialog = screen.getByRole("dialog", { name: "Issue pairing code" });
+    await within(dialog).findByRole("option", { name: "Fifth Avenue" });
+    fireEvent.change(within(dialog).getByLabelText("Store"), { target: { value: DUBAI_STORE } });
+    for (const [label, value] of Object.entries({
+      "Store name on receipts": "Dubai Mall",
+      "Store address on receipts": "Level 1",
+      "Tax registration id": "TRN-1",
+      "Printer vendor id (USB)": "0x04B8",
+      "Printer product id (USB)": "0x0E15",
+    })) {
+      fireEvent.change(within(dialog).getByLabelText(label), { target: { value } });
+    }
+    fireEvent.click(within(dialog).getByRole("button", { name: "Issue pairing code" }));
+    expect(await within(dialog).findByText("The store is not available to you.")).toBeDefined();
+  });
+});

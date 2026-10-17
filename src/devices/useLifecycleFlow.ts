@@ -164,7 +164,7 @@ export function useLifecycleFlow(action: FlowAction, device: DeviceDetail): Life
   }
 
   function refuse(failure: MutationFailure): void {
-    setNotice(noticeOf(failure, isIssueAction(action)));
+    setNotice(noticeOf(failure, isIssueAction(action) ? "replace-or-move" : undefined));
     if (failure.kind === "not-found") setGone(true);
     const preview = freshPreviewOf(failure);
     if (preview) setFresh(preview as DeviceImpactPreview);

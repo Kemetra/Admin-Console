@@ -2,26 +2,27 @@ import { BackArrow } from "@/components/BackArrow";
 import { Banner } from "@/components/Banner";
 import { DataTableSkeleton } from "@/components/DataTableSkeleton";
 import { ListState } from "@/components/ListState";
-import { DateTime, type MessageKey, type T, useT } from "@/i18n";
-import type { PairingCodeSummary } from "@/lib/device-queries";
+import { useT } from "@/i18n";
 import { type StoreDirectory, useStoreDirectory } from "@/shift-closes/useShiftCloses";
 /**
  * RT-372 — Pending pairing codes: the live codes in the caller's scope (pending
  * and not expired), newest first, keyset paged in the server's order. A code is
  * never listed (the server keeps only a hash): it is shown once, when issued.
- * Each row can be cancelled after an explicit confirm; cancelling is idempotent
- * (`already_cancelled` succeeds) and a used code can't be cancelled. A kind
- * the console does not know is shown as unknown, and a move or replace whose
- * target device is outside the caller's scope says so instead of "none".
+ * Each row can be cancelled after an explicit confirm that opens under that row;
+ * cancelling is idempotent (`already_cancelled` succeeds) and a used code can't be
+ * cancelled. A kind the console does not know is shown as unknown, and a move or
+ * replace whose target device is outside the caller's scope says so instead of
+ * "none".
  */
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link } from "react-router";
 import { PairDrawer } from "./PairDrawer";
-import { type CancelResult, useCancelFlow } from "./useCancelFlow";
+import { CodesTable } from "./PairingCodesTable";
+import { type CancelFlow, type CancelResult, useCancelFlow } from "./useCancelFlow";
+import { useCancelFocus } from "./useCancelFocus";
 import { type DeviceError, useDeviceScope } from "./useDevices";
 import { type PairingCodeListState, usePairingCodes } from "./usePairingCodes";
 import "../shell/surface.css";
-import "../components/data-table.css";
 import "./devices.css";
 
 const COLUMN_KEYS = [
@@ -33,82 +34,7 @@ const COLUMN_KEYS = [
   { key: "actions", header: "devices.codes.col.actions" },
 ] as const;
 
-const KIND_KEYS: Record<string, MessageKey> = {
-  pair: "devices.codes.kind.pair",
-  replace: "devices.codes.kind.replace",
-  move: "devices.codes.kind.move",
-};
-
-function ReplacesCell({ code }: Readonly<{ code: PairingCodeSummary }>): React.JSX.Element {
-  const t = useT();
-  if (code.replacesDeviceId) {
-    return (
-      <Link to={`/devices/${code.replacesDeviceId}`}>
-        <bdi dir="ltr" className="device-impact__id">
-          {code.replacesDeviceId}
-        </bdi>
-      </Link>
-    );
-  }
-  // A replace or move whose device the caller can't see is not "none".
-  return (
-    <span className="device-quiet">
-      {t(code.kind === "pair" ? "devices.codes.replaces.none" : "devices.codes.replaces.outside")}
-    </span>
-  );
-}
-
-interface TableProps {
-  rows: readonly PairingCodeSummary[];
-  directory: StoreDirectory;
-  onCancel: (code: PairingCodeSummary) => void;
-  t: T;
-}
-
-function CodesTable({ rows, directory, onCancel, t }: Readonly<TableProps>): React.JSX.Element {
-  return (
-    <table className="data-table">
-      <caption className="data-table__caption">{t("devices.codes.caption")}</caption>
-      <thead>
-        <tr>
-          <th scope="col">{t("devices.codes.col.terminal")}</th>
-          <th scope="col">{t("devices.codes.col.kind")}</th>
-          <th scope="col">{t("devices.codes.col.store")}</th>
-          <th scope="col">{t("devices.codes.col.replaces")}</th>
-          <th scope="col">{t("devices.codes.col.expires")}</th>
-          <th scope="col">{t("devices.codes.col.actions")}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((code) => (
-          <tr key={code.pairingCodeId}>
-            <td>
-              <bdi dir="auto">{code.terminalLabel}</bdi>
-            </td>
-            <td>
-              <span className="badge">
-                {t(KIND_KEYS[code.kind] ?? "devices.codes.kind.unknown")}
-              </span>
-            </td>
-            <td>{directory.nameOf(code.storeId) ?? t("devices.list.unknownStore")}</td>
-            <td>
-              <ReplacesCell code={code} />
-            </td>
-            <td>
-              <DateTime value={code.expiresAt} timeZone={directory.timeZoneOf(code.storeId)} />
-            </td>
-            <td>
-              <button type="button" className="btn-secondary" onClick={() => onCancel(code)}>
-                {t("devices.codes.cancel")}
-              </button>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-}
-
+/** A refusal reads as one thing; only a server failure is worth asking again. */
 function ListFailure({
   error,
   onRetry,
@@ -132,9 +58,11 @@ function ListFailure({
       message={t("devices.codes.loadFailed")}
       requestId={error.requestId}
       action={
-        <button type="button" className="btn-secondary" onClick={onRetry}>
-          {t("devices.codes.retry")}
-        </button>
+        error.kind === "rejected" ? undefined : (
+          <button type="button" className="btn-secondary" onClick={onRetry}>
+            {t("devices.codes.retry")}
+          </button>
+        )
       }
     />
   );
@@ -174,39 +102,6 @@ function Pager({ list }: Readonly<{ list: PairingCodeListState }>): React.JSX.El
   );
 }
 
-/** The inline confirm before a cancel: names the code, one destructive primary. */
-function CancelConfirm({
-  code,
-  pending,
-  onConfirm,
-  onKeep,
-}: Readonly<{
-  code: PairingCodeSummary;
-  pending: boolean;
-  onConfirm: () => void;
-  onKeep: () => void;
-}>): React.JSX.Element {
-  const t = useT();
-  return (
-    <fieldset className="confirm-delete device-confirm" aria-label={t("devices.codes.cancel")}>
-      <p className="confirm-delete__msg">
-        {t.rich("devices.codes.cancelConfirm", {
-          label: <bdi dir="auto">{code.terminalLabel}</bdi>,
-        })}
-      </p>
-      <div className="confirm-delete__actions">
-        <button type="button" className="btn-destructive" onClick={onConfirm} disabled={pending}>
-          {pending ? <span className="spinner" aria-hidden="true" /> : null}
-          {t("devices.codes.cancel")}
-        </button>
-        <button type="button" className="btn-secondary" onClick={onKeep} disabled={pending}>
-          {t("devices.codes.cancelKeep")}
-        </button>
-      </div>
-    </fieldset>
-  );
-}
-
 function ResultNotice({ result }: Readonly<{ result?: CancelResult }>): React.JSX.Element | null {
   const t = useT();
   if (!result) return null;
@@ -219,7 +114,7 @@ function ResultNotice({ result }: Readonly<{ result?: CancelResult }>): React.JS
 interface BodyProps {
   list: PairingCodeListState;
   directory: StoreDirectory;
-  onCancel: (code: PairingCodeSummary) => void;
+  cancel: CancelFlow;
 }
 
 /**
@@ -232,7 +127,7 @@ function isAwaiting(list: PairingCodeListState, directory: StoreDirectory): bool
 }
 
 /** The table, or why there isn't one: loading, a refusal, or nothing pending. */
-function CodesBody({ list, directory, onCancel }: Readonly<BodyProps>): React.JSX.Element {
+function CodesBody({ list, directory, cancel }: Readonly<BodyProps>): React.JSX.Element {
   const t = useT();
   if (isAwaiting(list, directory)) {
     return (
@@ -255,7 +150,7 @@ function CodesBody({ list, directory, onCancel }: Readonly<BodyProps>): React.JS
   }
   return (
     <>
-      <CodesTable rows={list.rows} directory={directory} onCancel={onCancel} t={t} />
+      <CodesTable rows={list.rows} directory={directory} cancel={cancel} t={t} />
       <Pager list={list} />
     </>
   );
@@ -266,7 +161,8 @@ export function PairingCodes(): React.JSX.Element {
   const scope = useDeviceScope();
   const directory = useStoreDirectory(scope.tenantId);
   const list = usePairingCodes(scope);
-  const cancel = useCancelFlow();
+  const region = useRef<HTMLDivElement>(null);
+  const cancel = useCancelFocus(useCancelFlow(), region);
   const [pairing, setPairing] = useState(false);
 
   if (!scope.tenantId) {
@@ -294,15 +190,9 @@ export function PairingCodes(): React.JSX.Element {
         </button>
       </header>
       <ResultNotice result={cancel.result} />
-      {cancel.confirming ? (
-        <CancelConfirm
-          code={cancel.confirming}
-          pending={cancel.pending}
-          onConfirm={() => void cancel.confirm(cancel.confirming as PairingCodeSummary)}
-          onKeep={cancel.keep}
-        />
-      ) : null}
-      <CodesBody list={list} directory={directory} onCancel={cancel.ask} />
+      <div ref={region} tabIndex={-1} className="device-codes-region">
+        <CodesBody list={list} directory={directory} cancel={cancel} />
+      </div>
       {pairing ? <PairDrawer onClose={() => setPairing(false)} /> : null}
     </div>
   );

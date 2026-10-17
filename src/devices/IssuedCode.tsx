@@ -7,8 +7,9 @@
  * move also carries the contract's REPLACEMENT_BLOCKED note: that refusal is the
  * POS's, at pairing, when a shift opened on the old device after the issue.
  */
-import { DateTime, useT } from "@/i18n";
+import { useT } from "@/i18n";
 import type { PairingCodeIssued } from "@/lib/device-queries";
+import { LtrTime } from "./DeviceParts";
 import "./devices.css";
 
 const MS_PER_MINUTE = 60_000;
@@ -43,7 +44,7 @@ export function IssuedCode({
       <p>
         {t.rich("devices.issue.issued.valid", {
           count: minutesToLive(issued),
-          time: <DateTime value={issued.expiresAt} timeZone={timeZone} />,
+          time: <LtrTime value={issued.expiresAt} timeZone={timeZone} />,
         })}
       </p>
       {replacing ? (

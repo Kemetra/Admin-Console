@@ -90,6 +90,17 @@ describe("validateIssueDraft (form checks; the server re-validates everything)",
   });
 });
 
+describe("Arabic-Indic digits in the ttl", () => {
+  test("are accepted and sent as the number they spell", () => {
+    expect(validateIssueDraft({ ...valid, ttlMinutes: "١٢٠" })).toEqual({});
+    expect(validateIssueDraft({ ...valid, ttlMinutes: "۱۲۰" })).toEqual({});
+    expect(buildIssueBody({ ...valid, ttlMinutes: "١٢٠" }).ttlMinutes).toBe(120);
+    expect(validateIssueDraft({ ...valid, ttlMinutes: "١٤٤١" }).ttlMinutes?.key).toBe(
+      "devices.issue.problem.ttl",
+    );
+  });
+});
+
 describe("buildIssueBody", () => {
   test("a plain pairing sends the store and the binding, nothing optional", () => {
     expect(buildIssueBody(valid)).toEqual({

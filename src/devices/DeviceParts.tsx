@@ -8,6 +8,18 @@ import { DateTime, useT } from "@/i18n";
 import { isPastExpiry, lastSeenView, trustStateView } from "./deviceLogic";
 import "./devices.css";
 
+/** A time is an LTR run inside either direction's sentence or row. */
+export function LtrTime({
+  value,
+  timeZone,
+}: Readonly<{ value: string; timeZone?: string }>): React.JSX.Element {
+  return (
+    <bdi dir="ltr">
+      <DateTime value={value} timeZone={timeZone} />
+    </bdi>
+  );
+}
+
 /** The terminal label, or a quiet "No label"; the id is machine data (UX-11). */
 export function DeviceName({
   label,

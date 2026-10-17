@@ -278,8 +278,8 @@ export const devices = {
   "devices.issue.problem.tooLong": "استخدم {max} حرفًا على الأكثر.",
   "devices.issue.problem.ttl": "أدخل عددًا صحيحًا من 1 إلى 1440.",
   "devices.issue.confirm": "إصدار رمز الربط",
-  "devices.issue.issuing": "جارٍ الإصدار…",
   "devices.issue.error.notFound": "الجهاز أو المتجر غير متاح لك.",
+  "devices.issue.error.storeNotFound": "المتجر غير متاح لك.",
   "devices.issue.error.alreadyPending":
     "يوجد رمز ربط حيّ لاستبدال هذا الجهاز. ألغِه من قائمة الرموز المعلّقة أولًا، أو انتظر انتهاءه.",
   "devices.issue.error.alreadyReplaced": "استُبدل هذا الجهاز من قبل. يُستبدل الجهاز مرة واحدة فقط.",

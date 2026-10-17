@@ -150,9 +150,11 @@ export function PairDrawer({ onClose }: Readonly<{ onClose: () => void }>): Reac
       }
       // A gateway error or timeout can arrive after the server made the code: unknown outcome.
       const unanswered = res.status >= 500 || res.status === 0;
-      setNotice(noticeOf(unanswered ? { kind: "no-answer" } : classifyMutationFailure(res), true));
+      setNotice(
+        noticeOf(unanswered ? { kind: "no-answer" } : classifyMutationFailure(res), "pair"),
+      );
     } catch {
-      setNotice(noticeOf({ kind: "no-answer" }, true));
+      setNotice(noticeOf({ kind: "no-answer" }, "pair"));
     }
   }
 

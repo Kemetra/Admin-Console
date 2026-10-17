@@ -65,9 +65,22 @@ function usbProblem(value: string): FieldProblem | undefined {
   return USB_ID.test(id) ? undefined : { key: "devices.issue.problem.usbId" };
 }
 
+const ARABIC_INDIC_ZERO = 0x0660;
+const EXTENDED_ARABIC_INDIC_ZERO = 0x06f0;
+
+/** A number typed with Arabic-Indic (٠-٩) or Persian (۰-۹) digits is the number it spells. */
+function normalizeDigits(value: string): string {
+  return value.replace(/[\u0660-\u0669\u06f0-\u06f9]/g, (digit) => {
+    const code = digit.charCodeAt(0);
+    return String(
+      code - (code >= EXTENDED_ARABIC_INDIC_ZERO ? EXTENDED_ARABIC_INDIC_ZERO : ARABIC_INDIC_ZERO),
+    );
+  });
+}
+
 /** Empty is the server default; anything else is a whole number of minutes in range. */
 function ttlProblem(value: string): FieldProblem | undefined {
-  const ttl = value.trim();
+  const ttl = normalizeDigits(value).trim();
   if (ttl === "") return undefined;
   const minutes = Number(ttl);
   const ok = /^\d+$/.test(ttl) && minutes >= TTL_MIN && minutes <= TTL_MAX;
@@ -108,7 +121,7 @@ export function buildIssueBody(
   replacesDeviceId?: string,
 ): PairingCodeIssueRequest {
   const label = draft.terminalLabel.trim();
-  const ttl = draft.ttlMinutes.trim();
+  const ttl = normalizeDigits(draft.ttlMinutes).trim();
   const com = draft.printerComPort.trim();
   return {
     storeId: draft.storeId,

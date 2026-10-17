@@ -5,9 +5,9 @@
  * what to do about it; `null` stays unknown, never zero.
  */
 import { Banner } from "@/components/Banner";
-import { DateTime, type MessageKey, useT } from "@/i18n";
+import { type MessageKey, useT } from "@/i18n";
 import type { DeviceImpactPreview } from "@/lib/device-queries";
-import { TrustBadge } from "./DeviceParts";
+import { LtrTime, TrustBadge } from "./DeviceParts";
 import { type ImpactDecision, blockedMessageKey, decideImpact } from "./impactDecision";
 import "./devices.css";
 
@@ -15,15 +15,6 @@ const SOURCE_KEYS: Record<string, MessageKey> = {
   cash_up: "devices.impact.source.cash_up",
   legacy: "devices.impact.source.legacy",
 };
-
-/** A time is an LTR run inside either direction's sentence. */
-function Time({ value, timeZone }: Readonly<{ value: string; timeZone?: string }>) {
-  return (
-    <bdi dir="ltr">
-      <DateTime value={value} timeZone={timeZone} />
-    </bdi>
-  );
-}
 
 function VerdictLine({
   decision,
@@ -84,7 +75,7 @@ function OpenShiftFact({
     <>
       <Fact label={t("devices.impact.field.openShift")}>
         {t.rich("devices.impact.openShift.line", {
-          time: <Time value={shift.openedAt} timeZone={timeZone} />,
+          time: <LtrTime value={shift.openedAt} timeZone={timeZone} />,
           source,
         })}
         <bdi dir="ltr" className="device-impact__id">
@@ -96,7 +87,7 @@ function OpenShiftFact({
           <>
             {t.rich("devices.impact.cashFacts.value", {
               count: shift.cashFacts.receivedCount,
-              time: <Time value={shift.cashFacts.lastReceivedAt} timeZone={timeZone} />,
+              time: <LtrTime value={shift.cashFacts.lastReceivedAt} timeZone={timeZone} />,
             })}
             <small className="device-quiet">{t("devices.impact.cashFacts.note")}</small>
           </>
@@ -157,7 +148,7 @@ export function ImpactPanel({
       </dl>
       <p className="device-quiet device-impact__snapshot">
         {t.rich("devices.impact.snapshot", {
-          time: <Time value={preview.evaluatedAt} timeZone={timeZone} />,
+          time: <LtrTime value={preview.evaluatedAt} timeZone={timeZone} />,
         })}
       </p>
     </section>

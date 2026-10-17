@@ -765,4 +765,28 @@ describe("review fixes (RT-372)", () => {
     expect(times.length).toBeGreaterThan(0);
     for (const time of times) expect(time.closest("bdi")?.getAttribute("dir")).toBe("ltr");
   });
+
+  test("M1 edge: Back then Review again while the codes are refetching keeps confirm hidden", async () => {
+    consoleGetDeviceImpact.mockResolvedValue({
+      status: 200,
+      data: impact({
+        action: "retire",
+        revokeReason: "retired",
+        trustState: "revoked",
+        cascade: null,
+      }),
+    });
+    consoleListPairingCodes.mockResolvedValueOnce({
+      status: 200,
+      data: { items: [], nextCursor: null },
+    });
+    await openRetireFor();
+    await within(dialog()).findByRole("button", { name: "Retire device" });
+    // The second look at the codes is still in flight.
+    consoleListPairingCodes.mockReturnValue(new Promise(() => undefined));
+    click("Back");
+    click("Review impact");
+    await within(dialog()).findByText("Allowed by the server.");
+    expect(within(dialog()).queryByRole("button", { name: "Retire device" })).toBeNull();
+  });
 });

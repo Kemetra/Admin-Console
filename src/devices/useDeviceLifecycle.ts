@@ -173,7 +173,8 @@ export function useReplacementCodes(
   });
   return {
     count: result.data,
-    isLoading: enabled && result.isLoading,
+    // Also true on a refetch (Back, then Review again): the earlier answer is not the current one.
+    isLoading: enabled && result.isFetching,
     failed: result.isError,
     retry: () => void result.refetch(),
   };

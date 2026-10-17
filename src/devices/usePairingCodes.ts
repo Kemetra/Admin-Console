@@ -93,12 +93,15 @@ export function usePairingCodes(scope: ScopeKey): PairingCodeListState {
   };
 }
 
+const REFRESH_AFTER: ReadonlySet<number> = new Set([200, 404, 409]);
+
 export function useCancelPairingCode() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (pairingCodeId: string) => consoleCancelPairingCode(pairingCodeId),
     onSuccess: (res) => {
-      if (res.status === 200) {
+      // 200 changed the code; a 404 or 409 says the page's picture of it is out of date.
+      if (REFRESH_AFTER.has(res.status)) {
         void client.invalidateQueries({ queryKey: ["devices", "pairing-codes"] });
       }
     },

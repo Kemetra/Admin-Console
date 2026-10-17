@@ -247,3 +247,7 @@
   user-select: all;
   overflow-wrap: anywhere;
 }
+
+.device-codes-region:focus-visible {
+  outline: none;
+}

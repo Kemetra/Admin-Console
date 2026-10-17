@@ -7,7 +7,11 @@
  *     attribution).
  *   - RT-372 lifecycle: `consoleGetDeviceImpact` (the read-only preview the
  *     console renders before every action), `consoleRevokeDevice` and
- *     `consoleRetireDevice`, and `consoleListPairingCodes` (the retire warning).
+ *     `consoleRetireDevice`.
+ *   - RT-372 pairing codes: `consoleIssuePairingCode` (a one-time code, shown
+ *     once; replace and move pass `replacesDeviceId`), `consoleListPairingCodes`
+ *     (the live pending codes; also read for the retire warning) and
+ *     `consoleCancelPairingCode`.
  *
  * Boundary: no DELETE (a device row is never removed) and no bulk operation.
  * Same `{ status, data?, error? }` shape as `src/lib/shift-close-queries.ts`;

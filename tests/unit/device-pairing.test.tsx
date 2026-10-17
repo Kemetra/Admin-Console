@@ -458,6 +458,35 @@ describe("Replace and Move (RT-372 part B)", () => {
     expect(await screen.findByRole("dialog", { name: "Replace device" })).toBeDefined();
   });
 
+  test("the issue form is direction-safe: free text is dir=auto and the address can span lines", async () => {
+    await openAction("Replace");
+    for (const label of [
+      "Store name on receipts",
+      "Store address on receipts",
+      "New terminal's label (optional)",
+    ]) {
+      expect(within(dialog()).getByLabelText(label).getAttribute("dir")).toBe("auto");
+    }
+    expect(within(dialog()).getByLabelText("Store address on receipts").tagName).toBe("TEXTAREA");
+  });
+
+  test("the issued code's times are LTR runs", async () => {
+    consoleGetDeviceImpact.mockResolvedValue({
+      status: 200,
+      data: impact({ action: "replace", revokeReason: "replaced" }),
+    });
+    consoleIssuePairingCode.mockResolvedValue({ status: 201, data: issued() });
+    await openAction("Replace");
+    fillBinding();
+    click("Review impact");
+    await within(dialog()).findByText("Allowed by the server.");
+    click("Issue pairing code");
+    await within(dialog()).findByText("FAKE-TEST-CODE-0000");
+    const times = dialog().querySelectorAll("time");
+    expect(times.length).toBeGreaterThan(0);
+    for (const time of times) expect(time.closest("bdi")?.getAttribute("dir")).toBe("ltr");
+  });
+
   test("a revoke for an administrative reason does not push a replacement", async () => {
     consoleGetDeviceImpact.mockResolvedValue({
       status: 200,

@@ -20,8 +20,41 @@ interface InputProps {
   value: string;
   problem?: FieldProblem;
   ltr?: boolean;
+  /** Free text in either script: its direction follows what is typed. */
+  auto?: boolean;
+  /** The contract allows a newline (the address). */
+  multiline?: boolean;
   inputMode?: "numeric";
   onChange: (value: string) => void;
+}
+
+interface ControlProps {
+  id: string;
+  value: string;
+  dir?: "ltr" | "auto";
+  multiline?: boolean;
+  inputMode?: "numeric";
+  invalid: boolean;
+  describedBy?: string;
+  onChange: (value: string) => void;
+}
+
+/** The text control: a line, or a few lines where the contract allows a newline. */
+function Control({ multiline, invalid, describedBy, onChange, ...rest }: Readonly<ControlProps>) {
+  const common = {
+    id: rest.id,
+    className: "input",
+    value: rest.value,
+    dir: rest.dir,
+    autoComplete: "off",
+    "aria-invalid": invalid ? ("true" as const) : undefined,
+    "aria-describedby": describedBy,
+  };
+  return multiline ? (
+    <textarea {...common} rows={3} onChange={(e) => onChange(e.target.value)} />
+  ) : (
+    <input {...common} inputMode={rest.inputMode} onChange={(e) => onChange(e.target.value)} />
+  );
 }
 
 function Input({
@@ -31,6 +64,8 @@ function Input({
   value,
   problem,
   ltr,
+  auto,
+  multiline,
   inputMode,
   onChange,
 }: Readonly<InputProps>): React.JSX.Element {
@@ -45,18 +80,17 @@ function Input({
           {help}
         </small>
       ) : null}
-      <input
+      <Control
         id={id}
-        className="input"
         value={value}
-        dir={ltr ? "ltr" : undefined}
+        dir={ltr ? "ltr" : auto ? "auto" : undefined}
+        multiline={multiline}
         inputMode={inputMode}
-        autoComplete="off"
-        aria-invalid={problem ? "true" : undefined}
-        aria-describedby={
+        invalid={problem !== undefined}
+        describedBy={
           [help ? helpId : null, problem ? errorId : null].filter(Boolean).join(" ") || undefined
         }
-        onChange={(e) => onChange(e.target.value)}
+        onChange={onChange}
       />
       <span id={errorId}>
         <InlineError message={problem ? t(problem.key, problem.params) : undefined} />
@@ -120,6 +154,7 @@ export function IssueFields({
       )}
       <Input
         id="issue-label"
+        auto
         label={t("devices.issue.field.terminalLabel")}
         help={t("devices.issue.field.terminalLabelHelp")}
         value={draft.terminalLabel}
@@ -141,6 +176,7 @@ export function IssueFields({
         <small className="device-quiet">{t("devices.issue.bindingHelp")}</small>
         <Input
           id="issue-branch-name"
+          auto
           label={t("devices.issue.field.branchName")}
           value={draft.branchName}
           problem={problems.branchName}
@@ -148,6 +184,8 @@ export function IssueFields({
         />
         <Input
           id="issue-branch-address"
+          auto
+          multiline
           label={t("devices.issue.field.branchAddress")}
           value={draft.branchAddress}
           problem={problems.branchAddress}
