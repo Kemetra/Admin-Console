@@ -120,6 +120,7 @@ Wiring, boundaries and tooling, with the repo-backed evidence for each:
 | Secrets and deployment | No secrets or deployment assumptions belong here | [Constitution principle 10](.specify/memory/constitution.md) |
 | Tests | 53 Vitest unit test files and 18 Playwright e2e spec files under `tests/` | [`tests/unit`](tests/unit) · [`tests/e2e`](tests/e2e) |
 | CI | One workflow on pull requests and pushes to `main`: `pnpm install --frozen-lockfile`, `build`, `lint`, unit tests, then e2e, on Node 22 | [`.github/workflows/ci.yml`](.github/workflows/ci.yml) |
+| AI review | CodeRabbit is the primary AI reviewer, capped at about one included review per hour, so incremental review is off. High-tier PRs (RT-582 tiers; the Admin-Console path mapping is not defined yet, so until it is the PR author names the tier, and PRs touching paths that carry `path_instructions` in `.coderabbit.yaml` are the working candidates) get a manual `@coderabbitai full review` after the last push, because a plain `review` only covers commits since the previous review; the `skip-coderabbit` label opts a trivial PR out | [`.coderabbit.yaml`](.coderabbit.yaml) |
 
 Not verified by this README: that the unit and e2e suites currently pass, and the live behavior of any screen against a running Backend-Core. Re-verify against `main` and CI before relying on this table.
 

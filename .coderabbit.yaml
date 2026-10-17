@@ -1,0 +1,81 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# RT-590 (RT-586 c12206 §1): CodeRabbit is the primary AI reviewer but capped at
+# about one included review per hour, so spend it on first pushes and on
+# High-tier PRs (manual `@coderabbitai full review` for a complete final-head
+# pass, see README).
+language: "en-US"
+reviews:
+  profile: "assertive"
+  request_changes_workflow: false
+  high_level_summary: true
+  review_status: true # keeps skip and rate-limit reasons visible on the PR
+  poem: false
+  in_progress_fortune: false
+  suggested_reviewers: false
+  auto_review:
+    enabled: true
+    drafts: false
+    # Pushes count against the review cap. Re-review via `@coderabbitai review`.
+    auto_incremental_review: false
+    ignore_usernames: ["dependabot[bot]", "renovate[bot]"]
+    labels: ["!skip-coderabbit"] # opt-out label for trivial PRs
+  path_filters:
+    - "!**/dist/**"
+    - "!**/coverage/**"
+    - "!**/node_modules/**"
+    - "!**/*.png"
+    - "!**/*.svg"
+    - "!**/*.snap"
+    - "!pnpm-lock.yaml"
+    # Generated OpenAPI client. Excluded from review, so drift is caught by the
+    # CI "Check API client is up to date" step (RT-584), not by CodeRabbit.
+    - "!src/generated/**"
+  path_instructions:
+    - path: "src/auth/**"
+      instructions: |
+        Sign-in, invitation acceptance and no-access screens. Session state is the
+        backend's `dp2_session` HttpOnly cookie, which JavaScript must never read,
+        copy or persist. Flag any of these:
+        - tokens, passwords or session identifiers written to localStorage,
+          sessionStorage, cookies, URLs, query strings, logs or error messages;
+        - an `Authorization: Bearer` header or a hand-added CSRF header (the
+          console uses cookie transport only);
+        - a frontend-side authorization decision (role or permission checks that
+          hide or allow access on their own). The console renders backend truth.
+        - sign-in error handling that leaks whether an account exists, or drops
+          the `429` / `Retry-After` behavior.
+    - path: "src/lib/auth-interceptor.ts"
+      instructions: |
+        401 reactive-refresh interceptor. Invariants to protect: `refreshSession`
+        is attempted exactly once per expired request, concurrent 401s share one
+        in-flight refresh, and a failed refresh clears cached context and
+        redirects to sign-in. Flag proactive or timer-based refresh, retry loops,
+        and any path where a failed refresh leaves stale tenant or store context.
+    - path: "src/lib/**"
+      instructions: |
+        Thin wrappers over the generated `apiClient` (`@/generated/client`), which
+        is the only Backend-Core call surface. Flag hand-written `fetch`, `axios`
+        or `XMLHttpRequest` against Backend-Core paths, bearer tokens, and
+        response shapes typed by hand instead of taken from the generated schema
+        types.
+    - path: "openapi-ts.config.ts"
+      instructions: |
+        Generated-client drift. `src/generated/**` is committed output and must
+        only change by running `pnpm generate:client` at the pinned Backend-Core
+        commits, never by hand. The pins are the global `DATA_PULSE_2_PIN` plus
+        any temporary per-source `pin` hold, resolved through `pinOf`. If a pin,
+        a per-source hold (added, changed or removed) or the source list changes,
+        the PR must also contain the regenerated `src/generated/` and say whether
+        the change is a re-pin or a regeneration at the same SHA. Flag a pin
+        change without regenerated output, and any manual edit to generated
+        files.
+    - path: ".github/scripts/fetch-pinned-contracts.sh"
+      instructions: |
+        Feeds the CI client-drift check. It must fetch exactly the set of commits
+        that `openapi-ts.config.ts` derives (`pinOf` over `OPENAPI_SOURCE_SPECS`:
+        the global pin plus any per-source hold), so several distinct commits are
+        legitimate. Flag a hard-coded pin, any unpinned or branch-relative fetch,
+        a fetch set that differs from the derived one, and any change that makes
+        the drift check pass without regenerating.
+chat:
+  auto_reply: true
