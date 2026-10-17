@@ -53,7 +53,17 @@ describe("resolveObservabilityConfig", () => {
   });
 
   test("the tunnel must be a same-origin absolute path", () => {
-    for (const tunnel of [undefined, "", "https://evil.test/t", "//evil.test/t", "relative"]) {
+    for (const tunnel of [
+      undefined,
+      "",
+      "https://evil.test/t",
+      "//evil.test/t",
+      "relative",
+      // The URL parser strips tab/newline, so these would resolve to evil.test.
+      "/\t/evil.test/t",
+      "/\n/evil.test/t",
+      "/\\evil.test/t",
+    ]) {
       expect(resolveObservabilityConfig({ ...VALID, tunnel }, SHA).kind).toBe("invalid");
     }
   });

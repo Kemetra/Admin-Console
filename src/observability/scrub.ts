@@ -61,6 +61,7 @@ export interface SentryEventLike {
   environment?: string;
   release?: string;
   server_name?: string;
+  sdk?: { settings?: { infer_ip?: string }; [key: string]: unknown };
   tags?: Record<string, unknown>;
   exception?: { values?: SentryExceptionValueLike[] };
   [key: string]: unknown;
@@ -120,8 +121,9 @@ function maskPostgresRowValues(value: string): string {
 /**
  * One whitespace-delimited token of an exception message. Secrets are masked
  * wherever they sit in it (`token=eyJ…`, `"https://u:p@host/x?api_key=…"`):
- * URLs first (userinfo and query), then JWTs, then emails. Index scans only,
- * so the work stays linear on untrusted input.
+ * URLs first (userinfo and query), then any other query or fragment
+ * (scheme-less URLs and paths), then JWTs, then emails. Index scans only, so the
+ * work stays linear on untrusted input.
  */
 class MessageToken {
   private readonly text: string;
@@ -131,7 +133,7 @@ class MessageToken {
   }
 
   scrubbed(): string {
-    const masked = this.withoutUrl().withoutJwt();
+    const masked = this.withoutUrl().withoutQuery().withoutJwt();
     return masked.isEmailLike() ? "[email]" : masked.text;
   }
 
@@ -147,14 +149,27 @@ class MessageToken {
     return new MessageToken(`${this.text.slice(0, start)}${safe}${raw.slice(end)}`);
   }
 
+  /**
+   * Drop a query or fragment the URL pass did not see (`/v1/x?phone=…`,
+   * `host/x#token=…`). A `?` or `#` that opens or ends the token is not one
+   * ("valid?", "#42"), so ordinary sentences survive.
+   */
+  withoutQuery(): MessageToken {
+    for (let i = 1; i < this.text.length - 1; i++) {
+      const char = this.text.charAt(i);
+      if (char === "?" || char === "#") return new MessageToken(this.text.slice(0, i));
+    }
+    return this;
+  }
+
   toString(): string {
     return this.text;
   }
 
-  /** Mask a JWT and everything after it. */
+  /** Mask a JWT (even without its signature) and everything after it. */
   private withoutJwt(): MessageToken {
     const at = this.text.indexOf("eyJ");
-    if (at === -1 || this.text.slice(at).split(".").length < 3) return this;
+    if (at === -1 || !this.text.includes(".", at)) return this;
     return new MessageToken(`${this.text.slice(0, at)}[jwt]`);
   }
 
@@ -188,18 +203,20 @@ function sanitizeMessage(value: string): string {
     : cleaned;
 }
 
-/** Browser frame filenames are URLs: keep scheme + host + path only. */
+/** Browser frame filenames are URLs or paths: keep scheme + host + path only. */
 function scrubFrame(frame: SentryFrameLike): Record<string, unknown> {
   const out = pickDefined(frame, FRAME_LOCATION_KEYS);
   if (typeof frame.filename === "string") {
     const capped = frame.filename.slice(0, MAX_SCAN_LENGTH);
-    out.filename = new MessageToken(capped).withoutUrl().toString();
+    out.filename = new MessageToken(capped).withoutUrl().withoutQuery().toString();
   }
   return out;
 }
 
 function scrubException(entry: SentryExceptionValueLike): SentryExceptionValueLike {
-  const out: SentryExceptionValueLike = pickDefined(entry, ["type"]);
+  const out: SentryExceptionValueLike = {};
+  // `type` is `error.name`, which app code can set to any text.
+  if (typeof entry.type === "string") out.type = sanitizeMessage(entry.type);
   if (typeof entry.value === "string") out.value = sanitizeMessage(entry.value);
   if (entry.mechanism !== undefined) out.mechanism = pickDefined(entry.mechanism, MECHANISM_KEYS);
   const frames = entry.stacktrace?.frames;
@@ -224,6 +241,9 @@ export function scrubSentryEvent(event: SentryEventLike): SentryEventLike | null
   if (!Array.isArray(values) || values.length === 0) return null;
 
   const out: SentryEventLike = pickDefined(event, SAFE_TOP_LEVEL);
+  // Sentry 11 tells ingest whether to infer the end-user IP from the request
+  // (sdk.settings.infer_ip). Pinned to "never": contract 3.3 forbids IPs.
+  out.sdk = { settings: { infer_ip: "never" } };
   const tags = scrubTags(event.tags);
   if (Object.keys(tags).length > 0) out.tags = tags;
   out.exception = { values: values.map(scrubException) };

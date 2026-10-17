@@ -50,9 +50,23 @@ function isUsableDsn(dsn: string): boolean {
   return url.username.length > 0 && PROJECT_ID.test(projectId);
 }
 
-/** Same-origin absolute path only: never another origin, never protocol-relative. */
+// Placeholder origin used only to resolve a path; never contacted.
+const PROBE_ORIGIN = "https://console.invalid";
+
+/**
+ * Same-origin absolute path only. Resolving it the way the browser will catches
+ * protocol-relative paths and the ones the URL parser rewrites into them (a tab
+ * or newline is stripped, a backslash becomes a slash); the path must also come
+ * out unchanged.
+ */
 function isSameOriginPath(path: string): boolean {
-  return path.startsWith("/") && !path.startsWith("//") && !path.includes("\\");
+  if (!path.startsWith("/")) return false;
+  try {
+    const url = new URL(path, PROBE_ORIGIN);
+    return url.origin === PROBE_ORIGIN && `${url.pathname}${url.search}` === path;
+  } catch {
+    return false;
+  }
 }
 
 function trimmedString(value: unknown): string | undefined {

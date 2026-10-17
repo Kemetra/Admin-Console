@@ -38,6 +38,23 @@ describe("scrubSentryEvent — message masks (contract 3.2)", () => {
     expect(scrubbedValue("bad http://[oops/x?q=1 here")).toBe("bad [url] here");
   });
 
+  test("drops the query and fragment of a scheme-less URL or path", () => {
+    expect(scrubbedValue("GET /v1/customers?phone=01012345678 failed")).toBe(
+      "GET /v1/customers failed",
+    );
+    expect(scrubbedValue("at //api.x.test/v1?token=abc")).toBe("at //api.x.test/v1");
+    expect(scrubbedValue("at api.x.test/v1#access_token=abc")).toBe("at api.x.test/v1");
+    expect(scrubbedValue("x=_://host/?token=secret")).toBe("x=_://host/");
+    // A sentence-ending "?" is not a query.
+    expect(scrubbedValue("Is it valid? no")).toBe("Is it valid? no");
+  });
+
+  test("masks a two-segment JWT (header + payload, no signature)", () => {
+    expect(scrubbedValue("bad eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJqb2huQHguY29tIn0 here")).toBe(
+      "bad [jwt] here",
+    );
+  });
+
   test("masks an email address", () => {
     expect(scrubbedValue("user a.b@example.test not found")).toBe("user [email] not found");
   });
@@ -128,10 +145,22 @@ describe("scrubSentryEvent — allowlist rebuild (contract 3.1)", () => {
         "level",
         "platform",
         "release",
+        "sdk",
         "tags",
         "timestamp",
       ].sort(),
     );
+  });
+
+  test("always tells Sentry ingest never to infer the user's IP", () => {
+    // Sentry 11 sets sdk.settings.infer_ip; the rebuild must not lose it, and a
+    // caller-provided "auto" must not win (contract 3.3: no IPs).
+    const withSdk = {
+      ...full,
+      sdk: { name: "sentry.javascript.react", settings: { infer_ip: "auto" } },
+    };
+    expect(scrubSentryEvent(withSdk)?.sdk).toEqual({ settings: { infer_ip: "never" } });
+    expect(scrubSentryEvent(eventWith("x"))?.sdk).toEqual({ settings: { infer_ip: "never" } });
   });
 
   test("keeps only the contract's bounded string tags", () => {
@@ -155,6 +184,20 @@ describe("scrubSentryEvent — allowlist rebuild (contract 3.1)", () => {
         in_app: true,
       },
     ]);
+  });
+
+  test("a relative frame filename loses its query too", () => {
+    const out = scrubSentryEvent({
+      exception: {
+        values: [{ type: "Error", stacktrace: { frames: [{ filename: "/assets/a.js?token=x" }] } }],
+      },
+    });
+    expect(out?.exception?.values?.[0]?.stacktrace?.frames).toEqual([{ filename: "/assets/a.js" }]);
+  });
+
+  test("the exception type is sanitized like a message", () => {
+    const out = scrubSentryEvent({ exception: { values: [{ type: "Err a@b.test", value: "x" }] } });
+    expect(out?.exception?.values?.[0]?.type).toBe("Err [email]");
   });
 
   test("never sends a request, user, extra, contexts or breadcrumbs", () => {
