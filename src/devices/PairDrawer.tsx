@@ -25,6 +25,7 @@ import {
 } from "./pairingLogic";
 import { useIssuePairingCode } from "./useDeviceLifecycle";
 import { useDeviceScope } from "./useDevices";
+import { useSingleFlight } from "./useSingleFlight";
 import "./devices.css";
 
 function NoticeBanner({
@@ -122,6 +123,7 @@ export function PairDrawer({ onClose }: Readonly<{ onClose: () => void }>): Reac
   const t = useT();
   const directory = useStoreDirectory(useDeviceScope().tenantId);
   const issue = useIssuePairingCode();
+  const singleFlight = useSingleFlight();
   const [draft, setDraft] = useState<IssueDraft>(EMPTY_ISSUE_DRAFT);
   const [problems, setProblems] = useState<IssueProblems>({});
   const [notice, setNotice] = useState<Notice | undefined>();
@@ -135,14 +137,20 @@ export function PairDrawer({ onClose }: Readonly<{ onClose: () => void }>): Reac
     setProblems(found);
     if (Object.keys(found).length > 0) return;
     setNotice(undefined);
+    await singleFlight(() => issueOnce());
+  }
+
+  async function issueOnce(): Promise<void> {
     try {
       const res = await issue.mutateAsync(buildIssueBody(draft));
-      if (res.status !== 201 || !res.data) {
-        setNotice(noticeOf(classifyMutationFailure(res), true));
+      if (res.status === 201 && res.data) {
+        setIssued(res.data);
+        issue.reset();
         return;
       }
-      setIssued(res.data);
-      issue.reset();
+      // A gateway error or timeout can arrive after the server made the code: unknown outcome.
+      const unanswered = res.status >= 500 || res.status === 0;
+      setNotice(noticeOf(unanswered ? { kind: "no-answer" } : classifyMutationFailure(res), true));
     } catch {
       setNotice(noticeOf({ kind: "no-answer" }, true));
     }

@@ -38,9 +38,10 @@ function issueResult(res: {
   data?: PairingCodeIssued;
   error?: unknown;
 }): SubmitResult {
-  return res.status === 201 && res.data
-    ? { ok: true, issued: res.data }
-    : { ok: false, failure: classifyMutationFailure(res) };
+  if (res.status === 201 && res.data) return { ok: true, issued: res.data };
+  // A gateway error or timeout can arrive after the server made the code: the outcome is unknown.
+  if (res.status >= 500 || res.status === 0) return { ok: false, failure: { kind: "no-answer" } };
+  return { ok: false, failure: classifyMutationFailure(res) };
 }
 
 export interface Submitter {

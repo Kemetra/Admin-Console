@@ -17,28 +17,27 @@ import { type StoreDirectory, useStoreDirectory } from "@/shift-closes/useShiftC
 import { useState } from "react";
 import { Link } from "react-router";
 import { PairDrawer } from "./PairDrawer";
-import { classifyMutationFailure, requestIdOfFailure } from "./lifecycleFailure";
+import { type CancelResult, useCancelFlow } from "./useCancelFlow";
 import { type DeviceError, useDeviceScope } from "./useDevices";
-import {
-  type PairingCodeListState,
-  useCancelPairingCode,
-  usePairingCodes,
-} from "./usePairingCodes";
+import { type PairingCodeListState, usePairingCodes } from "./usePairingCodes";
 import "../shell/surface.css";
 import "../components/data-table.css";
 import "./devices.css";
+
+const COLUMN_KEYS = [
+  { key: "terminal", header: "devices.codes.col.terminal" },
+  { key: "kind", header: "devices.codes.col.kind" },
+  { key: "store", header: "devices.codes.col.store" },
+  { key: "replaces", header: "devices.codes.col.replaces" },
+  { key: "expires", header: "devices.codes.col.expires" },
+  { key: "actions", header: "devices.codes.col.actions" },
+] as const;
 
 const KIND_KEYS: Record<string, MessageKey> = {
   pair: "devices.codes.kind.pair",
   replace: "devices.codes.kind.replace",
   move: "devices.codes.kind.move",
 };
-
-interface Result {
-  key: MessageKey;
-  variant: "success" | "warning" | "danger";
-  requestId?: string;
-}
 
 function ReplacesCell({ code }: Readonly<{ code: PairingCodeSummary }>): React.JSX.Element {
   const t = useT();
@@ -208,14 +207,66 @@ function CancelConfirm({
   );
 }
 
+function ResultNotice({ result }: Readonly<{ result?: CancelResult }>): React.JSX.Element | null {
+  const t = useT();
+  if (!result) return null;
+  if (result.variant === "success") {
+    return <output className="device-impact__verdict">{t(result.key)}</output>;
+  }
+  return <Banner variant={result.variant} message={t(result.key)} requestId={result.requestId} />;
+}
+
+interface BodyProps {
+  list: PairingCodeListState;
+  directory: StoreDirectory;
+  onCancel: (code: PairingCodeSummary) => void;
+}
+
+/**
+ * Rows are held back until the store roster has settled, so a store is never
+ * shown as unknown just because the roster had not arrived yet.
+ */
+function isAwaiting(list: PairingCodeListState, directory: StoreDirectory): boolean {
+  const rosterPending = list.rows.length > 0 && !directory.ready;
+  return list.isLoading || rosterPending;
+}
+
+/** The table, or why there isn't one: loading, a refusal, or nothing pending. */
+function CodesBody({ list, directory, onCancel }: Readonly<BodyProps>): React.JSX.Element {
+  const t = useT();
+  if (isAwaiting(list, directory)) {
+    return (
+      <DataTableSkeleton
+        caption={t("devices.codes.caption")}
+        columns={COLUMN_KEYS.map(({ key, header }) => ({ key, header: t(header) }))}
+        label={t("devices.codes.loadingNoun")}
+      />
+    );
+  }
+  if (list.error) return <ListFailure error={list.error} onRetry={list.retry} />;
+  if (list.rows.length === 0) {
+    return (
+      <ListState
+        state="empty"
+        emptyMessage={t("devices.codes.empty")}
+        emptyHint={t("devices.codes.emptyHint")}
+      />
+    );
+  }
+  return (
+    <>
+      <CodesTable rows={list.rows} directory={directory} onCancel={onCancel} t={t} />
+      <Pager list={list} />
+    </>
+  );
+}
+
 export function PairingCodes(): React.JSX.Element {
   const t = useT();
   const scope = useDeviceScope();
   const directory = useStoreDirectory(scope.tenantId);
   const list = usePairingCodes(scope);
-  const cancel = useCancelPairingCode();
-  const [confirming, setConfirming] = useState<PairingCodeSummary | null>(null);
-  const [result, setResult] = useState<Result | undefined>();
+  const cancel = useCancelFlow();
   const [pairing, setPairing] = useState(false);
 
   if (!scope.tenantId) {
@@ -225,50 +276,6 @@ export function PairingCodes(): React.JSX.Element {
       </div>
     );
   }
-
-  async function confirmCancel(code: PairingCodeSummary): Promise<void> {
-    setResult(undefined);
-    try {
-      const res = await cancel.mutateAsync(code.pairingCodeId);
-      if (res.status === 200 && res.data) {
-        setResult({
-          key:
-            res.data.outcome === "already_cancelled"
-              ? "devices.codes.alreadyCancelled"
-              : "devices.codes.cancelled",
-          variant: "success",
-        });
-      } else {
-        const failure = classifyMutationFailure(res);
-        const key: MessageKey =
-          failure.kind === "conflict"
-            ? "devices.codes.error.used"
-            : failure.kind === "not-found"
-              ? "devices.codes.error.notFound"
-              : failure.kind === "session"
-                ? "devices.list.sessionExpired"
-                : "devices.codes.error.generic";
-        setResult({
-          key,
-          variant: failure.kind === "conflict" ? "warning" : "danger",
-          requestId: requestIdOfFailure(failure),
-        });
-      }
-    } catch {
-      setResult({ key: "devices.codes.error.generic", variant: "danger" });
-    }
-    setConfirming(null);
-  }
-
-  const pending = list.isLoading || (list.rows.length > 0 && !directory.ready);
-  const columns = [
-    { key: "terminal", header: t("devices.codes.col.terminal") },
-    { key: "kind", header: t("devices.codes.col.kind") },
-    { key: "store", header: t("devices.codes.col.store") },
-    { key: "replaces", header: t("devices.codes.col.replaces") },
-    { key: "expires", header: t("devices.codes.col.expires") },
-    { key: "actions", header: t("devices.codes.col.actions") },
-  ];
 
   return (
     <div className="surface">
@@ -286,43 +293,16 @@ export function PairingCodes(): React.JSX.Element {
           {t("devices.codes.issue")}
         </button>
       </header>
-
-      {result ? (
-        result.variant === "success" ? (
-          <output className="device-impact__verdict">{t(result.key)}</output>
-        ) : (
-          <Banner variant={result.variant} message={t(result.key)} requestId={result.requestId} />
-        )
-      ) : null}
-      {confirming ? (
+      <ResultNotice result={cancel.result} />
+      {cancel.confirming ? (
         <CancelConfirm
-          code={confirming}
-          pending={cancel.isPending}
-          onConfirm={() => void confirmCancel(confirming)}
-          onKeep={() => setConfirming(null)}
+          code={cancel.confirming}
+          pending={cancel.pending}
+          onConfirm={() => void cancel.confirm(cancel.confirming as PairingCodeSummary)}
+          onKeep={cancel.keep}
         />
       ) : null}
-
-      {pending ? (
-        <DataTableSkeleton
-          caption={t("devices.codes.caption")}
-          columns={columns}
-          label={t("devices.codes.loadingNoun")}
-        />
-      ) : list.error ? (
-        <ListFailure error={list.error} onRetry={list.retry} />
-      ) : list.rows.length === 0 ? (
-        <ListState
-          state="empty"
-          emptyMessage={t("devices.codes.empty")}
-          emptyHint={t("devices.codes.emptyHint")}
-        />
-      ) : (
-        <>
-          <CodesTable rows={list.rows} directory={directory} onCancel={setConfirming} t={t} />
-          <Pager list={list} />
-        </>
-      )}
+      <CodesBody list={list} directory={directory} onCancel={cancel.ask} />
       {pairing ? <PairDrawer onClose={() => setPairing(false)} /> : null}
     </div>
   );

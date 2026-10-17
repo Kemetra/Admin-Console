@@ -362,27 +362,6 @@ describe("Replace and Move (RT-372 part B)", () => {
     expect(within(dialog()).queryByRole("button", { name: "Issue pairing code" })).toBeNull();
   });
 
-  test("425 in progress: never retried with the same key; points at the pending list", async () => {
-    consoleGetDeviceImpact.mockResolvedValue({
-      status: 200,
-      data: impact({ action: "replace", revokeReason: "replaced" }),
-    });
-    consoleIssuePairingCode.mockResolvedValue({
-      status: 425,
-      error: { error: "idempotency_in_progress", retryAfterSec: 3 },
-    });
-    await openAction("Replace");
-    fillBinding();
-    click("Review impact");
-    await within(dialog()).findByText("Allowed by the server.");
-    click("Issue pairing code");
-    expect(await within(dialog()).findByText(/Don't retry now/)).toBeDefined();
-    expect(
-      within(dialog()).getByRole("link", { name: "View pending pairing codes" }),
-    ).toBeDefined();
-    expect(consoleIssuePairingCode).toHaveBeenCalledTimes(1);
-  });
-
   test("nothing closes the drawer while the issue is in flight: the answer would be lost", async () => {
     consoleGetDeviceImpact.mockResolvedValue({
       status: 200,
@@ -407,20 +386,49 @@ describe("Replace and Move (RT-372 part B)", () => {
     expect(await within(dialog()).findByText("FAKE-TEST-CODE-0000")).toBeDefined();
   });
 
-  test("a lost response says the outcome is unknown and points at the pending list", async () => {
+  test("a second click before the first answer issues nothing more", async () => {
     consoleGetDeviceImpact.mockResolvedValue({
       status: 200,
       data: impact({ action: "replace", revokeReason: "replaced" }),
     });
-    consoleIssuePairingCode.mockRejectedValue(new TypeError("network"));
+    consoleIssuePairingCode.mockReturnValue(new Promise(() => undefined));
+    await openAction("Replace");
+    fillBinding();
+    click("Review impact");
+    await within(dialog()).findByText("Allowed by the server.");
+    const confirm = within(dialog()).getByRole("button", { name: "Issue pairing code" });
+    fireEvent.click(confirm);
+    fireEvent.click(confirm);
+    fireEvent.submit(confirm.closest("form") as HTMLFormElement);
+    await waitFor(() => expect(consoleIssuePairingCode).toHaveBeenCalledTimes(1));
+    expect(consoleIssuePairingCode).toHaveBeenCalledTimes(1);
+  });
+
+  test.each([
+    [
+      "a 425 (in progress)",
+      { status: 425, error: { error: "idempotency_in_progress", retryAfterSec: 3 } },
+      /Don't retry now/,
+    ],
+    [
+      "a gateway error (502)",
+      { status: 502, error: { error: { code: "bad_gateway", message: "x" } } },
+      /we don't know whether a code was issued/,
+    ],
+    ["a lost response", new TypeError("network"), /we don't know whether a code was issued/],
+  ])("%s is never retried: it points at the pending list", async (_name, answer, message) => {
+    consoleGetDeviceImpact.mockResolvedValue({
+      status: 200,
+      data: impact({ action: "replace", revokeReason: "replaced" }),
+    });
+    if (answer instanceof Error) consoleIssuePairingCode.mockRejectedValue(answer);
+    else consoleIssuePairingCode.mockResolvedValue(answer);
     await openAction("Replace");
     fillBinding();
     click("Review impact");
     await within(dialog()).findByText("Allowed by the server.");
     click("Issue pairing code");
-    expect(
-      await within(dialog()).findByText(/we don't know whether a code was issued/),
-    ).toBeDefined();
+    expect(await within(dialog()).findByText(message)).toBeDefined();
     expect(
       within(dialog()).getByRole("link", { name: "View pending pairing codes" }),
     ).toBeDefined();

@@ -40,6 +40,7 @@ import {
   useReplacementCodes,
 } from "./useDeviceLifecycle";
 import { useDeviceScope } from "./useDevices";
+import { useSingleFlight } from "./useSingleFlight";
 import { useSubmitAction } from "./useSubmitAction";
 
 /** After these revokes a replacement is the natural next step (security or recovery). */
@@ -118,6 +119,7 @@ export function useLifecycleFlow(action: FlowAction, device: DeviceDetail): Life
   const [issued, setIssued] = useState<PairingCodeIssued | undefined>();
 
   const submitter = useSubmitAction(action, device, draft);
+  const singleFlight = useSingleFlight();
   const reviewing = step === "review";
   const reason: RevokeReason | undefined =
     action === "revoke" && draft.reason !== "" ? draft.reason : undefined;
@@ -173,11 +175,13 @@ export function useLifecycleFlow(action: FlowAction, device: DeviceDetail): Life
     setProblems(found);
     if (hasProblems(found)) return;
     setNotice(undefined);
-    const result = await submitter.submit(decision);
-    if (!result.ok) return refuse(result.failure);
-    setOutcome(result.outcome);
-    setIssued(result.issued);
-    setStep("done");
+    await singleFlight(async () => {
+      const result = await submitter.submit(decision);
+      if (!result.ok) return refuse(result.failure);
+      setOutcome(result.outcome);
+      setIssued(result.issued);
+      setStep("done");
+    });
   }
 
   function onSubmit(event: React.FormEvent): void {
