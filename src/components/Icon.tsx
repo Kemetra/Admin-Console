@@ -25,6 +25,7 @@ export type IconName =
   | "cash"
   | "connection"
   | "device"
+  | "receipt"
   | "search"
   | "bell"
   | "help"
@@ -120,6 +121,13 @@ const PATHS: Record<IconName, React.ReactNode> = {
     <>
       <rect x="4" y="4" width="16" height="11" rx="1.5" />
       <path d="M12 15v3M8 20h8" />
+    </>
+  ),
+  // Receipt with a torn foot — sales search and sale detail (RT-587).
+  receipt: (
+    <>
+      <path d="M6 3h12v18l-3-2-3 2-3-2-3 2z" />
+      <path d="M9 8h6M9 12h6M9 16h3" />
     </>
   ),
   // Magnifier — global search.

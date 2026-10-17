@@ -47,6 +47,7 @@ describe("production navigation", () => {
       "Stores",
       "Operators",
       "Audit",
+      "Sales",
       "Stock discrepancies",
       "Shift closes",
       "Connection & sync",
@@ -105,6 +106,23 @@ describe("production navigation", () => {
     const nav = renderShell(role, false);
     expect(entryLabels(nav)).not.toContain("Devices");
     expect(within(nav).queryByText("Point of sale")).toBeNull();
+  });
+
+  // RT-587 (spec 012 FR-012 / OD-556-3): Sales, in its own "Transactions"
+  // section, only for the roles the console sales read serves.
+  test.each(["owner", "tenant_admin", "store_manager"])(
+    "RT-587: %s sees Sales in its section",
+    (role) => {
+      const nav = renderShell(role, false);
+      expect(within(nav).getByRole("link", { name: "Sales" }).getAttribute("href")).toBe("/sales");
+      expect(within(nav).getByText("Transactions").className).toBe("nav-section");
+    },
+  );
+
+  test.each(["store_staff", "cashier", "auditor"])("RT-587: %s has no Sales entry", (role) => {
+    const nav = renderShell(role, false);
+    expect(entryLabels(nav)).not.toContain("Sales");
+    expect(within(nav).queryByText("Transactions")).toBeNull();
   });
 
   // RT-421: payer accounts, in their own "Payers" section, for owner / tenant_admin
