@@ -76,21 +76,22 @@ export function comparePinFiles(
 ): readonly string[] {
   const pinnedBySha = new Map(pinned.map((f) => [f.path, f.blobSha]));
   const actualPaths = new Set(actual.map((f) => f.path));
-  const problems: string[] = [];
-  for (const file of actual) {
-    const expected = pinnedBySha.get(file.path);
-    if (expected === undefined) {
-      problems.push(`${file.path}: composed by the generator but not listed in the PIN`);
-    } else if (expected !== file.blobSha) {
-      problems.push(`${file.path}: PIN has blob ${expected} but Backend-Core has ${file.blobSha}`);
-    }
+  const drifted = actual.flatMap((file) => describeDrift(file, pinnedBySha.get(file.path)));
+  const stale = pinned
+    .filter((file) => !actualPaths.has(file.path))
+    .map((file) => `${file.path}: listed in the PIN but not composed by the generator`);
+  return [...drifted, ...stale];
+}
+
+/** The problem (if any) with one composed file, given the blob SHA the PIN holds for it. */
+function describeDrift(file: PinnedFile, pinnedSha: string | undefined): readonly string[] {
+  if (pinnedSha === undefined) {
+    return [`${file.path}: composed by the generator but not listed in the PIN`];
   }
-  for (const file of pinned) {
-    if (!actualPaths.has(file.path)) {
-      problems.push(`${file.path}: listed in the PIN but not composed by the generator`);
-    }
+  if (pinnedSha !== file.blobSha) {
+    return [`${file.path}: PIN has blob ${pinnedSha} but Backend-Core has ${file.blobSha}`];
   }
-  return problems;
+  return [];
 }
 
 // ─── PIN format ──────────────────────────────────────────────────────────────

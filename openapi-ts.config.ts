@@ -10,7 +10,7 @@
 //   pnpm generate:client --repin <ref>   resolve <ref> in DATA_PULSE_2_REPO,
 //                                        rewrite contracts/backend-core/PIN, regenerate
 
-import { execFileSync } from "node:child_process";
+import { type ExecFileSyncOptionsWithStringEncoding, execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -251,12 +251,16 @@ export function pinOf(spec: OpenApiSourceSpec): string {
   return spec.pin ?? DATA_PULSE_2_PIN;
 }
 
+const GIT_OPTIONS: ExecFileSyncOptionsWithStringEncoding = {
+  encoding: "utf8",
+  stdio: ["ignore", "pipe", "pipe"],
+  windowsHide: true,
+};
+
 function git(dataPulseRepo: string, args: readonly string[]): string {
-  return execFileSync("git", ["-C", dataPulseRepo, ...args], {
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-    windowsHide: true,
-  });
+  // `git` is resolved from PATH on purpose: this is a developer/CI tool run from the
+  // caller's own shell (as release-artifact.ts does), so PATH is theirs to trust.
+  return execFileSync("git", ["-C", dataPulseRepo, ...args], GIT_OPTIONS); // NOSONAR S4036
 }
 
 function readPinnedSource(dataPulseRepo: string, sourcePath: string, pin: string): string {
