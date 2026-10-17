@@ -61,6 +61,20 @@ Serving rules for the host:
 No secrets, hostnames, environment values or tenant data belong in the bundle or
 in `version.json`.
 
+The bundle embeds only its own commit SHA (`GITHUB_SHA` at build time) as the
+Sentry release (RT-633). Everything else arrives at runtime from Backend-Core's
+OBS-3 contract (RT-632):
+
+| Path | Role |
+| --- | --- |
+| `GET /api/v1/console/telemetry/config` | `204`: Sentry off, no SDK init. `200`: `{ tunnel, environment }`. Never a DSN. |
+| `/api/v1/console/telemetry/envelope` | Same-origin tunnel. It ignores the envelope DSN and forwards to the configured Console Sentry project. |
+
+The SDK starts with a fixed placeholder DSN (`.invalid` host), so the real DSN
+never reaches the browser. Until the Console reads the config endpoint (a
+follow-up after the contract merges and the client pin is bumped), it sends no
+telemetry.
+
 ## Verifying before deployment
 
 ```bash

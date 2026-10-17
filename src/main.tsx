@@ -1,3 +1,7 @@
+import { apiClient } from "@/generated/client";
+import { installRequestIdHeader } from "@/lib/request-id";
+import { AppErrorBoundary } from "@/observability/AppErrorBoundary";
+import { startObservability } from "@/observability/sentry";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
@@ -9,8 +13,17 @@ if (!rootElement) {
   throw new Error("Root element #root not found");
 }
 
+// RT-633: one X-Request-Id per Backend-Core call (contract RT-629 section 2).
+installRequestIdHeader(apiClient);
+
 createRoot(rootElement).render(
   <StrictMode>
-    <App />
+    <AppErrorBoundary>
+      <App />
+    </AppErrorBoundary>
   </StrictMode>,
 );
+
+// RT-633: after the first render, never blocking it. Inert without a runtime
+// config; initObservability never throws.
+void startObservability();
