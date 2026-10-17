@@ -223,10 +223,9 @@ describe("SaleList (RT-587, spec 012 J1)", () => {
   test("the empty state appears only for items [] with nextCursor null (AC-13)", async () => {
     consoleListSales.mockResolvedValue(page([], null));
     renderList(`/sales?${RANGE}`);
+    const message = `No sales received by the server for this store and range up to ${asOfText}.`;
     expect(
-      await screen.findByText(
-        `No sales received by the server for this store and range up to ${asOfText}.`,
-      ),
+      await screen.findByText((_, el) => el?.tagName === "SPAN" && el.textContent === message),
     ).toBeDefined();
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
   });
@@ -277,6 +276,24 @@ describe("SaleList (RT-587, spec 012 J1)", () => {
     expect(await screen.findByText(/the server rejected this search/i)).toBeDefined();
     expect(screen.getByText("req-400")).toBeDefined();
     expect(screen.queryByText(/no sales received/i)).toBeNull();
+    // Retrying the same rejected query cannot succeed: no Retry is offered.
+    expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+  });
+
+  test("a 400 on a continuation page restarts the walk from the first page", async () => {
+    consoleListSales
+      .mockResolvedValueOnce(page([item()], "c1"))
+      .mockResolvedValueOnce(failure(400))
+      .mockResolvedValueOnce(page([item({ saleRef: SALE_2, saleNumber: "R-0041" })], null));
+    renderList(`/sales?${RANGE}`);
+    await tableReady();
+    fireEvent.click(screen.getByRole("button", { name: "Load more" }));
+    expect(await screen.findByText(/did not accept the position of the next page/i)).toBeDefined();
+    expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Start again" }));
+    expect(await screen.findByText("R-0041")).toBeDefined();
+    expect(consoleListSales.mock.calls[2][0]).toMatchObject({ cursor: undefined });
+    expect(screen.queryByText("R-0042")).toBeNull();
   });
 
   test("a failed continuation keeps the loaded rows and retries the next page", async () => {
@@ -294,15 +311,68 @@ describe("SaleList (RT-587, spec 012 J1)", () => {
     expect(consoleListSales.mock.calls[2][0]).toMatchObject({ cursor: "c1" });
   });
 
-  test("a new filter restarts the walk without a cursor (FR-006)", async () => {
-    consoleListSales.mockResolvedValue(page([item()], "c1"));
+  test("a new filter restarts the walk without a cursor and drops the old rows (FR-006)", async () => {
+    consoleListSales
+      .mockResolvedValueOnce(page([item()], "c1"))
+      .mockResolvedValueOnce(page([item({ saleRef: SALE_2, saleNumber: "R-0041" })], "c2"))
+      .mockResolvedValueOnce(
+        page([item({ saleRef: "0190f000-0000-7000-8000-0000000005b9", saleNumber: "R-0099" })]),
+      );
     renderList(`/sales?${RANGE}`);
     await tableReady();
+    fireEvent.click(screen.getByRole("button", { name: "Load more" }));
+    expect(await screen.findByText("R-0041")).toBeDefined();
+    expect(consoleListSales.mock.calls[1][0]).toMatchObject({ cursor: "c1" });
+
     fireEvent.change(screen.getByLabelText("Void"), { target: { value: "true" } });
     fireEvent.click(screen.getByRole("button", { name: "Search" }));
-    await waitFor(() => expect(consoleListSales).toHaveBeenCalledTimes(2));
-    expect(consoleListSales.mock.calls[1][0]).toMatchObject({ voided: true, cursor: undefined });
+    expect(await screen.findByText("R-0099")).toBeDefined();
+    expect(consoleListSales).toHaveBeenCalledTimes(3);
+    expect(consoleListSales.mock.calls[2][0]).toMatchObject({ voided: true, cursor: undefined });
+    expect(screen.queryByText("R-0042")).toBeNull();
+    expect(screen.queryByText("R-0041")).toBeNull();
     expect(location()).toBe(`/sales?${RANGE}&voided=true`);
+  });
+
+  test("store_staff on /sales sees the unavailable state, with no form and no read (AC-5)", async () => {
+    activeContext.mockReturnValue(ctx("store_staff"));
+    renderList(`/sales?${RANGE}`);
+    expect(await screen.findByText("These sales are not available to you.")).toBeDefined();
+    expect(screen.queryByRole("form")).toBeNull();
+    expect(screen.queryByLabelText("Store")).toBeNull();
+    expect(consoleListSales).not.toHaveBeenCalled();
+    expect(listStores).not.toHaveBeenCalled();
+  });
+
+  test("the empty and not-available states are polite live regions", async () => {
+    consoleListSales.mockResolvedValue(page([], null));
+    renderList(`/sales?${RANGE}`);
+    const empty = await screen.findByText(/no sales received by the server/i);
+    expect(empty.closest("output")).not.toBeNull();
+    // The time is isolated from the sentence around it.
+    expect(empty.querySelector("time")?.getAttribute("dateTime")).toBe(AS_OF);
+  });
+
+  test("the loaded count is a status message, its number isolated", async () => {
+    renderList(`/sales?${RANGE}`);
+    await tableReady();
+    const count = screen.getByText(
+      (_, el) => el?.tagName === "OUTPUT" && el.textContent === "Loaded: 1",
+    );
+    expect(count.querySelector("bdi")?.textContent).toBe("1");
+  });
+
+  test("when the last page arrives, focus moves from Load more to the end of the list", async () => {
+    consoleListSales
+      .mockResolvedValueOnce(page([item()], "c1"))
+      .mockResolvedValueOnce(page([item({ saleRef: SALE_2, saleNumber: "R-0041" })], null));
+    renderList(`/sales?${RANGE}`);
+    await tableReady();
+    const more = screen.getByRole("button", { name: "Load more" });
+    more.focus();
+    fireEvent.click(more);
+    const end = await screen.findByText("End of the received sales for this range.");
+    await waitFor(() => expect(document.activeElement).toBe(end));
   });
 
   test("the sale-number field explains that pre-snapshot sales never match (AC-3)", async () => {

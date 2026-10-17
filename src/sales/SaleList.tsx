@@ -2,7 +2,7 @@ import { Banner } from "@/components/Banner";
 import { DataTable, type DataTableColumn } from "@/components/DataTable";
 import { DataTableSkeleton } from "@/components/DataTableSkeleton";
 import { ListState } from "@/components/ListState";
-import { DateTime, Money, type T, formatDateTime, useLocale, useT } from "@/i18n";
+import { DateTime, Money, type T, formatNumber, useLocale, useT } from "@/i18n";
 import type { SaleItem } from "@/lib/sale-queries";
 import { useStoreDirectory } from "@/shift-closes/useShiftCloses";
 /**
@@ -18,6 +18,7 @@ import { useStoreDirectory } from "@/shift-closes/useShiftCloses";
  * and a 400 is a validation message, never an empty list. Times are in the
  * store zone the server reports. Filters live in the URL (FR-007).
  */
+import { useEffect, useRef } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
 import { SaleFilterBar } from "./SaleFilterBar";
 import { BusinessDate, DeviceName, RecordedName, SaleNumber, StatusChips } from "./SaleParts";
@@ -28,6 +29,7 @@ import {
   isQueryReady,
   validateFilters,
 } from "./saleFilters";
+import { canReadSales } from "./saleLogic";
 import { type SaleError, type SaleListState, useSaleList, useSaleScope } from "./useSales";
 import "../shell/surface.css";
 import "./sales.css";
@@ -72,20 +74,33 @@ function saleColumns(t: T, timeZone: string | undefined): DataTableColumn<SaleIt
   ];
 }
 
+/**
+ * A result notice (empty, not available): the list-state look, announced as a
+ * polite status message so a screen reader hears the outcome of a search.
+ */
+function Notice({
+  message,
+  hint,
+}: Readonly<{ message: React.ReactNode; hint: string }>): React.JSX.Element {
+  return (
+    <output className="list-state list-state--empty">
+      <span className="list-state__msg">{message}</span>
+      <span className="list-state__hint">{hint}</span>
+    </output>
+  );
+}
+
+function Unavailable(): React.JSX.Element {
+  const t = useT();
+  return <Notice message={t("sales.list.unavailable")} hint={t("sales.list.unavailableHint")} />;
+}
+
 function ErrorView({
   error,
   onRetry,
 }: Readonly<{ error: SaleError; onRetry: () => void }>): React.JSX.Element {
   const t = useT();
-  if (error.kind === "not-found") {
-    return (
-      <ListState
-        state="empty"
-        emptyMessage={t("sales.list.unavailable")}
-        emptyHint={t("sales.list.unavailableHint")}
-      />
-    );
-  }
+  if (error.kind === "not-found") return <Unavailable />;
   if (error.kind === "session") {
     return (
       <Banner
@@ -95,15 +110,49 @@ function ErrorView({
       />
     );
   }
-  const rejected = error.kind === "rejected";
+  if (error.kind === "rejected") {
+    // The same query would be rejected again: change the search instead.
+    return (
+      <Banner
+        variant="warning"
+        message={t("sales.list.filterRejected")}
+        requestId={error.requestId}
+      />
+    );
+  }
   return (
     <Banner
-      variant={rejected ? "warning" : "danger"}
-      message={t(rejected ? "sales.list.filterRejected" : "sales.list.loadFailed")}
+      variant="danger"
+      message={t("sales.list.loadFailed")}
       requestId={error.requestId}
       action={
         <button type="button" className="btn-secondary" onClick={onRetry}>
           {t("sales.list.retry")}
+        </button>
+      }
+    />
+  );
+}
+
+/** A failed continuation: a refused cursor restarts the walk; anything else retries it. */
+function InlineFailure({
+  list,
+  error,
+}: Readonly<{ list: SaleListState; error: SaleError }>): React.JSX.Element {
+  const t = useT();
+  const restart = error.kind === "rejected";
+  return (
+    <Banner
+      variant={restart ? "warning" : "danger"}
+      message={t(restart ? "sales.list.cursorRejected" : "sales.list.inlineError")}
+      requestId={error.requestId}
+      action={
+        <button
+          type="button"
+          className="btn-secondary"
+          onClick={restart ? list.restart : list.retry}
+        >
+          {t(restart ? "sales.list.restart" : "sales.list.retry")}
         </button>
       }
     />
@@ -130,32 +179,47 @@ function Freshness({ list }: Readonly<{ list: SaleListState }>): React.JSX.Eleme
   );
 }
 
+/**
+ * Load more unmounts when the last page arrives. If it was used, focus moves to
+ * the end-of-list message so keyboard users are not dropped to the page start.
+ */
+function useEndFocus(list: SaleListState) {
+  const endRef = useRef<HTMLOutputElement>(null);
+  const pending = useRef(false);
+  useEffect(() => {
+    if (pending.current && list.ended && !list.hasMore) {
+      pending.current = false;
+      endRef.current?.focus();
+    }
+  }, [list.ended, list.hasMore]);
+  const loadMore = () => {
+    pending.current = true;
+    list.loadMore();
+  };
+  return { endRef, loadMore };
+}
+
 /** Loaded count, the inline continuation error, Load more, and the end of the walk. */
 function Pager({ list }: Readonly<{ list: SaleListState }>): React.JSX.Element {
   const t = useT();
+  const locale = useLocale();
+  const { endRef, loadMore } = useEndFocus(list);
   return (
     <>
-      {list.inlineError ? (
-        <Banner
-          variant="danger"
-          message={t("sales.list.inlineError")}
-          requestId={list.inlineError.requestId}
-          action={
-            <button type="button" className="btn-secondary" onClick={list.retry}>
-              {t("sales.list.retry")}
-            </button>
-          }
-        />
-      ) : null}
+      {list.inlineError ? <InlineFailure list={list} error={list.inlineError} /> : null}
       <div className="sale-pager">
-        <span>{t("sales.list.loaded", { count: list.rows.length })}</span>
+        <output>
+          {t.rich("sales.list.loaded", {
+            count: <bdi dir="ltr">{formatNumber(list.rows.length, locale)}</bdi>,
+          })}
+        </output>
         {list.hasMore ? (
           // aria-disabled, not disabled: a disabled button drops keyboard focus
           // while the next page loads. loadMore ignores repeat presses.
           <button
             type="button"
             className="btn-secondary"
-            onClick={list.loadMore}
+            onClick={loadMore}
             aria-disabled={list.isFetchingNextPage ? true : undefined}
             aria-busy={list.isFetchingNextPage ? true : undefined}
           >
@@ -163,7 +227,11 @@ function Pager({ list }: Readonly<{ list: SaleListState }>): React.JSX.Element {
             {t("sales.list.loadMore")}
           </button>
         ) : null}
-        {list.ended ? <output>{t("sales.list.ended")}</output> : null}
+        {list.ended ? (
+          <output ref={endRef} tabIndex={-1}>
+            {t("sales.list.ended")}
+          </output>
+        ) : null}
       </div>
     </>
   );
@@ -174,7 +242,6 @@ function Results({
   onOpen,
 }: Readonly<{ list: SaleListState; onOpen: (row: SaleItem) => void }>): React.JSX.Element {
   const t = useT();
-  const locale = useLocale();
   const columns = saleColumns(t, list.storeTimezone);
   if (list.isLoading) {
     return (
@@ -187,15 +254,9 @@ function Results({
   }
   if (list.error) return <ErrorView error={list.error} onRetry={list.retry} />;
   if (list.rows.length === 0 && list.ended) {
-    const asOf = list.asOf
-      ? formatDateTime(list.asOf, { timeZone: list.storeTimezone, locale })
-      : "";
+    const asOf = list.asOf ? <DateTime value={list.asOf} timeZone={list.storeTimezone} /> : "";
     return (
-      <ListState
-        state="empty"
-        emptyMessage={t("sales.list.empty", { asOf })}
-        emptyHint={t("sales.list.emptyHint")}
-      />
+      <Notice message={t.rich("sales.list.empty", { asOf })} hint={t("sales.list.emptyHint")} />
     );
   }
   return (
@@ -234,18 +295,29 @@ export function SaleList(): React.JSX.Element {
   const [search, setSearch] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const directory = useStoreDirectory(scope.tenantId);
+  // A role the API refuses (store_staff) reads nothing: the server would answer
+  // the same non-disclosing 404, so the form is not offered at all (AC-5).
+  const permitted = canReadSales(scope.role);
+  const directory = useStoreDirectory(permitted ? scope.tenantId : null);
 
   const filters = filtersFromSearch(search);
   const errors = validateFilters(filters);
   const valid = Object.keys(errors).length === 0;
-  const ready = valid && isQueryReady(filters);
+  const ready = permitted && valid && isQueryReady(filters);
   const list = useSaleList(scope, ready ? buildListQuery(filters) : null);
 
   if (!scope.tenantId) {
     return (
       <div className="surface">
         <p className="content__sub">{t("sales.list.scopePrompt")}</p>
+      </div>
+    );
+  }
+  if (!permitted) {
+    return (
+      <div className="surface">
+        <h1 className="content__title">{t("sales.list.title")}</h1>
+        <Unavailable />
       </div>
     );
   }

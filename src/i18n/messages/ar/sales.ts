@@ -38,6 +38,9 @@ export const sales = {
   "sales.list.sessionExpired": "انتهت جلستك. سجّل الدخول مرة أخرى.",
   "sales.list.inlineError": "تعذّر تحميل بقية الصفوف. الصفوف المعروضة من آخر تحميل ناجح.",
   "sales.list.retry": "إعادة المحاولة",
+  "sales.list.cursorRejected":
+    "لم يقبل الخادم موضع الصفحة التالية. ابدأ البحث من جديد من الصفحة الأولى.",
+  "sales.list.restart": "البدء من جديد",
   "sales.list.loaded": "المحمَّل: {count}",
   "sales.list.loadMore": "تحميل المزيد",
   "sales.list.col.saleNumber": "رقم البيع",

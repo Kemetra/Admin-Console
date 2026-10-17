@@ -32,6 +32,9 @@ export const sales: MessagesOf<typeof ar> = {
   "sales.list.inlineError":
     "The rest of the rows could not be loaded. The rows shown are from the last successful load.",
   "sales.list.retry": "Retry",
+  "sales.list.cursorRejected":
+    "The server did not accept the position of the next page. Start the search again from the first page.",
+  "sales.list.restart": "Start again",
   "sales.list.loaded": "Loaded: {count}",
   "sales.list.loadMore": "Load more",
   "sales.list.col.saleNumber": "Sale number",

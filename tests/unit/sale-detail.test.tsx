@@ -113,7 +113,11 @@ describe("SaleDetail (RT-587, spec 012 J2)", () => {
     renderDetail();
     await loaded();
     expect(consoleGetSale).toHaveBeenCalledWith(SALE_1);
-    expect(screen.getByRole("heading", { level: 1, name: "Sale R-0042" })).toBeDefined();
+    const heading = screen.getByRole("heading", { level: 1, name: "Sale R-0042" });
+    // The number is machine data, isolated LTR, so RTL never renders it as "0042-R".
+    const number = heading.querySelector("bdi");
+    expect(number?.getAttribute("dir")).toBe("ltr");
+    expect(number?.textContent).toBe("R-0042");
     expect(field("Receipt number").textContent).toBe("R-0042");
     expect(field("Business date").textContent).toBe("Oct 7, 2026");
     expect(field("Occurred").textContent).toBe(cairo("2026-10-07T10:30:00Z"));

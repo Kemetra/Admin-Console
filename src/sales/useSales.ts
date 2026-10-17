@@ -18,7 +18,7 @@ import {
   consoleListSales,
 } from "@/lib/sale-queries";
 import { requestIdOf } from "@/shift-closes/shiftCloseLogic";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isSaleRef, listEnded, nextSaleCursor } from "./saleLogic";
 
 export type SaleError = {
@@ -30,6 +30,7 @@ export interface SaleScope {
   tenantId: string | null;
   tenantName: string | null;
   activeStoreId: string | null;
+  role: string | null;
 }
 
 /** Active tenant and store (the query scope) from RF-1's provider. */
@@ -39,6 +40,7 @@ export function useSaleScope(): SaleScope {
     tenantId: context?.active_tenant?.id ?? null,
     tenantName: context?.active_tenant?.name ?? null,
     activeStoreId: context?.active_store?.id ?? null,
+    role: context?.active_role_code ?? null,
   };
 }
 
@@ -102,6 +104,11 @@ export interface SaleListState {
   /** A failure after a page was read: the loaded rows stay, with a Retry. */
   inlineError?: SaleError;
   retry: () => void;
+  /**
+   * Starts the walk again from the first page. For a continuation the server
+   * refused (400): the cursor is the problem, so retrying it cannot succeed.
+   */
+  restart: () => void;
   hasMore: boolean;
   isFetchingNextPage: boolean;
   loadMore: () => void;
@@ -132,8 +139,10 @@ function pagesState(pages: readonly SalePage[], failure: SaleError | undefined):
 /** The list for a ready query; `null` (no store or range yet) reads nothing. */
 export function useSaleList(scope: SaleScope, query: SaleListQuery | null): SaleListState {
   const active = Boolean(scope.tenantId) && query !== null;
+  const queryClient = useQueryClient();
+  const queryKey = saleQueryKeys.list(scope, query);
   const result = useInfiniteQuery({
-    queryKey: saleQueryKeys.list(scope, query),
+    queryKey,
     enabled: active,
     initialPageParam: FIRST_PAGE,
     queryFn: ({ pageParam }: { pageParam: string | undefined }) =>
@@ -149,6 +158,7 @@ export function useSaleList(scope: SaleScope, query: SaleListQuery | null): Sale
     ...pagesState(result.data?.pages ?? [], errorOf(result.error)),
     isLoading: active && result.isLoading,
     retry: () => (result.isFetchNextPageError ? loadMore() : void result.refetch()),
+    restart: () => void queryClient.resetQueries({ queryKey, exact: true }),
     hasMore: result.hasNextPage,
     isFetchingNextPage: result.isFetchingNextPage,
     loadMore,

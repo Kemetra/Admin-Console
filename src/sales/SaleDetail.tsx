@@ -145,7 +145,9 @@ function Loaded({ detail }: Readonly<{ detail: Detail }>): React.JSX.Element {
       <header className="surface__head">
         <div>
           <h1 className="content__title">
-            {number ? t("sales.detail.title", { number }) : t("sales.detail.titleNoNumber")}
+            {number
+              ? t.rich("sales.detail.title", { number: <SaleNumber value={number} /> })
+              : t("sales.detail.titleNoNumber")}
           </h1>
           <StatusChips sale={detail.summary} />
           <p className="content__sub">
