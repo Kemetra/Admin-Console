@@ -2,6 +2,7 @@ import type { MessageKey, Params } from "../../src/i18n/translate";
 import { DEVICE_1, DUBAI_STORE, NEW_YORK_STORE, SHIFT_OPEN, detail } from "../unit/device-fixtures";
 import { impact, openShift, revoked } from "../unit/device-lifecycle-fixtures";
 import { CODE_ID, SECRET_CODE, issued, pending } from "../unit/device-pairing-fixtures";
+import { expectNoAxeViolations } from "./axe";
 import { type Page, expect, test } from "./fixtures";
 
 /**
@@ -288,4 +289,38 @@ test("S6: after a security revoke Replace is offered directly", async ({ page, t
   await expect(drawer.getByText(t("devices.revoke.nextStep"))).toBeVisible();
   await drawer.getByRole("button", { name: t("devices.revoke.offerReplace") }).click();
   await expect(page.getByRole("dialog", { name: t("devices.issue.title.replace") })).toBeVisible();
+});
+
+test("S7: axe finds no violations on the replace form, the shown-once code and the pending codes", async ({
+  page,
+  t,
+}) => {
+  // The drawer's entrance fades in; contrast is measured on the settled page.
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await mockDevice(page, "owner", impact({ action: "replace", revokeReason: "replaced" }));
+  await page.route("**/api/v1/devices?**", (r) => r.fulfill(json({ items: [], nextCursor: null })));
+  await page.route("**/api/v1/pairing-codes?**", (r) =>
+    r.fulfill(json({ items: [pending()], nextCursor: null })),
+  );
+  await page.goto(`/devices/${DEVICE_1}`);
+  await page.getByRole("button", { name: t("devices.actions.replace") }).click();
+  const drawer = page.getByRole("dialog");
+  await expectNoAxeViolations(page, "replace form");
+  await drawer.getByRole("button", { name: t("devices.flow.review") }).click();
+  await expect(drawer.getByText(t("devices.text.required")).first()).toBeVisible();
+  await expectNoAxeViolations(page, "replace form with errors");
+  await fillBinding(page, t);
+  await drawer.getByRole("button", { name: t("devices.flow.review") }).click();
+  await drawer.getByRole("button", { name: t("devices.issue.confirm") }).click();
+  await expect(drawer.getByText(SECRET_CODE)).toBeVisible();
+  await expectNoAxeViolations(page, "issued code");
+
+  await page.goto("/devices/pairing-codes");
+  await expect(page.getByText("Counter 2")).toBeVisible();
+  await expectNoAxeViolations(page, "pending codes");
+  await page
+    .getByRole("button", { name: t("devices.codes.cancel") })
+    .first()
+    .click();
+  await expectNoAxeViolations(page, "cancel confirm");
 });
