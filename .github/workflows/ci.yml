@@ -9,9 +9,10 @@ on:
   push:
     branches: [main]
 
-# Cancel superseded runs on the same ref to save CI minutes.
+# Cancel superseded PR runs on the same ref to save CI minutes. Push runs on
+# main get a per-SHA group so back-to-back merges each complete (RT-579).
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.ref }}${{ github.event_name == 'push' && format('-{0}', github.sha) || '' }}
   cancel-in-progress: true
 
 # Least-privilege GITHUB_TOKEN: the job only checks out and restores caches (RT-84).
