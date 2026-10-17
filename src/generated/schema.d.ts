@@ -20,6 +20,7 @@
 // - packages/contracts/openapi/erpnext-sync-ops/console-sync-ops.yaml
 // - packages/contracts/openapi/devices.openapi.yaml
 // - packages/contracts/openapi/console-sales.openapi.yaml
+// - packages/contracts/openapi/cash-variance-policy.openapi.yaml
 //
 // The upstream OpenAPI files are separate documents with overlapping component
 // names, so this file namespaces each generated source and composes their path
@@ -6869,6 +6870,729 @@ export namespace ConsoleSalesSchema {
     }
 }
 
-export type paths = AuthSchema.paths & ContextSchema.paths & TenantsSchema.paths & StoresSchema.paths & MembershipsSchema.paths & AuditSchema.paths & UnknownItemsSchema.paths & SettlementSchema.paths & ErpnextReconciliationSchema.paths & ShiftClosesSchema.paths & ConnectorAdminSchema.paths & ConnectorHealthSchema.paths & SyncOpsSchema.paths & DevicesSchema.paths & ConsoleSalesSchema.paths;
-export type components = AuthSchema.components & ContextSchema.components & TenantsSchema.components & StoresSchema.components & MembershipsSchema.components & AuditSchema.components & UnknownItemsSchema.components & SettlementSchema.components & ErpnextReconciliationSchema.components & ShiftClosesSchema.components & ConnectorAdminSchema.components & ConnectorHealthSchema.components & SyncOpsSchema.components & DevicesSchema.components & ConsoleSalesSchema.components;
-export type operations = AuthSchema.operations & ContextSchema.operations & TenantsSchema.operations & StoresSchema.operations & MembershipsSchema.operations & AuditSchema.operations & UnknownItemsSchema.operations & SettlementSchema.operations & ErpnextReconciliationSchema.operations & ShiftClosesSchema.operations & ConnectorAdminSchema.operations & ConnectorHealthSchema.operations & SyncOpsSchema.operations & DevicesSchema.operations & ConsoleSalesSchema.operations;
+export namespace CashVariancePolicySchema {
+    export interface paths {
+        "/api/pos/v1/store/cash-variance-policy": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * Read the paired terminal's resolved shift variance policy.
+             * @description Returns the effective policy of the device's own tenant and store, as resolved by Backend-Core (see the info description): `policySource` (`system` | `tenant` | `store`), `policyRevisionId` (`null` for `system`), the value and `serverTime`. Tenant and store come only from the device row; no query parameter is accepted. Send `If-None-Match` with the last `ETag`; an unchanged resolved policy is `304` with no body. The POS freezes the answer on its local open record at each cash-session open and sends it on `openShift` (pos-shifts 1.2.0-draft).
+             */
+            get: operations["posGetCashVariancePolicy"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/tenants/{tenant_id}/cash-variance-policy": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Must be the session's tenant; another tenant, or a role outside the operation's list, is the non-disclosing 404. */
+                    tenant_id: components["parameters"]["TenantId"];
+                };
+                cookie?: never;
+            };
+            /**
+             * Read the tenant default shift variance policy.
+             * @description The tenant level of the policy: the tenant's latest revision, or the System default (`none`) when the tenant never set one, with the latest revision (actor, time, reason) and the concurrency token for the next publish. Roles `owner` / `tenant_admin`.
+             */
+            get: operations["consoleGetTenantCashVariancePolicy"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/tenants/{tenant_id}/cash-variance-policy/revisions": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Must be the session's tenant; another tenant, or a role outside the operation's list, is the non-disclosing 404. */
+                    tenant_id: components["parameters"]["TenantId"];
+                };
+                cookie?: never;
+            };
+            /**
+             * List the tenant default's revisions (newest first).
+             * @description Every tenant-scope revision, newest first by (`createdAt`, `revisionId`), keyset paginated. Roles `owner` / `tenant_admin`.
+             */
+            get: operations["consoleListTenantCashVariancePolicyRevisions"];
+            put?: never;
+            /**
+             * Publish a new tenant default (Apply Now).
+             * @description Appends a tenant-scope revision with the given value and `reason`. Roles `owner` / `tenant_admin`. A tenant may choose `none` (DR-3). The new default applies from each terminal's next cash-session open; where it is stricter than an active store override, it wins that store's resolution (the info description).
+             *
+             *     Order of checks, each stopping the call: (1) session, `Origin`, tenant and role (`401` / `403 origin_rejected` / `404`); (2) the `Idempotency-Key` (a same-key retry replays the stored response with `Idempotent-Replayed: true`); (3) the body (`400 validation_error`); (4) under a lock on the tenant's policy scope, the currency (`422 policy_currency_unsupported`); (5) `expectedRevisionId` (`409 cash_variance_policy_changed_concurrently`); (6) write the revision and its `cash_variance_policy.changed` audit row in one transaction and answer `201` with the updated tenant read.
+             */
+            post: operations["consolePublishTenantCashVariancePolicy"];
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/stores/{store_id}/cash-variance-policy": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description A store of the session's tenant within the caller's store scope; anything else is the non-disclosing 404. */
+                    store_id: components["parameters"]["StoreId"];
+                };
+                cookie?: never;
+            };
+            /**
+             * Read a store's effective shift variance policy and its override.
+             * @description The store's effective policy (source, revision, value) as resolved by Backend-Core, the tenant level it inherits, the active store override if any (reason, `effectiveUntil`, `permanent`), the concurrency token for the next override publish, and the DR-4 horizon. Roles `owner` / `tenant_admin` (any store in their membership store scope) and `store_manager` (its own stores; read only). The store scope is the operator-surface rule of `shift-closes`.
+             */
+            get: operations["consoleGetStoreCashVariancePolicy"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/stores/{store_id}/cash-variance-policy/revisions": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description A store of the session's tenant within the caller's store scope; anything else is the non-disclosing 404. */
+                    store_id: components["parameters"]["StoreId"];
+                };
+                cookie?: never;
+            };
+            /**
+             * List a store's override revisions (newest first).
+             * @description Every store-scope revision of this store (`set` and `clear`), newest first by (`createdAt`, `revisionId`), keyset paginated. A permanent override is labelled `permanent: true`, never hidden. Roles `owner` / `tenant_admin`, within their membership store scope.
+             */
+            get: operations["consoleListStoreCashVariancePolicyRevisions"];
+            put?: never;
+            /**
+             * Set or clear the store override (Apply Now).
+             * @description Appends a store-scope revision: `kind: set` publishes an override (value, `reason`, optional `effectiveUntil`); `kind: clear` removes the active one (`reason` only), so the store inherits the tenant level again. Roles `owner` / `tenant_admin`, within their membership store scope.
+             *
+             *     **Permanent override (DR-4).** A `set` with no `effectiveUntil`, or with one more than 90 days after the server's publish time, is permanent: only an `owner` may publish it, in this single call, and a `tenant_admin` gets `403 owner_approval_required`. The revision records the owner as `approvedByUserId`. There is no pending state.
+             *
+             *     **Pending owner ratification (RT-384 review L3).** (a) The 90-day horizon is elapsed time: `effectiveUntil` more than 90 × 24 h after the server's publish instant (no calendar or DST arithmetic). (b) A `tenant_admin` may publish a new override within the horizon whenever the previous one expires or is replaced, so overrides can be chained; each one needs its own `reason` and audit row. (c) A `tenant_admin` may `clear` an override, including an owner-approved permanent one. The coordinator recommends the owner consider requiring owner approval to clear a permanent override, and auditing override chains; the owner decides at the `[GATED]` review.
+             *
+             *     **Stricter only (RT-284 comment 11887, Q5).** A `set` must not be looser than the tenant level at publish: `none` under a tenant `limit`, or a higher `limitAmount`, is `422 override_looser_than_tenant`. An equal value is accepted.
+             *
+             *     Order of checks, each stopping the call: (1) session, `Origin`, store scope and role (`401` / `403 origin_rejected` / `404`); (2) the `Idempotency-Key` (a same-key retry replays the stored response with `Idempotent-Replayed: true`); (3) the body (`400 validation_error`); (4) under a lock on the store's policy scope: the currency (`422 policy_currency_unsupported`), an `effectiveUntil` not after the server time (`422 override_expiry_invalid`), a `clear` with no active override (`422 override_not_active`), the stricter-only rule (`422 override_looser_than_tenant`), then the owner rule (`403 owner_approval_required`); (5) `expectedRevisionId` (`409 cash_variance_policy_changed_concurrently`); (6) write the revision and its `cash_variance_policy.changed` audit row in one transaction and answer `201` with the updated store read.
+             */
+            post: operations["consolePublishStoreCashVariancePolicyOverride"];
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+    }
+    export type webhooks = Record<string, never>;
+    export interface components {
+        schemas: {
+            /** @description ISO-4217 alphabetic currency code. V1 accepts only `EGP` on a publish (422 otherwise). */
+            CurrencyCode: string;
+            /** @description Exact-decimal amount as a string, never negative; at most 15 integer and 4 fractional digits, and at most the currency's ISO-4217 minor unit of fractional digits on a publish (400 `validation_error`). */
+            NonNegativeDecimalAmount: string;
+            /** @description The policy value (AD-CASH-001 D-1). `none`: the cashier always closes alone. `limit`: approval is required exactly when `|variance| > limitAmount` (a variance equal to the limit closes with the cashier alone; `limitAmount` `0` asks on every non-zero variance). `limitAmount` and `currencyCode` are required for `limit` and absent for `none`. */
+            CashVariancePolicyValue: {
+                /** @enum {string} */
+                mode: "none" | "limit";
+                limitAmount?: components["schemas"]["NonNegativeDecimalAmount"];
+                currencyCode?: components["schemas"]["CurrencyCode"];
+            };
+            /**
+             * @description Where a resolved policy comes from. `system` is the Backend-Core constant `none` (no revision). Never `fallback`: that is the POS's own never-fetched value (pos-shifts `openShift`).
+             * @enum {string}
+             */
+            PolicySource: "system" | "tenant" | "store";
+            /**
+             * @description The source of the tenant level.
+             * @enum {string}
+             */
+            TenantPolicySource: "system" | "tenant";
+            /** @description A policy as resolved by Backend-Core. `policyRevisionId` is `null` exactly when `policySource` is `system`, and a `system` value is always `none` (the System default, DR-2). */
+            ResolvedCashVariancePolicy: {
+                policySource: components["schemas"]["PolicySource"];
+                /** Format: uuid */
+                policyRevisionId: string | null;
+                policyValue: components["schemas"]["CashVariancePolicyValue"];
+            };
+            /** @description The tenant level of the policy: the tenant's latest revision, or the System default. Never `store`. `policyRevisionId` is `null` exactly when `policySource` is `system`. */
+            TenantResolvedCashVariancePolicy: {
+                policySource: components["schemas"]["TenantPolicySource"];
+                /** Format: uuid */
+                policyRevisionId: string | null;
+                policyValue: components["schemas"]["CashVariancePolicyValue"];
+            };
+            /** @description The POS read: the resolved effective policy of the device's store and the server time. The POS freezes `policySource`, `policyRevisionId` and `policyValue` at each cash-session open. */
+            DeviceCashVariancePolicy: {
+                policySource: components["schemas"]["PolicySource"];
+                /** Format: uuid */
+                policyRevisionId: string | null;
+                policyValue: components["schemas"]["CashVariancePolicyValue"];
+                /**
+                 * Format: date-time
+                 * @description The server clock when the policy was resolved.
+                 */
+                serverTime: string;
+            };
+            /** @description One immutable revision. Every key is always present; a value that does not apply is `null`. A tenant revision is always a `set`, has no store and no expiry. A `clear` has no value. `permanent` is `true` only for a store `set` with no `effectiveUntil` or one beyond the 90-day horizon, and then `approvedByUserId` is the publishing owner; a store `set` with no `effectiveUntil` is always `permanent`. */
+            CashVariancePolicyRevision: {
+                /**
+                 * Format: uuid
+                 * @description The id a cash session freezes as `policyRevisionId` (K-2).
+                 */
+                revisionId: string;
+                /** @enum {string} */
+                scope: "tenant" | "store";
+                /**
+                 * Format: uuid
+                 * @description The store of a store-scope revision; `null` for a tenant revision.
+                 */
+                storeId: string | null;
+                /** @enum {string} */
+                kind: "set" | "clear";
+                /** @description The value; `null` for a `clear`. */
+                policyValue: components["schemas"]["CashVariancePolicyValue"] | null;
+                reason: components["schemas"]["Reason"];
+                /**
+                 * Format: date-time
+                 * @description Server time at publish (Apply Now).
+                 */
+                effectiveFrom: string;
+                /**
+                 * Format: date-time
+                 * @description A store override's expiry; `null` when none or not applicable.
+                 */
+                effectiveUntil: string | null;
+                permanent: boolean;
+                /**
+                 * Format: uuid
+                 * @description The approving `owner` of a permanent override; otherwise `null`.
+                 */
+                approvedByUserId: string | null;
+                /**
+                 * Format: uuid
+                 * @description The scope's previous latest revision (the publish's `expectedRevisionId`); `null` for the first.
+                 */
+                supersedesRevisionId: string | null;
+                /**
+                 * @description `current`: the scope's latest revision. `superseded`: a later revision of the same scope exists. `expired`: the scope's latest revision is a store `set` whose `effectiveUntil` has passed.
+                 * @enum {string}
+                 */
+                state: "current" | "superseded" | "expired";
+                /**
+                 * Format: uuid
+                 * @description The `users.id` who published the revision.
+                 */
+                createdByUserId: string;
+                /** Format: date-time */
+                createdAt: string;
+            } & (unknown & unknown & unknown & unknown & unknown);
+            /** @description A `CashVariancePolicyRevision` of the tenant scope. */
+            TenantCashVariancePolicyRevision: components["schemas"]["CashVariancePolicyRevision"] & {
+                /** @constant */
+                scope?: "tenant";
+            };
+            /** @description A `CashVariancePolicyRevision` of the store scope. */
+            StoreCashVariancePolicyRevision: components["schemas"]["CashVariancePolicyRevision"] & {
+                /** @constant */
+                scope?: "store";
+            };
+            /** @description A keyset page of tenant-scope revisions only, newest first. */
+            TenantCashVariancePolicyRevisionPage: {
+                items: components["schemas"]["TenantCashVariancePolicyRevision"][];
+                /** @description Opaque cursor for the next page; `null` on the last page. */
+                nextCursor: string | null;
+            };
+            /** @description A keyset page of this store's revisions only, newest first (the path store; the runtime never mixes in another scope or store). */
+            StoreCashVariancePolicyRevisionPage: {
+                items: components["schemas"]["StoreCashVariancePolicyRevision"][];
+                /** @description Opaque cursor for the next page; `null` on the last page. */
+                nextCursor: string | null;
+            };
+            /** @description The tenant default. `latestRevisionId` is the `expectedRevisionId` of the next tenant publish and the id of `latestRevision`. With a `system` default (the tenant never set one) both are `null`; with a `tenant` default both are set. */
+            TenantCashVariancePolicy: {
+                tenantDefault: components["schemas"]["TenantResolvedCashVariancePolicy"];
+                latestRevision: components["schemas"]["TenantCashVariancePolicyRevision"] | null;
+                /** Format: uuid */
+                latestRevisionId: string | null;
+            };
+            /** @description The store's active override (a `set` revision not yet expired). An override with no `effectiveUntil` is always `permanent`, and a permanent one names its approving owner. */
+            ActiveStoreOverride: {
+                /** Format: uuid */
+                revisionId: string;
+                policyValue: components["schemas"]["CashVariancePolicyValue"];
+                reason: components["schemas"]["Reason"];
+                /** Format: date-time */
+                effectiveUntil: string | null;
+                /** @description No expiry, or one beyond the 90-day horizon; the Console labels it "permanent". */
+                permanent: boolean;
+                /** Format: uuid */
+                approvedByUserId: string | null;
+                /** Format: uuid */
+                createdByUserId: string;
+                /** Format: date-time */
+                createdAt: string;
+            } & (unknown & unknown);
+            /** @description A store's policy. `effective` is what the store's terminals receive (the stricter of `activeOverride` and `tenantDefault`, a tie to the store). `latestRevisionId` is the `expectedRevisionId` of the next override publish: the store's latest revision of any kind or state (`null` before the first). */
+            StoreCashVariancePolicy: {
+                /** Format: uuid */
+                storeId: string;
+                effective: components["schemas"]["ResolvedCashVariancePolicy"];
+                tenantDefault: components["schemas"]["TenantResolvedCashVariancePolicy"];
+                activeOverride: components["schemas"]["ActiveStoreOverride"] | null;
+                /** Format: uuid */
+                latestRevisionId: string | null;
+                /**
+                 * @description The DR-4 maximum horizon (coordinator decision 1). An override whose `effectiveUntil` is more than this many days after publish, or absent, is permanent and owner-only.
+                 * @constant
+                 */
+                permanentOverrideHorizonDays: 90;
+            };
+            /** @description Why the policy changed, 1 to 200 characters. No PII. Required on every publish (D-3). */
+            Reason: string;
+            /** @description A new tenant default. The tenant comes from the path and the session, never the body. */
+            PublishTenantCashVariancePolicyRequest: {
+                /**
+                 * Format: uuid
+                 * @description The tenant read's `latestRevisionId` (`null` when the tenant has no revision yet).
+                 */
+                expectedRevisionId: string | null;
+                policyValue: components["schemas"]["CashVariancePolicyValue"];
+                reason: components["schemas"]["Reason"];
+            };
+            /** @description Set (`policyValue`, optional `effectiveUntil`) or clear (neither) the store override. The store comes from the path, never the body. */
+            PublishStoreCashVariancePolicyOverrideRequest: {
+                /**
+                 * Format: uuid
+                 * @description The store read's `latestRevisionId` (`null` when the store has no revision yet).
+                 */
+                expectedRevisionId: string | null;
+                /** @enum {string} */
+                kind: "set" | "clear";
+                policyValue?: components["schemas"]["CashVariancePolicyValue"];
+                reason: components["schemas"]["Reason"];
+                /**
+                 * Format: date-time
+                 * @description Optional expiry of a `set`, RFC 3339 with an offset; must be after the server time (422 `override_expiry_invalid`). Absent, or more than 90 days after publish: the override is permanent and owner-only.
+                 */
+                effectiveUntil?: string;
+            };
+            /** @description Canonical error envelope. Out-of-scope and cross-tenant refusals are non-disclosing (§II, §XII). */
+            Error: {
+                error: {
+                    /** @description Stable machine-readable error code. */
+                    code: string;
+                    /** @description Human-readable summary. No sensitive data, no cause enumeration. */
+                    message: string;
+                    /**
+                     * Format: uuid
+                     * @description Server-side correlation id.
+                     */
+                    request_id?: string;
+                };
+            };
+            /** @description The shared `IdempotencyInterceptor`'s 425 body (not the `Error` envelope). */
+            IdempotencyInProgressBody: {
+                /** @constant */
+                error: "idempotency_in_progress";
+                retryAfterSec: number;
+            };
+        };
+        responses: {
+            /** @description 400 `validation_error`: a malformed path id, an unknown or malformed query parameter, a cursor the server cannot decode, or a bad `If-None-Match`. Checked before any database read. */
+            ReadValidationFailure: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 400: `validation_error` (a malformed path id or body, an unknown key, a `limit` without an amount or currency, a `clear` with a value or an expiry, more fractional digits than the currency's minor unit), or the `IdempotencyInterceptor`'s `idempotency_key_required` / `idempotency_key_malformed`. Nothing is written. */
+            WriteValidationFailure: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 401 `unauthorized`: no human dashboard session. A bearer-only request (`dashboard_api` included) is refused (`SessionOnlyAdminGuard`). Non-disclosing. */
+            Unauthorized: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 401 `unauthorized`: a missing, invalid or revoked device token, or a non-device credential. Non-disclosing. */
+            DeviceUnauthorized: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 403 `origin_rejected` (RT-430): a cookie-authenticated publish whose `Origin` is missing or not allowed. Nothing is written. */
+            OriginRejected: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 403, `error.code` one of: `origin_rejected` (RT-430, as on the tenant publish); `owner_approval_required` (a permanent override — no `effectiveUntil`, or one more than 90 days ahead — published by a `tenant_admin`; only an `owner` may publish it, DR-4). Nothing is written. */
+            StoreWriteForbidden: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 404 `not_found`, non-disclosing: identical for another tenant, a store of another tenant or outside the caller's store scope, an absent id and a role outside the operation's list. */
+            NotFound: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 409, `error.code` one of: `cash_variance_policy_changed_concurrently` (`expectedRevisionId` is not the scope's latest revision; reload and retry); `idempotency_key_conflict` (the same `Idempotency-Key` with a different body). Nothing is written. */
+            Conflict: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 422 `policy_currency_unsupported`: a `limit` in a currency other than `EGP` (V1, K-5). Nothing is written. */
+            TenantPolicyUnprocessable: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 422, `error.code` one of: `policy_currency_unsupported` (a `limit` not in `EGP`, V1); `override_looser_than_tenant` (the value is looser than the tenant level, RT-284 Q5); `override_expiry_invalid` (`effectiveUntil` is not after the server time); `override_not_active` (a `clear` while the store has no active override). Nothing is written. */
+            StoreOverrideUnprocessable: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 425 `idempotency_in_progress`: the first request with this `Idempotency-Key` is still being processed. Retry after `Retry-After` seconds with the same key and body. Nothing is written by this request. */
+            IdempotencyInProgress: {
+                headers: {
+                    "Retry-After": components["headers"]["RetryAfterInProgress"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyInProgressBody"];
+                };
+            };
+            /** @description 500 `internal_error`: an unexpected server error, recorded server-side under `request_id` and never returned. */
+            SystemFailure: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+        parameters: {
+            /** @description Must be the session's tenant; another tenant, or a role outside the operation's list, is the non-disclosing 404. */
+            TenantId: string;
+            /** @description A store of the session's tenant within the caller's store scope; anything else is the non-disclosing 404. */
+            StoreId: string;
+            /** @description The last `ETag` received; omit it when the cached policy was lost. */
+            IfNoneMatch: string;
+            /** @description Opaque keyset cursor from a prior page's `nextCursor`; omit it for the first page. A value the server did not issue is 400 `validation_error`. */
+            Cursor: string;
+            /** @description Maximum revisions per page. The server MAY return fewer. */
+            PageSize: number;
+            /** @description REQUIRED on every publish (G5): 16 to 128 printable ASCII characters with no whitespace, as the shared `IdempotencyInterceptor` enforces. Keyed on the verified actor. An identical retry replays the stored response with `Idempotent-Replayed: true`; key reuse with a different body is 409 `idempotency_key_conflict`; a key still being processed is 425 `idempotency_in_progress`. A missing key is 400 `idempotency_key_required`, a malformed one 400 `idempotency_key_malformed`. */
+            IdempotencyKey: string;
+        };
+        requestBodies: never;
+        headers: {
+            /** @description Strong ETag: the quoted lowercase hex SHA-256 of the canonical JSON (keys sorted, no whitespace) of the resolved `policySource`, `policyRevisionId` and `policyValue`. `serverTime` is not part of it. Because it is computed over the resolved policy, it changes when a store override expires, with no write. */
+            ETag: string;
+            /** @description Always `no-cache, private`; the POS revalidates every read. */
+            CacheControl: "no-cache, private";
+            /** @description Present and `true` on a same-`Idempotency-Key` replay, which carries the stored status (`201`). Absent on a first-time publish. */
+            IdempotentReplayed: boolean;
+            /** @description Seconds to wait before retrying a 425 with the same `Idempotency-Key` and body. */
+            RetryAfterInProgress: number;
+        };
+        pathItems: never;
+    }
+    export type $defs = Record<string, never>;
+    export interface operations {
+        posGetCashVariancePolicy: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description The last `ETag` received; omit it when the cached policy was lost. */
+                    "If-None-Match"?: components["parameters"]["IfNoneMatch"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The resolved policy. */
+                200: {
+                    headers: {
+                        ETag: components["headers"]["ETag"];
+                        "Cache-Control": components["headers"]["CacheControl"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DeviceCashVariancePolicy"];
+                    };
+                };
+                /** @description Unchanged since the `If-None-Match` ETag. No body. */
+                304: {
+                    headers: {
+                        ETag: components["headers"]["ETag"];
+                        "Cache-Control": components["headers"]["CacheControl"];
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                400: components["responses"]["ReadValidationFailure"];
+                401: components["responses"]["DeviceUnauthorized"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+        consoleGetTenantCashVariancePolicy: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Must be the session's tenant; another tenant, or a role outside the operation's list, is the non-disclosing 404. */
+                    tenant_id: components["parameters"]["TenantId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The tenant default. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TenantCashVariancePolicy"];
+                    };
+                };
+                400: components["responses"]["ReadValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                404: components["responses"]["NotFound"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+        consoleListTenantCashVariancePolicyRevisions: {
+            parameters: {
+                query?: {
+                    /** @description Opaque keyset cursor from a prior page's `nextCursor`; omit it for the first page. A value the server did not issue is 400 `validation_error`. */
+                    cursor?: components["parameters"]["Cursor"];
+                    /** @description Maximum revisions per page. The server MAY return fewer. */
+                    page_size?: components["parameters"]["PageSize"];
+                };
+                header?: never;
+                path: {
+                    /** @description Must be the session's tenant; another tenant, or a role outside the operation's list, is the non-disclosing 404. */
+                    tenant_id: components["parameters"]["TenantId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description A page of revisions. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TenantCashVariancePolicyRevisionPage"];
+                    };
+                };
+                400: components["responses"]["ReadValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                404: components["responses"]["NotFound"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+        consolePublishTenantCashVariancePolicy: {
+            parameters: {
+                query?: never;
+                header: {
+                    /** @description REQUIRED on every publish (G5): 16 to 128 printable ASCII characters with no whitespace, as the shared `IdempotencyInterceptor` enforces. Keyed on the verified actor. An identical retry replays the stored response with `Idempotent-Replayed: true`; key reuse with a different body is 409 `idempotency_key_conflict`; a key still being processed is 425 `idempotency_in_progress`. A missing key is 400 `idempotency_key_required`, a malformed one 400 `idempotency_key_malformed`. */
+                    "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                };
+                path: {
+                    /** @description Must be the session's tenant; another tenant, or a role outside the operation's list, is the non-disclosing 404. */
+                    tenant_id: components["parameters"]["TenantId"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["PublishTenantCashVariancePolicyRequest"];
+                };
+            };
+            responses: {
+                /** @description Published. A same-key retry replays this `201` with `Idempotent-Replayed: true`. */
+                201: {
+                    headers: {
+                        "Idempotent-Replayed": components["headers"]["IdempotentReplayed"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TenantCashVariancePolicy"];
+                    };
+                };
+                400: components["responses"]["WriteValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["OriginRejected"];
+                404: components["responses"]["NotFound"];
+                409: components["responses"]["Conflict"];
+                422: components["responses"]["TenantPolicyUnprocessable"];
+                425: components["responses"]["IdempotencyInProgress"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+        consoleGetStoreCashVariancePolicy: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description A store of the session's tenant within the caller's store scope; anything else is the non-disclosing 404. */
+                    store_id: components["parameters"]["StoreId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The store's policy. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StoreCashVariancePolicy"];
+                    };
+                };
+                400: components["responses"]["ReadValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                404: components["responses"]["NotFound"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+        consoleListStoreCashVariancePolicyRevisions: {
+            parameters: {
+                query?: {
+                    /** @description Opaque keyset cursor from a prior page's `nextCursor`; omit it for the first page. A value the server did not issue is 400 `validation_error`. */
+                    cursor?: components["parameters"]["Cursor"];
+                    /** @description Maximum revisions per page. The server MAY return fewer. */
+                    page_size?: components["parameters"]["PageSize"];
+                };
+                header?: never;
+                path: {
+                    /** @description A store of the session's tenant within the caller's store scope; anything else is the non-disclosing 404. */
+                    store_id: components["parameters"]["StoreId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description A page of revisions. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StoreCashVariancePolicyRevisionPage"];
+                    };
+                };
+                400: components["responses"]["ReadValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                404: components["responses"]["NotFound"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+        consolePublishStoreCashVariancePolicyOverride: {
+            parameters: {
+                query?: never;
+                header: {
+                    /** @description REQUIRED on every publish (G5): 16 to 128 printable ASCII characters with no whitespace, as the shared `IdempotencyInterceptor` enforces. Keyed on the verified actor. An identical retry replays the stored response with `Idempotent-Replayed: true`; key reuse with a different body is 409 `idempotency_key_conflict`; a key still being processed is 425 `idempotency_in_progress`. A missing key is 400 `idempotency_key_required`, a malformed one 400 `idempotency_key_malformed`. */
+                    "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                };
+                path: {
+                    /** @description A store of the session's tenant within the caller's store scope; anything else is the non-disclosing 404. */
+                    store_id: components["parameters"]["StoreId"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["PublishStoreCashVariancePolicyOverrideRequest"];
+                };
+            };
+            responses: {
+                /** @description Published. A same-key retry replays this `201` with `Idempotent-Replayed: true`. */
+                201: {
+                    headers: {
+                        "Idempotent-Replayed": components["headers"]["IdempotentReplayed"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StoreCashVariancePolicy"];
+                    };
+                };
+                400: components["responses"]["WriteValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["StoreWriteForbidden"];
+                404: components["responses"]["NotFound"];
+                409: components["responses"]["Conflict"];
+                422: components["responses"]["StoreOverrideUnprocessable"];
+                425: components["responses"]["IdempotencyInProgress"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+    }
+}
+
+export type paths = AuthSchema.paths & ContextSchema.paths & TenantsSchema.paths & StoresSchema.paths & MembershipsSchema.paths & AuditSchema.paths & UnknownItemsSchema.paths & SettlementSchema.paths & ErpnextReconciliationSchema.paths & ShiftClosesSchema.paths & ConnectorAdminSchema.paths & ConnectorHealthSchema.paths & SyncOpsSchema.paths & DevicesSchema.paths & ConsoleSalesSchema.paths & CashVariancePolicySchema.paths;
+export type components = AuthSchema.components & ContextSchema.components & TenantsSchema.components & StoresSchema.components & MembershipsSchema.components & AuditSchema.components & UnknownItemsSchema.components & SettlementSchema.components & ErpnextReconciliationSchema.components & ShiftClosesSchema.components & ConnectorAdminSchema.components & ConnectorHealthSchema.components & SyncOpsSchema.components & DevicesSchema.components & ConsoleSalesSchema.components & CashVariancePolicySchema.components;
+export type operations = AuthSchema.operations & ContextSchema.operations & TenantsSchema.operations & StoresSchema.operations & MembershipsSchema.operations & AuditSchema.operations & UnknownItemsSchema.operations & SettlementSchema.operations & ErpnextReconciliationSchema.operations & ShiftClosesSchema.operations & ConnectorAdminSchema.operations & ConnectorHealthSchema.operations & SyncOpsSchema.operations & DevicesSchema.operations & ConsoleSalesSchema.operations & CashVariancePolicySchema.operations;
