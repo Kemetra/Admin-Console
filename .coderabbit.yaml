@@ -55,8 +55,8 @@ reviews:
         Thin wrappers over the generated `apiClient` (`@/generated/client`), which
         is the only Backend-Core call surface. Flag hand-written `fetch`, `axios`
         or `XMLHttpRequest` against Backend-Core paths, bearer tokens, and
-        request bodies or responses typed by hand instead of from the generated
-        schema types.
+        response shapes typed by hand instead of taken from the generated schema
+        types.
     - path: "openapi-ts.config.ts"
       instructions: |
         Generated-client drift. `src/generated/**` is committed output and must
