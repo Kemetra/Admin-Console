@@ -85,6 +85,8 @@ const POSTGRES_ROW_MARKERS = [
   { marker: "Failing row contains (", mask: "Failing row contains (...)" },
 ] as const;
 const SCHEME_CHAR = /^[a-z0-9+.-]$/i;
+/** Characters that open a URL query or fragment. */
+const QUERY_MARKS: ReadonlySet<string> = new Set(["?", "#"]);
 const TRAILING_PUNCTUATION: ReadonlySet<string> = new Set([`"`, "'", ")", "]", ",", ";", ".", ">"]);
 const FRAME_LOCATION_KEYS = ["function", "lineno", "colno", "module", "in_app"] as const;
 const MECHANISM_KEYS = ["type", "handled"] as const;
@@ -156,11 +158,11 @@ class MessageToken {
    * sentences survive.
    */
   withoutQuery(): MessageToken {
-    const first = this.text.charAt(0);
-    if ((first === "?" || first === "#") && this.text.includes("=")) return new MessageToken("");
+    if (QUERY_MARKS.has(this.text.charAt(0)) && this.text.includes("=")) {
+      return new MessageToken("");
+    }
     for (let i = 1; i < this.text.length - 1; i++) {
-      const char = this.text.charAt(i);
-      if (char === "?" || char === "#") return new MessageToken(this.text.slice(0, i));
+      if (QUERY_MARKS.has(this.text.charAt(i))) return new MessageToken(this.text.slice(0, i));
     }
     return this;
   }
