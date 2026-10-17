@@ -74,7 +74,7 @@ export function reuseOrNewKey(
   previous: KeyedAttempt | undefined,
   fingerprint: string,
 ): KeyedAttempt {
-  return previous && previous.fingerprint === fingerprint
+  return previous?.fingerprint === fingerprint
     ? previous
     : { fingerprint, key: newIdempotencyKey() };
 }

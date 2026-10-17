@@ -29,7 +29,7 @@ import { useState } from "react";
 import { PayerCreate } from "./PayerCreate";
 import { canReadPayers } from "./payerAccess";
 import { type PayerRow, payerCategoryKey, payerScope, payerStatusKey } from "./payerListLogic";
-import { type PayerListError, usePayerAccounts } from "./usePayerAccounts";
+import { type PayerAccountsValue, type PayerListError, usePayerAccounts } from "./usePayerAccounts";
 import { usePayerStores } from "./usePayerStores";
 import "../shell/surface.css";
 
@@ -85,52 +85,27 @@ function PayerRowView({
   );
 }
 
-export function PayerList(): React.JSX.Element {
+/** The list's states and table, split out of PayerList to keep each function readable. */
+function PayerListBody({
+  state,
+  stores,
+  createButton,
+}: Readonly<{
+  state: PayerAccountsValue;
+  stores: readonly { id: string; name?: string }[];
+  createButton: React.ReactNode;
+}>): React.JSX.Element {
   const t = useT();
-  const signOut = useSignOut();
-  const { context } = useActiveContextValue();
-  const rawTenant = context?.active_tenant ?? null;
-  const allowed = canReadPayers(context?.active_role_code);
-  const tenantId = allowed ? (rawTenant?.id ?? null) : null;
-  const { rows, hasMore, isLoading, isFetchingNextPage, error, loadMore, refetch } =
-    usePayerAccounts(tenantId, {});
-  const stores = usePayerStores(rawTenant?.id ?? null, allowed);
-  const [creating, setCreating] = useState(false);
-
-  // Pre-call guard: no active tenant -> scope prompt, list wrapper never issued.
-  // (No tenant means no role to judge, and the prompt discloses nothing.)
-  if (!rawTenant?.id) {
-    return <ScopePrompt />;
-  }
-  if (!allowed) return <NoAccess onSignOut={signOut} />;
-  const tenantName = rawTenant.name ?? rawTenant.id;
-  const createButton = (
-    <button type="button" className="btn-primary" onClick={() => setCreating(true)}>
-      {t("payers.list.create")}
-    </button>
-  );
+  const { rows, hasMore, isLoading, isFetchingNextPage, error, loadMore } = state;
   const settled = !isLoading;
-  // The header Create shows once there is something listed (or more to walk); the
-  // zero-state carries its own, and a failed first load offers neither.
-  const showHeaderCreate = settled && (rows.length > 0 || hasMore);
 
   return (
-    <div className="surface">
-      <header className="surface__head">
-        <div>
-          <h1 className="content__title">{t("payers.list.title")}</h1>
-          <p className="content__sub">
-            {t.rich("payers.list.subtitle", { tenant: <bdi>{tenantName}</bdi> })}
-          </p>
-        </div>
-        {showHeaderCreate ? createButton : null}
-      </header>
-
+    <>
       {error ? (
         <Banner variant="danger" message={t(ERROR_COPY[error.kind])} requestId={error.requestId} />
       ) : null}
 
-      {isLoading ? <ListState state="loading" label={t("payers.list.loadingNoun")} /> : null}
+      {state.isLoading ? <ListState state="loading" label={t("payers.list.loadingNoun")} /> : null}
 
       {settled && !error && rows.length === 0 && !hasMore ? (
         <ListState state="empty" emptyMessage={t("payers.list.empty")} action={createButton} />
@@ -174,6 +149,52 @@ export function PayerList(): React.JSX.Element {
           </button>
         </div>
       ) : null}
+    </>
+  );
+}
+
+export function PayerList(): React.JSX.Element {
+  const t = useT();
+  const signOut = useSignOut();
+  const { context } = useActiveContextValue();
+  const rawTenant = context?.active_tenant ?? null;
+  const allowed = canReadPayers(context?.active_role_code);
+  const tenantId = allowed ? (rawTenant?.id ?? null) : null;
+  const list = usePayerAccounts(tenantId, {});
+  const { rows, hasMore, isLoading, refetch } = list;
+  const stores = usePayerStores(rawTenant?.id ?? null, allowed);
+  const [creating, setCreating] = useState(false);
+
+  // Pre-call guard: no active tenant -> scope prompt, list wrapper never issued.
+  // (No tenant means no role to judge, and the prompt discloses nothing.)
+  if (!rawTenant?.id) {
+    return <ScopePrompt />;
+  }
+  if (!allowed) return <NoAccess onSignOut={signOut} />;
+  const tenantName = rawTenant.name ?? rawTenant.id;
+  const createButton = (
+    <button type="button" className="btn-primary" onClick={() => setCreating(true)}>
+      {t("payers.list.create")}
+    </button>
+  );
+  const settled = !isLoading;
+  // The header Create shows once there is something listed (or more to walk); the
+  // zero-state carries its own, and a failed first load offers neither.
+  const showHeaderCreate = settled && (rows.length > 0 || hasMore);
+
+  return (
+    <div className="surface">
+      <header className="surface__head">
+        <div>
+          <h1 className="content__title">{t("payers.list.title")}</h1>
+          <p className="content__sub">
+            {t.rich("payers.list.subtitle", { tenant: <bdi>{tenantName}</bdi> })}
+          </p>
+        </div>
+        {showHeaderCreate ? createButton : null}
+      </header>
+
+      <PayerListBody state={list} stores={stores} createButton={createButton} />
 
       {creating ? (
         <PayerCreate
