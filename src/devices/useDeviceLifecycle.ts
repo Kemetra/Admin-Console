@@ -20,7 +20,8 @@ import {
   consoleRevokeDevice,
 } from "@/lib/device-queries";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type MutationFailure, type RevokeBody, classifyMutationFailure } from "./lifecycleLogic";
+import { type MutationFailure, classifyMutationFailure } from "./lifecycleFailure";
+import type { RevokeBody } from "./lifecycleLogic";
 import type { DeviceScope } from "./useDevices";
 
 type ScopeKey = Pick<DeviceScope, "tenantId" | "activeStoreId">;
@@ -38,14 +39,32 @@ class ImpactFetchError extends Error {
   }
 }
 
-export function useImpact(
-  scope: ScopeKey,
-  deviceId: string,
-  action: DeviceLifecycleAction,
-  reason: RevokeReason | undefined,
-  enabled: boolean,
-  nonce: number,
-): ImpactState {
+const GENERIC: MutationFailure = { kind: "generic" };
+
+function failureOf(error: unknown): MutationFailure | undefined {
+  if (!error) return undefined;
+  return error instanceof ImpactFetchError ? error.failure : GENERIC;
+}
+
+export interface ImpactRequest {
+  scope: ScopeKey;
+  deviceId: string;
+  action: DeviceLifecycleAction;
+  /** Only a revoke sends a reason (any other action with one is a 400). */
+  reason?: RevokeReason;
+  enabled: boolean;
+  /** Bumped to ask again: the impact is a snapshot, never a reservation. */
+  nonce: number;
+}
+
+export function useImpact({
+  scope,
+  deviceId,
+  action,
+  reason,
+  enabled,
+  nonce,
+}: ImpactRequest): ImpactState {
   const result = useQuery<DeviceImpactPreview>({
     queryKey: [
       "devices",
@@ -67,15 +86,10 @@ export function useImpact(
       return res.data;
     },
   });
-  const failure = result.error;
   return {
     preview: result.data,
     isLoading: enabled && result.isLoading,
-    error: failure
-      ? failure instanceof ImpactFetchError
-        ? failure.failure
-        : { kind: "generic" }
-      : undefined,
+    error: failureOf(result.error),
     retry: () => void result.refetch(),
   };
 }

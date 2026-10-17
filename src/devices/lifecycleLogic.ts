@@ -1,21 +1,23 @@
 /**
- * RT-372 pure helpers for the device lifecycle flows. No React, no fetch.
+ * RT-372 pure helpers for the device lifecycle forms. No React, no fetch.
  *
- * The server decides. `decideImpact` only reads the preview's `verdict`,
- * `blockCode` and `requires` and says what the form may offer; it never looks
- * at the device's trust state, the role or the open shift to reach a verdict of
- * its own. The contract's extension policy is fail-safe: an unknown verdict is
- * `blocked`, an unknown block code is shown as a refusal that cannot be
- * resolved, and an unknown requirement is unmet. Helpers return catalog message
- * keys, never copy (RT-399).
+ * The server decides what an action does (`impactDecision.ts`) and how a refusal
+ * reads (`lifecycleFailure.ts`). This module holds what the forms themselves
+ * need: which actions exist for a trust state, the revoke reasons an operator
+ * can pick, operator-text validation and the request bodies. Helpers return
+ * catalog message keys, never copy (RT-399).
  */
 import type { MessageKey } from "@/i18n";
 import type { RevokeReason } from "@/lib/device-queries";
-import { requestIdOf } from "./deviceLogic";
 
 // --- Which actions a device offers ---------------------------------------------
 
 export type LifecycleActionId = "revoke" | "retire";
+
+const ACTIONS_BY_TRUST: Readonly<Record<string, readonly LifecycleActionId[]>> = {
+  active: ["revoke", "retire"],
+  revoked: ["retire"],
+};
 
 /**
  * The actions that exist for a device in each trust state, from the lifecycle's
@@ -25,14 +27,7 @@ export type LifecycleActionId = "revoke" | "retire";
  * unknown trust state offers nothing.
  */
 export function actionsFor(trustState: string): readonly LifecycleActionId[] {
-  switch (trustState) {
-    case "active":
-      return ["revoke", "retire"];
-    case "revoked":
-      return ["retire"];
-    default:
-      return [];
-  }
+  return Object.hasOwn(ACTIONS_BY_TRUST, trustState) ? ACTIONS_BY_TRUST[trustState] : [];
 }
 
 // --- Revoke reasons ----------------------------------------------------------
@@ -62,88 +57,6 @@ export const REVOKE_REASON_GROUPS: readonly ReasonGroup[] = [
     reasons: ["hardware_failure", "admin_error", "other"],
   },
 ];
-
-// --- The server's verdict ------------------------------------------------------
-
-/** The shape `decideImpact` reads; wider than the contract so unknown values survive. */
-export interface ImpactLike {
-  verdict: string;
-  blockCode: string | null;
-  requires: readonly string[];
-}
-
-export type ImpactDecision =
-  | {
-      kind: "ready";
-      /** The open shift becomes the unresolved custody exception. */
-      custody: boolean;
-      needs: { note: boolean; acknowledge: boolean };
-    }
-  | { kind: "blocked"; blockCode: string | null; known: boolean }
-  | { kind: "forbidden" }
-  | { kind: "no_change" };
-
-const BLOCK_CODES: ReadonlySet<string> = new Set([
-  "unresolved_cash_session",
-  "unresolved_custody_exception",
-  "device_retired",
-]);
-
-/**
- * `owner_or_tenant_admin` is a fact about the caller that the verdict already
- * folded in (`forbidden_recovery` otherwise), so on a proceeding verdict it is
- * met. `note` and `acknowledge_custody_exception` are the request's inputs.
- */
-const KNOWN_REQUIREMENTS: ReadonlySet<string> = new Set([
-  "owner_or_tenant_admin",
-  "note",
-  "acknowledge_custody_exception",
-]);
-
-const UNKNOWN: ImpactDecision = { kind: "blocked", blockCode: null, known: false };
-
-export function decideImpact(preview: ImpactLike): ImpactDecision {
-  switch (preview.verdict) {
-    case "no_change":
-      return { kind: "no_change" };
-    case "forbidden_recovery":
-      return { kind: "forbidden" };
-    case "blocked":
-      return {
-        kind: "blocked",
-        blockCode: preview.blockCode,
-        known: preview.blockCode !== null && BLOCK_CODES.has(preview.blockCode),
-      };
-    case "allowed":
-    case "allowed_with_custody_exception": {
-      if (!preview.requires.every((r) => KNOWN_REQUIREMENTS.has(r))) return UNKNOWN;
-      return {
-        kind: "ready",
-        custody: preview.verdict === "allowed_with_custody_exception",
-        needs: {
-          note: preview.requires.includes("note"),
-          acknowledge: preview.requires.includes("acknowledge_custody_exception"),
-        },
-      };
-    }
-    default:
-      return UNKNOWN;
-  }
-}
-
-/** Why a blocked action is refused, and what to do. An unknown code offers nothing. */
-export function blockedMessageKey(code: string | null): MessageKey {
-  switch (code) {
-    case "unresolved_cash_session":
-      return "devices.impact.blocked.cashSession";
-    case "unresolved_custody_exception":
-      return "devices.impact.blocked.custodyException";
-    case "device_retired":
-      return "devices.impact.blocked.retired";
-    default:
-      return "devices.impact.blocked.unknown";
-  }
-}
 
 // --- Operator text ---------------------------------------------------------------
 
@@ -193,66 +106,4 @@ export function buildRevokeBody({ reason, note, acknowledge }: RevokeDraft): Rev
     ...(trimmed === "" ? {} : { note: trimmed }),
     ...(acknowledge ? { acknowledgeCustodyException: true as const } : {}),
   };
-}
-
-// --- Mutation answers ------------------------------------------------------------
-
-export interface WrapperFailure {
-  status: number;
-  error?: unknown;
-}
-
-export type MutationFailure =
-  | { kind: "conflict"; code: string; preview?: unknown; requestId?: string }
-  | { kind: "forbidden-recovery"; requestId?: string }
-  | { kind: "unmet"; code: string; requestId?: string }
-  | { kind: "not-found"; requestId?: string }
-  | { kind: "validation"; requestId?: string }
-  | { kind: "session"; requestId?: string }
-  | { kind: "generic"; requestId?: string };
-
-interface Envelope {
-  error?: { code?: string; details?: unknown };
-}
-
-function codeOf(error: unknown): string {
-  return (error as Envelope | undefined)?.error?.code ?? "";
-}
-
-function withRequestId<T extends object>(kind: T, error: unknown): T & { requestId?: string } {
-  const requestId = requestIdOf(error);
-  return requestId === undefined ? kind : { ...kind, requestId };
-}
-
-/**
- * What a refused lifecycle mutation means. The 409's `error.details` is the
- * preview the server computed under its lock; it is optional on the revoke (a
- * server from before RT-366 omits it), so the caller falls back to a fresh
- * preview when it is absent.
- */
-export function classifyMutationFailure({ status, error }: WrapperFailure): MutationFailure {
-  const code = codeOf(error);
-  switch (status) {
-    case 409: {
-      const details = (error as Envelope | undefined)?.error?.details;
-      return withRequestId(
-        { kind: "conflict" as const, code, ...(details ? { preview: details } : {}) },
-        error,
-      );
-    }
-    case 403:
-      return code === "recovery_revoke_forbidden"
-        ? withRequestId({ kind: "forbidden-recovery" as const }, error)
-        : withRequestId({ kind: "generic" as const }, error);
-    case 422:
-      return withRequestId({ kind: "unmet" as const, code }, error);
-    case 404:
-      return withRequestId({ kind: "not-found" as const }, error);
-    case 400:
-      return withRequestId({ kind: "validation" as const }, error);
-    case 401:
-      return withRequestId({ kind: "session" as const }, error);
-    default:
-      return withRequestId({ kind: "generic" as const }, error);
-  }
 }

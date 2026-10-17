@@ -8,7 +8,7 @@ import { Banner } from "@/components/Banner";
 import { DateTime, type MessageKey, useT } from "@/i18n";
 import type { DeviceImpactPreview } from "@/lib/device-queries";
 import { TrustBadge } from "./DeviceParts";
-import { type ImpactDecision, blockedMessageKey, decideImpact } from "./lifecycleLogic";
+import { type ImpactDecision, blockedMessageKey, decideImpact } from "./impactDecision";
 import "./devices.css";
 
 const SOURCE_KEYS: Record<string, MessageKey> = {

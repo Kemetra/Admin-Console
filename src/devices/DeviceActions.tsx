@@ -12,7 +12,8 @@
 import { type MessageKey, useT } from "@/i18n";
 import type { DeviceDetail } from "@/lib/device-queries";
 import { useEffect, useRef, useState } from "react";
-import { type FlowAction, LifecycleFlow } from "./LifecycleFlow";
+import { LifecycleFlow } from "./LifecycleFlow";
+import type { FlowAction } from "./flowTypes";
 import { actionsFor } from "./lifecycleLogic";
 import "./devices.css";
 
