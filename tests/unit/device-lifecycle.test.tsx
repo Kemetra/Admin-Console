@@ -69,6 +69,12 @@ async function chooseReason(label: RegExp | string): Promise<void> {
   click("Review impact");
 }
 
+/** Open Revoke on Till 1, pick `label`, and ask the server for the impact. */
+async function openRevokeWithReason(label: RegExp | string): Promise<void> {
+  await openRevoke();
+  await chooseReason(label);
+}
+
 const revokedWithCustody = detail({
   deviceId: DEVICE_2,
   label: "Till 2",
@@ -157,8 +163,7 @@ describe("Revoke (RT-372)", () => {
   });
 
   test("`other` needs a note before the impact is asked for", async () => {
-    await openRevoke();
-    await chooseReason("Other reason");
+    await openRevokeWithReason("Other reason");
     expect(within(dialog()).getByText("This field is required.")).toBeDefined();
     expect(consoleGetDeviceImpact).not.toHaveBeenCalled();
   });
@@ -166,8 +171,7 @@ describe("Revoke (RT-372)", () => {
   test("allowed: the confirm step renders the server's impact, then revokes with the reason", async () => {
     consoleGetDeviceImpact.mockResolvedValue({ status: 200, data: impact() });
     consoleRevokeDevice.mockResolvedValue(revoked());
-    await openRevoke();
-    await chooseReason("Lost");
+    await openRevokeWithReason("Lost");
     expect(await within(dialog()).findByText("Allowed by the server.")).toBeDefined();
     expect(consoleGetDeviceImpact).toHaveBeenCalledWith(DEVICE_1, "revoke", "lost");
     const facts = within(dialog());
@@ -195,8 +199,7 @@ describe("Revoke (RT-372)", () => {
       }),
     });
     consoleRevokeDevice.mockResolvedValue(revoked({ custodyExceptionShiftId: SHIFT_OPEN }));
-    await openRevoke();
-    await chooseReason("Stolen");
+    await openRevokeWithReason("Stolen");
     expect(
       await within(dialog()).findByText(/stays on this device as an unresolved exception/),
     ).toBeDefined();
@@ -218,8 +221,7 @@ describe("Revoke (RT-372)", () => {
         openShift: openShift({ source: "legacy", cashFacts: null }),
       }),
     });
-    await openRevoke();
-    await chooseReason("Lost");
+    await openRevokeWithReason("Lost");
     expect(
       await within(dialog()).findByText(/a legacy shift has no received cash-up facts/),
     ).toBeDefined();
@@ -236,8 +238,7 @@ describe("Revoke (RT-372)", () => {
       }),
     });
     consoleRevokeDevice.mockResolvedValue(revoked({ revokeReason: "hardware_failure" }));
-    await openRevoke();
-    await chooseReason("Hardware failure");
+    await openRevokeWithReason("Hardware failure");
     const note = await within(dialog()).findByLabelText(
       "What happened, and where is the drawer cash?",
     );
@@ -274,8 +275,7 @@ describe("Revoke (RT-372)", () => {
         openShift: openShift(),
       }),
     });
-    await openRevoke();
-    await chooseReason("Hardware failure");
+    await openRevokeWithReason("Hardware failure");
     expect(
       await within(dialog()).findByText(/can only be made by an owner or a tenant admin/),
     ).toBeDefined();
@@ -292,8 +292,7 @@ describe("Revoke (RT-372)", () => {
         openShift: openShift(),
       }),
     });
-    await openRevoke();
-    await chooseReason("Admin error");
+    await openRevokeWithReason("Admin error");
     const text = (await within(dialog()).findByText(/Close the shift on the till and let it sync/))
       .textContent;
     expect(text).toContain("There is no override");
@@ -307,8 +306,7 @@ describe("Revoke (RT-372)", () => {
     ["an unknown requirement is unmet", { requires: ["second_approver"] }],
   ])("%s: no action is offered", async (_name, over) => {
     consoleGetDeviceImpact.mockResolvedValue({ status: 200, data: impact(over) });
-    await openRevoke();
-    await chooseReason("Lost");
+    await openRevokeWithReason("Lost");
     expect(
       await within(dialog()).findByText(/for a reason this console doesn't know/),
     ).toBeDefined();
@@ -320,8 +318,7 @@ describe("Revoke (RT-372)", () => {
       status: 404,
       error: { error: { code: "not_found", message: "x", request_id: "req-404" } },
     });
-    await openRevoke();
-    await chooseReason("Lost");
+    await openRevokeWithReason("Lost");
     expect(
       await within(dialog()).findByText("This device is no longer available to you."),
     ).toBeDefined();
@@ -338,8 +335,7 @@ describe("Revoke (RT-372)", () => {
       openShift: openShift(),
     });
     consoleRevokeDevice.mockResolvedValue(conflict("unresolved_cash_session", fresh));
-    await openRevoke();
-    await chooseReason("Admin error");
+    await openRevokeWithReason("Admin error");
     await within(dialog()).findByText("Allowed by the server.");
     click("Revoke device");
     expect(
@@ -361,8 +357,7 @@ describe("Revoke (RT-372)", () => {
       status,
       error: { error: { code, message: "x", request_id: "r" } },
     });
-    await openRevoke();
-    await chooseReason("Lost");
+    await openRevokeWithReason("Lost");
     await within(dialog()).findByText("Allowed by the server.");
     click("Revoke device");
     expect(await within(dialog()).findByText(message)).toBeDefined();
@@ -371,8 +366,7 @@ describe("Revoke (RT-372)", () => {
   test("already_revoked is idempotent and says nothing changed", async () => {
     consoleGetDeviceImpact.mockResolvedValue({ status: 200, data: impact() });
     consoleRevokeDevice.mockResolvedValue(revoked({}, "already_revoked"));
-    await openRevoke();
-    await chooseReason("Lost");
+    await openRevokeWithReason("Lost");
     await within(dialog()).findByText("Allowed by the server.");
     click("Revoke device");
     expect(
