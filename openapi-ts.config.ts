@@ -35,7 +35,7 @@ import openapiTS, { astToString, COMMENT_HEADER } from "openapi-typescript";
  *     consoleListPostingBacklog, consoleListReconciliationRuns) — RT-560
  *     (spec 016 Phase A); added at the existing pin, no re-pin
  *   - devices.openapi.yaml (consoleListDevices, consoleGetDevice; the
- *     consoleRevokeDevice write is in the document but not wrapped) — RT-371
+ *     lifecycle writes are wrapped from RT-372) — RT-371
  *   - console-sales.openapi.yaml (consoleListSales, consoleGetSale) — RT-587
  *     (spec 012 sales search and sale detail)
  *
@@ -92,8 +92,16 @@ import openapiTS, { astToString, COMMENT_HEADER } from "openapi-typescript";
  * `devices.openapi.yaml` gains the RT-366 impact preview (`consoleGetDeviceImpact`
  * and a 409 payload), additive and not wrapped here. Every other source is
  * byte-identical.
+ *
+ * SIXTH deliberate re-pin (RT-372, 2026-10-17): bumped a959959 -> 3499d17
+ * (Backend-Core main, after RT-367 #789 / #798 pairing codes, replace and move,
+ * and RT-368 #799 / #802 retire) for the device lifecycle flows. The only drift
+ * across the composed sources is `devices.openapi.yaml` 1.3.0-draft: it adds
+ * `consoleRetireDevice`, `consoleIssuePairingCode`, `consoleListPairingCodes`
+ * and `consoleCancelPairingCode`, and `consoleListDevices` no longer lists
+ * retired devices by default. Every other source is byte-identical.
  */
-export const DATA_PULSE_2_PIN = "a959959dc34d6ba1897543fe7320d3c602240834" as const;
+export const DATA_PULSE_2_PIN = "3499d17ca4f62a49100004bd93ba6cc3b7f90184" as const;
 
 /**
  * The OpenAPI sources composed into the generated client, one entry per
