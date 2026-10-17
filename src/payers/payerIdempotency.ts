@@ -7,10 +7,10 @@
  *
  *   201                              → created
  *   201 + Idempotent-Replayed:true   → replayed (same account, not a duplicate)
- *   400 validation_failure           → inline field error
+ *   400 validation_error             → form-level error with the request id
  *   400 idempotency_key_*            → regenerate key + retry (not user-facing)
- *   400 / 422                        → inline field error (a 422 is not in the
- *                                       contract; handled the same, never its cause)
+ *   422                              → the same form-level error (a 422 is not in the
+ *                                       contract; never its cause)
  *   401                              → re-authenticate (session)
  *   403                              → permission banner
  *   404                              → non-disclosing "store unavailable" (an

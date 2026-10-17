@@ -59,9 +59,9 @@ describe("classifyPayerCreateOutcome", () => {
     expect(classifyPayerCreateOutcome(res({ status: 201, headers })).kind).toBe("replayed");
   });
 
-  test("400 validation_error -> inline field error", () => {
+  test("400 validation_error -> form-level error", () => {
     const o = classifyPayerCreateOutcome(
-      res({ status: 400, error: { error: { code: "validation_failure" } } }),
+      res({ status: 400, error: { error: { code: "validation_error" } } }),
     );
     expect(o.kind).toBe("validation");
     expect(o).toMatchObject({ messageKey: "payers.create.errors.validation" });

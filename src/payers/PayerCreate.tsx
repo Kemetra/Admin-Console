@@ -13,7 +13,8 @@ import { textField } from "@/lib/form-field";
  * and routes the result through classifyPayerCreateOutcome:
  *
  *   201 / replayed   → onCreated (close + refetch list)
- *   400 / 422        → inline field error (never the server's words)
+ *   400 / 422        → form-level banner with the request id (never the server's
+ *                      words; field errors are the client-side checks only)
  *   400 key issue    → fresh key + resubmit ONCE (not user-facing)
  *   401              → session banner (interceptor owns the redirect)
  *   403              → permission banner
@@ -92,7 +93,14 @@ export function PayerCreate({
         onCreated();
         return;
       case "validation":
-        setNameError({ messageKey: classified.messageKey });
+        // A server refusal is form-level: it may concern any field (or none the
+        // operator can see), so it is never pinned on the name. Field errors are
+        // the client-side checks only.
+        setBanner({
+          variant: "danger",
+          messageKey: classified.messageKey,
+          requestId: classified.requestId,
+        });
         return;
       case "regenerate-key":
         // A malformed/missing key is ours to fix, once; a second refusal is an error.

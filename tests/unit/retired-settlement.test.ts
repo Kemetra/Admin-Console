@@ -48,6 +48,18 @@ describe("retired 018/019 settlement surface (RT-421)", () => {
     }
   });
 
+  test("no per-source pin hold remains: nothing in the config sources, nothing in the generated header", () => {
+    const config = readSource("openapi-ts.config.ts");
+    const sources = config.slice(
+      config.indexOf("OPENAPI_SOURCE_SPECS:"),
+      config.indexOf("OPENAPI_SOURCES ="),
+    );
+    expect(sources).not.toMatch(/\spin:/);
+    expect(readFileSync(join(process.cwd(), "src/generated/schema.d.ts"), "utf8")).not.toContain(
+      "held @",
+    );
+  });
+
   test.each(["src/receivables", "src/settlement-reconciliation", "src/shell/receivableRoutes.tsx"])(
     "%s is gone",
     (path) => {

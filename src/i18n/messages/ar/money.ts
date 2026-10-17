@@ -6,8 +6,7 @@ import type { Messages } from "../types";
  * (RT-413 Option B: ERPNext owns A/R).
  *
  * Glossary used here: Payer → «جهة الدفع» (pl. «جهات الدفع»); ERPNext Customer →
- * «عميل ERPNext». Money values are never part of a template's prose: they
- * render through <Money> as `1,250.00 EGP`, isolated LTR.
+ * «عميل ERPNext».
  */
 export const money = {
   // --- Payer accounts (017) --------------------------------------------------
