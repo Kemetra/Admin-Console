@@ -92,8 +92,20 @@ import openapiTS, { astToString, COMMENT_HEADER } from "openapi-typescript";
  * `devices.openapi.yaml` gains the RT-366 impact preview (`consoleGetDeviceImpact`
  * and a 409 payload), additive and not wrapped here. Every other source is
  * byte-identical.
+ *
+ * SIXTH deliberate re-pin (RT-389, 2026-10-17): bumped a959959 -> 3499d17
+ * (Backend-Core main, after RT-387 #797 shift variance policy runtime and
+ * RT-368 #802) for the shift variance policy console reads and publishes
+ * (`cash-variance-policy.openapi.yaml`, contract RT-384, added to the composed
+ * sources below). Drift across the composed sources, checked against the
+ * contracts between a959959 and 3499d17: only `devices.openapi.yaml` moved, and
+ * additively (RT-368 retire runtime: `consoleRetireDevice`, the pairing-code
+ * operations and their schemas, none wrapped by RT-371); no existing Devices
+ * wire shape changed. Every other source is byte-identical, `console-sales`
+ * included. The same SHA is adopted by RT-372 (device lifecycle), which wraps
+ * the new Devices operations; whichever of the two lands second regenerates.
  */
-export const DATA_PULSE_2_PIN = "a959959dc34d6ba1897543fe7320d3c602240834" as const;
+export const DATA_PULSE_2_PIN = "3499d17ca4f62a49100004bd93ba6cc3b7f90184" as const;
 
 /**
  * The OpenAPI sources composed into the generated client, one entry per
@@ -159,6 +171,13 @@ export const OPENAPI_SOURCE_SPECS: readonly OpenApiSourceSpec[] = [
   // spec 012): `consoleListSales`, `consoleGetSale`. Read-only consumption;
   // no YAML authored here.
   { name: "ConsoleSales", path: "packages/contracts/openapi/console-sales.openapi.yaml" },
+  // Shift variance policy (RT-384 contract #778 / RT-387 runtime #797; RT-389):
+  // the tenant default and store override reads, revision lists and publishes.
+  // The POS device read in the same document is not wrapped here.
+  {
+    name: "CashVariancePolicy",
+    path: "packages/contracts/openapi/cash-variance-policy.openapi.yaml",
+  },
 ];
 
 /** Upstream source paths (kept for back-compat / documentation references). */
