@@ -12,6 +12,7 @@ import {
   type CashVariancePolicyRevision,
   type PublishStoreBody,
   type PublishTenantBody,
+  type RevisionQuery,
   type StoreCashVariancePolicy,
   type TenantCashVariancePolicy,
   consoleGetStoreCashVariancePolicy,
@@ -26,11 +27,20 @@ import { useRef, useState } from "react";
 import { type KeyedAttempt, reuseOrNewKey } from "./policyIdempotency";
 import { type PublishOutcome, type PublishResult, classifyPublishOutcome } from "./policyLogic";
 
+/** The tenant a policy belongs to, or the store whose override it is (an object, not a bare id). */
+export interface TenantScope {
+  tenantId: string;
+}
+export interface StoreScope {
+  storeId: string;
+}
+
 export const policyKeys = {
-  tenant: (tenantId: string) => ["cash-policy", "tenant", tenantId] as const,
-  tenantRevisions: (tenantId: string) => ["cash-policy", "tenant-revisions", tenantId] as const,
-  store: (storeId: string) => ["cash-policy", "store", storeId] as const,
-  storeRevisions: (storeId: string) => ["cash-policy", "store-revisions", storeId] as const,
+  tenant: ({ tenantId }: TenantScope) => ["cash-policy", "tenant", tenantId] as const,
+  tenantRevisions: ({ tenantId }: TenantScope) =>
+    ["cash-policy", "tenant-revisions", tenantId] as const,
+  store: ({ storeId }: StoreScope) => ["cash-policy", "store", storeId] as const,
+  storeRevisions: ({ storeId }: StoreScope) => ["cash-policy", "store-revisions", storeId] as const,
   /** Every cached store read (a tenant publish can change any of them). */
   allStores: ["cash-policy", "store"] as const,
 };
@@ -81,34 +91,36 @@ export interface PolicyRead<T> {
   refetch: () => Promise<unknown>;
 }
 
-export function useTenantPolicy(tenantId: string): PolicyRead<TenantCashVariancePolicy> {
-  const query = useQuery<ReadResult<TenantCashVariancePolicy>>({
-    queryKey: policyKeys.tenant(tenantId),
-    queryFn: () =>
-      toResult(
-        () => consoleGetTenantCashVariancePolicy(tenantId),
-        (data) => isObject(data.tenantDefault) && isObject(data.tenantDefault.policyValue),
-      ),
+function usePolicyRead<T>(
+  queryKey: readonly unknown[],
+  fetcher: () => Promise<Raw<T>>,
+  isShape: (data: T) => boolean,
+): PolicyRead<T> {
+  const query = useQuery<ReadResult<T>>({
+    queryKey,
+    queryFn: () => toResult(fetcher, isShape),
     retry: false,
   });
   return { result: query.data, isLoading: query.isLoading, refetch: () => query.refetch() };
 }
 
-export function useStorePolicy(storeId: string): PolicyRead<StoreCashVariancePolicy> {
-  const query = useQuery<ReadResult<StoreCashVariancePolicy>>({
-    queryKey: policyKeys.store(storeId),
-    queryFn: () =>
-      toResult(
-        () => consoleGetStoreCashVariancePolicy(storeId),
-        (data) =>
-          isObject(data.effective) &&
-          isObject(data.effective.policyValue) &&
-          isObject(data.tenantDefault) &&
-          isObject(data.tenantDefault.policyValue),
-      ),
-    retry: false,
-  });
-  return { result: query.data, isLoading: query.isLoading, refetch: () => query.refetch() };
+const hasValue = (policy: { policyValue: unknown } | undefined): boolean =>
+  isObject(policy) && isObject(policy?.policyValue);
+
+export function useTenantPolicy(scope: TenantScope): PolicyRead<TenantCashVariancePolicy> {
+  return usePolicyRead(
+    policyKeys.tenant(scope),
+    () => consoleGetTenantCashVariancePolicy(scope.tenantId),
+    (data) => hasValue(data.tenantDefault),
+  );
+}
+
+export function useStorePolicy(scope: StoreScope): PolicyRead<StoreCashVariancePolicy> {
+  return usePolicyRead(
+    policyKeys.store(scope),
+    () => consoleGetStoreCashVariancePolicy(scope.storeId),
+    (data) => hasValue(data.effective) && hasValue(data.tenantDefault),
+  );
 }
 
 // --- Revision history -----------------------------------------------------------
@@ -130,13 +142,13 @@ interface RevisionPage {
 
 function useRevisions(
   queryKey: readonly unknown[],
-  fetchPage: (cursor: string | undefined) => Promise<Raw<RevisionPage>>,
+  fetchPage: (page: RevisionQuery) => Promise<Raw<RevisionPage>>,
 ): RevisionList {
   const query = useInfiniteQuery({
     queryKey,
     initialPageParam: undefined as string | undefined,
     queryFn: async ({ pageParam }) => {
-      const res = await fetchPage(pageParam);
+      const res = await fetchPage({ cursor: pageParam });
       if (res.status >= 400 || !res.data) throw new Error("cash-policy-revisions");
       return res.data;
     },
@@ -158,16 +170,16 @@ function useRevisions(
   };
 }
 
-export function useTenantRevisions(tenantId: string): RevisionList {
-  return useRevisions(policyKeys.tenantRevisions(tenantId), (cursor) =>
-    consoleListTenantCashVariancePolicyRevisions(tenantId, { cursor }),
+export function useTenantRevisions(scope: TenantScope): RevisionList {
+  return useRevisions(policyKeys.tenantRevisions(scope), (page) =>
+    consoleListTenantCashVariancePolicyRevisions(scope.tenantId, page),
   );
 }
 
 /** A store's revisions are owner / tenant_admin only: pass `enabled` false for anyone else. */
-export function useStoreRevisions(storeId: string): RevisionList {
-  return useRevisions(policyKeys.storeRevisions(storeId), (cursor) =>
-    consoleListStoreCashVariancePolicyRevisions(storeId, { cursor }),
+export function useStoreRevisions(scope: StoreScope): RevisionList {
+  return useRevisions(policyKeys.storeRevisions(scope), (page) =>
+    consoleListStoreCashVariancePolicyRevisions(scope.storeId, page),
   );
 }
 
@@ -183,14 +195,14 @@ export interface Publisher<B> {
 }
 
 /** The key survives only what a retry of the same body could still need. */
-function keepsKey(status: number, outcome: PublishOutcome): boolean {
-  return outcome.kind === "in-progress" || status >= 500;
+function keepsKey(res: PublishResult, outcome: PublishOutcome): boolean {
+  return outcome.kind === "in-progress" || res.status >= 500;
 }
 
 const NETWORK_FAILURE: PublishOutcome = { kind: "failed", messageKey: "cashPolicy.error.generic" };
 
 function usePublisher<B, T>(
-  run: (body: B, key: string) => Promise<Published<T>>,
+  run: (body: B, attempt: KeyedAttempt) => Promise<Published<T>>,
   onSaved: (data: T) => void,
 ): Publisher<B> {
   const attempt = useRef<KeyedAttempt | undefined>(undefined);
@@ -203,14 +215,14 @@ function usePublisher<B, T>(
       // One silent retry when the server says the key itself was malformed.
       for (let tries = 0; tries < 2; tries++) {
         attempt.current = reuseOrNewKey(attempt.current, fingerprint);
-        const res = await run(body, attempt.current.key);
+        const res = await run(body, attempt.current);
         const outcome = classifyPublishOutcome(res);
         if (outcome.kind === "regenerate-key") {
           attempt.current = undefined;
           continue;
         }
         if (outcome.kind === "saved" && res.data !== undefined) onSaved(res.data);
-        if (outcome.kind === "saved" || !keepsKey(res.status, outcome)) attempt.current = undefined;
+        if (outcome.kind === "saved" || !keepsKey(res, outcome)) attempt.current = undefined;
         return outcome;
       }
       attempt.current = undefined;
@@ -226,27 +238,44 @@ function usePublisher<B, T>(
   return { submit, pending };
 }
 
-export function usePublishTenant(tenantId: string): Publisher<PublishTenantBody> {
-  const qc = useQueryClient();
-  return usePublisher<PublishTenantBody, TenantCashVariancePolicy>(
-    (body, key) => consolePublishTenantCashVariancePolicy(tenantId, body, key),
-    (data) => {
-      const next: ReadResult<TenantCashVariancePolicy> = { kind: "ok", data };
-      qc.setQueryData(policyKeys.tenant(tenantId), next);
-      void qc.invalidateQueries({ queryKey: policyKeys.tenantRevisions(tenantId) });
-      void qc.invalidateQueries({ queryKey: policyKeys.allStores });
-    },
-  );
+interface PublishInto<B, T> {
+  run: (body: B, attempt: KeyedAttempt) => Promise<Published<T>>;
+  readKey: readonly unknown[];
+  revisionsKey: readonly unknown[];
+  /** Other cached reads this publish can change. */
+  alsoInvalidate?: readonly unknown[];
 }
 
-export function usePublishStoreOverride(storeId: string): Publisher<PublishStoreBody> {
+/** A publish whose `201` body replaces the cached read, and refreshes the lists it touches. */
+function usePublishInto<B, T>({
+  run,
+  readKey,
+  revisionsKey,
+  alsoInvalidate,
+}: PublishInto<B, T>): Publisher<B> {
   const qc = useQueryClient();
-  return usePublisher<PublishStoreBody, StoreCashVariancePolicy>(
-    (body, key) => consolePublishStoreCashVariancePolicyOverride(storeId, body, key),
-    (data) => {
-      const next: ReadResult<StoreCashVariancePolicy> = { kind: "ok", data };
-      qc.setQueryData(policyKeys.store(storeId), next);
-      void qc.invalidateQueries({ queryKey: policyKeys.storeRevisions(storeId) });
-    },
-  );
+  return usePublisher<B, T>(run, (data) => {
+    const next: ReadResult<T> = { kind: "ok", data };
+    qc.setQueryData(readKey, next);
+    void qc.invalidateQueries({ queryKey: revisionsKey });
+    if (alsoInvalidate) void qc.invalidateQueries({ queryKey: alsoInvalidate });
+  });
+}
+
+export function usePublishTenant(scope: TenantScope): Publisher<PublishTenantBody> {
+  return usePublishInto<PublishTenantBody, TenantCashVariancePolicy>({
+    run: (body, { key }) => consolePublishTenantCashVariancePolicy(scope.tenantId, body, key),
+    readKey: policyKeys.tenant(scope),
+    revisionsKey: policyKeys.tenantRevisions(scope),
+    // A tenant publish can change every store's resolved policy.
+    alsoInvalidate: policyKeys.allStores,
+  });
+}
+
+export function usePublishStoreOverride(scope: StoreScope): Publisher<PublishStoreBody> {
+  return usePublishInto<PublishStoreBody, StoreCashVariancePolicy>({
+    run: (body, { key }) => consolePublishStoreCashVariancePolicyOverride(scope.storeId, body, key),
+    readKey: policyKeys.store(scope),
+    revisionsKey: policyKeys.storeRevisions(scope),
+  });
 }

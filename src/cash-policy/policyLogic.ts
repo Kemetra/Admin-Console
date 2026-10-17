@@ -150,40 +150,50 @@ const UNPROCESSABLE: Record<string, MessageKey> = {
   override_not_active: "cashPolicy.error.notActive",
 };
 
-export function classifyPublishOutcome(result: PublishResult): PublishOutcome {
-  const { status } = result;
-  if (status === 201) return { kind: "saved" };
-  const { code, requestId } = envelope(result.error);
-  const failed = (messageKey: MessageKey): PublishOutcome => ({
+type Handler = (code: string | undefined, requestId: string | undefined) => PublishOutcome;
+
+const failedWith =
+  (messageKey: MessageKey): Handler =>
+  (_code, requestId) => ({ kind: "failed", messageKey, requestId });
+
+/** A message by error code, else a default (an unknown code is never surfaced). */
+const byCode =
+  (table: Record<string, MessageKey>, fallback: MessageKey): Handler =>
+  (code, requestId) => ({
     kind: "failed",
-    messageKey,
+    messageKey: code !== undefined && Object.hasOwn(table, code) ? table[code] : fallback,
     requestId,
   });
 
-  if (status === 409) {
-    return code === "idempotency_key_conflict"
-      ? { kind: "key-conflict", messageKey: "cashPolicy.error.keyConflict", requestId }
-      : { kind: "stale", messageKey: "cashPolicy.error.changedConcurrently", requestId };
-  }
-  if (status === 400) {
-    return code === "idempotency_key_required" || code === "idempotency_key_malformed"
-      ? { kind: "regenerate-key" }
-      : failed("cashPolicy.error.validation");
-  }
-  if (status === 422) {
-    return failed(
-      code && Object.hasOwn(UNPROCESSABLE, code)
-        ? UNPROCESSABLE[code]
-        : "cashPolicy.error.validation",
-    );
-  }
-  if (status === 403) {
-    if (code === "owner_approval_required") return failed("cashPolicy.error.ownerApprovalRequired");
-    if (code === "origin_rejected") return failed("cashPolicy.error.originRejected");
-    return failed("cashPolicy.error.forbidden");
-  }
-  if (status === 425) return { kind: "in-progress", messageKey: "cashPolicy.error.inProgress" };
-  if (status === 404) return failed("cashPolicy.error.unavailable");
-  if (status === 401) return failed("cashPolicy.error.sessionExpired");
-  return failed("cashPolicy.error.generic");
+const conflict: Handler = (code, requestId) =>
+  code === "idempotency_key_conflict"
+    ? { kind: "key-conflict", messageKey: "cashPolicy.error.keyConflict", requestId }
+    : { kind: "stale", messageKey: "cashPolicy.error.changedConcurrently", requestId };
+
+const badRequest: Handler = (code, requestId) =>
+  code === "idempotency_key_required" || code === "idempotency_key_malformed"
+    ? { kind: "regenerate-key" }
+    : failedWith("cashPolicy.error.validation")(code, requestId);
+
+const BY_STATUS: Record<number, Handler> = {
+  400: badRequest,
+  401: failedWith("cashPolicy.error.sessionExpired"),
+  403: byCode(
+    {
+      owner_approval_required: "cashPolicy.error.ownerApprovalRequired",
+      origin_rejected: "cashPolicy.error.originRejected",
+    },
+    "cashPolicy.error.forbidden",
+  ),
+  404: failedWith("cashPolicy.error.unavailable"),
+  409: conflict,
+  422: byCode(UNPROCESSABLE, "cashPolicy.error.validation"),
+  425: () => ({ kind: "in-progress", messageKey: "cashPolicy.error.inProgress" }),
+};
+
+export function classifyPublishOutcome(result: PublishResult): PublishOutcome {
+  if (result.status === 201) return { kind: "saved" };
+  const { code, requestId } = envelope(result.error);
+  const handler = BY_STATUS[result.status] ?? failedWith("cashPolicy.error.generic");
+  return handler(code, requestId);
 }

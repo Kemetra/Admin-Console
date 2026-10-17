@@ -39,7 +39,7 @@ function StoreHistory({
   storeId,
   timeZone,
 }: Readonly<{ storeId: string; timeZone: string }>): React.JSX.Element {
-  return <PolicyHistory list={useStoreRevisions(storeId)} timeZone={timeZone} />;
+  return <PolicyHistory list={useStoreRevisions({ storeId })} timeZone={timeZone} />;
 }
 
 function OverrideFacts({
@@ -128,8 +128,8 @@ function StorePolicyBody({
   isOwner,
 }: Readonly<{ storeId: string; timeZone: string; editable: boolean; isOwner: boolean }>) {
   const t = useT();
-  const read = useStorePolicy(storeId);
-  const publisher = usePublishStoreOverride(storeId);
+  const read = useStorePolicy({ storeId });
+  const publisher = usePublishStoreOverride({ storeId });
   const [notice, setNotice] = useState<Notice | undefined>();
   const [formKey, setFormKey] = useState(0);
   const policy: StoreCashVariancePolicy | undefined =

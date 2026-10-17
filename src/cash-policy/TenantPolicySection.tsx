@@ -20,13 +20,13 @@ import { usePublishTenant, useTenantPolicy, useTenantRevisions } from "./useCash
 import "./cash-policy.css";
 
 function TenantHistory({ tenantId }: Readonly<{ tenantId: string }>): React.JSX.Element {
-  return <PolicyHistory list={useTenantRevisions(tenantId)} />;
+  return <PolicyHistory list={useTenantRevisions({ tenantId })} />;
 }
 
 function TenantPolicyBody({ tenantId }: Readonly<{ tenantId: string }>): React.JSX.Element {
   const t = useT();
-  const read = useTenantPolicy(tenantId);
-  const publisher = usePublishTenant(tenantId);
+  const read = useTenantPolicy({ tenantId });
+  const publisher = usePublishTenant({ tenantId });
   const [notice, setNotice] = useState<Notice | undefined>();
   // A new key remounts the form (a clean draft) after a successful publish only.
   const [formKey, setFormKey] = useState(0);
