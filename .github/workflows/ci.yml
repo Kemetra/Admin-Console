@@ -22,6 +22,8 @@ permissions:
 jobs:
   build-test:
     runs-on: ubuntu-latest
+    # RT-584: default is 360 min; the job's p90 is ~2 min, so a hang fails fast.
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -37,6 +39,25 @@ jobs:
 
       - name: Install
         run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # RT-584: the generated client is committed, so drift from the pinned
+      # Backend-Core contract (hand edit, stale regen, generator bump) must fail
+      # before merge. Pins come from openapi-ts.config.ts; no secret needed
+      # (Backend-Core is public). Runs before Build so drift fails fast.
+      - name: Fetch pinned Backend-Core contracts
+        run: .github/scripts/fetch-pinned-contracts.sh "$RUNNER_TEMP/backend-core"
+
+      - name: Regenerate API client
+        run: pnpm generate:client
+        env:
+          DATA_PULSE_2_REPO: ${{ runner.temp }}/backend-core
+
+      - name: Check API client is up to date
+        run: |
+          if ! git diff --exit-code --stat src/generated/; then
+            echo "::error title=API client drift::src/generated/ differs from a regeneration at the pinned Backend-Core commit. Run 'pnpm generate:client' and commit the result."
+            exit 1
+          fi
 
       - name: Build
         run: pnpm build
@@ -78,3 +99,13 @@ jobs:
 
       - name: E2E tests
         run: pnpm test:e2e
+
+      # RT-584: Playwright retries (2) hide flakes. Warn per test that passed
+      # only on retry and list them in the step summary. Warn-only by policy.
+      - name: Report E2E retries
+        if: ${{ !cancelled() }}
+        run: |
+          node .github/scripts/report-flaky-e2e.mjs
+          if [ -f playwright-report/e2e-retries.md ]; then
+            tee -a "$GITHUB_STEP_SUMMARY" < playwright-report/e2e-retries.md
+          fi
