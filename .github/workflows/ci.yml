@@ -59,6 +59,17 @@ jobs:
             exit 1
           fi
 
+      # RT-677: the pin commit comes from contracts/backend-core/PIN (the file
+      # Backend-Core and the repin bot read). The clone lives outside the workspace
+      # so biome and vitest never scan it.
+      - name: Generated client is up to date
+        run: |
+          pin_commit="$(sed -n 's/^commit: //p' contracts/backend-core/PIN)"
+          git init -q "$RUNNER_TEMP/bc"
+          git -C "$RUNNER_TEMP/bc" fetch -q --depth 1 https://github.com/Kemetra/Backend-Core "$pin_commit"
+          DATA_PULSE_2_REPO="$RUNNER_TEMP/bc" pnpm generate:client
+          git diff --exit-code src/generated/schema.d.ts
+
       - name: Build
         run: pnpm build
 
