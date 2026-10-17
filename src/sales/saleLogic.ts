@@ -35,8 +35,8 @@ export function nextSaleCursor(page: { nextCursor: string | null }): string | un
 
 /** The walk has ended: the last loaded page carries `nextCursor: null`. */
 export function listEnded(pages: readonly { nextCursor: string | null }[]): boolean {
-  const last = pages.at(-1);
-  return last !== undefined && last.nextCursor === null;
+  // No page yet is not an end: `undefined === null` is false.
+  return pages.at(-1)?.nextCursor === null;
 }
 
 // --- Label keys (machine codes drive copy; they are not copy) -------------------
