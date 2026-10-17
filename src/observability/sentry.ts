@@ -18,7 +18,7 @@ import {
 import { type ConfigSource, type InitResult, initObservability } from "./init";
 
 /** Placeholder source until RT-632 lands: no runtime config, so inert. */
-export const noRuntimeConfig: ConfigSource = async () => null;
+export const noRuntimeConfig: ConfigSource = () => Promise.resolve(null);
 
 /** Full commit SHA injected at build time (vite.config.ts); absent in tests/dev. */
 function buildSha(): string | undefined {
