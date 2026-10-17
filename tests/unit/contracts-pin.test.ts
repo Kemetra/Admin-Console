@@ -53,6 +53,10 @@ describe("contracts PIN", () => {
     expect(fromPin).toEqual(fromSpecs);
   });
 
+  test("no composed source holds its own pin, so the single-commit PIN describes all of them", () => {
+    expect(OPENAPI_SOURCE_SPECS.filter((s) => s.pin !== undefined)).toEqual([]);
+  });
+
   test("formatPin(parsePin(x)) round-trips the committed PIN", () => {
     const text = committedPin();
     expect(formatPin(parsePin(text))).toBe(text);

@@ -154,8 +154,8 @@ export const DATA_PULSE_2_PIN: string = BACKEND_CORE_PIN.commit;
  *
  * `path` is relative to the Data-Pulse-2 repo root at the pinned SHA; `name` is
  * the TypeScript namespace the source is emitted under; an optional `pin`
- * overrides `DATA_PULSE_2_PIN` for that one source (a temporary hold only; none
- * is held today).
+ * overrides `DATA_PULSE_2_PIN` for that one source. Since RT-677 the single-commit
+ * PIN file cannot describe a hold, so the generator refuses one (re-pin instead).
  */
 /** One composed OpenAPI source; `pin` is an optional per-source hold. */
 export interface OpenApiSourceSpec {
@@ -267,9 +267,19 @@ function readPinnedSource(dataPulseRepo: string, sourcePath: string, pin: string
   return git(dataPulseRepo, ["show", `${pin}:${sourcePath}`]);
 }
 
-/** Sources read at the PIN commit; a per-source hold reads elsewhere and is not in the PIN. */
+/**
+ * Every composed source. A per-source hold reads a different commit, which the
+ * single-commit PIN cannot describe (and consumers of the PIN would be misled),
+ * so a hold is refused rather than silently left out of the PIN: re-pin instead.
+ */
 function pinnedSpecs(): readonly OpenApiSourceSpec[] {
-  return OPENAPI_SOURCE_SPECS.filter((spec) => spec.pin === undefined);
+  const held = OPENAPI_SOURCE_SPECS.filter((spec) => spec.pin !== undefined);
+  if (held.length > 0) {
+    throw new Error(
+      `${PIN_FILE_PATH} cannot describe per-source pin holds (${held.map((s) => s.name).join(", ")}); re-pin instead of holding`,
+    );
+  }
+  return OPENAPI_SOURCE_SPECS;
 }
 
 /** The blob SHA of every pinned source in Backend-Core at `commit`. */
