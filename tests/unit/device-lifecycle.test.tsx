@@ -118,6 +118,12 @@ describe("device lifecycle actions (RT-372): the action bar", () => {
     expect(screen.getByRole("button", { name: "Retire" })).toBeDefined();
   });
 
+  test("arriving on the page does not move focus: only closing a flow does", async () => {
+    renderDetail();
+    await screen.findByRole("heading", { level: 1, name: "Till 1" });
+    expect(document.activeElement).toBe(document.body);
+  });
+
   test("a retired device is closed out: no actions, and it says so", async () => {
     consoleGetDevice.mockResolvedValue({
       status: 200,

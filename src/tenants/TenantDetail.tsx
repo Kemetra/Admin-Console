@@ -1,3 +1,4 @@
+import { TenantPolicySection } from "@/cash-policy/TenantPolicySection";
 import { BackArrow } from "@/components/BackArrow";
 import { Banner } from "@/components/Banner";
 import { ConfirmDelete } from "@/components/ConfirmDelete";
@@ -12,6 +13,9 @@ import { type Rf2ErrorRender, mapRf2Error } from "@/lib/rf2-queries";
  *
  * Soft-delete (T019) is behind the shared inline ConfirmDelete that names the
  * resource; on success it re-fetches the list and routes back (S8).
+ *
+ * RT-389: the shift variance policy section sits under the fields; it shows
+ * only to an owner / tenant_admin of this (the active) tenant.
  */
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
@@ -147,6 +151,8 @@ export function TenantDetail(): React.JSX.Element {
           </button>
         </div>
       )}
+
+      <TenantPolicySection tenantId={tenant.id} />
     </div>
   );
 }

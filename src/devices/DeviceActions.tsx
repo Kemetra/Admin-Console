@@ -35,8 +35,12 @@ export function DeviceActions({
 
   // The drawer returns focus to the button that opened it; if that button no longer
   // exists, keep the operator's place instead of dropping to <body>.
+  // Only after a flow was open and has just closed: never on arrival at the page.
+  const wasOpen = useRef(false);
   useEffect(() => {
-    if (open === null && document.activeElement === document.body) region.current?.focus();
+    const justClosed = open === null && wasOpen.current;
+    wasOpen.current = open !== null;
+    if (justClosed && document.activeElement === document.body) region.current?.focus();
   }, [open]);
 
   return (

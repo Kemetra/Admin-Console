@@ -6,6 +6,7 @@
 import type { ar } from "./ar";
 import { audit } from "./en/audit";
 import { auth } from "./en/auth";
+import { cashPolicy } from "./en/cashPolicy";
 import { common } from "./en/common";
 import { devices } from "./en/devices";
 import { erp } from "./en/erp";
@@ -33,6 +34,7 @@ export const EN_MODULES = {
   erp,
   devices,
   sales,
+  cashPolicy,
 };
 
 export const en: MessagesOf<typeof ar> = {
@@ -49,4 +51,5 @@ export const en: MessagesOf<typeof ar> = {
   ...erp,
   ...devices,
   ...sales,
+  ...cashPolicy,
 };

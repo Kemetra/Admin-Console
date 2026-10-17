@@ -93,13 +93,18 @@ import openapiTS, { astToString, COMMENT_HEADER } from "openapi-typescript";
  * and a 409 payload), additive and not wrapped here. Every other source is
  * byte-identical.
  *
- * SIXTH deliberate re-pin (RT-372, 2026-10-17): bumped a959959 -> 3499d17
- * (Backend-Core main, after RT-367 #789 / #798 pairing codes, replace and move,
- * and RT-368 #799 / #802 retire) for the device lifecycle flows. The only drift
- * across the composed sources is `devices.openapi.yaml` 1.3.0-draft: it adds
- * `consoleRetireDevice`, `consoleIssuePairingCode`, `consoleListPairingCodes`
- * and `consoleCancelPairingCode`, and `consoleListDevices` no longer lists
- * retired devices by default. Every other source is byte-identical.
+ * SIXTH deliberate re-pin (RT-389 and RT-372, 2026-10-17): bumped a959959 ->
+ * 3499d17 (Backend-Core main, after RT-387 #797 shift variance policy runtime,
+ * RT-367 #789 / #798 pairing codes and RT-368 #799 / #802 retire). RT-389 adds
+ * the shift variance policy source (`cash-variance-policy.openapi.yaml`,
+ * contract RT-384) to the composed sources below; RT-372 wraps the new Devices
+ * operations for the device lifecycle flows (`consoleRetireDevice`,
+ * `consoleIssuePairingCode`, `consoleListPairingCodes`,
+ * `consoleCancelPairingCode`). Drift across the composed sources between
+ * a959959 and 3499d17: only `devices.openapi.yaml` 1.3.0-draft moved, and
+ * additively, except that `consoleListDevices` no longer lists retired devices
+ * by default (`trust_state=retired` still does). Every other source is
+ * byte-identical, `console-sales` included.
  */
 export const DATA_PULSE_2_PIN = "3499d17ca4f62a49100004bd93ba6cc3b7f90184" as const;
 
@@ -167,6 +172,13 @@ export const OPENAPI_SOURCE_SPECS: readonly OpenApiSourceSpec[] = [
   // spec 012): `consoleListSales`, `consoleGetSale`. Read-only consumption;
   // no YAML authored here.
   { name: "ConsoleSales", path: "packages/contracts/openapi/console-sales.openapi.yaml" },
+  // Shift variance policy (RT-384 contract #778 / RT-387 runtime #797; RT-389):
+  // the tenant default and store override reads, revision lists and publishes.
+  // The POS device read in the same document is not wrapped here.
+  {
+    name: "CashVariancePolicy",
+    path: "packages/contracts/openapi/cash-variance-policy.openapi.yaml",
+  },
 ];
 
 /** Upstream source paths (kept for back-compat / documentation references). */

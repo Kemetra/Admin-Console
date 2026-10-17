@@ -2,6 +2,7 @@ import type { MessageKey } from "../../src/i18n/translate";
 import type { RevokeReason } from "../../src/lib/device-queries";
 import { DEVICE_1, DEVICE_2, DUBAI_STORE, SHIFT_OPEN, detail } from "../unit/device-fixtures";
 import { conflict, impact, openShift, retired, revoked } from "../unit/device-lifecycle-fixtures";
+import { expectNoAxeViolations } from "./axe";
 import { type Page, expect, test } from "./fixtures";
 
 /**
@@ -328,4 +329,48 @@ test("S6b: retire of a revoked device with a custody exception is blocked by the
   await drawer.getByRole("button", { name: t("devices.flow.review") }).click();
   await expect(drawer.getByText(t("devices.impact.blocked.custodyException"))).toBeVisible();
   await expect(drawer.getByRole("button", { name: t("devices.retire.confirm") })).toHaveCount(0);
+});
+
+test("S7: axe finds no violations on the revoke details, the confirm steps and the blocked state", async ({
+  page,
+  t,
+}) => {
+  // The drawer's entrance fades in; contrast is measured on the settled page.
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const recovery = impact({
+    verdict: "allowed_with_custody_exception",
+    revokeReason: "hardware_failure",
+    requires: ["owner_or_tenant_admin", "note", "acknowledge_custody_exception"],
+    openShift: openShift(),
+  });
+  const { drawer } = await reviewRevoke(page, t, {
+    role: "owner",
+    reason: "hardware_failure",
+    preview: recovery,
+  });
+  await expect(drawer.getByText(t("devices.impact.verdict.allowedCustody"))).toBeVisible();
+  await expectNoAxeViolations(page, "recovery confirm step");
+
+  // The same step with its validation errors showing.
+  await drawer.getByRole("button", { name: t("devices.revoke.confirm") }).click();
+  await expect(drawer.getByText(t("devices.revoke.acknowledgeRequired"))).toBeVisible();
+  await expectNoAxeViolations(page, "recovery confirm step with errors");
+
+  await drawer.getByRole("button", { name: t("devices.flow.back") }).click();
+  await expectNoAxeViolations(page, "revoke details");
+
+  await page.route(`**/api/v1/devices/${DEVICE_1}/impact?**`, (r) =>
+    r.fulfill(
+      json(
+        impact({
+          verdict: "blocked",
+          blockCode: "unresolved_cash_session",
+          openShift: openShift(),
+        }),
+      ),
+    ),
+  );
+  await drawer.getByRole("button", { name: t("devices.flow.review") }).click();
+  await expect(drawer.getByText(t("devices.impact.blocked.cashSession"))).toBeVisible();
+  await expectNoAxeViolations(page, "blocked confirm step");
 });
