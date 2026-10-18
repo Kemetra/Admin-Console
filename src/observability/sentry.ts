@@ -5,12 +5,11 @@
  * errors (`cause`) and dedupe. No breadcrumbs, HTTP context, browser session,
  * tracing or session replay (owner decision D7).
  *
- * Runtime config: Backend-Core's OBS-3 contract (RT-632) serves
- * `GET /api/v1/console/telemetry/config`: 204 (Sentry off) or
- * `{ tunnel, environment }` with no DSN (see ./config.ts). Reading it through
- * the generated client waits for that contract to merge and the pin bump, so
- * until then the source below returns nothing and the Console stays inert (no
- * SDK init, no egress).
+ * Runtime config: the caller passes the source. In the app it is
+ * `telemetryConfigSource()` (./runtime-config.ts, RT-673), which reads
+ * Backend-Core's `GET /api/v1/console/telemetry/config` through the generated
+ * client: 204 keeps the Console inert (no SDK init, no egress), 200 gives
+ * `{ tunnel, environment }` with no DSN (see ./config.ts).
  */
 import {
   dedupeIntegration,
@@ -20,15 +19,12 @@ import {
 } from "@sentry/react";
 import { type ConfigSource, type InitResult, initObservability } from "./init";
 
-/** Source until the RT-632 config endpoint is wired in: no config, so inert. */
-export const noRuntimeConfig: ConfigSource = () => Promise.resolve(null);
-
 /** Full commit SHA injected at build time (vite.config.ts); absent in tests/dev. */
 function buildSha(): string | undefined {
   return typeof __CONSOLE_RELEASE_SHA__ === "string" ? __CONSOLE_RELEASE_SHA__ : undefined;
 }
 
-export function startObservability(source: ConfigSource = noRuntimeConfig): Promise<InitResult> {
+export function startObservability(source: ConfigSource): Promise<InitResult> {
   return initObservability(source, {
     sentryInit: (options) => init(options),
     integrations: () => [
