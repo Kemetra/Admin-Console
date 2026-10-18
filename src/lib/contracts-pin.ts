@@ -191,3 +191,128 @@ export function parsePin(text: string): ContractsPin {
     files: draft.files,
   };
 }
+
+// ─── repin bot (RT-679) ──────────────────────────────────────────────────────
+
+/** How a repin moved the pinned files, by git blob SHA. Each list is sorted. */
+export interface PinDiff {
+  readonly changed: readonly string[];
+  readonly added: readonly string[];
+  readonly removed: readonly string[];
+}
+
+const byPath = (a: string, b: string): number => a.localeCompare(b);
+
+export function diffPins(before: ContractsPin, after: ContractsPin): PinDiff {
+  const beforeBySha = new Map(before.files.map((f) => [f.path, f.blobSha]));
+  const afterBySha = new Map(after.files.map((f) => [f.path, f.blobSha]));
+  return {
+    changed: after.files
+      .filter((f) => beforeBySha.has(f.path) && beforeBySha.get(f.path) !== f.blobSha)
+      .map((f) => f.path)
+      .sort(byPath),
+    added: after.files
+      .filter((f) => !beforeBySha.has(f.path))
+      .map((f) => f.path)
+      .sort(byPath),
+    removed: before.files
+      .filter((f) => !afterBySha.has(f.path))
+      .map((f) => f.path)
+      .sort(byPath),
+  };
+}
+
+/** True when a repin moved at least one pinned contract file. */
+export function hasPinChanges(diff: PinDiff): boolean {
+  return diff.changed.length + diff.added.length + diff.removed.length > 0;
+}
+
+/**
+ * The contract set a PIN describes, independent of the Backend-Core commit it was
+ * read at (that moves with every upstream commit even when no contract does).
+ */
+export function pinFingerprint(pin: ContractsPin): string {
+  return pin.files
+    .map((f) => `${f.path} ${f.blobSha}`)
+    .sort(byPath)
+    .join("\n");
+}
+
+export type BranchAction = "push" | "comment";
+
+/**
+ * Whether the bot may force-push its branch. Only when every commit ahead of
+ * `main` is the bot's: a human who added commits to adapt the code must not be
+ * overwritten, so the bot comments instead. A null login (a commit whose email
+ * GitHub cannot link to an account) is never the bot's.
+ */
+export function decideBranchAction(
+  commitAuthors: readonly (string | null)[],
+  botLogin: string,
+): BranchAction {
+  return commitAuthors.every((login) => login === botLogin) ? "push" : "comment";
+}
+
+export interface RepinPrBodyArgs {
+  readonly before: ContractsPin;
+  readonly after: ContractsPin;
+  readonly diff: PinDiff;
+  readonly conformance: "pass" | "fail";
+  /** Tail of the failing build/test output; only shown when `conformance` is `fail`. */
+  readonly failureSummary?: string;
+}
+
+const SHORT_SHA_LENGTH = 7;
+
+const shortSha = (commit: string): string => commit.slice(0, SHORT_SHA_LENGTH);
+
+function fileSection(title: string, paths: readonly string[]): readonly string[] {
+  if (paths.length === 0) return [];
+  return ["", `**${title}** (${paths.length})`, ...paths.map((p) => `- \`${p}\``)];
+}
+
+/** A code fence longer than any backtick run in `text`, so the text cannot close it. */
+function fenceFor(text: string): string {
+  const longestRun = Math.max(0, ...(text.match(/`+/g) ?? []).map((run) => run.length));
+  return "`".repeat(Math.max(3, longestRun + 1));
+}
+
+function failureSection(summary: string | undefined): readonly string[] {
+  const text = (summary ?? "").trim() || "(no output captured; see the workflow run)";
+  const fence = fenceFor(text);
+  return [
+    "",
+    "## Build or test failed after the repin",
+    "",
+    "This PR is a draft labelled `contracts-break`. Adapt the code on this branch; once a later run",
+    "of the bot passes it is marked ready and the label is removed.",
+    "",
+    fence,
+    text,
+    fence,
+  ];
+}
+
+export function renderRepinPrBody(args: RepinPrBodyArgs): string {
+  const { before, after, diff, conformance, failureSummary } = args;
+  const compare = `https://github.com/${after.repo}/compare/${before.commit}...${after.commit}`;
+  const lines = [
+    `Repins the Backend-Core contracts \`${shortSha(before.commit)}\` -> \`${shortSha(after.commit)}\` ([compare](${compare})).`,
+    "",
+    `Regenerated \`src/generated/schema.d.ts\` with \`pnpm generate:client --repin ${shortSha(after.commit)}\`.`,
+    `Of ${after.files.length} pinned contract files: ${diff.changed.length} changed, ${diff.added.length} added, ${diff.removed.length} removed.`,
+    ...fileSection("Changed", diff.changed),
+    ...fileSection("Added", diff.added),
+    ...fileSection("Removed", diff.removed),
+    "",
+    conformance === "pass"
+      ? "Build and unit tests passed on the regenerated client."
+      : "Build or unit tests FAILED on the regenerated client.",
+    ...(conformance === "fail" ? failureSection(failureSummary) : []),
+    "",
+    "---",
+    "Opened by the `contracts-repin` workflow (RT-679). If you push your own commits to this",
+    "branch the bot stops force-pushing it and comments here instead.",
+  ];
+  return `${lines.join("\n")}\n`;
+}

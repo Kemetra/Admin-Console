@@ -7,9 +7,10 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "include": ["src/**", "tests/**", "*.ts", "*.json", "*.html"],
+    "include": ["src/**", "tests/**", "scripts/**", "*.ts", "*.json", "*.html"],
     "ignore": [
       "dist/**",
+      ".github/**",
       "coverage/**",
       "playwright-report/**",
       "test-results/**",

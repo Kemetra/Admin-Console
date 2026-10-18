@@ -4,7 +4,17 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 import { OPENAPI_SOURCE_SPECS } from "../../openapi-ts.config.ts";
-import { comparePinFiles, formatPin, parsePin } from "../../src/lib/contracts-pin.ts";
+import {
+  type ContractsPin,
+  comparePinFiles,
+  decideBranchAction,
+  diffPins,
+  formatPin,
+  hasPinChanges,
+  parsePin,
+  pinFingerprint,
+  renderRepinPrBody,
+} from "../../src/lib/contracts-pin.ts";
 
 const OPENAPI_ROOT = "packages/contracts/openapi";
 
@@ -88,5 +98,100 @@ describe("contracts PIN", () => {
     );
     const dup = `file: a.yaml ${"a".repeat(40)}`;
     expect(() => parsePin(`${base}\n${dup}\n${dup}`)).toThrow(/duplicate/);
+  });
+});
+
+// RT-679: pure helpers behind the scheduled repin bot (scripts/contracts-repin-pr.ts).
+// Same signatures and cases as the POS sibling (RT-676).
+const sha = (c: string): string => c.repeat(40);
+
+const repinPin = (commit: string, files: Record<string, string>): ContractsPin => ({
+  repo: "Kemetra/Backend-Core",
+  commit,
+  source: OPENAPI_ROOT,
+  files: Object.entries(files).map(([path, blobSha]) => ({ path, blobSha })),
+});
+
+const BOT = "kemetra-contracts-bot[bot]";
+
+describe("repin bot helpers (RT-679)", () => {
+  test("diffPins reports changed, added and removed files by blob SHA", () => {
+    const before = repinPin(sha("1"), {
+      "same.yaml": sha("a"),
+      "moved.yaml": sha("b"),
+      "gone.yaml": sha("c"),
+    });
+    const after = repinPin(sha("2"), {
+      "same.yaml": sha("a"),
+      "moved.yaml": sha("d"),
+      "new.yaml": sha("e"),
+    });
+    expect(diffPins(before, after)).toEqual({
+      changed: ["moved.yaml"],
+      added: ["new.yaml"],
+      removed: ["gone.yaml"],
+    });
+    expect(diffPins(before, before)).toEqual({ changed: [], added: [], removed: [] });
+    expect(hasPinChanges(diffPins(before, after))).toBe(true);
+    expect(hasPinChanges(diffPins(before, before))).toBe(false);
+  });
+
+  test("pinFingerprint ignores the commit and the file order", () => {
+    const a = repinPin(sha("1"), { "a.yaml": sha("a"), "b.yaml": sha("b") });
+    const reordered = repinPin(sha("2"), { "b.yaml": sha("b"), "a.yaml": sha("a") });
+    const moved = repinPin(sha("1"), { "a.yaml": sha("c"), "b.yaml": sha("b") });
+    expect(pinFingerprint(a)).toBe(pinFingerprint(reordered));
+    expect(pinFingerprint(a)).not.toBe(pinFingerprint(moved));
+  });
+
+  test("decideBranchAction pushes when all commits are the bot's", () => {
+    expect(decideBranchAction([BOT, BOT], BOT)).toBe("push");
+  });
+
+  test("decideBranchAction comments when any commit is a human's", () => {
+    expect(decideBranchAction([BOT, "ahmed"], BOT)).toBe("comment");
+  });
+
+  test("decideBranchAction pushes when the branch has no commits ahead", () => {
+    expect(decideBranchAction([], BOT)).toBe("push");
+  });
+
+  test("decideBranchAction comments when an author login is null", () => {
+    expect(decideBranchAction([null], BOT)).toBe("comment");
+    expect(decideBranchAction([BOT, null], BOT)).toBe("comment");
+  });
+
+  test("renderRepinPrBody includes the compare URL and both commits", () => {
+    const before = repinPin(sha("1"), { "a.yaml": sha("a") });
+    const after = repinPin(sha("2"), { "a.yaml": sha("b"), "b.yaml": sha("c") });
+    const body = renderRepinPrBody({
+      before,
+      after,
+      diff: diffPins(before, after),
+      conformance: "pass",
+    });
+    expect(body).toContain(
+      `https://github.com/Kemetra/Backend-Core/compare/${sha("1")}...${sha("2")}`,
+    );
+    expect(body).toContain("1111111");
+    expect(body).toContain("2222222");
+    expect(body).toContain("`a.yaml`");
+    expect(body).toContain("`b.yaml`");
+    expect(body).not.toContain("contracts-break");
+  });
+
+  test("renderRepinPrBody includes the failure summary when conformance fails", () => {
+    const before = repinPin(sha("1"), { "a.yaml": sha("a") });
+    const after = repinPin(sha("2"), { "a.yaml": sha("b") });
+    const body = renderRepinPrBody({
+      before,
+      after,
+      diff: diffPins(before, after),
+      conformance: "fail",
+      failureSummary: "src/x.ts(3,1): error TS2322 ``` tricky fence",
+    });
+    expect(body).toContain("contracts-break");
+    expect(body).toContain("error TS2322");
+    expect(body).toContain("````"); // fence is longer than any backtick run in the summary
   });
 });

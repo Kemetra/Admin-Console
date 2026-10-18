@@ -1,0 +1,192 @@
+# RT-679 (contracts-sync S6): keep the generated client pinned to current
+# Backend-Core contracts. Once a day it repins the whole contracts/backend-core/PIN
+# to Backend-Core `main` through the generator and, when anything changed, opens
+# or updates ONE bot PR (`bot/backend-core-repin`). A failed build or test still
+# opens the PR, as a draft labelled `contracts-break`. A repin error opens or
+# updates one issue labelled `contracts-repin`.
+#
+# This is a separate workflow, not part of ci.yml: ci.yml's drift check (RT-584)
+# stays offline against the committed pin.
+#
+# Needs the repo secrets CONTRACTS_BOT_APP_ID and CONTRACTS_BOT_PRIVATE_KEY (the
+# `kemetra-contracts-bot` GitHub App; Contents, Pull requests and Issues write).
+# A GITHUB_TOKEN cannot open the PR, and a push made with it would not trigger the
+# `pull_request` CI the PR needs, so the App token is minted FIRST and the checkout
+# uses it. The real run logic is in scripts/contracts-repin-pr.ts and
+# src/lib/contracts-pin.ts (unit-tested).
+name: Contracts repin
+
+on:
+  schedule:
+    - cron: "37 3 * * *"
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Backend-Core branch, tag or full SHA to repin to
+        required: false
+        default: main
+
+concurrency:
+  group: contracts-repin
+  cancel-in-progress: false
+
+# The App token carries the write access; GITHUB_TOKEN stays read-only.
+permissions:
+  contents: read
+
+jobs:
+  repin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Explicit `bash` runs with `-eo pipefail`, so a failing command before `| tee` fails the step.
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Run from main only
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error title=Contracts repin::Run this workflow from main: the bot branch is cut from main and its PR targets main."
+          exit 1
+
+      - name: Require the contracts bot secrets
+        env:
+          APP_ID: ${{ secrets.CONTRACTS_BOT_APP_ID }}
+          PRIVATE_KEY: ${{ secrets.CONTRACTS_BOT_PRIVATE_KEY }}
+        run: |
+          if [ -z "$APP_ID" ] || [ -z "$PRIVATE_KEY" ]; then
+            echo "::error title=Contracts bot::CONTRACTS_BOT_APP_ID and CONTRACTS_BOT_PRIVATE_KEY are not both set. Add them as repository secrets (GitHub App kemetra-contracts-bot, RT-675)."
+            exit 1
+          fi
+
+      - name: Mint the contracts bot token
+        id: app
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
+        with:
+          app-id: ${{ secrets.CONTRACTS_BOT_APP_ID }}
+          private-key: ${{ secrets.CONTRACTS_BOT_PRIVATE_KEY }}
+          # Least privilege: only what the PR script and the error issue use.
+          permission-contents: write
+          permission-pull-requests: write
+          permission-issues: write
+
+      # Not persisted: the install, build and test steps run repo code and must not find
+      # the token in .git/config. The PR step hands it to git itself, below.
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          token: ${{ steps.app.outputs.token }}
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+
+      - name: Setup Node 22 LTS
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # Backend-Core is public: anonymous shallow fetch, no secret. Only the tip's
+      # files are needed, and a `blob:none` fetch without a promisor remote would
+      # break `git show`. The repo lives outside the workspace so tsc, biome and
+      # `git status` never see it.
+      - name: Fetch Backend-Core
+        id: bc
+        env:
+          BC_REF: ${{ inputs.ref || 'main' }}
+        run: |
+          {
+            case "$BC_REF" in
+              ''|-*|*[!A-Za-z0-9._/-]*)
+                echo "::error title=Backend-Core ref::Invalid ref '$BC_REF'"
+                exit 1
+                ;;
+            esac
+            git init -q "$RUNNER_TEMP/bc"
+            for attempt in 1 2 3; do
+              if git -C "$RUNNER_TEMP/bc" fetch -q --depth 1 https://github.com/Kemetra/Backend-Core "$BC_REF"; then
+                break
+              fi
+              if [ "$attempt" -eq 3 ]; then
+                echo "::error title=Backend-Core fetch::Could not fetch Backend-Core '$BC_REF' after 3 attempts"
+                exit 1
+              fi
+              sleep $((attempt * 5))
+            done
+            sha="$(git -C "$RUNNER_TEMP/bc" rev-parse --verify 'FETCH_HEAD^{commit}')"
+            echo "sha=$sha" >> "$GITHUB_OUTPUT"
+            echo "Backend-Core $BC_REF is $sha"
+          } 2>&1 | tee -a "$RUNNER_TEMP/error.log"
+
+      # Always the whole PIN: the generator refuses per-source holds.
+      - name: Repin the generated client
+        env:
+          DATA_PULSE_2_REPO: ${{ runner.temp }}/bc
+          BC_SHA: ${{ steps.bc.outputs.sha }}
+        run: pnpm generate:client --repin "$BC_SHA" 2>&1 | tee -a "$RUNNER_TEMP/error.log"
+
+      # The PIN `commit:` line and the generated header's source SHA move with EVERY
+      # Backend-Core commit, so the file status alone would open a PR daily. Only a
+      # moved `file:` blob SHA (a composed contract changed, was added or removed) counts.
+      - name: Detect a contract change
+        id: diff
+        run: |
+          if git diff -U0 -- contracts/backend-core/PIN | grep -qE '^[+-]file: '; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            git diff --stat -- contracts src/generated
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No pinned Backend-Core contract file changed since the pin; nothing to do."
+          fi
+
+      # A break must not stop the PR: it opens as a draft with the failure summary.
+      - name: Build and test the repin
+        id: verify
+        if: steps.diff.outputs.changed == 'true'
+        continue-on-error: true
+        env:
+          NO_COLOR: "1"
+          FORCE_COLOR: "0"
+        run: '{ pnpm build && pnpm test; } 2>&1 | tee "$RUNNER_TEMP/verify.log"'
+
+      - name: Open or update the repin PR
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          CONFORMANCE: ${{ steps.verify.outcome == 'success' && 'pass' || 'fail' }}
+          VERIFY_LOG: ${{ runner.temp }}/verify.log
+        run: |
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          node --disable-warning=ExperimentalWarning --experimental-strip-types \
+            scripts/contracts-repin-pr.ts 2>&1 | tee -a "$RUNNER_TEMP/error.log"
+
+      # One open issue at a time: later failures add a comment instead of a new issue.
+      - name: Report a repin error
+        if: failure() && steps.app.outputs.token != ''
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh label create contracts-repin --repo "$GITHUB_REPOSITORY" --force \
+            --color 5319E7 --description "Backend-Core contracts repin workflow failed"
+          {
+            echo "The scheduled Backend-Core contracts repin failed: $RUN_URL"
+            echo
+            echo "No repin PR was opened or updated by this run. Last output:"
+            echo
+            echo '~~~~text'
+            tail -n 40 "$RUNNER_TEMP/error.log" 2>/dev/null || echo "(no output captured)"
+            echo '~~~~'
+          } > "$RUNNER_TEMP/issue.md"
+          existing="$(gh issue list --repo "$GITHUB_REPOSITORY" --label contracts-repin --state open \
+            --json number --jq '.[0].number // empty')"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/issue.md"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --label contracts-repin \
+              --title "Backend-Core contracts repin failed" --body-file "$RUNNER_TEMP/issue.md"
+          fi
