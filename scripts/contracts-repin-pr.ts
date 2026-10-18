@@ -21,15 +21,19 @@
 // Loaded under Node type stripping: no enums, parameter properties or path aliases.
 
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { OUTPUT_PATH, PIN_FILE_PATH } from "../openapi-ts.config.ts";
 import {
   type BranchAction,
+  type ContractsPin,
   decideBranchAction,
   diffPins,
+  hasPinChanges,
   parsePin,
+  pinFingerprint,
   renderRepinPrBody,
 } from "../src/lib/contracts-pin.ts";
 
@@ -55,7 +59,7 @@ type Tool = "git" | "gh";
 /** Everything one run needs to open or update the PR. */
 interface RepinRun {
   readonly repo: string;
-  readonly commit: string;
+  readonly pin: ContractsPin;
   readonly title: string;
   readonly body: string;
   /** True when build/test failed: the PR is a draft labelled `contracts-break`. */
@@ -160,8 +164,11 @@ function pushRepin(job: RepinRun, lease: string | null): boolean {
   git("commit", "-m", job.title);
   if (lease !== null) {
     git("fetch", "--depth", "1", "origin", BRANCH);
-    if (git("rev-parse", "FETCH_HEAD^{tree}") === git("rev-parse", "HEAD^{tree}")) {
-      console.log(`${BRANCH} already holds this repin; not pushing.`);
+    // The commit line and the generated header move with every Backend-Core commit, so
+    // compare the contract blobs: an open PR that already pins them needs no new push.
+    const branchPin = parsePin(git("show", `FETCH_HEAD:${PIN_FILE_PATH}`));
+    if (!hasPinChanges(diffPins(branchPin, job.pin))) {
+      console.log(`${BRANCH} already pins these contract files; not pushing.`);
       return false;
     }
   }
@@ -196,15 +203,18 @@ function syncPrState(job: RepinRun, pr: OpenPr): void {
   if (hasLabel) gh("pr", "edit", ...target, "--remove-label", BREAK_LABEL);
 }
 
-function upsertPr(job: RepinRun): void {
+/** `pushed` false means the branch kept its earlier commit, so its title and body stay true. */
+function upsertPr(job: RepinRun, pushed: boolean): void {
   const pr = findOpenPr(job);
   if (pr === null) {
     createPr(job);
     return;
   }
   const target = [String(pr.number), "--repo", job.repo];
-  gh("pr", "edit", ...target, "--title", job.title);
-  gh("pr", "edit", ...target, "--body-file", writeBodyFile(job.body));
+  if (pushed) {
+    gh("pr", "edit", ...target, "--title", job.title);
+    gh("pr", "edit", ...target, "--body-file", writeBodyFile(job.body));
+  }
   syncPrState(job, pr);
   console.log(`Updated PR #${pr.number}.`);
 }
@@ -215,20 +225,23 @@ function commentBlocked(job: RepinRun): void {
   if (pr === null) {
     throw new Error(
       `${BRANCH} has commits that are not the bot's and no open PR to comment on; ` +
-        `resolve or delete the branch (new target ${job.commit})`,
+        `resolve or delete the branch (new target ${job.pin.commit})`,
     );
   }
   const target = [String(pr.number), "--repo", job.repo];
-  const marker = `<!-- contracts-repin:${job.commit} -->`;
+  // Keyed on the contract set, not the commit: a new Backend-Core commit that moves no
+  // contract must not add another comment to a PR a person owns.
+  const key = createHash("sha1").update(pinFingerprint(job.pin)).digest("hex");
+  const marker = `<!-- contracts-repin:${key} -->`;
   if (gh("pr", "view", ...target, "--json", "comments").includes(marker)) {
-    console.log(`PR #${pr.number} already has the comment for ${job.commit}.`);
+    console.log(`PR #${pr.number} already has the comment for these contracts.`);
     return;
   }
   const text = [
     marker,
-    `Backend-Core has moved on to \`${job.commit.slice(0, 7)}\`, but \`${BRANCH}\` has commits that are not the bot's, so the bot did not force-push over them.`,
+    `Backend-Core has moved on to \`${job.pin.commit.slice(0, 7)}\`, but \`${BRANCH}\` has commits that are not the bot's, so the bot did not force-push over them.`,
     "",
-    `To pick the newer contracts up, merge \`${BASE}\` and run \`pnpm generate:client --repin ${job.commit}\` on this branch, or close this PR and delete the branch so the bot opens a fresh one.`,
+    `To pick the newer contracts up, merge \`${BASE}\` and run \`pnpm generate:client --repin ${job.pin.commit}\` on this branch, or close this PR and delete the branch so the bot opens a fresh one.`,
   ].join("\n");
   gh("pr", "comment", ...target, "--body-file", writeBodyFile(text));
   console.log(`Commented on PR #${pr.number}.`);
@@ -241,13 +254,13 @@ function main(): void {
   const diff = diffPins(before, after);
   // The PIN commit and the generated header move with every Backend-Core commit; only a
   // moved blob is a contract change worth a PR (and a CI run).
-  if (diff.changed.length + diff.added.length + diff.removed.length === 0) {
+  if (!hasPinChanges(diff)) {
     console.log(`No pinned contract file changed at ${after.commit.slice(0, 7)}; nothing to do.`);
     return;
   }
   const job: RepinRun = {
     repo: requireEnv("GITHUB_REPOSITORY"),
-    commit: after.commit,
+    pin: after,
     title: `chore(contracts): repin Backend-Core contracts to ${after.commit.slice(0, 7)}`,
     body: renderRepinPrBody({
       before,
@@ -267,8 +280,7 @@ function main(): void {
   }
 
   if (job.draft) ensureBreakLabel(job);
-  pushRepin(job, lease);
-  upsertPr(job);
+  upsertPr(job, pushRepin(job, lease));
 }
 
 try {

@@ -222,6 +222,22 @@ export function diffPins(before: ContractsPin, after: ContractsPin): PinDiff {
   };
 }
 
+/** True when a repin moved at least one pinned contract file. */
+export function hasPinChanges(diff: PinDiff): boolean {
+  return diff.changed.length + diff.added.length + diff.removed.length > 0;
+}
+
+/**
+ * The contract set a PIN describes, independent of the Backend-Core commit it was
+ * read at (that moves with every upstream commit even when no contract does).
+ */
+export function pinFingerprint(pin: ContractsPin): string {
+  return pin.files
+    .map((f) => `${f.path} ${f.blobSha}`)
+    .sort(byPath)
+    .join("\n");
+}
+
 export type BranchAction = "push" | "comment";
 
 /**

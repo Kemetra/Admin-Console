@@ -10,7 +10,9 @@ import {
   decideBranchAction,
   diffPins,
   formatPin,
+  hasPinChanges,
   parsePin,
+  pinFingerprint,
   renderRepinPrBody,
 } from "../../src/lib/contracts-pin.ts";
 
@@ -130,6 +132,16 @@ describe("repin bot helpers (RT-679)", () => {
       removed: ["gone.yaml"],
     });
     expect(diffPins(before, before)).toEqual({ changed: [], added: [], removed: [] });
+    expect(hasPinChanges(diffPins(before, after))).toBe(true);
+    expect(hasPinChanges(diffPins(before, before))).toBe(false);
+  });
+
+  test("pinFingerprint ignores the commit and the file order", () => {
+    const a = repinPin(sha("1"), { "a.yaml": sha("a"), "b.yaml": sha("b") });
+    const reordered = repinPin(sha("2"), { "b.yaml": sha("b"), "a.yaml": sha("a") });
+    const moved = repinPin(sha("1"), { "a.yaml": sha("c"), "b.yaml": sha("b") });
+    expect(pinFingerprint(a)).toBe(pinFingerprint(reordered));
+    expect(pinFingerprint(a)).not.toBe(pinFingerprint(moved));
   });
 
   test("decideBranchAction pushes when all commits are the bot's", () => {

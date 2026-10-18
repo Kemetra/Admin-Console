@@ -65,11 +65,18 @@ jobs:
         with:
           app-id: ${{ secrets.CONTRACTS_BOT_APP_ID }}
           private-key: ${{ secrets.CONTRACTS_BOT_PRIVATE_KEY }}
+          # Least privilege: only what the PR script and the error issue use.
+          permission-contents: write
+          permission-pull-requests: write
+          permission-issues: write
 
+      # Not persisted: the install, build and test steps run repo code and must not find
+      # the token in .git/config. The PR step hands it to git itself, below.
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           token: ${{ steps.app.outputs.token }}
+          persist-credentials: false
 
       - name: Setup pnpm
         uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
@@ -153,6 +160,7 @@ jobs:
           CONFORMANCE: ${{ steps.verify.outcome == 'success' && 'pass' || 'fail' }}
           VERIFY_LOG: ${{ runner.temp }}/verify.log
         run: |
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           node --disable-warning=ExperimentalWarning --experimental-strip-types \
             scripts/contracts-repin-pr.ts 2>&1 | tee -a "$RUNNER_TEMP/error.log"
 
