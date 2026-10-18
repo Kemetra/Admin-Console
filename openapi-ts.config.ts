@@ -150,6 +150,12 @@ export const PIN_FILE_PATH = "contracts/backend-core/PIN" as const;
  * `console-telemetry`, `pos-terminal-pairing`, `pos-sales` and
  * `erpnext-connector/stock-view`; none is composed here, so the generated
  * client does not see them.
+ *
+ * NEW SOURCE, SAME PIN (RT-673, 2026-10-18): `console-telemetry.openapi.yaml`
+ * (RT-632 #817/#818) is now composed so the Console reads
+ * `consoleGetTelemetryConfig` through the generated client. 35114fd already
+ * holds it, so the commit did not move: `pnpm generate:client --repin 35114fd...`
+ * only added its blob SHA to the PIN.
  */
 export const BACKEND_CORE_PIN: ContractsPin = parsePin(
   readFileSync(resolve(repoRoot, PIN_FILE_PATH), "utf8"),
@@ -228,6 +234,13 @@ export const OPENAPI_SOURCE_SPECS: readonly OpenApiSourceSpec[] = [
   {
     name: "CashVariancePolicy",
     path: "packages/contracts/openapi/cash-variance-policy.openapi.yaml",
+  },
+  // Console Sentry tunnel (RT-632 contract #817 / runtime #818; RT-673): only
+  // `consoleGetTelemetryConfig` is wrapped. The SDK posts envelopes to the
+  // tunnel itself, so `consoleForwardTelemetryEnvelope` is not called here.
+  {
+    name: "ConsoleTelemetry",
+    path: "packages/contracts/openapi/console-telemetry.openapi.yaml",
   },
 ];
 

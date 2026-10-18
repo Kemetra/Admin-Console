@@ -1,6 +1,7 @@
 import { apiClient } from "@/generated/client";
 import { installRequestIdHeader } from "@/lib/request-id";
 import { AppErrorBoundary } from "@/observability/AppErrorBoundary";
+import { telemetryConfigSource } from "@/observability/runtime-config";
 import { startObservability } from "@/observability/sentry";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
@@ -24,6 +25,7 @@ createRoot(rootElement).render(
   </StrictMode>,
 );
 
-// RT-633: after the first render, never blocking it. Inert without a runtime
-// config; initObservability never throws.
-void startObservability();
+// RT-633/RT-673: after the first render, never blocking it. The config comes
+// from Backend-Core (204 or any failure keeps the Console inert);
+// initObservability never throws.
+void startObservability(telemetryConfigSource());

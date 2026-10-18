@@ -21,6 +21,7 @@
 // - packages/contracts/openapi/devices.openapi.yaml
 // - packages/contracts/openapi/console-sales.openapi.yaml
 // - packages/contracts/openapi/cash-variance-policy.openapi.yaml
+// - packages/contracts/openapi/console-telemetry.openapi.yaml
 //
 // The upstream OpenAPI files are separate documents with overlapping component
 // names, so this file namespaces each generated source and composes their path
@@ -7709,6 +7710,187 @@ export namespace CashVariancePolicySchema {
     }
 }
 
-export type paths = AuthSchema.paths & ContextSchema.paths & TenantsSchema.paths & StoresSchema.paths & MembershipsSchema.paths & AuditSchema.paths & UnknownItemsSchema.paths & SettlementSchema.paths & ErpnextReconciliationSchema.paths & ShiftClosesSchema.paths & ConnectorAdminSchema.paths & ConnectorHealthSchema.paths & SyncOpsSchema.paths & DevicesSchema.paths & ConsoleSalesSchema.paths & CashVariancePolicySchema.paths;
-export type components = AuthSchema.components & ContextSchema.components & TenantsSchema.components & StoresSchema.components & MembershipsSchema.components & AuditSchema.components & UnknownItemsSchema.components & SettlementSchema.components & ErpnextReconciliationSchema.components & ShiftClosesSchema.components & ConnectorAdminSchema.components & ConnectorHealthSchema.components & SyncOpsSchema.components & DevicesSchema.components & ConsoleSalesSchema.components & CashVariancePolicySchema.components;
-export type operations = AuthSchema.operations & ContextSchema.operations & TenantsSchema.operations & StoresSchema.operations & MembershipsSchema.operations & AuditSchema.operations & UnknownItemsSchema.operations & SettlementSchema.operations & ErpnextReconciliationSchema.operations & ShiftClosesSchema.operations & ConnectorAdminSchema.operations & ConnectorHealthSchema.operations & SyncOpsSchema.operations & DevicesSchema.operations & ConsoleSalesSchema.operations & CashVariancePolicySchema.operations;
+export namespace ConsoleTelemetrySchema {
+    export interface paths {
+        "/api/v1/console/telemetry/config": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /** Whether the Console should start its Sentry SDK, and with which tunnel and environment. */
+            get: operations["consoleGetTelemetryConfig"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/console/telemetry/envelope": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            get?: never;
+            put?: never;
+            /** Forward a Sentry envelope from the Admin-Console to the Console Sentry project. */
+            post: operations["consoleForwardTelemetryEnvelope"];
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+    }
+    export type webhooks = Record<string, never>;
+    export interface components {
+        schemas: {
+            /** @description Runtime Sentry settings for the Console. Never carries a DSN. */
+            ConsoleTelemetryConfig: {
+                /**
+                 * @description The same-origin tunnel path for the SDK's `tunnel` option.
+                 * @constant
+                 */
+                tunnel: "/api/v1/console/telemetry/envelope";
+                /** @description The server's Sentry environment (`SENTRY_ENVIRONMENT`, else `DEPLOYMENT_ENVIRONMENT`, else `unknown`). The tunnel stamps the same value on forwarded events. */
+                environment: string;
+            };
+            /** @description A Sentry envelope as raw text. `maxLength` is the byte cap; a body of multibyte text reaches the cap with fewer characters. */
+            Envelope: string;
+            /** @description Canonical error envelope. */
+            Error: {
+                error: {
+                    /** @description Stable machine-readable error code. */
+                    code: string;
+                    /** @description Fixed human-readable summary. Never quotes the request body. */
+                    message: string;
+                    /**
+                     * Format: uuid
+                     * @description Server-side correlation id.
+                     */
+                    request_id?: string;
+                };
+            };
+        };
+        responses: never;
+        parameters: never;
+        requestBodies: never;
+        headers: never;
+        pathItems: never;
+    }
+    export type $defs = Record<string, never>;
+    export interface operations {
+        consoleGetTelemetryConfig: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The tunnel is configured. The Console starts its SDK with `tunnel` and `environment`, and a fixed placeholder DSN. */
+                200: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ConsoleTelemetryConfig"];
+                    };
+                };
+                /** @description The tunnel is inert (`CONSOLE_SENTRY_DSN` unset, blank or malformed). The Console does not start its SDK. */
+                204: {
+                    headers: {
+                        "Cache-Control"?: "no-store";
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        consoleForwardTelemetryEnvelope: {
+            parameters: {
+                query?: never;
+                header: {
+                    /** @description The API's own origin or an origin listed in `ALLOWED_ORIGINS`. Missing or foreign → `403 origin_rejected`. */
+                    Origin: string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            /** @description A Sentry envelope (newline-delimited: an envelope header line, then items, each an item header line and a payload). At most 65,536 bytes (`413 envelope_too_large`); a body with a `Content-Encoding` other than `identity` is `415`. The browser SDK sends a string body as `text/plain`. */
+            requestBody: {
+                content: {
+                    "text/plain": components["schemas"]["Envelope"];
+                    "application/x-sentry-envelope": components["schemas"]["Envelope"];
+                    "application/octet-stream": components["schemas"]["Envelope"];
+                };
+            };
+            responses: {
+                /** @description Accepted. On a configured tunnel a well-formed envelope gets the same `204` whether its error event was forwarded, dropped by the scrubber or by the forward bound, or dropped because the rate-limit store is unavailable. An inert tunnel answers `204` to every request (see Default-inert). */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description `envelope_malformed`: the body is empty, or the envelope header, an item header or an event payload is not a JSON object, or an item's `length` runs past the end of the body. The message is fixed and never quotes the input. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description `origin_rejected` (RT-430 rule): the `Origin` header is missing, or is neither the API's own origin nor listed in `ALLOWED_ORIGINS`. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description `envelope_too_large`: the body is larger than 65,536 bytes. */
+                413: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description `unsupported_media_type`: the `Content-Type` is not `text/plain`, `application/x-sentry-envelope` or `application/octet-stream` (a missing `Content-Type` is accepted), or the body has a `Content-Encoding` other than `identity`. */
+                415: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description `RATE_LIMITED`: the client IP's budget or the global budget for this endpoint is spent. The Sentry SDK backs off for `Retry-After` seconds. */
+                429: {
+                    headers: {
+                        "Retry-After"?: number;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+    }
+}
+
+export type paths = AuthSchema.paths & ContextSchema.paths & TenantsSchema.paths & StoresSchema.paths & MembershipsSchema.paths & AuditSchema.paths & UnknownItemsSchema.paths & SettlementSchema.paths & ErpnextReconciliationSchema.paths & ShiftClosesSchema.paths & ConnectorAdminSchema.paths & ConnectorHealthSchema.paths & SyncOpsSchema.paths & DevicesSchema.paths & ConsoleSalesSchema.paths & CashVariancePolicySchema.paths & ConsoleTelemetrySchema.paths;
+export type components = AuthSchema.components & ContextSchema.components & TenantsSchema.components & StoresSchema.components & MembershipsSchema.components & AuditSchema.components & UnknownItemsSchema.components & SettlementSchema.components & ErpnextReconciliationSchema.components & ShiftClosesSchema.components & ConnectorAdminSchema.components & ConnectorHealthSchema.components & SyncOpsSchema.components & DevicesSchema.components & ConsoleSalesSchema.components & CashVariancePolicySchema.components & ConsoleTelemetrySchema.components;
+export type operations = AuthSchema.operations & ContextSchema.operations & TenantsSchema.operations & StoresSchema.operations & MembershipsSchema.operations & AuditSchema.operations & UnknownItemsSchema.operations & SettlementSchema.operations & ErpnextReconciliationSchema.operations & ShiftClosesSchema.operations & ConnectorAdminSchema.operations & ConnectorHealthSchema.operations & SyncOpsSchema.operations & DevicesSchema.operations & ConsoleSalesSchema.operations & CashVariancePolicySchema.operations & ConsoleTelemetrySchema.operations;

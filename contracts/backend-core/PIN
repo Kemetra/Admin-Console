@@ -10,6 +10,7 @@ file: cash-variance-policy.openapi.yaml fd35a99fa8f238dfc0e30bb8969b35928e59950e
 file: catalog/unknown-items.yaml 5d264f510235470ee2a0fc161779a87ae60b076d
 file: connector/connector-admin.yaml db10d8e12e39cc4ed92c0714980b0d7cc0d976ec
 file: console-sales.openapi.yaml 6440d613e2da344d47b8da643d123a776e942f00
+file: console-telemetry.openapi.yaml d369f78bbe71c101ae35d5475aae1ad4af549869
 file: context.openapi.yaml f6f021820c692cebd3094789057e92414a85ab54
 file: devices.openapi.yaml d90ab3edabe8dda1cf4da5d112fee1d65a92847a
 file: erpnext-connector/connector-health.yaml 352e823253631170e491e4b20f433d473b78f84e

@@ -1,9 +1,9 @@
-import { noRuntimeConfig, startObservability } from "@/observability/sentry";
+import { startObservability } from "@/observability/sentry";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 /**
- * RT-633 (OBS-4): the `@sentry/react` binding. Inert by default (no runtime
- * config until RT-632), and when enabled it passes an explicit minimal
+ * RT-633 (OBS-4): the `@sentry/react` binding. Inert when the source yields no
+ * config (204, RT-673), and when enabled it passes an explicit minimal
  * integration list: no replay, tracing, breadcrumbs or browser session.
  */
 const init = vi.fn();
@@ -26,9 +26,8 @@ afterEach(() => {
 });
 
 describe("startObservability", () => {
-  test("the default source provides no config, so nothing is initialised", async () => {
-    expect(await noRuntimeConfig()).toBeNull();
-    expect(await startObservability()).toBe("disabled");
+  test("a source with no config initialises nothing", async () => {
+    expect(await startObservability(async () => null)).toBe("disabled");
     expect(init).not.toHaveBeenCalled();
   });
 
