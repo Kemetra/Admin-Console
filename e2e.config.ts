@@ -8,7 +8,7 @@ process.env.E2E_TELEMETRY_DISABLED ??= "1";
 // (playwright.config.ts, tests/e2e/). Run with `pnpm test:e2e:agent`.
 //
 // Requires Node ^22.22.3 || >=24.8.0 (e2e@0.19 needs module.registerHooks);
-// engines.node stays >=22 until RT-390.
+// package.json engines.node declares it (pnpm warns on mismatch; not enforced without engine-strict).
 //
 // Target: APP_URL when set and non-empty (an app already running), otherwise the built SPA
 // preview on :4174, which the runner starts and stops. Run `pnpm build` first,
