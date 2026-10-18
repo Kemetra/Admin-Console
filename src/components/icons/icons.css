@@ -1,0 +1,44 @@
+/*
+ * RT-696 (RT-263 IC-3) — registry glyphs. Colour is `currentColor`, so the
+ * control's status or interaction token decides it, and forced colours apply
+ * as they do to text: no `forced-color-adjust` here (DESIGN.md §7).
+ *
+ * Direction (doc 25 §4.2) comes from the nearest `dir` attribute, carried down
+ * as inherited custom properties, so an LTR-isolated run (`<bdi dir="ltr">`
+ * machine data) keeps its glyphs unmirrored inside the RTL page. Same
+ * mechanism as the POS registry: not `:dir()`, which a build may lower to a
+ * `:lang()` list that matches inside those isolates too, and not a
+ * `[dir] .rt-icon` ancestor selector, which matches any RTL ancestor, not the
+ * nearest.
+ */
+[dir="rtl" i] {
+  --rt-icon-flip: -1;
+  --rt-icon-ltr: none;
+  --rt-icon-rtl: inline;
+}
+
+[dir="ltr" i] {
+  --rt-icon-flip: 1;
+  --rt-icon-ltr: inline;
+  --rt-icon-rtl: none;
+}
+
+.rt-icon {
+  display: inline-block;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+/* A direction-implying meaning flips with the reading direction. */
+.rt-icon--mirror {
+  transform: scaleX(var(--rt-icon-flip, 1));
+}
+
+/* A `variant` entry carries both Fluent assets; the direction shows one. */
+.rt-icon__ltr {
+  display: var(--rt-icon-ltr, inline);
+}
+
+.rt-icon__rtl {
+  display: var(--rt-icon-rtl, none);
+}

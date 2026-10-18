@@ -2,6 +2,7 @@
  * No-access terminal state (SF-1/SF-2, S7, VD-2). Shown when a signed-in user
  * has zero memberships. Offers only sign-out. Copy: `auth.noAccess.*` (RT-399).
  */
+import { Icon } from "@/components/icons/Icon";
 import { useT } from "@/i18n";
 import "./no-access.css";
 
@@ -14,19 +15,10 @@ export function NoAccess({ onSignOut }: Readonly<NoAccessProps>): React.JSX.Elem
   return (
     <div className="signin-stage">
       <div className="noaccess">
-        <svg
-          className="noaccess__icon"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <rect x="4" y="10" width="16" height="11" rx="2" />
-          <path d="M8 10V7a4 4 0 0 1 8 0v3" />
-        </svg>
+        {/* The lg glyph sits unscaled in the 40px slot (doc 25 §2 rule 7). */}
+        <span className="noaccess__icon" aria-hidden="true">
+          <Icon name="lock" size="lg" />
+        </span>
         <h1 className="noaccess__title">{t("auth.noAccess.title")}</h1>
         <p className="noaccess__body">{t("auth.noAccess.body")}</p>
         <button className="btn-secondary" type="button" onClick={() => void onSignOut()}>

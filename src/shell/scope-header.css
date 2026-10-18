@@ -36,9 +36,8 @@
   opacity: 0.4;
   padding: 0 var(--space-1);
 }
+/* The registry's sm (16) grid sizes the caret; it is never scaled (RT-696). */
 .scope__caret {
-  width: 14px;
-  height: 14px;
   opacity: 0.8;
 }
 

@@ -1,6 +1,0 @@
-.back-arrow {
-  display: inline-block;
-}
-[dir="rtl"] .back-arrow {
-  transform: scaleX(-1);
-}
