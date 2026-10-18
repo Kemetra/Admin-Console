@@ -1,3 +1,4 @@
+import { Icon } from "@/components/icons/Icon";
 import { useActiveContextValue } from "@/context/ActiveContextProvider";
 import { type T, useT } from "@/i18n";
 import { useStoreList } from "@/stores/useStoreQueries";
@@ -24,7 +25,7 @@ import "./scope-header.css";
 function ActiveCheck(): React.JSX.Element {
   return (
     <span className="scope-menu__check" aria-hidden="true">
-      ✓
+      <Icon name="confirm" size="sm" />
     </span>
   );
 }
@@ -183,18 +184,7 @@ export function ScopeHeader(): React.JSX.Element | null {
         <span className="scope__current">
           {store ? <bdi>{store.name}</bdi> : t("shell.scope.allStores")}
         </span>
-        <svg
-          className="scope__caret"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <path d="m6 9 6 6 6-6" />
-        </svg>
+        <Icon name="disclosure" size="sm" className="scope__caret" />
       </button>
 
       {open ? (

@@ -186,17 +186,34 @@ focus, copy, status and border/icon feedback stay intact.
 - **Readability floor: 12px.** No operator-readable text below 12px (declared CSS sizes are checked by
   `tests/unit/tokens-identity.test.ts`). Arabic body keeps generous line-height (1.7).
   Hierarchy comes from placement, spacing, weight and alignment before size.
-- **Icons: Fluent System Icons** is the leading family, via a **semantic icon registry**
-  (`icon.store`, `icon.inventory`, `icon.sync`, `icon.posting`, …) instead of raw vendor
-  names in product code. This is **pending the icon fit/licensing/bundle PoC (RT-263)**; until
-  then the existing stroke icon set in `src/components/Icon.tsx` stays.
-  - One icon grammar; never mix families.
-  - Regular forms by default; filled only for persistent selected states.
-  - Icons reinforce and text decides. Destructive, financial and recovery actions stay
-    text-visible.
-  - Icons inherit `currentColor`.
-  - Mirror directional icons in RTL (back, forward, undo). Never mirror object icons (printer,
-    store, trash).
+- **Icons: Fluent System Icons Regular**, through the **semantic icon registry** in
+  `src/components/icons/` (RT-263 D-263-1…9, shipped by RT-696). The canonical name table is
+  POS `docs/design/vnext/25-rt263-icon-registry-fluent-poc.md` §3; Admin carries the subset it
+  renders, with the same names as POS (D-263-9).
+  - **Names are meanings** (`store`, `inventory`, `back`, `status.warning`), never shapes,
+    screens or vendor names. Product code writes `<Icon name="store" />`; only
+    `registry.ts` maps a name to a Fluent asset.
+  - **One grammar.** Fluent Regular is the only glyph source; no other family, no raw `<svg>`
+    and no text glyph (`✕`, `✓`, `←`) stands in for an icon. Filled is only for the selected
+    slim-rail nav entry (D-263-8); the Admin sidebar is labelled, so Admin declares none. The
+    brand `TowerMark` stays outside the registry (D-263-7).
+  - **Vendored, no dependency.** Path data is copied from `@fluentui/svg-icons` 1.1.344 into
+    `fluent-paths.ts`, with the version in its `/*! @license MIT */` header; the MIT text sits
+    beside it and in `NOTICE`. An update is a reviewed re-extraction, not a package bump
+    (D-263-2/3).
+  - **Sizes are the native grids:** `sm` 16, `md` 20 (default), `lg` 24. A glyph is never
+    scaled between grids; a larger slot (the NoAccess lock) centres an `lg` glyph. Each name
+    declares only the grids its call sites use (D-263-5).
+  - **Icons reinforce and text decides.** The glyph is always `aria-hidden` and not focusable;
+    the accessible name lives on the control or the adjacent text. The old `title` prop is
+    retired (D-263-6). Destructive, financial and recovery actions stay text-visible; an
+    icon-only control (the Drawer close) needs an `aria-label` on the control.
+  - **Colour:** `fill="currentColor"`, so the control's token decides it. No
+    `forced-color-adjust` on icons: under forced colours they take the system colours like text.
+  - **RTL follows meaning; the registry owns it** (D-263-4). Each name is `never`, `mirror`
+    (flipped in an RTL run: `back`, `signOut`) or `variant` (a separate Fluent RTL asset:
+    `audit`). The nearest `dir` attribute decides, so an LTR-isolated run stays unmirrored.
+    Never mirror object icons (store, lock, search, check).
 
 ## 5. Layout, density and shape (UX-04, UX-10)
 

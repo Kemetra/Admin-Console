@@ -4,7 +4,7 @@
  * scope — scope-driven, never role-driven, FR-006-004), from/to date-time. One
  * primary Apply; a quiet Clear. Serializes to the contract's query params.
  */
-import { Icon } from "@/components/Icon";
+import { Icon } from "@/components/icons/Icon";
 import { useT } from "@/i18n";
 import { textField } from "@/lib/form-field";
 import { useRef } from "react";
@@ -60,7 +60,7 @@ export function AuditFilters({
       noValidate
     >
       <span className="audit-filters__lead" aria-hidden="true">
-        <Icon name="search" size={16} />
+        <Icon name="search" size="sm" />
       </span>
       <div className="audit-filters__field">
         <label htmlFor="f-action">{t("audit.field.action")}</label>

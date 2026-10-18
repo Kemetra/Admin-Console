@@ -1,7 +1,7 @@
 import { Banner } from "@/components/Banner";
 import { DataTable } from "@/components/DataTable";
-import { Icon } from "@/components/Icon";
 import { ListState } from "@/components/ListState";
+import { Icon } from "@/components/icons/Icon";
 import { DateTime, type T, useT } from "@/i18n";
 import {
   type ListUnknownItemsParams,
@@ -126,7 +126,7 @@ export function UnknownItemList(): React.JSX.Element {
 
       <fieldset className="unknown-item-controls">
         <legend className="unknown-item-controls__legend">
-          <Icon name="search" size={14} className="unknown-item-controls__icon" />
+          <Icon name="search" size="sm" className="unknown-item-controls__icon" />
           {t("unknownItems.filters.legend")}
         </legend>
         <label className="unknown-item-controls__field">

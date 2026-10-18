@@ -1,5 +1,5 @@
-import { Icon, type IconName } from "@/components/Icon";
 import { TowerMark } from "@/components/TowerMark";
+import { Icon, type IconNameFor } from "@/components/icons/Icon";
 /**
  * SF-2 authenticated app shell (T027; RF-2 T009/T010). top-bar + persistent
  * scope header + sidebar + content (DESIGN.md layout). The frame every RF-2..RF-7
@@ -8,8 +8,8 @@ import { TowerMark } from "@/components/TowerMark";
  * shown gated to mark scope, not to claim they are built — in dev builds only.
  * RT-270 (UX-09: no dead destinations): a production build never lists them.
  *
- * Console v4.0 visual adoption: each nav entry leads with a decorative line icon
- * (aria-hidden, so labels stay the sole accessible name) and the topbar carries
+ * Console v4.0 visual adoption: each nav entry leads with a decorative registry
+ * icon (RT-696; aria-hidden, so labels stay the sole accessible name) and the topbar carries
  * the Console product label, the language switch (RT-399) and the dark-mode
  * switch (RT-398) before the user.
  * Operational chrome with no backing yet (search, notifications, system
@@ -33,11 +33,14 @@ import { NavLink } from "react-router";
 import { ScopeHeader } from "./ScopeHeader";
 import "./app-shell.css";
 
+/** Nav glyphs all sit on the md (20) grid (RT-263 doc 25 §2 rule 7). */
+type NavIcon = IconNameFor<"md">;
+
 /** Live nav: RF-2 (Tenants/Stores), RF-5 (Operators), RF-6 (Audit). */
-const LIVE_NAV: { label: MessageKey; to: string; icon: IconName }[] = [
-  { label: "shell.nav.tenants", to: "/tenants", icon: "tenants" },
-  { label: "shell.nav.stores", to: "/stores", icon: "stores" },
-  { label: "shell.nav.operators", to: "/operators", icon: "operators" },
+const LIVE_NAV: { label: MessageKey; to: string; icon: NavIcon }[] = [
+  { label: "shell.nav.tenants", to: "/tenants", icon: "tenant" },
+  { label: "shell.nav.stores", to: "/stores", icon: "store" },
+  { label: "shell.nav.operators", to: "/operators", icon: "people" },
   { label: "shell.nav.audit", to: "/audit", icon: "audit" },
 ];
 
@@ -51,7 +54,7 @@ const ROLE_NAV: {
   section: MessageKey;
   label: MessageKey;
   to: string;
-  icon: IconName;
+  icon: NavIcon;
   canRead: (role: string | null | undefined) => boolean;
 }[] = [
   {
@@ -59,14 +62,14 @@ const ROLE_NAV: {
     section: "sales.nav.section",
     label: "sales.nav.label",
     to: "/sales",
-    icon: "receipt",
+    icon: "sale",
     canRead: canReadSales,
   },
   {
     section: "shell.nav.section.inventory",
     label: "shell.nav.stockDiscrepancies",
     to: "/stock-discrepancies",
-    icon: "stock",
+    icon: "inventory",
     canRead: canReadStockDiscrepancies,
   },
   {
@@ -90,7 +93,7 @@ const ROLE_NAV: {
     section: "devices.nav.section",
     label: "devices.nav.label",
     to: "/devices",
-    icon: "device",
+    icon: "terminal",
     canRead: canReadDevices,
   },
   {
@@ -107,9 +110,9 @@ const ROLE_NAV: {
  * Families not yet built — shown gated to mark scope, not to claim built. Dev
  * builds only (RT-270): in production they would be dead destinations.
  */
-const GATED_NAV: { label: MessageKey; gate: string; icon: IconName }[] = [
-  { label: "shell.nav.catalog", gate: "RF-3", icon: "catalog" },
-  { label: "shell.nav.unknownItems", gate: "RF-4", icon: "unknown" },
+const GATED_NAV: { label: MessageKey; gate: string; icon: NavIcon }[] = [
+  { label: "shell.nav.catalog", gate: "RF-3", icon: "product" },
+  { label: "shell.nav.unknownItems", gate: "RF-4", icon: "unknownItem" },
 ];
 
 export interface AppShellProps {
@@ -172,7 +175,7 @@ export function AppShell({
             isActive ? "nav-entry nav-entry--active" : "nav-entry nav-entry--link"
           }
         >
-          <Icon name="overview" className="nav-entry__icon" />
+          <Icon name="dashboard" className="nav-entry__icon" />
           <span className="nav-entry__label">{t("shell.nav.overview")}</span>
         </NavLink>
         <div className="nav-section">{t("shell.nav.section.management")}</div>
@@ -213,7 +216,7 @@ export function AppShell({
           : null}
         <div className="topbar__spacer" />
         <button type="button" className="nav-entry nav-signout" onClick={() => void onSignOut()}>
-          <Icon name="sign-out" className="nav-entry__icon" />
+          <Icon name="signOut" className="nav-entry__icon" />
           <span className="nav-entry__label">{t("shell.signOut")}</span>
         </button>
       </nav>

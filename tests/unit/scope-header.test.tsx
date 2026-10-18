@@ -79,9 +79,16 @@ describe("ScopeHeader store menu", () => {
     openMenu();
     await screen.findByRole("menuitem", { name: "New Cairo Mall" });
     expect(screen.getAllByRole("menuitem").map((b) => b.textContent)).toEqual([
-      "All stores✓",
+      "All stores",
       "Cairo Festival City",
       "New Cairo Mall",
+    ]);
+    // The active-scope cue is the registry's `confirm` glyph (RT-696), on the active row only.
+    const checks = screen.getAllByRole("menuitem").map((b) => b.querySelector("[data-icon]"));
+    expect(checks.map((c) => c?.getAttribute("data-icon") ?? null)).toEqual([
+      "confirm",
+      null,
+      null,
     ]);
   });
 

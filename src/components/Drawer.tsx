@@ -9,6 +9,7 @@
  * Tab/Shift+Tab are trapped within the panel so `aria-modal` is honest. No
  * nested cards (rule 5); internal grouping uses ruled sections.
  */
+import { Icon } from "@/components/icons/Icon";
 import { useT } from "@/i18n";
 import { useEffect, useRef } from "react";
 import "./drawer.css";
@@ -92,7 +93,7 @@ export function Drawer({ title, onClose, children }: Readonly<DrawerProps>): Rea
             onClick={onClose}
             aria-label={t("common.close")}
           >
-            ✕
+            <Icon name="close" size="sm" />
           </button>
         </header>
         <div className="drawer__body">{children}</div>
