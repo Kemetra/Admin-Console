@@ -34,6 +34,7 @@
     "vitest.config.ts",
     "playwright.config.ts",
     "openapi-ts.config.ts",
-    "release-artifact.ts"
+    "release-artifact.ts",
+    "e2e.config.ts"
   ]
 }
