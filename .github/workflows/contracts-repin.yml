@@ -122,15 +122,18 @@ jobs:
           BC_SHA: ${{ steps.bc.outputs.sha }}
         run: pnpm generate:client --repin "$BC_SHA" 2>&1 | tee -a "$RUNNER_TEMP/error.log"
 
+      # The PIN `commit:` line and the generated header's source SHA move with EVERY
+      # Backend-Core commit, so the file status alone would open a PR daily. Only a
+      # moved `file:` blob SHA (a composed contract changed, was added or removed) counts.
       - name: Detect a contract change
         id: diff
         run: |
-          if [ -z "$(git status --porcelain -- contracts src/generated)" ]; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-            echo "Backend-Core contracts are unchanged since the pin; nothing to do."
-          else
+          if git diff -U0 -- contracts/backend-core/PIN | grep -qE '^[+-]file: '; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
             git diff --stat -- contracts src/generated
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No pinned Backend-Core contract file changed since the pin; nothing to do."
           fi
 
       # A break must not stop the PR: it opens as a draft with the failure summary.

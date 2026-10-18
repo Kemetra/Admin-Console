@@ -238,6 +238,13 @@ function main(): void {
   const conformance = readConformance();
   const before = parsePin(git("show", `HEAD:${PIN_FILE_PATH}`));
   const after = parsePin(readFileSync(PIN_FILE_PATH, "utf8"));
+  const diff = diffPins(before, after);
+  // The PIN commit and the generated header move with every Backend-Core commit; only a
+  // moved blob is a contract change worth a PR (and a CI run).
+  if (diff.changed.length + diff.added.length + diff.removed.length === 0) {
+    console.log(`No pinned contract file changed at ${after.commit.slice(0, 7)}; nothing to do.`);
+    return;
+  }
   const job: RepinRun = {
     repo: requireEnv("GITHUB_REPOSITORY"),
     commit: after.commit,
@@ -245,7 +252,7 @@ function main(): void {
     body: renderRepinPrBody({
       before,
       after,
-      diff: diffPins(before, after),
+      diff,
       conformance,
       failureSummary: failureSummary(process.env.VERIFY_LOG),
     }),
