@@ -3,7 +3,7 @@
  * Do not make direct changes to the file.
  */
 
-// Source: Data-Pulse-2 @ 3499d17ca4f62a49100004bd93ba6cc3b7f90184
+// Source: Data-Pulse-2 @ 35114fd49d7765dccf4e4c9f3b5c3a6e2d6dd828
 // Sources:
 // - packages/contracts/openapi/auth.openapi.yaml
 // - packages/contracts/openapi/context.openapi.yaml
@@ -1747,7 +1747,10 @@ export namespace AuditSchema {
                 path?: never;
                 cookie?: never;
             };
-            /** Query audit events for the active tenant. */
+            /**
+             * Query audit events for the active tenant.
+             * @description Items are ordered newest first: `occurred_at` descending, then `id` descending as the tie-breaker. `next_cursor` continues that order and is stable under concurrent inserts. A cursor is valid only with the same filters (including `kind`) it was issued under.
+             */
             get: operations["listAuditEvents"];
             put?: never;
             post?: never;
@@ -1774,6 +1777,8 @@ export namespace AuditSchema {
                 /** Format: uuid */
                 store_id?: string | null;
                 action?: string;
+                /** @description Action kind derived by the server from `action` (not stored). Known values: `read`, `change`. More values may be added; treat an unknown value as `change`. An action the server has not classified is `change`. */
+                kind: string;
                 target_type?: string | null;
                 /** Format: uuid */
                 target_id?: string | null;
@@ -1795,8 +1800,10 @@ export namespace AuditSchema {
         listAuditEvents: {
             parameters: {
                 query?: {
-                    /** @description Filter by action code (prefix match supported, e.g., "auth."). */
+                    /** @description Filter by a literal action-code prefix (e.g. `auth.`). `%`, `_` and `\` are matched literally, not as patterns. */
                     action?: string;
+                    /** @description Return only events of this action kind. `change` excludes read-only actions (list/read/pull requests that changed no state); `read` returns only those. Omitted: all events, as before. Read-only actions are still recorded; this filter changes what the list returns, not what is audited. Combines with every other filter (AND). An unknown value is a 400 `validation_error`. */
+                    kind?: "read" | "change";
                     actor_user_id?: string;
                     store_id?: string;
                     from?: string;
@@ -1822,6 +1829,13 @@ export namespace AuditSchema {
                             next_cursor?: string | null;
                         };
                     };
+                };
+                /** @description `validation_error`: a query parameter is invalid (for example an unknown `kind`, a malformed `cursor`, an out-of-range `limit`, a non-UUID id, or a malformed date-time). */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
                 };
                 /** @description No active tenant. */
                 401: {
@@ -2827,6 +2841,38 @@ export namespace SettlementSchema {
             patch?: never;
             trace?: never;
         };
+        "/api/v1/settlement/payer-accounts/{payerRef}": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            get?: never;
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            /**
+             * Update a payer account (repair a missing ERPNext Customer link, rename, suspend or reactivate).
+             * @description Change a payer's `displayName`, `externalRef` or `status`. Role: owner / tenant_admin (403 otherwise). `tenant_id` and the actor are server-resolved (§XII). A malformed `payerRef` is a 400 `validation_error`.
+             *
+             *     Scope. A store-scoped payer outside the caller's store access is a non-disclosing 404, as is an unknown or other-tenant `payerRef`. A change to `status` or `externalRef` of a tenant-wide payer (`storeId` null) needs a caller with tenant-wide store scope (access to all stores, with no single store selected): a store-restricted owner / tenant_admin gets 403 `payer_scope_insufficient` and nothing is written, because the change reaches every store. It is a 403, not a 404, because every owner / tenant_admin already sees tenant-wide payers in the list, so the refusal hides nothing. The gate triggers on `status` or `externalRef` being present in the body, not on an effective change: a request that repeats the current value is refused too, and a request that mixes such a field with `displayName` is refused as a whole. A `displayName`-only change to a tenant-wide payer follows the store-scope rule of the list. Order: validation (400) and not-found / out-of-store-scope (404) first; the scope check (403) runs before the version check (409).
+             *
+             *     Fields. Every field is optional, but the body must carry `expectedVersion` and at least one of `displayName`, `externalRef` or `status` (otherwise 400 `validation_error`). `category` and `storeId` cannot be changed; sending them is a 400 (strict body). `externalRef` sets or replaces the ERPNext Customer link and cannot be cleared: `null` is a 400, because an unlinked payer is the fault this route repairs. It is an identifier: 1..140 characters, no leading or trailing whitespace, no control characters, no NUL, no zero-width character (U+200B-U+200D, U+FEFF) and no line / paragraph separator (U+2028 / U+2029). `displayName` must contain a non-whitespace character and no NUL. A value that breaks these rules is a 400 `validation_error`, never a 5xx.
+             *
+             *     Concurrency. `expectedVersion` must equal the payer's current `version`, else 409 `payer_version_conflict` and nothing is written: re-list the payer and retry. An effective update sets `version` to version + 1 in the same transaction that writes the change and returns the updated `PayerAccount`. A request whose values all equal the current ones is a no-op: 200 with the unchanged payer, `version` not bumped, no audit event. The version check runs before any write, so a stale `expectedVersion` is a 409 even for a no-op. Idempotent on `Idempotency-Key`: the same key and body replay the stored 200 (including after the version moved on); the key with another body is 409 `idempotency_key_conflict`.
+             *
+             *     Effect on sales. A credit sale captured after a repair succeeds. `suspended` refuses new capture (`sale_responsibility_payer_invalid`) and, under RT-577 D12, makes a credit reversal of any of that payer's sales fail closed (422 `credit_reversal_settlement_unavailable`); `active` reinstates both. Postings, frozen or pending, are unaffected by a status change. Captured `sale_responsibilities` and their `payerRef` are not changed by any update.
+             *
+             *     Effect on postings (RT-332). A changed `externalRef` NEVER touches a posting that has already frozen its payer link: each work item freezes `payerExternalRef` in its resolution version, so the posting feed keeps serving the frozen value and no edit retargets it. A new `externalRef` is picked up only by resolutions frozen after the update (a sale whose posting intent has not yet been created, or a new sale). The one exception is deliberate: an RT-332 operator re-resolution (`freezeOperatorResolution`) re-reads the live `external_ref`, so re-resolving a pending posting after an update repoints it to the new value. An update itself never re-resolves anything.
+             *
+             *     Audit. An effective update writes `settlement.payer_account.updated` in the same transaction as the update (a failed audit write rolls the update back); it is not emitted for a no-op. Metadata: `payerRef`, `changedFields` (the field names that changed), `fromVersion`, `toVersion`, `statusFrom` / `statusTo` when the status changed, and `externalRefFrom` / `externalRefTo` when the link changed (ERPNext Customer identifiers, business-class and not PII per migration 0051; `externalRefFrom` is null for an unlinked payer). It never records the displayName (§XIV). Cookie-authenticated, so the RT-430 `Origin` check applies.
+             */
+            patch: operations["consoleUpdatePayerAccount"];
+            trace?: never;
+        };
     }
     export type webhooks = Record<string, never>;
     export interface components {
@@ -2848,6 +2894,20 @@ export namespace SettlementSchema {
                  */
                 storeId?: string | null;
             };
+            /** @description Update-a-payer-account request (RT-572). `expectedVersion` plus at least one change. `category`, `storeId`, `payerRef`, `version`, `tenant_id` and any other key are refused (strict). Omitted fields are unchanged. */
+            PayerAccountUpdate: {
+                /** @description The `PayerAccount.version` the caller last saw (an int4 column, hence the bound). A mismatch is 409 `payer_version_conflict`. */
+                expectedVersion: number;
+                /** @description New display name. Must contain a non-whitespace character and no NUL; otherwise 400 `validation_error`. */
+                displayName?: string;
+                /** @description Set or replace the payer's ERPNext Customer link (see `PayerAccountCreate.externalRef`). Not nullable: the link cannot be cleared. It is an identifier: 1..140 characters (a Frappe document name), no leading or trailing whitespace, no control characters, no NUL, no zero-width character (U+200B-U+200D, U+FEFF) and no line / paragraph separator (U+2028 / U+2029); otherwise 400 `validation_error`. It never alters an already-frozen posting (RT-332): only resolutions frozen after the update use it. */
+                externalRef?: string;
+                /**
+                 * @description `suspended` refuses new capture (`sale_responsibility_payer_invalid`) and, under RT-577 D12, makes credit reversals of that payer's sales fail closed (`credit_reversal_settlement_unavailable`); postings are unaffected. `active` reinstates both.
+                 * @enum {string}
+                 */
+                status?: "active" | "suspended";
+            } | unknown | unknown | unknown;
             /** @description Wire projection of a payer account. No `tenant_id` (implicit in scope), no credit terms. */
             PayerAccount: {
                 /**
@@ -2941,6 +3001,24 @@ export namespace SettlementSchema {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description not_found (404) — the payer does not exist, belongs to another tenant, or is store-scoped outside the caller's store access. Non-disclosing: one body for every cause (§II/§XII). */
+            PayerNotFound: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description conflict (409) — a deterministic refusal that writes nothing: `payer_version_conflict` (`expectedVersion` is not the payer's current `version`; re-list and retry) or `idempotency_key_conflict` (the key reused with a different payload). */
+            PayerUpdateConflict: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description system_failure (500) — unexpected server error; cause recorded server-side by request_id. */
             SystemFailure: {
                 headers: {
@@ -2952,6 +3030,8 @@ export namespace SettlementSchema {
             };
         };
         parameters: {
+            /** @description The payer's stable reference (`PayerAccount.payerRef`). A malformed value is a 400 `validation_error`. */
+            PayerRef: string;
             /** @description Optional payer-category filter. */
             PayerCategoryQuery: components["schemas"]["PayerCategory"];
             /** @description Opaque keyset cursor from a prior page's `nextCursor`. Omit for the first page. */
@@ -3028,6 +3108,42 @@ export namespace SettlementSchema {
                 403: components["responses"]["ForbiddenOrOriginRejected"];
                 404: components["responses"]["NotFound"];
                 409: components["responses"]["Conflict"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+        consoleUpdatePayerAccount: {
+            parameters: {
+                query?: never;
+                header: {
+                    /** @description REQUIRED on every write. Reuses the existing IdempotencyInterceptor — identical retry replays the stored response; key-reuse with a different logical payload returns 409 `idempotency_key_conflict`. */
+                    "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                };
+                path: {
+                    /** @description The payer's stable reference (`PayerAccount.payerRef`). A malformed value is a 400 `validation_error`. */
+                    payerRef: components["parameters"]["PayerRef"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["PayerAccountUpdate"];
+                };
+            };
+            responses: {
+                /** @description The payer after the update (or unchanged, for a no-op). */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PayerAccount"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["ForbiddenOrOriginRejected"];
+                404: components["responses"]["PayerNotFound"];
+                409: components["responses"]["PayerUpdateConflict"];
                 500: components["responses"]["SystemFailure"];
             };
         };

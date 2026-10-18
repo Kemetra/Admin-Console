@@ -132,6 +132,24 @@ export const PIN_FILE_PATH = "contracts/backend-core/PIN" as const;
  * parsing TypeScript. The generator verifies each source's blob SHA against the
  * PIN before generating, and `pnpm generate:client --repin <ref>` rewrites the
  * PIN, then regenerates. Moving the pin did not move it: still 3499d17.
+ *
+ * SEVENTH deliberate re-pin (RT-678, 2026-10-18, a person in the loop, not the
+ * repin bot of RT-679): bumped 3499d17 -> 35114fd (Backend-Core main, 30 commits
+ * ahead, through the RT-674 consumer-impact check #820). Done with
+ * `pnpm generate:client --repin 35114fd...`. Of the 16 composed sources only two
+ * changed; both are additive and no caller needed a code change:
+ *   - `audit.openapi.yaml` (RT-567 / RT-687): `listAuditEvents` gains the
+ *     optional `kind` filter (`read` | `change`) and a documented 400; the
+ *     `AuditEvent` response gains a `kind` field the server always sets; the
+ *     `action` filter is documented as a literal prefix and the order as newest
+ *     first. The console does not read or send `kind` yet.
+ *   - `settlement/settlement.yaml` (RT-572): new `consoleUpdatePayerAccount`
+ *     (`PATCH /api/v1/settlement/payer-accounts/{payerRef}`) with its request
+ *     schema and 404/409 responses. Nothing wraps it yet.
+ * The other 14 composed sources are byte-identical. Backend-Core also changed
+ * `console-telemetry`, `pos-terminal-pairing`, `pos-sales` and
+ * `erpnext-connector/stock-view`; none is composed here, so the generated
+ * client does not see them.
  */
 export const BACKEND_CORE_PIN: ContractsPin = parsePin(
   readFileSync(resolve(repoRoot, PIN_FILE_PATH), "utf8"),
