@@ -137,8 +137,18 @@ function branchAuthors(job: RepinRun): readonly (string | null)[] {
 
 function findOpenPr(job: RepinRun): OpenPr | null {
   const out = gh(
-    ...["pr", "list", "--repo", job.repo, "--head", BRANCH, "--base", BASE, "--state", "open"],
-    ...["--json", "number,isDraft,labels"],
+    "pr",
+    "list",
+    "--repo",
+    job.repo,
+    "--head",
+    BRANCH,
+    "--base",
+    BASE,
+    "--state",
+    "open",
+    "--json",
+    "number,isDraft,labels",
   );
   const prs = JSON.parse(out) as readonly OpenPr[];
   return prs[0] ?? null;
@@ -146,8 +156,16 @@ function findOpenPr(job: RepinRun): OpenPr | null {
 
 function ensureBreakLabel(job: RepinRun): void {
   gh(
-    ...["label", "create", BREAK_LABEL, "--repo", job.repo, "--force"],
-    ...["--color", "D93F0B", "--description", "Backend-Core repin broke the build or tests"],
+    "label",
+    "create",
+    BREAK_LABEL,
+    "--repo",
+    job.repo,
+    "--force",
+    "--color",
+    "D93F0B",
+    "--description",
+    "Backend-Core repin broke the build or tests",
   );
 }
 
@@ -203,7 +221,11 @@ function syncPrState(job: RepinRun, pr: OpenPr): void {
   if (hasLabel) gh("pr", "edit", ...target, "--remove-label", BREAK_LABEL);
 }
 
-/** `pushed` false means the branch kept its earlier commit, so its title and body stay true. */
+/**
+ * `pushed` false means the branch kept its earlier commit, so the title (which names the
+ * commit) stays. The body is rewritten whenever it could be stale: a new push, or a
+ * build/test verdict that flipped since the PR was last written.
+ */
 function upsertPr(job: RepinRun, pushed: boolean): void {
   const pr = findOpenPr(job);
   if (pr === null) {
@@ -211,8 +233,8 @@ function upsertPr(job: RepinRun, pushed: boolean): void {
     return;
   }
   const target = [String(pr.number), "--repo", job.repo];
-  if (pushed) {
-    gh("pr", "edit", ...target, "--title", job.title);
+  if (pushed) gh("pr", "edit", ...target, "--title", job.title);
+  if (pushed || pr.isDraft !== job.draft) {
     gh("pr", "edit", ...target, "--body-file", writeBodyFile(job.body));
   }
   syncPrState(job, pr);
@@ -231,7 +253,7 @@ function commentBlocked(job: RepinRun): void {
   const target = [String(pr.number), "--repo", job.repo];
   // Keyed on the contract set, not the commit: a new Backend-Core commit that moves no
   // contract must not add another comment to a PR a person owns.
-  const key = createHash("sha1").update(pinFingerprint(job.pin)).digest("hex");
+  const key = createHash("sha256").update(pinFingerprint(job.pin)).digest("hex");
   const marker = `<!-- contracts-repin:${key} -->`;
   if (gh("pr", "view", ...target, "--json", "comments").includes(marker)) {
     console.log(`PR #${pr.number} already has the comment for these contracts.`);
