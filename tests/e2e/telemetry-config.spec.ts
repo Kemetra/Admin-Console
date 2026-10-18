@@ -100,8 +100,13 @@ test("200 config: the only egress is the same-origin envelope POST, OBS-1 tagged
   expect(event.tags.service).toBe("admin-console");
   expect(event.tags.env).toBe("staging");
   expect(event.breadcrumbs ?? []).toEqual([]);
-  // A release build (CI, GITHUB_SHA) stamps the SHA12 on both; a local build has neither.
-  if (event.release !== undefined || event.tags.version !== undefined) {
+  // vite.config.ts builds GITHUB_SHA in, and CI sets it for the build and this
+  // run alike, so there the SHA12 is required. A local build may have neither.
+  const buildSha = process.env.GITHUB_SHA;
+  if (buildSha) {
+    expect(event.release).toBe(buildSha.slice(0, 12));
+    expect(event.tags.version).toBe(event.release);
+  } else if (event.release !== undefined || event.tags.version !== undefined) {
     expect(event.release).toMatch(SHA12);
     expect(event.tags.version).toBe(event.release);
   }
