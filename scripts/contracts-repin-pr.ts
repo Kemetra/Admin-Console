@@ -50,17 +50,29 @@ interface OpenPr {
   readonly labels: readonly { readonly name: string }[];
 }
 
-function run(command: string, args: readonly string[]): string {
+type Tool = "git" | "gh";
+
+/** Everything one run needs to open or update the PR. */
+interface RepinRun {
+  readonly repo: string;
+  readonly commit: string;
+  readonly title: string;
+  readonly body: string;
+  /** True when build/test failed: the PR is a draft labelled `contracts-break`. */
+  readonly draft: boolean;
+}
+
+function run(tool: Tool, args: readonly string[]): string {
   try {
     // `git` and `gh` are resolved from PATH on purpose: this runs on a GitHub-hosted runner.
-    return execFileSync(command, args, {
+    return execFileSync(tool, args, {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
     }).trim(); // NOSONAR S4036
   } catch (error) {
     const stderr = (error as { stderr?: unknown }).stderr;
     const detail = typeof stderr === "string" && stderr.trim() !== "" ? `: ${stderr.trim()}` : "";
-    throw new Error(`${command} ${args.join(" ")} failed${detail}`);
+    throw new Error(`${tool} ${args.join(" ")} failed${detail}`);
   }
 }
 
@@ -99,13 +111,13 @@ function remoteBranchHead(): string | null {
 }
 
 /** Author logins of the commits ahead of main on the bot branch ([] when it does not exist). */
-function branchAuthors(repo: string): readonly (string | null)[] {
+function branchAuthors(job: RepinRun): readonly (string | null)[] {
   let out: string;
   try {
     out = gh(
       "api",
       "--paginate",
-      `repos/${repo}/compare/${BASE}...${BRANCH}`,
+      `repos/${job.repo}/compare/${BASE}...${BRANCH}`,
       "--jq",
       `.commits[] | (.author.login // "${UNLINKED}")`,
     );
@@ -119,33 +131,33 @@ function branchAuthors(repo: string): readonly (string | null)[] {
     .map((login) => (login === UNLINKED ? null : login));
 }
 
-function findOpenPr(repo: string): OpenPr | null {
+function findOpenPr(job: RepinRun): OpenPr | null {
   const out = gh(
-    ...["pr", "list", "--repo", repo, "--head", BRANCH, "--base", BASE, "--state", "open"],
+    ...["pr", "list", "--repo", job.repo, "--head", BRANCH, "--base", BASE, "--state", "open"],
     ...["--json", "number,isDraft,labels"],
   );
   const prs = JSON.parse(out) as readonly OpenPr[];
   return prs[0] ?? null;
 }
 
-function ensureBreakLabel(repo: string): void {
+function ensureBreakLabel(job: RepinRun): void {
   gh(
-    ...["label", "create", BREAK_LABEL, "--repo", repo, "--force"],
+    ...["label", "create", BREAK_LABEL, "--repo", job.repo, "--force"],
     ...["--color", "D93F0B", "--description", "Backend-Core repin broke the build or tests"],
   );
 }
 
 /** Commit the repin on the bot branch and push it; false when origin already has this exact tree. */
-function pushRepin(title: string, lease: string | null): boolean {
+function pushRepin(job: RepinRun, lease: string | null): boolean {
   git("config", "user.name", BOT_LOGIN);
   git("config", "user.email", BOT_EMAIL);
   git("checkout", "-B", BRANCH);
   git("add", "--", PIN_FILE_PATH, OUTPUT_PATH);
-  if (run("git", ["status", "--porcelain", "--", PIN_FILE_PATH, OUTPUT_PATH]) === "") {
+  if (git("status", "--porcelain", "--", PIN_FILE_PATH, OUTPUT_PATH) === "") {
     console.log("Nothing to commit: the working tree already matches main.");
     return false;
   }
-  git("commit", "-m", title);
+  git("commit", "-m", job.title);
   if (lease !== null) {
     git("fetch", "--depth", "1", "origin", BRANCH);
     if (git("rev-parse", "FETCH_HEAD^{tree}") === git("rev-parse", "HEAD^{tree}")) {
@@ -159,93 +171,97 @@ function pushRepin(title: string, lease: string | null): boolean {
   return true;
 }
 
-function writeBody(body: string): string {
+function writeBodyFile(text: string): string {
   const file = join(mkdtempSync(join(tmpdir(), "contracts-repin-")), "body.md");
-  writeFileSync(file, body, "utf8");
+  writeFileSync(file, text, "utf8");
   return file;
 }
 
-function createPr(repo: string, title: string, body: string, draft: boolean): void {
-  const args = ["pr", "create", "--repo", repo, "--base", BASE, "--head", BRANCH];
-  args.push("--title", title, "--body-file", writeBody(body));
-  if (draft) args.push("--draft", "--label", BREAK_LABEL);
+function createPr(job: RepinRun): void {
+  const args = ["pr", "create", "--repo", job.repo, "--base", BASE, "--head", BRANCH];
+  args.push("--title", job.title, "--body-file", writeBodyFile(job.body));
+  if (job.draft) args.push("--draft", "--label", BREAK_LABEL);
   console.log(`Opened ${gh(...args)}`);
 }
 
-function syncPrState(repo: string, pr: OpenPr, draft: boolean): void {
-  const n = String(pr.number);
+function syncPrState(job: RepinRun, pr: OpenPr): void {
+  const target = [String(pr.number), "--repo", job.repo];
   const hasLabel = pr.labels.some((l) => l.name === BREAK_LABEL);
-  if (draft) {
-    if (!pr.isDraft) gh("pr", "ready", n, "--repo", repo, "--undo");
-    if (!hasLabel) gh("pr", "edit", n, "--repo", repo, "--add-label", BREAK_LABEL);
+  if (job.draft) {
+    if (!pr.isDraft) gh("pr", "ready", ...target, "--undo");
+    if (!hasLabel) gh("pr", "edit", ...target, "--add-label", BREAK_LABEL);
     return;
   }
-  if (pr.isDraft) gh("pr", "ready", n, "--repo", repo);
-  if (hasLabel) gh("pr", "edit", n, "--repo", repo, "--remove-label", BREAK_LABEL);
+  if (pr.isDraft) gh("pr", "ready", ...target);
+  if (hasLabel) gh("pr", "edit", ...target, "--remove-label", BREAK_LABEL);
 }
 
-function upsertPr(repo: string, title: string, body: string, draft: boolean): void {
-  const pr = findOpenPr(repo);
+function upsertPr(job: RepinRun): void {
+  const pr = findOpenPr(job);
   if (pr === null) {
-    createPr(repo, title, body, draft);
+    createPr(job);
     return;
   }
-  gh("pr", "edit", String(pr.number), "--repo", repo, "--title", title);
-  gh("pr", "edit", String(pr.number), "--repo", repo, "--body-file", writeBody(body));
-  syncPrState(repo, pr, draft);
+  const target = [String(pr.number), "--repo", job.repo];
+  gh("pr", "edit", ...target, "--title", job.title);
+  gh("pr", "edit", ...target, "--body-file", writeBodyFile(job.body));
+  syncPrState(job, pr);
   console.log(`Updated PR #${pr.number}.`);
 }
 
 /** Tell the PR a repin is waiting but a person owns the branch now (once per target commit). */
-function commentBlocked(repo: string, commit: string): void {
-  const pr = findOpenPr(repo);
+function commentBlocked(job: RepinRun): void {
+  const pr = findOpenPr(job);
   if (pr === null) {
     throw new Error(
       `${BRANCH} has commits that are not the bot's and no open PR to comment on; ` +
-        `resolve or delete the branch (new target ${commit})`,
+        `resolve or delete the branch (new target ${job.commit})`,
     );
   }
-  const marker = `<!-- contracts-repin:${commit} -->`;
-  const existing = gh("pr", "view", String(pr.number), "--repo", repo, "--json", "comments");
-  if (existing.includes(marker)) {
-    console.log(`PR #${pr.number} already has the comment for ${commit}.`);
+  const target = [String(pr.number), "--repo", job.repo];
+  const marker = `<!-- contracts-repin:${job.commit} -->`;
+  if (gh("pr", "view", ...target, "--json", "comments").includes(marker)) {
+    console.log(`PR #${pr.number} already has the comment for ${job.commit}.`);
     return;
   }
-  const body = [
+  const text = [
     marker,
-    `Backend-Core has moved on to \`${commit.slice(0, 7)}\`, but \`${BRANCH}\` has commits that are not the bot's, so the bot did not force-push over them.`,
+    `Backend-Core has moved on to \`${job.commit.slice(0, 7)}\`, but \`${BRANCH}\` has commits that are not the bot's, so the bot did not force-push over them.`,
     "",
-    `To pick the newer contracts up, merge \`${BASE}\` and run \`pnpm generate:client --repin ${commit}\` on this branch, or close this PR and delete the branch so the bot opens a fresh one.`,
+    `To pick the newer contracts up, merge \`${BASE}\` and run \`pnpm generate:client --repin ${job.commit}\` on this branch, or close this PR and delete the branch so the bot opens a fresh one.`,
   ].join("\n");
-  gh("pr", "comment", String(pr.number), "--repo", repo, "--body-file", writeBody(body));
+  gh("pr", "comment", ...target, "--body-file", writeBodyFile(text));
   console.log(`Commented on PR #${pr.number}.`);
 }
 
 function main(): void {
-  const repo = requireEnv("GITHUB_REPOSITORY");
   const conformance = readConformance();
   const before = parsePin(git("show", `HEAD:${PIN_FILE_PATH}`));
   const after = parsePin(readFileSync(PIN_FILE_PATH, "utf8"));
-  const diff = diffPins(before, after);
-  const title = `chore(contracts): repin Backend-Core contracts to ${after.commit.slice(0, 7)}`;
+  const job: RepinRun = {
+    repo: requireEnv("GITHUB_REPOSITORY"),
+    commit: after.commit,
+    title: `chore(contracts): repin Backend-Core contracts to ${after.commit.slice(0, 7)}`,
+    body: renderRepinPrBody({
+      before,
+      after,
+      diff: diffPins(before, after),
+      conformance,
+      failureSummary: failureSummary(process.env.VERIFY_LOG),
+    }),
+    draft: conformance === "fail",
+  };
 
   const lease = remoteBranchHead();
-  const action: BranchAction = decideBranchAction(branchAuthors(repo), BOT_LOGIN);
+  const action: BranchAction = decideBranchAction(branchAuthors(job), BOT_LOGIN);
   if (action === "comment") {
-    commentBlocked(repo, after.commit);
+    commentBlocked(job);
     return;
   }
 
-  if (conformance === "fail") ensureBreakLabel(repo);
-  pushRepin(title, lease);
-  const body = renderRepinPrBody({
-    before,
-    after,
-    diff,
-    conformance,
-    failureSummary: failureSummary(process.env.VERIFY_LOG),
-  });
-  upsertPr(repo, title, body, conformance === "fail");
+  if (job.draft) ensureBreakLabel(job);
+  pushRepin(job, lease);
+  upsertPr(job);
 }
 
 try {
