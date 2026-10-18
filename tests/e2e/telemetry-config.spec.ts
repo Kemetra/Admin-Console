@@ -62,9 +62,19 @@ async function throwUncaught(page: Page, message: string): Promise<void> {
 
 test("204 config: an uncaught error sends no telemetry", async ({ page }) => {
   const egress = await boot(page, { status: 204 });
+  // The error must really reach the page's global handler...
+  const uncaught = page.waitForEvent("pageerror");
   await throwUncaught(page, "rt673-probe-inert");
-  // Give a would-be transport time to flush before asserting silence.
-  await page.waitForTimeout(1_000);
+  expect((await uncaught).message).toBe("rt673-probe-inert");
+  // ...and no telemetry request may follow it. With a config, the same probe
+  // posts its envelope well inside this window (the 200 test below).
+  const leaked = page.waitForRequest(
+    (request) =>
+      new URL(request.url()).origin !== "http://localhost:4173" ||
+      new URL(request.url()).pathname === ENVELOPE_PATH,
+    { timeout: 1_500 },
+  );
+  await expect(leaked).rejects.toThrow(/Timeout/);
   expect(egress.envelopes).toEqual([]);
   expect(egress.crossOrigin).toEqual([]);
 });
