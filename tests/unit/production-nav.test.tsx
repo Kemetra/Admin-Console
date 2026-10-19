@@ -53,6 +53,7 @@ describe("production navigation", () => {
       "Shift closes",
       "Connection & sync",
       "Sales needing repair",
+      "Product reconciliation",
       "Devices",
       "Payer accounts",
       "Sign out",
@@ -108,6 +109,26 @@ describe("production navigation", () => {
     "RT-726: %s has no Sales needing repair entry",
     (role) => {
       expect(entryLabels(renderShell(role, false))).not.toContain("Sales needing repair");
+    },
+  );
+
+  // RT-727: product reconciliation joins the Integration section (one heading),
+  // for the roles the API lets use it (all five ops are owner / tenant_admin).
+  test.each(["owner", "tenant_admin"])(
+    "RT-727: %s sees Product reconciliation under the one Integration heading",
+    (role) => {
+      const nav = renderShell(role, false);
+      expect(
+        within(nav).getByRole("link", { name: "Product reconciliation" }).getAttribute("href"),
+      ).toBe("/product-reconciliation");
+      expect(within(nav).getAllByText("Integration")).toHaveLength(1);
+    },
+  );
+
+  test.each(["store_manager", "store_staff", "cashier", "auditor"])(
+    "RT-727: %s has no Product reconciliation entry",
+    (role) => {
+      expect(entryLabels(renderShell(role, false))).not.toContain("Product reconciliation");
     },
   );
 

@@ -28,6 +28,7 @@ import { DirtyGuardProvider } from "@/shell/dirty-guard";
 import { erpStatusRoutes } from "@/shell/erpStatusRoutes";
 import { NavigationBlocker } from "@/shell/navigation-blocker";
 import { payerRoutes } from "@/shell/payerRoutes";
+import { productReconciliationRoutes } from "@/shell/productReconciliationRoutes";
 import { rf2Routes } from "@/shell/rf2Routes";
 import { rf4aRoutes } from "@/shell/rf4aRoutes";
 import { rf5Routes } from "@/shell/rf5Routes";
@@ -82,6 +83,7 @@ const router = createBrowserRouter(
         {stockDiscrepancyRoutes}
         {shiftCloseRoutes}
         {erpStatusRoutes}
+        {productReconciliationRoutes}
         {deviceRoutes}
         {saleRoutes}
         {saleSyncRoutes}
