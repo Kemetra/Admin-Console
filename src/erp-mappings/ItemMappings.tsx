@@ -17,7 +17,7 @@ import { DateTime, type T, useT } from "@/i18n";
 import type { ErpnextItemMapping, ItemMappingState } from "@/lib/erp-mapping-queries";
 import { useId, useState } from "react";
 import { useSearchParams } from "react-router";
-import { FailureBanner, InlineConfirm, Ref } from "./MappingParts";
+import { FailureBanner, InlineConfirm, Ref, RetryButton } from "./MappingParts";
 import { cleanRef, parseStateFilter, sourceKey, stateView } from "./mappingLogic";
 import {
   type ListView,
@@ -284,11 +284,7 @@ function ItemTable({
   }
   if (list.failure) {
     const retry =
-      list.failure.kind === "unavailable" ? undefined : (
-        <button type="button" className="btn-secondary" onClick={list.retry}>
-          {t("erp.retry")}
-        </button>
-      );
+      list.failure.kind === "unavailable" ? undefined : <RetryButton onRetry={list.retry} />;
     return <FailureBanner op="listItems" failure={list.failure} action={retry} />;
   }
   if (list.rows.length === 0) return <ListState state="empty" emptyMessage={t(emptyKey)} />;
@@ -417,11 +413,7 @@ export function ItemMappings({ tenantId }: Readonly<{ tenantId: string }>): Reac
         <FailureBanner
           op="listItems"
           failure={list.staleFailure}
-          action={
-            <button type="button" className="btn-secondary" onClick={list.retry}>
-              {t("erp.retry")}
-            </button>
-          }
+          action={<RetryButton onRetry={list.retry} />}
         />
       ) : null}
       <ItemTable
