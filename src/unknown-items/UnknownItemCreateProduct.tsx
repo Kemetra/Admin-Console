@@ -1,4 +1,5 @@
 import { Banner } from "@/components/Banner";
+import { GatedButton } from "@/components/GatedButton";
 import { InlineError } from "@/components/InlineError";
 import { type MessageKey, useT } from "@/i18n";
 import type {
@@ -164,10 +165,10 @@ export function UnknownItemCreateProduct({
         />
 
         <div className="unknown-item-detail__actions">
-          <button type="submit" className="btn-primary">
+          <GatedButton type="submit" className="btn-primary">
             {create.isPending ? <span className="spinner" aria-hidden="true" /> : null}
             {t("unknownItems.create.submit")}
-          </button>
+          </GatedButton>
           <button type="button" className="btn-secondary" onClick={onCancel}>
             {t("common.cancel")}
           </button>
