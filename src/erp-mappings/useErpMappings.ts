@@ -42,18 +42,31 @@ class MappingFetchError extends Error {
   }
 }
 
-/** One read's payload, or its typed failure. A read that got no answer is `failed`. */
-async function read<P>(op: MappingOp, call: () => Promise<MappingResult<P>>): Promise<P> {
+/**
+ * One call: the payload, or the typed failure. No answer at all classifies per
+ * `op` (a failed read, an unknown mutation outcome). Never retried.
+ */
+async function callOnce<P>(
+  op: MappingOp,
+  call: () => Promise<MappingResult<P>>,
+): Promise<MutationOutcome<P>> {
   let res: MappingResult<P>;
   try {
     res = await call();
   } catch {
-    throw new MappingFetchError(classifyFailure(op, undefined));
+    return { ok: false, failure: classifyFailure(op, undefined) };
   }
   if (res.status >= 400 || res.data === undefined) {
-    throw new MappingFetchError(classifyFailure(op, res));
+    return { ok: false, failure: classifyFailure(op, res) };
   }
-  return res.data;
+  return { ok: true, data: res.data };
+}
+
+/** One read's payload; its failure is thrown for the query to hold. */
+async function read<P>(op: MappingOp, call: () => Promise<MappingResult<P>>): Promise<P> {
+  const outcome = await callOnce(op, call);
+  if (!outcome.ok) throw new MappingFetchError(outcome.failure);
+  return outcome.data;
 }
 
 export interface ListView<T> {
@@ -136,23 +149,6 @@ export interface MappingMutation<V, P> {
   reset: () => void;
 }
 
-/** One send: the payload, or the typed failure (no answer at all is an unknown outcome). */
-async function send<P>(
-  op: MappingOp,
-  call: () => Promise<MappingResult<P>>,
-): Promise<MutationOutcome<P>> {
-  let res: MappingResult<P>;
-  try {
-    res = await call();
-  } catch {
-    return { ok: false, failure: classifyFailure(op, undefined) };
-  }
-  if (res.status >= 400 || res.data === undefined) {
-    return { ok: false, failure: classifyFailure(op, res) };
-  }
-  return { ok: true, data: res.data };
-}
-
 function useMappingMutation<V, P>(
   tenantId: string | null,
   op: MappingOp,
@@ -161,7 +157,7 @@ function useMappingMutation<V, P>(
   const qc = useQueryClient();
   const mutation = useMutation({
     retry: false,
-    mutationFn: (vars: V) => send(op, () => call(vars)),
+    mutationFn: (vars: V) => callOnce(op, () => call(vars)),
     onSuccess: (outcome) => {
       if (outcome.ok || shouldRefreshAfter(outcome.failure)) {
         void qc.invalidateQueries({ queryKey: mappingQueryKeys.all(tenantId) });
