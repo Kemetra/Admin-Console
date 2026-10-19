@@ -39,7 +39,7 @@ session is the same `cookieAuth` transport RF-2 uses; the test fixture holds it.
 ## RT-724 (RF-4b) — runtime re-verified 2026-10-19
 
 Contract: `catalog/unknown-items.yaml` at the current PIN
-(`contracts/backend-core/PIN`, blob `5d264f5`). Runtime: Backend-Core `main`
+(`contracts/backend-core/PIN`, blob `7656b15` since RT-723). Runtime: Backend-Core `main`
 @ `aa994f4`.
 
 | Op | Runtime route @ aa994f4 | Roles | Consumed |
@@ -50,6 +50,6 @@ Contract: `catalog/unknown-items.yaml` at the current PIN
 | `tenantAdminLinkUnknownItem` | `reconciliation.controller.ts` `@Post …/:id/link` | — | NO — deferred: needs a product picker and no console catalog read contract exists |
 
 The reopen / bulk-dismiss "runtime-absent" finding above (pin `62d0906`) no
-longer holds. Backend-Core `main` also documents a console 429 (RT-620) that the
-pinned contract does not carry yet; until the PIN moves, a 429 renders the
-generic error.
+longer holds. After the RT-723 repin (blob `7656b15`) every op also documents
+the console 429 `rate_limited` (RT-574); the queue renders it as a persistent,
+non-retryable banner.

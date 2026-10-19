@@ -211,6 +211,8 @@ export const stock: MessagesOf<typeof ar> = {
     "The target product is no longer available, so nothing changed.",
   "unknownItems.errors.keyConflict":
     "This request conflicted with an earlier attempt, so nothing changed. Refresh, then try again.",
+  "unknownItems.errors.rateLimited":
+    "Too many requests in a short time, so nothing changed. Wait a moment, then try again.",
   "unknownItems.errors.inProgress":
     "The previous request is still being processed. Wait a moment, then try again.",
 };

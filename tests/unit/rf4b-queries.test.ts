@@ -140,6 +140,22 @@ describe("bulkDismiss", () => {
   });
 });
 
+describe("429 rate_limited (RT-574) on the write ops", () => {
+  test.each(["createProduct", "reopen", "bulkDismiss"] as const)(
+    "%s: 429 -> persistent banner that drops the key",
+    (op) => {
+      const r = mapUnknownItemError(env(429, op, "rate_limited", "req-429"));
+      expect(r).toEqual({
+        kind: "banner",
+        messageKey: "unknownItems.errors.rateLimited",
+        requestId: "req-429",
+        retryable: false,
+      });
+      expect(keepsKey(r)).toBe(false);
+    },
+  );
+});
+
 describe("RF-4a mapping is unchanged for the read ops", () => {
   test("list / inspect 409 and 425 stay generic", () => {
     for (const op of ["list", "inspect"] as const) {
@@ -159,6 +175,7 @@ describe("copy: Arabic-first, never backend English, never a raw key", () => {
     "unknownItems.errors.targetUnavailable",
     "unknownItems.errors.keyConflict",
     "unknownItems.errors.inProgress",
+    "unknownItems.errors.rateLimited",
   ] as const;
   test.each(keys)("%s resolves to Arabic copy", (key) => {
     const ar = translate("ar", key, { max: BULK_DISMISS_MAX });

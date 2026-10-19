@@ -238,6 +238,8 @@ export const stock = {
   "unknownItems.errors.targetUnavailable": "الصنف المطلوب لم يعد متاحًا، فلم يتغير شيء.",
   "unknownItems.errors.keyConflict":
     "تعارض هذا الطلب مع محاولة سابقة، فلم يتغير شيء. حدّث القائمة ثم حاول مرة أخرى.",
+  "unknownItems.errors.rateLimited":
+    "طلبات كثيرة جدًا في وقت قصير، فلم يتغير شيء. انتظر لحظة ثم حاول مرة أخرى.",
   "unknownItems.errors.inProgress":
     "لا يزال الطلب السابق قيد المعالجة. انتظر لحظة ثم حاول مرة أخرى.",
 } satisfies Messages;

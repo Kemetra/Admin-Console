@@ -156,6 +156,7 @@ describe("create product from an unknown item", () => {
     [fail(409, "alias_conflict"), /already linked to another product/],
     [fail(409, "already_reconciled"), /already been resolved/],
     [fail(409, "target_unavailable"), /no longer available/],
+    [fail(429, "rate_limited"), /Too many requests/],
   ])("error %# renders its copy, keeps the input, and is not retried", async (res, copy) => {
     createProductFromUnknownItem.mockResolvedValue(res);
     const drawer = await openForm();
@@ -262,6 +263,7 @@ describe("reopen a dismissed item", () => {
     [fail(409, "already_reconciled"), /only a dismissed item can be reopened/],
     [fail(409, "idempotency_key_conflict"), /conflicted with an earlier attempt/],
     [fail(425, "idempotency_in_progress"), /still being processed/],
+    [fail(429, "rate_limited"), /Too many requests/],
   ])("error %# renders its copy once, with no automatic retry", async (res, copy) => {
     reopenUnknownItem.mockResolvedValue(res);
     const drawer = await openDismissed();
@@ -356,6 +358,7 @@ describe("bulk dismiss", () => {
     [fail(403, "forbidden"), /do not have permission/],
     [fail(409, "idempotency_key_conflict"), /conflicted with an earlier attempt/],
     [fail(425, "idempotency_in_progress"), /still being processed/],
+    [fail(429, "rate_limited"), /Too many requests/],
   ])("error %# renders its copy, keeps the selection, and is not retried", async (res, copy) => {
     bulkDismissUnknownItems.mockResolvedValue(res);
     await selectBoth();

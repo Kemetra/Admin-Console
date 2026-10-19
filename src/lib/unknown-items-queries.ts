@@ -22,8 +22,9 @@
  * (the item is already terminal), `alias_conflict` (create-product: the
  * identifier is bound to another product, which is NEVER named), or
  * `idempotency_key_conflict` (reopen / bulk-dismiss). The 007 `forbidden` (403)
- * is its own branch, distinct from the non-disclosing 404. The pinned contract
- * documents no 422/429; the keyed ops (reopen / bulk-dismiss) document 425.
+ * is its own branch, distinct from the non-disclosing 404. Since the RT-723
+ * repin every op documents the console 429 `rate_limited` (RT-574); the keyed
+ * ops (reopen / bulk-dismiss) also document 425. No 422 is documented.
  *
  * RT-399: the mapper returns a catalog `messageKey`, never copy; the surfaces
  * translate it at render, so a locale switch never leaves a cached string in
@@ -239,6 +240,7 @@ const COPY = {
   targetUnavailable: "unknownItems.errors.targetUnavailable",
   keyConflict: "unknownItems.errors.keyConflict",
   inProgress: "unknownItems.errors.inProgress",
+  rateLimited: "unknownItems.errors.rateLimited",
   serverError: "errors.server",
   badRequest: "errors.generic",
 } as const satisfies Record<string, MessageKey>;
@@ -308,7 +310,7 @@ function mapConflict(input: UnknownItemErrorContext): UnknownItemErrorRender {
  * Map an RF-4a operation's failure to a render decision. Pure; no React, no
  * fetch. Each op maps only the statuses its contract documents (AS-5); an
  * undocumented status falls to the generic branch rather than inventing
- * handling (no 422/429 is documented on any of the three ops).
+ * handling (no 422 is documented on any op).
  *
  * Documented statuses:
  *   - list:          400 / 401 / 403        (no 404 — RLS filters to an empty page)
@@ -320,6 +322,8 @@ function mapConflict(input: UnknownItemErrorContext): UnknownItemErrorRender {
  *                    409 (already_reconciled | idempotency_key_conflict) / 425
  *   - bulkDismiss:   400 (whole batch rejected) / 401 / 403 /
  *                    409 (idempotency_key_conflict) / 425
+ *   - every op:      429 rate_limited (RT-574) — a persistent banner, never
+ *                    retried automatically
  * `target_unavailable` is mapped wherever a reconciliation 409 carries it,
  * though create-product's contract does not list it (only link does).
  *
@@ -356,6 +360,10 @@ export function mapUnknownItemError(input: UnknownItemErrorContext): UnknownItem
         return { kind: "generic", messageKey: COPY.badRequest, requestId };
       }
       return mapConflict(input);
+    case 429:
+      // The per-user console budget is spent. Not a 401 (the session is fine)
+      // and never retried for the operator: they wait and try again.
+      return { kind: "banner", messageKey: COPY.rateLimited, requestId, retryable: false };
     case 425:
       // Documented on the keyed ops only. Never retried automatically: the
       // operator tries again, and the same key replays the original result.
