@@ -3,6 +3,7 @@
  * in place, directly under the row it belongs to, with focus on the safe choice
  * (Keep code); while a cancel is pending no other row can start one.
  */
+import { GatedButton } from "@/components/GatedButton";
 import { type MessageKey, type T, useT } from "@/i18n";
 import type { PairingCodeSummary } from "@/lib/device-queries";
 import type { StoreDirectory } from "@/shift-closes/useShiftCloses";
@@ -64,10 +65,15 @@ function CancelConfirm({
         })}
       </p>
       <div className="confirm-delete__actions">
-        <button type="button" className="btn-destructive" onClick={onConfirm} disabled={pending}>
+        <GatedButton
+          type="button"
+          className="btn-destructive"
+          onClick={onConfirm}
+          disabled={pending}
+        >
           {pending ? <span className="spinner" aria-hidden="true" /> : null}
           {t("devices.codes.cancel")}
-        </button>
+        </GatedButton>
         <button
           type="button"
           className="btn-secondary"

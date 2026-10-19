@@ -13,7 +13,7 @@ import { type Mock, beforeEach, describe, expect, test, vi } from "vitest";
  *  - Only one refresh happens even if several 401s arrive concurrently.
  */
 describe("createAuthRetry", () => {
-  let refreshSession: Mock<() => Promise<{ ok: boolean }>>;
+  let refreshSession: Mock<() => Promise<{ ok: boolean; status?: number }>>;
   let onSessionLost: Mock<() => void>;
 
   beforeEach(() => {
@@ -78,5 +78,46 @@ describe("createAuthRetry", () => {
     await Promise.all([p1, p2]);
 
     expect(refreshSession).toHaveBeenCalledTimes(1);
+  });
+  // RT-621: a 429 is never a lost session.
+  test("a 429 on the original request passes through: no refresh, no sign-out", async () => {
+    const retry = createAuthRetry({ refreshSession, onSessionLost });
+    const original = vi.fn().mockResolvedValue({ status: 429 });
+
+    const result = await retry(original);
+
+    expect(result).toEqual({ status: 429 });
+    expect(original).toHaveBeenCalledTimes(1);
+    expect(refreshSession).not.toHaveBeenCalled();
+    expect(onSessionLost).not.toHaveBeenCalled();
+  });
+
+  test("a refresh refused with 429 does not sign out and reports 429 to the caller", async () => {
+    refreshSession.mockResolvedValue({ ok: false, status: 429 });
+    const retry = createAuthRetry({ refreshSession, onSessionLost });
+    const original = vi.fn().mockResolvedValue({ status: 401, data: undefined });
+
+    const result = await retry(original);
+
+    expect(onSessionLost).not.toHaveBeenCalled();
+    expect(result.status).toBe(429);
+    // The original is not replayed into the limit either.
+    expect(original).toHaveBeenCalledTimes(1);
+    expect(refreshSession).toHaveBeenCalledTimes(1);
+  });
+
+  test("a 429 on the retry after a good refresh is returned, never a sign-out", async () => {
+    refreshSession.mockResolvedValue({ ok: true, status: 200 });
+    const retry = createAuthRetry({ refreshSession, onSessionLost });
+    const original = vi
+      .fn()
+      .mockResolvedValueOnce({ status: 401 })
+      .mockResolvedValueOnce({ status: 429 });
+
+    const result = await retry(original);
+
+    expect(result).toEqual({ status: 429 });
+    expect(onSessionLost).not.toHaveBeenCalled();
+    expect(original).toHaveBeenCalledTimes(2);
   });
 });

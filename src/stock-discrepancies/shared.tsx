@@ -3,6 +3,7 @@
  * from RF-1's active context, the no-tenant prompt, and the "Load more" pager.
  */
 import { Banner } from "@/components/Banner";
+import { GatedButton } from "@/components/GatedButton";
 import { useActiveContextValue } from "@/context/ActiveContextProvider";
 import { useT } from "@/i18n";
 import type { ScopeKey, StockDiscrepancyError } from "./useStockDiscrepancies";
@@ -58,9 +59,14 @@ export function LoadMoreButton({
   if (!hasMore) return null;
   return (
     <div>
-      <button type="button" className="btn-secondary" onClick={onLoadMore} disabled={isFetching}>
+      <GatedButton
+        type="button"
+        className="btn-secondary"
+        onClick={onLoadMore}
+        disabled={isFetching}
+      >
         {isFetching ? t("common.loading") : label}
-      </button>
+      </GatedButton>
     </div>
   );
 }
@@ -83,9 +89,9 @@ export function InlineLoadError({
       message={t("stock.inlineError")}
       requestId={error.requestId}
       action={
-        <button type="button" className="btn-secondary" onClick={onRetry}>
+        <GatedButton type="button" className="btn-secondary" onClick={onRetry}>
           {t("stock.retry")}
-        </button>
+        </GatedButton>
       }
     />
   );

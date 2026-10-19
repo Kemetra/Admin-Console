@@ -1,5 +1,6 @@
 import { Banner } from "@/components/Banner";
 import { Drawer } from "@/components/Drawer";
+import { GatedButton } from "@/components/GatedButton";
 import { InlineError } from "@/components/InlineError";
 import { type MessageKey, useT } from "@/i18n";
 import { type InvitationCreateBody, createInvitation, refreshSession } from "@/lib/client";
@@ -58,7 +59,7 @@ export function InviteMember({
       () => createInvitation(body, key),
       async () => {
         const r = await refreshSession();
-        return { ok: r.status >= 200 && r.status < 300 };
+        return { ok: r.status >= 200 && r.status < 300, status: r.status };
       },
     );
 
@@ -235,12 +236,16 @@ export function InviteMember({
         </div>
 
         <div className="surface__actions">
-          <button type="submit" className="btn-primary" disabled={pending || tooEarly !== null}>
+          <GatedButton
+            type="submit"
+            className="btn-primary"
+            disabled={pending || tooEarly !== null}
+          >
             {pending ? <span className="spinner" aria-hidden="true" /> : null}
             {tooEarly !== null
               ? t("operators.invite.retrying", { count: tooEarly })
               : t("operators.invite.submit")}
-          </button>
+          </GatedButton>
           <button type="button" className="btn-secondary" onClick={onClose} disabled={pending}>
             {t("common.cancel")}
           </button>

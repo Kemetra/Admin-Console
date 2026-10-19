@@ -1,4 +1,5 @@
 import { Banner } from "@/components/Banner";
+import { GatedButton } from "@/components/GatedButton";
 import { TowerMark } from "@/components/TowerMark";
 import { type MessageKey, useT } from "@/i18n";
 import { queryKeys } from "@/lib/query";
@@ -111,7 +112,7 @@ export function AcceptInvitation(): React.JSX.Element {
                   disabled={accept.isPending}
                 />
               </div>
-              <button
+              <GatedButton
                 className="btn-primary signin-submit"
                 type="submit"
                 disabled={accept.isPending}
@@ -124,7 +125,7 @@ export function AcceptInvitation(): React.JSX.Element {
                 ) : (
                   t("auth.acceptInvitation.submit")
                 )}
-              </button>
+              </GatedButton>
             </form>
 
             <p className="signin-foot">

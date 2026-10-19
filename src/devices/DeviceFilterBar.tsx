@@ -1,3 +1,4 @@
+import { GatedButton } from "@/components/GatedButton";
 import { useT } from "@/i18n";
 /**
  * RT-371 filter bar: store and trust state, the two filters the contract has.
@@ -105,9 +106,9 @@ export function DeviceFilterBar({
         </select>
       </div>
       <div className="device-filters__actions">
-        <button type="submit" className="btn-primary">
+        <GatedButton type="submit" className="btn-primary">
           {t("devices.filter.apply")}
-        </button>
+        </GatedButton>
         <button type="button" className="btn-ghost" onClick={clear}>
           {t("devices.filter.clear")}
         </button>

@@ -7,6 +7,13 @@ import {
   switchActiveTenant,
 } from "@/lib/client";
 import { queryKeys } from "@/lib/query";
+import {
+  RATE_LIMITED_STATUS,
+  RateLimitError,
+  isRateLimitError,
+  rateLimitRemainingMs,
+  retryRateLimitedOnly,
+} from "@/lib/rate-limit";
 /**
  * Active-context hook (SF-3, T014-T016). The read-only projection of the
  * server-resolved context (FR-003-005). `getActiveContext` is the source of
@@ -22,6 +29,11 @@ import { queryKeys } from "@/lib/query";
  * is lost (S5). The lost state is encoded in the query RESULT (not a ref), so
  * React re-renders and the guard routes to SF-1. Rendering of backend truth,
  * not a frontend authorization decision (FR-003-004).
+ *
+ * RT-621: a 429 (on the read or on its refresh) is NOT a lost session. The
+ * query throws RateLimitError, so a context already on screen stays, and the
+ * read is retried at most once after Retry-After. With no context yet the
+ * protected area shows the rate-limit state, never the sign-in page.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef } from "react";
@@ -34,6 +46,8 @@ export interface ActiveContextValue {
   isLoading: boolean;
   /** True when the context fetch 401'd AND the reactive refresh also failed (S5). */
   sessionLost: boolean;
+  /** RT-621: the last context read was refused with 429 (never a sign-out). */
+  rateLimited: boolean;
   /** memberships.length === 0 → no-access (S7); used by SF-1/SF-2 branching. */
   membershipCount: number;
   switchTenant: (tenantId: string) => Promise<void>;
@@ -51,7 +65,7 @@ export function useActiveContext(): ActiveContextValue {
     createAuthRetry({
       refreshSession: async () => {
         const res = await refreshSession();
-        return { ok: res.status >= 200 && res.status < 300 };
+        return { ok: res.status >= 200 && res.status < 300, status: res.status };
       },
       // Don't clear the cache here: this fires DURING the context query's own
       // execution, and clearing would re-trigger it in a loop. The session-lost
@@ -64,12 +78,17 @@ export function useActiveContext(): ActiveContextValue {
     queryKey: queryKeys.activeContext,
     queryFn: async () => {
       const res = await withAuthRetry(() => getActiveContext());
+      if (res.status === RATE_LIMITED_STATUS) {
+        // The middleware already recorded the Retry-After; read what it left.
+        throw new RateLimitError(Math.ceil(rateLimitRemainingMs() / 1000));
+      }
       if (res.status === 401) {
         return { kind: "session-lost" };
       }
       return { kind: "context", data: res.data ?? null };
     },
-    retry: false,
+    // Only a 429 is retried (once, after Retry-After); a 401 is final here.
+    retry: retryRateLimitedOnly,
   });
 
   // RT-343: cancel first. A fetch still in flight with no data yet (e.g. the
@@ -101,6 +120,8 @@ export function useActiveContext(): ActiveContextValue {
     context,
     isLoading: query.isLoading,
     sessionLost,
+    // failureReason covers the wait before the single retry, error the end state.
+    rateLimited: isRateLimitError(query.error ?? query.failureReason),
     membershipCount: context?.memberships?.length ?? 0,
     switchTenant: async (tenantId) => {
       await tenant.mutateAsync(tenantId);
