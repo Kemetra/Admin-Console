@@ -185,47 +185,53 @@ export type RepairOutcome =
       retryAfter?: number;
     };
 
+type Refusal = Exclude<RepairOutcome, { kind: "repaired" }>;
+type RefusalView = Pick<Refusal, "kind" | "messageKey">;
+
+/** Refusals by status, or by `status:code` where the code changes the meaning. */
+const REFUSALS: Record<string, RefusalView> = {
+  "400": { kind: "rejected", messageKey: "saleSync.repair.error.rejected" },
+  "401": { kind: "session", messageKey: "saleSync.error.session" },
+  "403": { kind: "forbidden", messageKey: "saleSync.repair.error.forbidden" },
+  "403:origin_rejected": { kind: "forbidden", messageKey: "saleSync.repair.error.originRejected" },
+  "404": { kind: "not-found", messageKey: "saleSync.repair.error.notFound" },
+  "409": { kind: "conflict", messageKey: "saleSync.repair.error.conflict" },
+  "409:idempotency_key_conflict": {
+    kind: "key-conflict",
+    messageKey: "saleSync.repair.error.keyConflict",
+  },
+};
+
+/** Anything unlisted (a 5xx, no response) may have been applied: never "failed". */
+const UNCONFIRMED: RefusalView = {
+  kind: "unconfirmed",
+  messageKey: "saleSync.repair.error.unconfirmed",
+};
+
+function refusalOf(status: number, code: string | undefined): RefusalView {
+  return REFUSALS[`${status}:${code}`] ?? REFUSALS[String(status)] ?? UNCONFIRMED;
+}
+
 /**
  * Maps the server's answer to what the operator sees. Only a 200 is a repair;
  * a 5xx or a lost response is "unconfirmed" (the server may have acted), never
  * "failed". Nothing here retries.
  */
 export function classifyRepair(result: RepairResult): RepairOutcome {
-  const requestId = requestIdOf(result.error);
-  const code = errorCodeOf(result.error);
   if (result.status === 200 && result.data) return { kind: "repaired", status: result.data };
-  switch (result.status) {
-    case 400:
-      return { kind: "rejected", messageKey: "saleSync.repair.error.rejected", requestId };
-    case 401:
-      return { kind: "session", messageKey: "saleSync.error.session", requestId };
-    case 403:
-      return {
-        kind: "forbidden",
-        messageKey:
-          code === "origin_rejected"
-            ? "saleSync.repair.error.originRejected"
-            : "saleSync.repair.error.forbidden",
-        requestId,
-      };
-    case 404:
-      return { kind: "not-found", messageKey: "saleSync.repair.error.notFound", requestId };
-    case 409:
-      return code === "idempotency_key_conflict"
-        ? { kind: "key-conflict", messageKey: "saleSync.repair.error.keyConflict", requestId }
-        : { kind: "conflict", messageKey: "saleSync.repair.error.conflict", requestId };
-    case 429:
-      return {
-        kind: "rate-limited",
-        messageKey: result.retryAfter
-          ? "saleSync.repair.error.rateLimitedFor"
-          : "saleSync.repair.error.rateLimited",
-        requestId,
-        retryAfter: result.retryAfter,
-      };
-    default:
-      return { kind: "unconfirmed", messageKey: "saleSync.repair.error.unconfirmed", requestId };
+  const requestId = requestIdOf(result.error);
+  if (result.status === 429) {
+    const { retryAfter } = result;
+    return {
+      kind: "rate-limited",
+      messageKey: retryAfter
+        ? "saleSync.repair.error.rateLimitedFor"
+        : "saleSync.repair.error.rateLimited",
+      requestId,
+      retryAfter,
+    };
   }
+  return { ...refusalOf(result.status, errorCodeOf(result.error)), requestId };
 }
 
 /**

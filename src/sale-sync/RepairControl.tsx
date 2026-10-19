@@ -40,6 +40,12 @@ function outcomeMessage(t: T, outcome: RepairOutcome): string {
   return t(outcome.messageKey);
 }
 
+/** Nothing holds focus: the element that had it was removed. */
+function focusIsLost(): boolean {
+  const active = document.activeElement;
+  return active === null || active === document.body;
+}
+
 /**
  * The server's answer to the last repair request, until the next one starts.
  * When the answer removed the control that had focus (a repaired sale is no
@@ -51,8 +57,7 @@ export function RepairOutcomeBanner({
   const t = useT();
   const holder = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const active = document.activeElement;
-    if (outcome && (active === null || active === document.body)) holder.current?.focus();
+    if (outcome && focusIsLost()) holder.current?.focus();
   }, [outcome]);
   if (!outcome) return null;
   return (

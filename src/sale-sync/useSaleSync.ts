@@ -11,6 +11,7 @@
 import {
   type NeedsRepairItem,
   type NeedsRepairPage,
+  type NeedsRepairQuery,
   type SaleAuditTimeline,
   type SaleSyncStatus,
   consoleGetSaleAuditTimeline,
@@ -102,19 +103,31 @@ function readState<T>(result: UseQueryResult<T>, enabled: boolean): ReadState<T>
   };
 }
 
+/** One per-sale read: gated on the role and the tenant, never retried on its own. */
+function useSaleRead<T>(
+  queryKey: readonly unknown[],
+  read: () => Promise<ApiResult<T>>,
+  enabled: boolean,
+): ReadState<T> {
+  const result = useQuery({
+    queryKey,
+    enabled,
+    queryFn: () => read().then(dataOrThrow),
+    retry: false,
+  });
+  return readState(result, enabled);
+}
+
 export function useSaleSyncStatus(
   scope: SaleScope,
   saleRef: string,
   enabled: boolean,
 ): ReadState<SaleSyncStatus> {
-  const active = enabled && Boolean(scope.tenantId);
-  const result = useQuery({
-    queryKey: saleSyncQueryKeys.status(scope, saleRef),
-    enabled: active,
-    queryFn: () => consoleGetSaleSyncStatus(saleRef).then(dataOrThrow),
-    retry: false,
-  });
-  return readState(result, active);
+  return useSaleRead(
+    saleSyncQueryKeys.status(scope, saleRef),
+    () => consoleGetSaleSyncStatus(saleRef),
+    enabled && Boolean(scope.tenantId),
+  );
 }
 
 export function useSaleAuditTimeline(
@@ -122,14 +135,11 @@ export function useSaleAuditTimeline(
   saleRef: string,
   enabled: boolean,
 ): ReadState<SaleAuditTimeline> {
-  const active = enabled && Boolean(scope.tenantId);
-  const result = useQuery({
-    queryKey: saleSyncQueryKeys.timeline(scope, saleRef),
-    enabled: active,
-    queryFn: () => consoleGetSaleAuditTimeline(saleRef).then(dataOrThrow),
-    retry: false,
-  });
-  return readState(result, active);
+  return useSaleRead(
+    saleSyncQueryKeys.timeline(scope, saleRef),
+    () => consoleGetSaleAuditTimeline(saleRef),
+    enabled && Boolean(scope.tenantId),
+  );
 }
 
 // --- NEEDS_REPAIR queue ------------------------------------------------------------
@@ -150,6 +160,23 @@ export interface NeedsRepairState {
 
 const FIRST_PAGE: string | undefined = undefined;
 
+/** The list query: the store filter when one is set, and the cursor after page 1. */
+function pageQuery(storeId: string, cursor: string | undefined): NeedsRepairQuery {
+  return { ...(storeId ? { store_id: storeId } : {}), ...(cursor ? { cursor } : {}) };
+}
+
+type PagesState = Pick<NeedsRepairState, "rows" | "error" | "inlineError" | "asOf">;
+
+/** With a page on screen a failure is inline (the rows stay); with none it is the error view. */
+function pagesState(
+  pages: readonly NeedsRepairPage[],
+  failure: SyncError | undefined,
+  readAt: number,
+): PagesState {
+  if (pages.length === 0) return { rows: [], error: failure };
+  return { rows: pages.flatMap((p) => p.items), inlineError: failure, asOf: readAt };
+}
+
 export function useNeedsRepairList(
   scope: SaleScope,
   storeId: string,
@@ -161,24 +188,16 @@ export function useNeedsRepairList(
     enabled: active,
     initialPageParam: FIRST_PAGE,
     queryFn: ({ pageParam }: { pageParam: string | undefined }) =>
-      consoleListNeedsRepair({
-        ...(storeId ? { store_id: storeId } : {}),
-        ...(pageParam ? { cursor: pageParam } : {}),
-      }).then(dataOrThrow<NeedsRepairPage>),
+      consoleListNeedsRepair(pageQuery(storeId, pageParam)).then(dataOrThrow<NeedsRepairPage>),
     getNextPageParam: nextRepairCursor,
     retry: false,
   });
   const loadMore = () => {
     if (result.hasNextPage && !result.isFetchingNextPage) void result.fetchNextPage();
   };
-  const pages = result.data?.pages ?? [];
-  const failure = errorOf(result.error);
   return {
-    rows: pages.flatMap((p) => p.items),
+    ...pagesState(result.data?.pages ?? [], errorOf(result.error), result.dataUpdatedAt),
     isLoading: active && result.isLoading,
-    error: pages.length > 0 ? undefined : failure,
-    inlineError: pages.length > 0 ? failure : undefined,
-    asOf: pages.length > 0 ? result.dataUpdatedAt : undefined,
     retry: () => (result.isFetchNextPageError ? loadMore() : void result.refetch()),
     hasMore: result.hasNextPage,
     isFetchingNextPage: result.isFetchingNextPage,
