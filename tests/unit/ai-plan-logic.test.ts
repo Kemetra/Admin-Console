@@ -2,6 +2,7 @@ import { aiPlanViewFor } from "@/ai-entitlements/aiAccess";
 import { toPanelModel } from "@/ai-entitlements/aiLogic";
 import { describe, expect, test } from "vitest";
 import {
+  dayMeter,
   exhaustedFeature,
   fullActive,
   fullNone,
@@ -84,6 +85,18 @@ describe("toPanelModel, full view", () => {
     ]);
   });
 
+  test("meters are kept only for a usable feature, and a zero limit is not 'used up'", () => {
+    const entitledButOff = { ...switchedOffFeature, meters: [dayMeter] };
+    const noAllowance = {
+      ...exhaustedFeature,
+      meters: [{ ...dayMeter, limit: 0, used: 0, reserved: 0, remaining: 0 }],
+    };
+    const m = toPanelModel({ ...fullActive, features: [entitledButOff, noAllowance] }, "full");
+    expect(m?.kind === "full" && m.features[0].meters).toEqual([]);
+    const meter = m?.kind === "full" ? m.features[1].meters[0] : undefined;
+    expect(meter).toMatchObject({ noAllowance: true, allowanceUsed: false });
+  });
+
   test("an opt-out is carried with its date", () => {
     const m = toPanelModel({ ...fullActive, features: [switchedOffFeature] }, "full");
     expect(m?.kind === "full" && m.features[0]).toMatchObject({
@@ -138,8 +151,8 @@ describe("toPanelModel, minimal view", () => {
     expect(m?.kind === "minimal" && m.features).toHaveLength(fullActive.features.length);
   });
 
-  test("an owner is never upgraded by a minimal body: it renders as minimal", () => {
-    expect(toPanelModel(minimalView, "full")?.kind).toBe("minimal");
+  test("a full-view role whose body is minimal is a load failure, not a minimal list", () => {
+    expect(toPanelModel(minimalView, "full")).toBeUndefined();
   });
 });
 

@@ -10,8 +10,9 @@
  * `undefined` (a load failure for the caller), never a throw.
  *
  * The role picks the projection and the body can only narrow it: a store_manager
- * always gets the minimal one (D-6), even if a full body arrives, and a minimal
- * body is never upgraded for anyone.
+ * always gets the minimal one (D-6), even if a full body arrives. A full-view role
+ * whose body is not `view: "full"` is a load failure (the server never does this),
+ * not a minimal list under a plan title.
  */
 import type { AiPlanView } from "./aiAccess";
 
@@ -46,8 +47,10 @@ export interface MeterModel {
   remaining: number;
   /** The next UTC window boundary, as the server states it. */
   resetsAt: string;
-  /** `remaining` is 0: the allowance of this window is used up. */
+  /** `remaining` is 0 under a limit above 0: the allowance of this window is used up. */
   allowanceUsed: boolean;
+  /** The limit is 0: this window grants no allowance at all (not "used up"). */
+  noAllowance: boolean;
 }
 
 export interface FullFeatureModel {
@@ -137,7 +140,8 @@ function meterOf(item: unknown): MeterModel | undefined {
     reserved: reserved as number,
     remaining: remaining as number,
     resetsAt,
-    allowanceUsed: remaining === 0,
+    allowanceUsed: remaining === 0 && limit !== 0,
+    noAllowance: limit === 0,
   };
 }
 
@@ -145,12 +149,16 @@ function fullFeatureOf(item: unknown): FullFeatureModel | undefined {
   if (!isObject(item) || typeof item.featureId !== "string") return undefined;
   const optOut = isObject(item.optOut) ? item.optOut : {};
   const meters = Array.isArray(item.meters) ? item.meters : [];
+  const status = statusOf(item);
   return {
     featureId: item.featureId,
-    status: statusOf(item),
+    status,
     optedOut: optOut.optedOut === true,
     optedOutAt: asString(optOut.changedAt),
-    meters: meters.flatMap((m) => meterOf(m) ?? []),
+    // An entitled feature that is unavailable (switched off, trial ended, read only) can
+    // still carry meters; "12 left" under "switched off" would mislead, so only a usable
+    // feature shows its allowance.
+    meters: status === "available" ? meters.flatMap((m) => meterOf(m) ?? []) : [],
   };
 }
 
@@ -167,7 +175,8 @@ export function toPanelModel(data: unknown, view: AiPlanView): PanelModel | unde
   if (!isObject(data) || !Array.isArray(data.features)) return undefined;
   const evaluatedAt = asString(data.evaluatedAt);
 
-  if (view === "full" && data.view === "full") {
+  if (view === "full") {
+    if (data.view !== "full") return undefined;
     return {
       kind: "full",
       state: stateOf(data.state),

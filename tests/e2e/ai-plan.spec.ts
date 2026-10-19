@@ -5,8 +5,9 @@ import { expect, test } from "./fixtures";
  * The AI plan & usage panel is unreleased: the Backend-Core runtime (RT-664)
  * does not exist, so a production build follows the gated-nav precedent
  * (RT-270) and shows no panel and sends no request, for any role. The panel's
- * content, roles and states are covered by the unit tests, and by an axe run
- * against the dev server (the `import.meta.env.DEV` gate on).
+ * content, roles and states are covered by the unit tests. Axe (WCAG 2.1 A/AA,
+ * en + ar) was run by hand against the dev server (the `import.meta.env.DEV` gate
+ * on); that spec is not committed, see the PR's release steps.
  */
 const TENANT = "t1";
 
@@ -47,6 +48,7 @@ for (const role of ["owner", "tenant_admin", "store_manager"]) {
 
     await page.goto(`/tenants/${TENANT}`);
     await expect(page.getByRole("heading", { name: "Northstar Retail" })).toBeVisible();
+    await page.waitForLoadState("networkidle");
     await expect(page.getByText(t("aiPlan.full.title"))).toHaveCount(0);
     await expect(page.getByText(t("aiPlan.minimal.title"))).toHaveCount(0);
     expect(aiGets).toBe(0);

@@ -48,5 +48,6 @@ export const aiPlan: MessagesOf<typeof ar> = {
   "aiPlan.meter.scope.store": "Store allowance",
   "aiPlan.meter.left": "{remaining} of {limit} requests left, resets {time}",
   "aiPlan.meter.used": "Allowance used, resets {time}",
+  "aiPlan.meter.none": "No allowance in this window, resets {time}",
   "aiPlan.meter.detail": "Limit {limit}, used {used}, in progress {reserved}",
 };

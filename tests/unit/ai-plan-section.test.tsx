@@ -144,6 +144,33 @@ describe("owner / tenant_admin: the full view", () => {
     expect(region.textContent).toContain(STORE_ID);
   });
 
+  test("an unavailable feature shows no allowance line, and a zero limit says so", async () => {
+    read.mockResolvedValue(
+      ok({
+        ...fullActive,
+        features: [
+          { ...fullActive.features[4], meters: [fullActive.features[0].meters[0]] },
+          {
+            ...exhaustedFeature,
+            meters: [{ ...fullActive.features[0].meters[0], limit: 0, remaining: 0 }],
+          },
+        ],
+      }),
+    );
+    renderSection();
+    const region = await loadedRegion();
+    expect(within(region).queryByText(/requests left/)).toBeNull();
+    expect(within(region).getByText(/No allowance in this window, resets/)).toBeDefined();
+    expect(within(region).queryByText(/Allowance used/)).toBeNull();
+  });
+
+  test("a full-view role whose body is minimal is a load failure", async () => {
+    read.mockResolvedValue(ok(minimalView));
+    renderSection();
+    expect((await screen.findByRole("alert")).textContent).toContain("could not be loaded");
+    expect(screen.queryByText("Not available — ask your account owner")).toBeNull();
+  });
+
   test("an opt-out shows who switched it off and when", async () => {
     read.mockResolvedValue(ok(fullActive));
     renderSection();

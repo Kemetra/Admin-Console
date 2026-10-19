@@ -61,6 +61,19 @@ function Field({
   );
 }
 
+function meterState(
+  meter: MeterModel,
+  { t, time }: Readonly<{ t: ReturnType<typeof useT>; time: React.ReactNode }>,
+): React.ReactNode {
+  if (meter.noAllowance) return t.rich("aiPlan.meter.none", { time });
+  if (meter.allowanceUsed) return t.rich("aiPlan.meter.used", { time });
+  return t.rich("aiPlan.meter.left", {
+    remaining: formatNumber(meter.remaining, t.locale),
+    limit: formatNumber(meter.limit, t.locale),
+    time,
+  });
+}
+
 function MeterLine({ meter }: Readonly<{ meter: MeterModel }>): React.JSX.Element {
   const t = useT();
   const { locale } = t;
@@ -78,15 +91,7 @@ function MeterLine({ meter }: Readonly<{ meter: MeterModel }>): React.JSX.Elemen
           </>
         )}
       </span>
-      <span className="ai-plan__meter-state">
-        {meter.allowanceUsed
-          ? t.rich("aiPlan.meter.used", { time })
-          : t.rich("aiPlan.meter.left", {
-              remaining: formatNumber(meter.remaining, locale),
-              limit: formatNumber(meter.limit, locale),
-              time,
-            })}
-      </span>
+      <span className="ai-plan__meter-state">{meterState(meter, { t, time })}</span>
       <span className="ai-plan__meter-detail">
         {t("aiPlan.meter.detail", {
           limit: formatNumber(meter.limit, locale),
