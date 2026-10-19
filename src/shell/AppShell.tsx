@@ -1,3 +1,4 @@
+import { RateLimitBanner } from "@/components/RateLimitBanner";
 import { TowerMark } from "@/components/TowerMark";
 import { Icon, type IconNameFor } from "@/components/icons/Icon";
 /**
@@ -247,6 +248,8 @@ export function AppShell({
 
       {/* data-dirty-scope: forms edited in here count as unsaved work (RT-268). */}
       <main className="content" data-dirty-scope>
+        {/* RT-621: any 429 shows here, above the surface, without blocking it. */}
+        <RateLimitBanner />
         {children}
       </main>
     </div>

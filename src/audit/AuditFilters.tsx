@@ -4,6 +4,7 @@
  * scope — scope-driven, never role-driven, FR-006-004), from/to date-time. One
  * primary Apply; a quiet Clear. Serializes to the contract's query params.
  */
+import { GatedButton } from "@/components/GatedButton";
 import { Icon } from "@/components/icons/Icon";
 import { useT } from "@/i18n";
 import { textField } from "@/lib/form-field";
@@ -107,9 +108,9 @@ export function AuditFilters({
         <input id="f-to" name="to" type="datetime-local" className="input" />
       </div>
       <div className="audit-filters__actions">
-        <button type="submit" className="btn-primary">
+        <GatedButton type="submit" className="btn-primary">
           {t("audit.filters.apply")}
-        </button>
+        </GatedButton>
         <button
           type="button"
           className="btn-ghost"

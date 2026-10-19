@@ -37,7 +37,7 @@ export type InviteAuthOutcome<T extends MaybeUnauthorized> =
  */
 export async function runInviteWithAuth<T extends MaybeUnauthorized>(
   invite: () => Promise<T>,
-  refreshSession: () => Promise<{ ok: boolean }>,
+  refreshSession: () => Promise<{ ok: boolean; status?: number }>,
 ): Promise<InviteAuthOutcome<T>> {
   let refreshFailed = false;
   const withAuthRetry = createAuthRetry({

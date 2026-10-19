@@ -34,6 +34,27 @@ export const common = {
   "errors.server": "حدث خطأ ما. حاول مرة أخرى.",
   "errors.generic": "تعذّر إكمال الطلب.",
 
+  // RT-621: the shared 429 banner and the countdown on a gated control.
+  "rateLimit.title": "طلبات كثيرة جدًا",
+  "rateLimit.wait": {
+    zero: "يمكنك المحاولة مرة أخرى بعد {count} ثانية.",
+    one: "يمكنك المحاولة مرة أخرى بعد ثانية واحدة.",
+    two: "يمكنك المحاولة مرة أخرى بعد ثانيتين.",
+    few: "يمكنك المحاولة مرة أخرى بعد {count} ثوانٍ.",
+    many: "يمكنك المحاولة مرة أخرى بعد {count} ثانية.",
+    other: "يمكنك المحاولة مرة أخرى بعد {count} ثانية.",
+  },
+  "rateLimit.ready": "يمكنك المحاولة مرة أخرى الآن.",
+  "rateLimit.dismiss": "إخفاء",
+  "rateLimit.gate": {
+    zero: "انتظر {count} ث",
+    one: "انتظر {count} ث",
+    two: "انتظر {count} ث",
+    few: "انتظر {count} ث",
+    many: "انتظر {count} ث",
+    other: "انتظر {count} ث",
+  },
+
   "format.dateTime": "{date}، {time}",
   "format.dateTimeUtc": "{date}، {time} UTC",
   "format.duration.hours": {

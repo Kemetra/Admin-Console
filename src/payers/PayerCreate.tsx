@@ -1,5 +1,6 @@
 import { Banner } from "@/components/Banner";
 import { Drawer } from "@/components/Drawer";
+import { GatedButton } from "@/components/GatedButton";
 import { InlineError } from "@/components/InlineError";
 import { type MessageKey, useT } from "@/i18n";
 import { type PayerAccountCreateBody, consoleCreatePayerAccount } from "@/lib/client";
@@ -249,10 +250,10 @@ export function PayerCreate({
         </div>
 
         <div className="surface__actions">
-          <button type="submit" className="btn-primary" disabled={pending}>
+          <GatedButton type="submit" className="btn-primary" disabled={pending}>
             {pending ? <span className="spinner" aria-hidden="true" /> : null}
             {t("payers.create.submit")}
-          </button>
+          </GatedButton>
           <button type="button" className="btn-secondary" onClick={onClose} disabled={pending}>
             {t("common.cancel")}
           </button>

@@ -7,6 +7,7 @@
  */
 import { Banner } from "@/components/Banner";
 import { Drawer } from "@/components/Drawer";
+import { GatedButton } from "@/components/GatedButton";
 import { type MessageKey, useT } from "@/i18n";
 import type { DeviceDetail } from "@/lib/device-queries";
 import { useStoreDirectory } from "@/shift-closes/useShiftCloses";
@@ -100,9 +101,9 @@ function Details({
     <>
       <DetailFields action={action} flow={flow} device={device} />
       <div className="surface__actions">
-        <button type="submit" className="btn-primary">
+        <GatedButton type="submit" className="btn-primary">
           {t("devices.flow.review")}
-        </button>
+        </GatedButton>
         <button type="button" className="btn-secondary" onClick={onClose}>
           {t("common.cancel")}
         </button>
@@ -146,14 +147,14 @@ function Review({
       <ReviewBody action={action} flow={flow} timeZone={timeZone} />
       <div className="surface__actions">
         {canConfirm ? (
-          <button
+          <GatedButton
             type="submit"
             className={isIssueAction(action) ? "btn-primary" : "btn-destructive"}
             disabled={pending}
           >
             {pending ? <span className="spinner" aria-hidden="true" /> : null}
             {t(CONFIRM[action])}
-          </button>
+          </GatedButton>
         ) : null}
         <button type="button" className="btn-secondary" onClick={back} disabled={pending}>
           {t("devices.flow.back")}

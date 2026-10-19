@@ -7,14 +7,19 @@
  * mutations, a single retry on queries (the 401 path is handled by the
  * interceptor, not by Query retries), and no refetch-on-window-focus
  * (OQ-2 resolved to reactive on-401-retry-once, not a focus/timer cadence).
+ *
+ * RT-621: the single query retry honours a running Retry-After (429) instead of
+ * the default 1 s backoff, and is skipped when the wait is long (rate-limit.ts).
  */
 import { QueryClient } from "@tanstack/react-query";
+import { queryRetry, queryRetryDelay } from "./rate-limit";
 
 export function createQueryClient(): QueryClient {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        retry: 1,
+        retry: queryRetry,
+        retryDelay: (failureCount, error) => queryRetryDelay(failureCount, error),
         refetchOnWindowFocus: false,
         staleTime: 30_000,
       },

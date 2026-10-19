@@ -9,6 +9,7 @@
  * shown by the section. Remounting the form (a new `key`) resets the draft; a
  * refused publish leaves it as typed so the operator can retry.
  */
+import { GatedButton } from "@/components/GatedButton";
 import { InlineError } from "@/components/InlineError";
 import { type MessageKey, useT } from "@/i18n";
 import { useState } from "react";
@@ -212,10 +213,10 @@ export function PolicyForm({
       ) : null}
       <p className="field__hint">{t("cashPolicy.form.applyNowHint")}</p>
       <div className="surface__actions">
-        <button type="submit" className="btn-primary" disabled={pending}>
+        <GatedButton type="submit" className="btn-primary" disabled={pending}>
           {pending ? <span className="spinner" aria-hidden="true" /> : null}
           {t("cashPolicy.form.applyNow")}
-        </button>
+        </GatedButton>
       </div>
     </form>
   );
