@@ -1,11 +1,16 @@
 import {
+  type BulkDismissOutcome,
+  type CreateProductFromUnknownItemRequest,
   type ListUnknownItemsParams,
   type ReviewQueueItem,
   type UnknownItemErrorRender,
+  bulkDismissUnknownItems,
+  createProductFromUnknownItem,
   dismissUnknownItem,
   inspectUnknownItem,
   listUnknownItems,
   mapUnknownItemError,
+  reopenUnknownItem,
   unknownItemsQueryKeys,
 } from "@/lib/unknown-items-queries";
 /**
@@ -17,8 +22,14 @@ import {
  * The query RESULT carries the typed-error render decision (mapUnknownItemError)
  * when a call fails, so components branch on data, not on thrown errors —
  * mirroring RF-2's `useTenantQueries` pattern.
+ *
+ * RT-724 adds the RF-4b writes (create product, reopen, bulk dismiss). Like
+ * dismiss, none is retried automatically (the query client sets
+ * `mutations.retry: false`); the operator decides whether to try again.
  */
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRef } from "react";
+import { type KeyedAttempt, keepsKey, reuseOrNewKey } from "./unknownItemIdempotency";
 
 export type UnknownItemListResult =
   | { kind: "page"; items: ReviewQueueItem[]; nextCursor: string | null }
@@ -88,6 +99,110 @@ export function useUnknownItemDismiss(activeTenantId: string | null) {
           queryKey: ["rf4a", "unknown-items", activeTenantId],
         });
       }
+    },
+  });
+}
+
+/** A write's result: the returned row (or outcomes), or the mapped error. */
+export type UnknownItemWriteResult<T> =
+  | { ok: true; value: T }
+  | { ok: false; render: UnknownItemErrorRender };
+
+/** After a write: refresh the tenant's queue (every variant) and the item views. */
+function invalidateAfterWrite(qc: QueryClient, activeTenantId: string | null): void {
+  void qc.invalidateQueries({ queryKey: ["rf4a", "unknown-items", activeTenantId] });
+  void qc.invalidateQueries({ queryKey: ["rf4a", "unknown-item"] });
+}
+
+/**
+ * RT-724 — create a tenant product from a pending item. 201 returns the item,
+ * now `resolved` / `created`. The form owns its input, so a refusal (400, 409
+ * `alias_conflict`) leaves what the operator typed in place.
+ */
+export function useUnknownItemCreateProduct(activeTenantId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      id: string;
+      body: CreateProductFromUnknownItemRequest;
+    }): Promise<UnknownItemWriteResult<ReviewQueueItem>> => {
+      const res = await createProductFromUnknownItem(input.id, input.body);
+      if (res.status >= 400) {
+        return { ok: false, render: mapUnknownItemError({ ...res, op: "createProduct" }) };
+      }
+      return { ok: true, value: res.data as ReviewQueueItem };
+    },
+    onSuccess: (result) => {
+      if (result.ok) invalidateAfterWrite(qc, activeTenantId);
+    },
+  });
+}
+
+/**
+ * Hold one keyed attempt across manual retries: reuse the key for the same
+ * fingerprint while the last outcome was unsettled, drop it on a final one.
+ */
+function useKeyedAttempt() {
+  const attempt = useRef<KeyedAttempt | undefined>(undefined);
+  return {
+    keyFor(fingerprint: string): string {
+      attempt.current = reuseOrNewKey(attempt.current, fingerprint);
+      return attempt.current.key;
+    },
+    settle(render?: UnknownItemErrorRender): void {
+      if (!render || !keepsKey(render)) attempt.current = undefined;
+    },
+  };
+}
+
+/**
+ * RT-724 — reopen a dismissed item (tenant-wide actors only; a store-scoped
+ * actor gets 403 `forbidden`). 201 returns the fresh `pending` row.
+ */
+export function useUnknownItemReopen(activeTenantId: string | null) {
+  const qc = useQueryClient();
+  const attempt = useKeyedAttempt();
+  return useMutation({
+    mutationFn: async (id: string): Promise<UnknownItemWriteResult<ReviewQueueItem>> => {
+      const res = await reopenUnknownItem(id, attempt.keyFor(`reopen:${id}`));
+      if (res.status >= 400) {
+        const render = mapUnknownItemError({ ...res, op: "reopen" });
+        attempt.settle(render);
+        return { ok: false, render };
+      }
+      attempt.settle();
+      return { ok: true, value: res.data as ReviewQueueItem };
+    },
+    onSuccess: (result) => {
+      if (result.ok) invalidateAfterWrite(qc, activeTenantId);
+    },
+  });
+}
+
+/**
+ * RT-724 — dismiss a selection (≤ BULK_DISMISS_MAX ids; more is rejected whole
+ * with a 400). 200 carries one outcome per id; a mixed batch still succeeds.
+ */
+export function useUnknownItemBulkDismiss(activeTenantId: string | null) {
+  const qc = useQueryClient();
+  const attempt = useKeyedAttempt();
+  return useMutation({
+    mutationFn: async (ids: string[]): Promise<UnknownItemWriteResult<BulkDismissOutcome[]>> => {
+      // One normalized body serves both the key fingerprint and the request, so
+      // a retry of the same selection replays the exact body its key was minted for.
+      const sorted = [...ids].sort((a, b) => a.localeCompare(b));
+      const res = await bulkDismissUnknownItems(sorted, attempt.keyFor(JSON.stringify(sorted)));
+      if (res.status >= 400) {
+        const render = mapUnknownItemError({ ...res, op: "bulkDismiss" });
+        attempt.settle(render);
+        return { ok: false, render };
+      }
+      attempt.settle();
+      const data = res.data as { outcomes?: BulkDismissOutcome[] } | undefined;
+      return { ok: true, value: data?.outcomes ?? [] };
+    },
+    onSuccess: (result) => {
+      if (result.ok) invalidateAfterWrite(qc, activeTenantId);
     },
   });
 }

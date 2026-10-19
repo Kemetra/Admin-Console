@@ -17,7 +17,8 @@ import {
  *   - list:    400 / 401 / 403
  *   - inspect: 400 / 401 / 403 / 404
  *   - dismiss: 400 / 401 / 403 / 404 / 409 (already_reconciled)
- * The contract documents NO 422/429 on any of the three ops.
+ * The contract documents no 422; since the RT-723 repin every op documents the
+ * console 429 `rate_limited`.
  */
 const env = (status: number, op: UnknownItemOp, requestId?: string) => ({
   status,
@@ -85,8 +86,15 @@ describe("mapUnknownItemError — 5xx retryable, and undocumented 4xx fall to ge
   test("422 is undocumented anywhere -> generic (NOT a fabricated category)", () => {
     expect(mapUnknownItemError(env(422, "dismiss")).kind).toBe("generic");
   });
-  test("429 is undocumented anywhere -> generic", () => {
-    expect(mapUnknownItemError(env(429, "list")).kind).toBe("generic");
+  test("429 rate_limited -> persistent banner, never retried automatically", () => {
+    for (const op of ["list", "inspect", "dismiss"] as const) {
+      expect(mapUnknownItemError(env(429, op, "req-429"))).toEqual({
+        kind: "banner",
+        messageKey: "unknownItems.errors.rateLimited",
+        requestId: "req-429",
+        retryable: false,
+      });
+    }
   });
 });
 

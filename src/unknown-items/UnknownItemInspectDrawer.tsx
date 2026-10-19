@@ -15,23 +15,74 @@ import {
  * `sale_context` (that field lives on `UnknownItem`, not the review projection;
  * FR-007 / FR-4a-004).
  *
- * For a `pending` item it offers a Dismiss entry, which swaps the body to the
- * dismiss confirm. The dismiss action and its inline error live in
- * UnknownItemDismiss; this surface just owns the panel + the read-only detail.
+ * For a `pending` item it offers Create product (RT-724) and Dismiss, each of
+ * which swaps the action area to its own step (form / confirm); a `dismissed`
+ * item offers Reopen (RT-724). The actions are offered by lifecycle state, not
+ * by role (VG-5): a store-scoped actor's reopen gets the backend's 403, shown
+ * as the tenant-wide-authority banner. Each action owns its inline error; this
+ * surface owns the panel + the read-only detail.
  * RT-399: enum fields render their localized labels (never the raw code), ids
  * stay LTR-isolated, and the instants render as operational times.
  */
 import { useState } from "react";
+import { UnknownItemCreateProduct } from "./UnknownItemCreateProduct";
 import { UnknownItemDismiss } from "./UnknownItemDismiss";
-import { useUnknownItemInspect } from "./useUnknownItemQueries";
+import { UnknownItemErrorBanner } from "./UnknownItemErrorBanner";
+import { useUnknownItemInspect, useUnknownItemReopen } from "./useUnknownItemQueries";
 import "./unknown-items.css";
 
 export interface UnknownItemInspectDrawerProps {
   id: string;
   activeTenantId: string | null;
   onClose: () => void;
-  /** Called after a successful dismiss so the parent can close + refresh. */
-  onDismissed: () => void;
+  /**
+   * Called after a successful write so the parent can close + refresh. Carries
+   * the success notice to show on the queue, or null when the change speaks
+   * for itself (a dismissed row simply leaves the queue).
+   */
+  onCompleted: (notice: MessageKey | null) => void;
+}
+
+/** Which action step the drawer shows under the detail. */
+type Step = "actions" | "dismiss" | "create";
+
+/** Reopen a dismissed item: one primary action, its error inline. */
+function ReopenAction({
+  item,
+  activeTenantId,
+  onReopened,
+}: Readonly<{
+  item: ReviewQueueItem;
+  activeTenantId: string | null;
+  onReopened: () => void;
+}>): React.JSX.Element {
+  const t = useT();
+  const reopen = useUnknownItemReopen(activeTenantId);
+  const result = reopen.data;
+  const error = result && !result.ok ? result.render : undefined;
+  return (
+    <div className="unknown-item-dismiss">
+      {error ? <UnknownItemErrorBanner error={error} /> : null}
+      {reopen.isError ? <Banner variant="danger" message={t("errors.server")} /> : null}
+      <div className="unknown-item-detail__actions">
+        <button
+          type="button"
+          className="btn-primary"
+          disabled={reopen.isPending}
+          onClick={() =>
+            reopen.mutate(item.id, {
+              onSuccess: (res) => {
+                if (res.ok) onReopened();
+              },
+            })
+          }
+        >
+          {reopen.isPending ? <span className="spinner" aria-hidden="true" /> : null}
+          {t("unknownItems.reopen.action")}
+        </button>
+      </div>
+    </div>
+  );
 }
 
 function Field({
@@ -90,15 +141,16 @@ export function UnknownItemInspectDrawer({
   id,
   activeTenantId,
   onClose,
-  onDismissed,
+  onCompleted,
 }: Readonly<UnknownItemInspectDrawerProps>): React.JSX.Element {
   const t = useT();
   const { result, isLoading } = useUnknownItemInspect(id);
-  const [confirming, setConfirming] = useState(false);
+  const [step, setStep] = useState<Step>("actions");
 
   const item = result?.kind === "item" ? result.item : undefined;
   const error = result?.kind === "error" ? result.render : undefined;
   const isPending = item?.resolution_status === "pending";
+  const isDismissed = item?.resolution_status === "dismissed";
 
   return (
     <Drawer title={t("unknownItems.drawer.title")} onClose={onClose}>
@@ -114,19 +166,37 @@ export function UnknownItemInspectDrawer({
       {item ? (
         <>
           <DetailBody item={item} />
-          {isPending && !confirming ? (
+          {isPending && step === "actions" ? (
             <div className="unknown-item-detail__actions">
-              <button type="button" className="btn-destructive" onClick={() => setConfirming(true)}>
+              <button type="button" className="btn-primary" onClick={() => setStep("create")}>
+                {t("unknownItems.create.action")}
+              </button>
+              <button type="button" className="btn-destructive" onClick={() => setStep("dismiss")}>
                 {t("unknownItems.dismiss.action")}
               </button>
             </div>
           ) : null}
-          {isPending && confirming ? (
+          {isPending && step === "create" ? (
+            <UnknownItemCreateProduct
+              item={item}
+              activeTenantId={activeTenantId}
+              onCreated={() => onCompleted("unknownItems.create.success")}
+              onCancel={() => setStep("actions")}
+            />
+          ) : null}
+          {isPending && step === "dismiss" ? (
             <UnknownItemDismiss
               item={item}
               activeTenantId={activeTenantId}
-              onDismissed={onDismissed}
-              onCancel={() => setConfirming(false)}
+              onDismissed={() => onCompleted(null)}
+              onCancel={() => setStep("actions")}
+            />
+          ) : null}
+          {isDismissed ? (
+            <ReopenAction
+              item={item}
+              activeTenantId={activeTenantId}
+              onReopened={() => onCompleted("unknownItems.reopen.success")}
             />
           ) : null}
         </>

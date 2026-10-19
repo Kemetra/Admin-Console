@@ -49,6 +49,7 @@ describe("production navigation", () => {
       "Audit",
       "Sales",
       "Stock discrepancies",
+      "Unknown items",
       "Shift closes",
       "Connection & sync",
       "Devices",
@@ -159,6 +160,28 @@ describe("production navigation", () => {
     const nav = renderShell("owner", true);
     expect(entryLabels(nav)).toContain("Catalog");
     expect(within(nav).getByText("RF-3")).toBeDefined();
-    expect(nav.querySelectorAll("[aria-disabled='true']")).toHaveLength(2);
+    expect(nav.querySelectorAll("[aria-disabled='true']")).toHaveLength(1);
+    expect(within(nav).queryByText("RF-4")).toBeNull();
   });
+
+  // RT-724: the unknown-items queue left the RF-4 gate, in its own "Catalog"
+  // section, for the roles the list API serves.
+  test.each(["owner", "tenant_admin", "store_manager"])(
+    "RT-724: %s sees Unknown items in its section",
+    (role) => {
+      const nav = renderShell(role, false);
+      expect(within(nav).getByRole("link", { name: "Unknown items" }).getAttribute("href")).toBe(
+        "/unknown-items",
+      );
+      expect(within(nav).getByText("Catalog").className).toBe("nav-section");
+    },
+  );
+
+  test.each(["store_staff", "cashier", "auditor"])(
+    "RT-724: %s has no Unknown items entry",
+    (role) => {
+      const nav = renderShell(role, false);
+      expect(entryLabels(nav)).not.toContain("Unknown items");
+    },
+  );
 });

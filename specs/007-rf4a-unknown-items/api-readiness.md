@@ -35,3 +35,21 @@ precondition (FR-005), and the gate passes.
 RF-1 shipped (`ActiveContextProvider`, generated client, Banner / InlineError,
 TanStack Query) — present in `src/`. The cookie-auth tenant-admin/store-operator
 session is the same `cookieAuth` transport RF-2 uses; the test fixture holds it.
+
+## RT-724 (RF-4b) — runtime re-verified 2026-10-19
+
+Contract: `catalog/unknown-items.yaml` at the current PIN
+(`contracts/backend-core/PIN`, blob `7656b15` since RT-723). Runtime: Backend-Core `main`
+@ `aa994f4`.
+
+| Op | Runtime route @ aa994f4 | Roles | Consumed |
+| --- | --- | --- | --- |
+| `tenantAdminCreateProductFromUnknownItem` | `reconciliation.controller.ts` `@Post …/:id/create-product` (201) | owner, tenant_admin (else 404) | YES (RT-724) |
+| `tenantAdminReopenUnknownItem` | `reconciliation.controller.ts` `@Post …/:id/reopen` | owner, tenant_admin, store_manager (store-scoped → 403 in the service) | YES (RT-724) |
+| `tenantAdminBulkDismissUnknownItems` | `unknown-items.controller.ts` `@Post …/bulk-dismiss` (200, ≤200 ids, `@Idempotent("required")`) | owner, tenant_admin, store_manager (else 403) | YES (RT-724) |
+| `tenantAdminLinkUnknownItem` | `reconciliation.controller.ts` `@Post …/:id/link` | — | NO — deferred: needs a product picker and no console catalog read contract exists |
+
+The reopen / bulk-dismiss "runtime-absent" finding above (pin `62d0906`) no
+longer holds. After the RT-723 repin (blob `7656b15`) every op also documents
+the console 429 `rate_limited` (RT-574); the queue renders it as a persistent,
+non-retryable banner.
