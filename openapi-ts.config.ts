@@ -156,6 +156,17 @@ export const PIN_FILE_PATH = "contracts/backend-core/PIN" as const;
  * `consoleGetTelemetryConfig` through the generated client. 35114fd already
  * holds it, so the commit did not move: `pnpm generate:client --repin 35114fd...`
  * only added its blob SHA to the PIN.
+ *
+ * EIGHTH deliberate re-pin (RT-723, 2026-10-19): bumped 35114fd -> aa994f4
+ * (Backend-Core main, RT-620 #852), superseding repin bot PR #139, and composed
+ * six new console sources: `catalog/erpnext-item-map.yaml`,
+ * `catalog/erpnext-warehouse-map.yaml`, `catalog/product-reconciliation.yaml`,
+ * `catalog/tracking-profile.yaml`, `sale-sync-ops/sale-sync-ops.yaml` and
+ * `inventory/inventory.yaml`. None is wrapped yet. Drift across the 17
+ * existing sources is additive: RT-620 documents the console rate-limit 429
+ * (`TooManyRequests`) on every cookieAuth operation of 15 of them, and RT-685
+ * changes only prose in `console-telemetry.openapi.yaml`. `auth.openapi.yaml`
+ * is byte-identical. No caller needed a code change.
  */
 export const BACKEND_CORE_PIN: ContractsPin = parsePin(
   readFileSync(resolve(repoRoot, PIN_FILE_PATH), "utf8"),
@@ -242,6 +253,21 @@ export const OPENAPI_SOURCE_SPECS: readonly OpenApiSourceSpec[] = [
     name: "ConsoleTelemetry",
     path: "packages/contracts/openapi/console-telemetry.openapi.yaml",
   },
+  // Console sources for the ERP mapping, sale sync-ops, product reconciliation
+  // and inventory read views (RT-723). Composed only: nothing wraps them yet,
+  // the screens that call them are follow-ups. Consume-only; no YAML authored here.
+  { name: "ErpnextItemMap", path: "packages/contracts/openapi/catalog/erpnext-item-map.yaml" },
+  {
+    name: "ErpnextWarehouseMap",
+    path: "packages/contracts/openapi/catalog/erpnext-warehouse-map.yaml",
+  },
+  {
+    name: "ProductReconciliation",
+    path: "packages/contracts/openapi/catalog/product-reconciliation.yaml",
+  },
+  { name: "TrackingProfile", path: "packages/contracts/openapi/catalog/tracking-profile.yaml" },
+  { name: "SaleSyncOps", path: "packages/contracts/openapi/sale-sync-ops/sale-sync-ops.yaml" },
+  { name: "Inventory", path: "packages/contracts/openapi/inventory/inventory.yaml" },
 ];
 
 /** Upstream source paths (kept for back-compat / documentation references). */
