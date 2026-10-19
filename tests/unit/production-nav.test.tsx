@@ -49,6 +49,7 @@ describe("production navigation", () => {
       "Audit",
       "Sales",
       "Stock discrepancies",
+      "Stock movements",
       "Unknown items",
       "Shift closes",
       "Connection & sync",
@@ -68,6 +69,17 @@ describe("production navigation", () => {
       expect(entryLabels(renderShell(role, false))).toContain("Shift closes");
     },
   );
+
+  test.each(["owner", "tenant_admin", "store_manager"])(
+    "RT-728: the inventory read views are listed for %s",
+    (role) => {
+      expect(entryLabels(renderShell(role, false))).toContain("Stock movements");
+    },
+  );
+
+  test("RT-728: the inventory read views are hidden from other roles", () => {
+    expect(entryLabels(renderShell("cashier", false))).not.toContain("Stock movements");
+  });
 
   test("RT-18: the shift-close review is hidden from roles the API refuses", () => {
     expect(entryLabels(renderShell("cashier", false))).not.toContain("Shift closes");
