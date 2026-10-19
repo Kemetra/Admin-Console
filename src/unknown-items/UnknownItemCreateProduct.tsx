@@ -1,7 +1,10 @@
 import { Banner } from "@/components/Banner";
 import { InlineError } from "@/components/InlineError";
 import { type MessageKey, useT } from "@/i18n";
-import type { ReviewQueueItem } from "@/lib/unknown-items-queries";
+import type {
+  CreateProductFromUnknownItemRequest,
+  ReviewQueueItem,
+} from "@/lib/unknown-items-queries";
 /**
  * RT-724 (RF-4b) — create a tenant product from a pending unknown item. An
  * inline form in the inspect drawer: product name + tax category, both
@@ -25,9 +28,66 @@ export interface UnknownItemCreateProductProps {
   onCancel: () => void;
 }
 
+/** One labelled text input with an optional hint and its inline error. */
+function TextField({
+  id,
+  label,
+  hint,
+  value,
+  onChange,
+  error,
+  machine = false,
+}: Readonly<{
+  id: string;
+  label: string;
+  hint?: string;
+  value: string;
+  onChange: (value: string) => void;
+  error?: MessageKey;
+  /** A code rather than words: isolated LTR. */
+  machine?: boolean;
+}>): React.JSX.Element {
+  const t = useT();
+  const describedBy = [hint ? `${id}-hint` : null, error ? `${id}-error` : null]
+    .filter(Boolean)
+    .join(" ");
+  return (
+    <div className="field">
+      <label htmlFor={id}>{label}</label>
+      <input
+        id={id}
+        className="input"
+        dir={machine ? "ltr" : undefined}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        aria-invalid={error ? "true" : undefined}
+        aria-describedby={describedBy || undefined}
+        autoComplete="off"
+      />
+      {hint ? (
+        <span id={`${id}-hint`} className="field__hint">
+          {hint}
+        </span>
+      ) : null}
+      <span id={`${id}-error`}>
+        <InlineError message={error ? t(error) : undefined} />
+      </span>
+    </div>
+  );
+}
+
 interface FieldErrors {
   name?: MessageKey;
   taxCategory?: MessageKey;
+}
+
+/** Both fields are required non-empty after trim; undefined when the body may be sent. */
+function requiredFieldErrors(body: CreateProductFromUnknownItemRequest): FieldErrors | undefined {
+  if (body.name && body.tax_category) return undefined;
+  return {
+    name: body.name ? undefined : "unknownItems.create.nameRequired",
+    taxCategory: body.tax_category ? undefined : "unknownItems.create.taxCategoryRequired",
+  };
 }
 
 export function UnknownItemCreateProduct({
@@ -40,19 +100,16 @@ export function UnknownItemCreateProduct({
   const create = useUnknownItemCreateProduct(activeTenantId);
   const [name, setName] = useState("");
   const [taxCategory, setTaxCategory] = useState("");
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors | undefined>();
   const result = create.data;
   const error = result && !result.ok ? result.render : undefined;
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>): void {
     e.preventDefault();
     const body = { name: name.trim(), tax_category: taxCategory.trim() };
-    const errors: FieldErrors = {
-      name: body.name ? undefined : "unknownItems.create.nameRequired",
-      taxCategory: body.tax_category ? undefined : "unknownItems.create.taxCategoryRequired",
-    };
+    const errors = requiredFieldErrors(body);
     setFieldErrors(errors);
-    if (errors.name || errors.taxCategory) return; // client guard: nothing sent
+    if (errors) return; // client guard: nothing sent
     create.mutate(
       { id: item.id, body },
       {
@@ -70,43 +127,22 @@ export function UnknownItemCreateProduct({
         {error ? <UnknownItemErrorBanner error={error} /> : null}
         {create.isError ? <Banner variant="danger" message={t("errors.server")} /> : null}
 
-        <div className="field">
-          <label htmlFor="unknown-item-product-name">{t("unknownItems.create.name")}</label>
-          <input
-            id="unknown-item-product-name"
-            className="input"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            aria-invalid={fieldErrors.name ? "true" : undefined}
-            aria-describedby={fieldErrors.name ? "unknown-item-product-name-error" : undefined}
-            autoComplete="off"
-          />
-          <span id="unknown-item-product-name-error">
-            <InlineError message={fieldErrors.name ? t(fieldErrors.name) : undefined} />
-          </span>
-        </div>
-
-        <div className="field">
-          <label htmlFor="unknown-item-tax-category">{t("unknownItems.create.taxCategory")}</label>
-          <input
-            id="unknown-item-tax-category"
-            className="input"
-            dir="ltr"
-            value={taxCategory}
-            onChange={(e) => setTaxCategory(e.target.value)}
-            aria-invalid={fieldErrors.taxCategory ? "true" : undefined}
-            aria-describedby="unknown-item-tax-category-hint unknown-item-tax-category-error"
-            autoComplete="off"
-          />
-          <span id="unknown-item-tax-category-hint" className="field__hint">
-            {t("unknownItems.create.taxCategoryHint")}
-          </span>
-          <span id="unknown-item-tax-category-error">
-            <InlineError
-              message={fieldErrors.taxCategory ? t(fieldErrors.taxCategory) : undefined}
-            />
-          </span>
-        </div>
+        <TextField
+          id="unknown-item-product-name"
+          label={t("unknownItems.create.name")}
+          value={name}
+          onChange={setName}
+          error={fieldErrors?.name}
+        />
+        <TextField
+          id="unknown-item-tax-category"
+          label={t("unknownItems.create.taxCategory")}
+          hint={t("unknownItems.create.taxCategoryHint")}
+          value={taxCategory}
+          onChange={setTaxCategory}
+          error={fieldErrors?.taxCategory}
+          machine
+        />
 
         <div className="unknown-item-detail__actions">
           <button type="submit" className="btn-primary">
