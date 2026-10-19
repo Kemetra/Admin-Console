@@ -18,6 +18,7 @@ export function backlogItem(over: Partial<BacklogItem> = {}): BacklogItem {
     tenantProductId: PRODUCT_A,
     mismatchClass: "unmapped_dp2_product",
     suggestionMappingId: null,
+    suggestionMappingVersion: null,
     suggestionSource: null,
     suggestedBy: null,
     suggestedAt: null,
@@ -32,6 +33,7 @@ export function suggestionItem(): BacklogItem {
     tenantProductId: PRODUCT_B,
     mismatchClass: "suggestion_unconfirmed",
     suggestionMappingId: MAPPING_B,
+    suggestionMappingVersion: 3,
     suggestionSource: "manual",
     suggestedAt: "2026-10-18T09:00:00Z",
     erpnextItemRef: "ITEM-COLA-330",
@@ -62,6 +64,8 @@ export function result(
     erpnextItemRef: null,
     resultState: "open",
     detail: null,
+    mappingId: null,
+    mappingVersion: null,
     ...over,
   };
 }

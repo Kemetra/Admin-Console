@@ -11,10 +11,13 @@ import { ListState as ListStateView } from "@/components/ListState";
 import { StatusPill } from "@/erp-status/parts";
 import { type MessageKey, type T, useT } from "@/i18n";
 import { Fragment } from "react";
+import { Link } from "react-router";
 import {
   type OutcomeView,
   type ReadError,
   type RefusedOutcome,
+  type RepairPlan,
+  type RepairTarget,
   classView,
   refusalView,
 } from "./productReconLogic";
@@ -37,6 +40,33 @@ export function Raw({ value }: Readonly<{ value: string }>): React.JSX.Element {
     <bdi dir="ltr" className="data-table__cell--mono">
       {value}
     </bdi>
+  );
+}
+
+const OPEN_KEYS: Record<RepairTarget["repairKind"], MessageKey> = {
+  suggest_confirm: "productRecon.repair.open",
+  confirm: "productRecon.repair.confirmOpen",
+  re_point: "productRecon.repair.repointOpen",
+};
+
+/**
+ * A row's repair action: the button that opens the repair panel, a link to the
+ * item mappings screen when the row lacks the mapping id and version (RT-733),
+ * or a muted dash.
+ */
+export function RepairAction({
+  plan,
+  onRepair,
+}: Readonly<{ plan: RepairPlan; onRepair: (target: RepairTarget) => void }>): React.JSX.Element {
+  const t = useT();
+  if (plan === "needs-version") {
+    return <Link to="/erp-connection/mappings">{t("productRecon.repair.needsVersion")}</Link>;
+  }
+  if (typeof plan === "string") return <span className="muted">{t("productRecon.none")}</span>;
+  return (
+    <button type="button" className="btn-secondary" onClick={() => onRepair(plan)}>
+      {t(OPEN_KEYS[plan.repairKind])}
+    </button>
   );
 }
 

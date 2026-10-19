@@ -4,13 +4,14 @@ import { AsOf, Panel } from "@/erp-status/parts";
  * live read of active products with no confirmed-and-active ERPNext mapping,
  * filterable by class, cursor-paged. A product with no mapping at all can be
  * repaired here (`suggest_confirm`). A product with only an unconfirmed
- * suggestion is shown with the suggested reference; confirming it needs the
- * mapping's version, which this surface does not receive, so the row says so.
+ * suggestion is shown with the suggested reference and is `confirm`ed with the
+ * `suggestionMappingId` + `suggestionMappingVersion` the row carries (RT-733);
+ * a row without both links to the item mappings screen instead.
  */
 import { DateTime, type T, useT } from "@/i18n";
 import type { BacklogClass, BacklogItem } from "@/lib/product-reconciliation-queries";
-import { ClassFilter, ClassPill, Raw, ReconTable } from "./parts";
-import { BACKLOG_CLASSES, type RepairTarget, backlogRepairBlock } from "./productReconLogic";
+import { ClassFilter, ClassPill, Raw, ReconTable, RepairAction } from "./parts";
+import { BACKLOG_CLASSES, type RepairTarget, backlogRepair } from "./productReconLogic";
 import type { ListState } from "./useProductReconciliation";
 
 function headers(t: T): { key: string; header: string }[] {
@@ -37,27 +38,6 @@ function Suggestion({ item }: Readonly<{ item: BacklogItem }>): React.JSX.Elemen
         </span>
       ) : null}
     </span>
-  );
-}
-
-function RowAction({
-  item,
-  onRepair,
-}: Readonly<{ item: BacklogItem; onRepair: (target: RepairTarget) => void }>): React.JSX.Element {
-  const t = useT();
-  const block = backlogRepairBlock(item);
-  if (block === "needs-version") {
-    return <span className="muted">{t("productRecon.repair.needsVersion")}</span>;
-  }
-  if (block !== null) return <span className="muted">{t("productRecon.none")}</span>;
-  return (
-    <button
-      type="button"
-      className="btn-secondary"
-      onClick={() => onRepair({ tenantProductId: item.tenantProductId })}
-    >
-      {t("productRecon.repair.open")}
-    </button>
   );
 }
 
@@ -110,7 +90,7 @@ export function BacklogPanel({
               <DateTime value={item.observedAt} />
             </td>
             <td>
-              <RowAction item={item} onRepair={onRepair} />
+              <RepairAction plan={backlogRepair(item)} onRepair={onRepair} />
             </td>
           </tr>
         )}
