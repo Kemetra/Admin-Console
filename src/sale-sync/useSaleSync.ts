@@ -42,13 +42,27 @@ export type SyncError = { kind: ReadErrorKind; requestId?: string; retryAfter?: 
 
 type ScopeKey = Pick<SaleScope, "tenantId" | "activeStoreId">;
 
+/** One sale, read or repaired within the active scope. */
+export interface SaleTarget {
+  scope: SaleScope;
+  saleRef: string;
+}
+
+/** The NEEDS_REPAIR queue: the store filter ("" = all stores) and the page's gate. */
+export interface QueueTarget {
+  scope: SaleScope;
+  storeId: string;
+  /** False for a malformed store filter: nothing is requested. */
+  enabled: boolean;
+}
+
 export const saleSyncQueryKeys = {
   all: (scope: ScopeKey) => ["sale-sync", scope.tenantId, scope.activeStoreId] as const,
-  status: (scope: ScopeKey, saleRef: string) =>
+  status: ({ scope, saleRef }: SaleTarget) =>
     [...saleSyncQueryKeys.all(scope), "status", saleRef] as const,
-  timeline: (scope: ScopeKey, saleRef: string) =>
+  timeline: ({ scope, saleRef }: SaleTarget) =>
     [...saleSyncQueryKeys.all(scope), "timeline", saleRef] as const,
-  needsRepair: (scope: ScopeKey, storeId: string) =>
+  needsRepair: ({ scope, storeId }: Pick<QueueTarget, "scope" | "storeId">) =>
     [...saleSyncQueryKeys.all(scope), "needs-repair", storeId] as const,
 };
 
@@ -91,55 +105,40 @@ export interface ReadState<T> {
   retry: () => void;
 }
 
-function readState<T>(result: UseQueryResult<T>, enabled: boolean): ReadState<T> {
+/** A disabled query never loads, so `isLoading` needs no separate gate. */
+function readState<T>(result: UseQueryResult<T>): ReadState<T> {
   const failure = errorOf(result.error);
   const has = result.data !== undefined;
   return {
     data: result.data,
-    isLoading: enabled && result.isLoading,
+    isLoading: result.isLoading,
     error: has ? undefined : failure,
     inlineError: has ? failure : undefined,
     retry: () => void result.refetch(),
   };
 }
 
-/** One per-sale read: gated on the role and the tenant, never retried on its own. */
+/** One per-sale read: with a tenant only, never retried on its own. */
 function useSaleRead<T>(
   queryKey: readonly unknown[],
-  read: () => Promise<ApiResult<T>>,
-  enabled: boolean,
+  target: SaleTarget,
+  read: (saleRef: string) => Promise<ApiResult<T>>,
 ): ReadState<T> {
   const result = useQuery({
     queryKey,
-    enabled,
-    queryFn: () => read().then(dataOrThrow),
+    enabled: Boolean(target.scope.tenantId),
+    queryFn: () => read(target.saleRef).then(dataOrThrow),
     retry: false,
   });
-  return readState(result, enabled);
+  return readState(result);
 }
 
-export function useSaleSyncStatus(
-  scope: SaleScope,
-  saleRef: string,
-  enabled: boolean,
-): ReadState<SaleSyncStatus> {
-  return useSaleRead(
-    saleSyncQueryKeys.status(scope, saleRef),
-    () => consoleGetSaleSyncStatus(saleRef),
-    enabled && Boolean(scope.tenantId),
-  );
+export function useSaleSyncStatus(target: SaleTarget): ReadState<SaleSyncStatus> {
+  return useSaleRead(saleSyncQueryKeys.status(target), target, consoleGetSaleSyncStatus);
 }
 
-export function useSaleAuditTimeline(
-  scope: SaleScope,
-  saleRef: string,
-  enabled: boolean,
-): ReadState<SaleAuditTimeline> {
-  return useSaleRead(
-    saleSyncQueryKeys.timeline(scope, saleRef),
-    () => consoleGetSaleAuditTimeline(saleRef),
-    enabled && Boolean(scope.tenantId),
-  );
+export function useSaleAuditTimeline(target: SaleTarget): ReadState<SaleAuditTimeline> {
+  return useSaleRead(saleSyncQueryKeys.timeline(target), target, consoleGetSaleAuditTimeline);
 }
 
 // --- NEEDS_REPAIR queue ------------------------------------------------------------
@@ -164,34 +163,31 @@ export interface NeedsRepairState {
 const FIRST_PAGE: string | undefined = undefined;
 
 /** The list query: the store filter when one is set, and the cursor after page 1. */
-function pageQuery(storeId: string, cursor: string | undefined): NeedsRepairQuery {
+function pageQuery({ storeId }: QueueTarget, cursor: string | undefined): NeedsRepairQuery {
   return { ...(storeId ? { store_id: storeId } : {}), ...(cursor ? { cursor } : {}) };
 }
 
 type PagesState = Pick<NeedsRepairState, "rows" | "error" | "inlineError" | "asOf">;
 
 /** With a page on screen a failure is inline (the rows stay); with none it is the error view. */
-function pagesState(
-  pages: readonly NeedsRepairPage[],
-  failure: SyncError | undefined,
-  readAt: number,
-): PagesState {
+function pagesState(result: {
+  data?: { pages: NeedsRepairPage[] };
+  error: unknown;
+  dataUpdatedAt: number;
+}): PagesState {
+  const pages = result.data?.pages ?? [];
+  const failure = errorOf(result.error);
   if (pages.length === 0) return { rows: [], error: failure };
-  return { rows: pages.flatMap((p) => p.items), inlineError: failure, asOf: readAt };
+  return { rows: pages.flatMap((p) => p.items), inlineError: failure, asOf: result.dataUpdatedAt };
 }
 
-export function useNeedsRepairList(
-  scope: SaleScope,
-  storeId: string,
-  enabled: boolean,
-): NeedsRepairState {
-  const active = enabled && Boolean(scope.tenantId);
+export function useNeedsRepairList(target: QueueTarget): NeedsRepairState {
   const result = useInfiniteQuery({
-    queryKey: saleSyncQueryKeys.needsRepair(scope, storeId),
-    enabled: active,
+    queryKey: saleSyncQueryKeys.needsRepair(target),
+    enabled: target.enabled && Boolean(target.scope.tenantId),
     initialPageParam: FIRST_PAGE,
     queryFn: ({ pageParam }: { pageParam: string | undefined }) =>
-      consoleListNeedsRepair(pageQuery(storeId, pageParam)).then(dataOrThrow<NeedsRepairPage>),
+      consoleListNeedsRepair(pageQuery(target, pageParam)).then(dataOrThrow<NeedsRepairPage>),
     getNextPageParam: nextRepairCursor,
     retry: false,
   });
@@ -199,8 +195,8 @@ export function useNeedsRepairList(
     if (result.hasNextPage && !result.isFetchingNextPage) void result.fetchNextPage();
   };
   return {
-    ...pagesState(result.data?.pages ?? [], errorOf(result.error), result.dataUpdatedAt),
-    isLoading: active && result.isLoading,
+    ...pagesState(result),
+    isLoading: result.isLoading,
     retry: () => (result.isFetchNextPageError ? loadMore() : void result.refetch()),
     refresh: () => void result.refetch(),
     hasMore: result.hasNextPage,
@@ -220,7 +216,7 @@ export interface RepairState {
   reset: () => void;
 }
 
-export function useRepairSale(scope: SaleScope, saleRef: string): RepairState {
+export function useRepairSale(target: SaleTarget): RepairState {
   const queryClient = useQueryClient();
   const key = useRef<string | undefined>(undefined);
   const busy = useRef(false);
@@ -236,20 +232,20 @@ export function useRepairSale(scope: SaleScope, saleRef: string): RepairState {
     key.current ??= newIdempotencyKey();
     let next: RepairOutcome;
     try {
-      next = classifyRepair(await consoleRepairSaleSync(saleRef, key.current));
+      next = classifyRepair(await consoleRepairSaleSync(target.saleRef, key.current));
     } catch {
       // No response at all: the server may or may not have acted.
       next = classifyRepair({ status: 0 });
     }
     if (!keepsKey(next)) key.current = undefined;
     if (next.kind === "repaired") {
-      queryClient.setQueryData(saleSyncQueryKeys.status(scope, saleRef), next.status);
+      queryClient.setQueryData(saleSyncQueryKeys.status(target), next.status);
     } else {
-      void queryClient.invalidateQueries({ queryKey: saleSyncQueryKeys.status(scope, saleRef) });
+      void queryClient.invalidateQueries({ queryKey: saleSyncQueryKeys.status(target) });
     }
-    void queryClient.invalidateQueries({ queryKey: saleSyncQueryKeys.timeline(scope, saleRef) });
+    void queryClient.invalidateQueries({ queryKey: saleSyncQueryKeys.timeline(target) });
     void queryClient.invalidateQueries({
-      queryKey: [...saleSyncQueryKeys.all(scope), "needs-repair"],
+      queryKey: [...saleSyncQueryKeys.all(target.scope), "needs-repair"],
     });
     setOutcome(next);
     setPending(false);

@@ -207,7 +207,7 @@ function Content({ scope }: Readonly<{ scope: SaleScope }>): React.JSX.Element {
   const storeId = search.get("store") ?? "";
   const stores = useFilterStores(scope.tenantId);
   const validStore = isStoreFilter(storeId);
-  const list = useNeedsRepairList(scope, storeId, validStore);
+  const list = useNeedsRepairList({ scope, storeId, enabled: validStore });
   const nameOf = (id: string) => stores.find((s) => s.id === id)?.name;
 
   return (

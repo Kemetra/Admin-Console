@@ -121,8 +121,8 @@ function StatusBody({
 function SyncStatusSection({ saleRef, timeZone }: Readonly<SectionProps>): React.JSX.Element {
   const t = useT();
   const scope = useSaleScope();
-  const read = useSaleSyncStatus(scope, saleRef, true);
-  const repair = useRepairSale(scope, saleRef);
+  const read = useSaleSyncStatus({ scope, saleRef });
+  const repair = useRepairSale({ scope, saleRef });
   let body: React.ReactNode = null;
   if (read.isLoading) {
     body = <ListState state="loading" label={t("saleSync.status.loadingNoun")} />;
@@ -180,7 +180,7 @@ function TimelineRow({
 function TimelineSection({ saleRef, timeZone }: Readonly<SectionProps>): React.JSX.Element {
   const t = useT();
   const scope = useSaleScope();
-  const read = useSaleAuditTimeline(scope, saleRef, true);
+  const read = useSaleAuditTimeline({ scope, saleRef });
   const entries = read.data?.entries ?? [];
   let body: React.ReactNode = null;
   if (read.isLoading) {
