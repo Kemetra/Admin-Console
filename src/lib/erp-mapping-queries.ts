@@ -41,10 +41,16 @@ export interface MappingResult<P> {
   retryAfter?: number;
 }
 
+/** Whole seconds from a `Retry-After` header; anything else is no wait. */
+function retrySeconds(res: Response): number | undefined {
+  const seconds = Number(res.headers.get("Retry-After"));
+  return Number.isInteger(seconds) && seconds > 0 ? seconds : undefined;
+}
+
 function withRetryAfter<P>(status: number, data: P | undefined, error: unknown, res: Response) {
   const result: MappingResult<P> = { status, data, error };
-  const header = Number(res.headers.get("Retry-After"));
-  if (status === 429 && Number.isInteger(header) && header > 0) result.retryAfter = header;
+  const wait = status === 429 ? retrySeconds(res) : undefined;
+  if (wait !== undefined) result.retryAfter = wait;
   return result;
 }
 

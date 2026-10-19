@@ -59,6 +59,25 @@ export function requestIdOf(error: unknown): string | undefined {
   return typeof id === "string" && id.length > 0 ? id : undefined;
 }
 
+type Kind = MappingFailure["kind"];
+
+/** What each documented status means on a read and on a mutation. */
+const STATUS_KINDS: Readonly<Record<number, { read: Kind; write: Kind }>> = {
+  400: { read: "validation", write: "validation" },
+  401: { read: "session", write: "session" },
+  403: { read: "unavailable", write: "origin" },
+  404: { read: "unavailable", write: "not-found" },
+  409: { read: "failed", write: "conflict" },
+  429: { read: "rate-limited", write: "rate-limited" },
+};
+
+/** Any other status: a 5xx on a mutation may or may not have applied; the rest failed. */
+function kindOf(status: number, read: boolean): Kind {
+  const known = STATUS_KINDS[status];
+  if (known) return read ? known.read : known.write;
+  return status >= 500 && !read ? "unknown" : "failed";
+}
+
 /** A refused or unanswered call as a typed failure. `result` undefined = no answer at all. */
 export function classifyFailure(
   op: MappingOp,
@@ -66,29 +85,14 @@ export function classifyFailure(
 ): MappingFailure {
   const read = isRead(op);
   if (result === undefined) return { kind: read ? "failed" : "unknown" };
+  const kind = kindOf(result.status, read);
   const id = requestIdOf(result.error);
-  const requestId = id === undefined ? {} : { requestId: id };
-  switch (result.status) {
-    case 400:
-      return { kind: "validation", ...requestId };
-    case 401:
-      return { kind: "session", ...requestId };
-    case 403:
-      return { kind: read ? "unavailable" : "origin", ...requestId };
-    case 404:
-      return { kind: read ? "unavailable" : "not-found", ...requestId };
-    case 409:
-      return read ? { kind: "failed", ...requestId } : { kind: "conflict", ...requestId };
-    case 429:
-      return {
-        kind: "rate-limited",
-        ...(result.retryAfter === undefined ? {} : { retryAfter: result.retryAfter }),
-        ...requestId,
-      };
-    default:
-      if (result.status >= 500 && !read) return { kind: "unknown", ...requestId };
-      return { kind: "failed", ...requestId };
-  }
+  const wait = kind === "rate-limited" ? result.retryAfter : undefined;
+  return {
+    kind,
+    ...(wait === undefined ? {} : { retryAfter: wait }),
+    ...(id === undefined ? {} : { requestId: id }),
+  } as MappingFailure;
 }
 
 /** After these the list on screen may be wrong, so it is read again (a read, never the mutation). */
@@ -96,48 +100,48 @@ export function shouldRefreshAfter(failure: MappingFailure): boolean {
   return failure.kind === "conflict" || failure.kind === "not-found" || failure.kind === "unknown";
 }
 
-const CONFLICT_KEYS: Record<Exclude<MappingOp, "listItems" | "listWarehouses">, MessageKey> = {
-  suggest: "erp.map.error.suggestConflict",
-  confirm: "erp.map.error.confirmConflict",
-  retireItem: "erp.map.error.retireConflict",
-  setWarehouse: "erp.map.error.setConflict",
-  retireWarehouse: "erp.map.error.retireConflict",
+const KIND_KEYS: Readonly<Record<Kind, MessageKey>> = {
+  validation: "erp.map.error.validation",
+  session: "erp.map.error.session",
+  unavailable: "erp.map.error.unavailable",
+  origin: "erp.map.error.origin",
+  "not-found": "erp.map.error.mappingNotFound",
+  conflict: "erp.map.error.failed",
+  "rate-limited": "erp.map.error.rateLimited",
+  unknown: "erp.map.error.unknownOutcome",
+  failed: "erp.map.error.failed",
 };
 
-const NOT_FOUND_KEYS: Record<Exclude<MappingOp, "listItems" | "listWarehouses">, MessageKey> = {
-  suggest: "erp.map.error.productNotFound",
-  confirm: "erp.map.error.mappingNotFound",
-  retireItem: "erp.map.error.mappingNotFound",
-  setWarehouse: "erp.map.error.storeNotFound",
-  retireWarehouse: "erp.map.error.mappingNotFound",
+/** A read has no addressed row: its refusals read as the surface's. */
+const READ_KEYS: Readonly<Partial<Record<Kind, MessageKey>>> = {
+  validation: "erp.map.error.readRejected",
+  "not-found": "erp.map.error.unavailable",
+};
+
+type WriteOp = Exclude<MappingOp, "listItems" | "listWarehouses">;
+
+/** A mutation's 409 and 404 name what it addressed. */
+const WRITE_KEYS: Readonly<Record<WriteOp, Partial<Record<Kind, MessageKey>>>> = {
+  suggest: {
+    conflict: "erp.map.error.suggestConflict",
+    "not-found": "erp.map.error.productNotFound",
+  },
+  confirm: { conflict: "erp.map.error.confirmConflict" },
+  retireItem: { conflict: "erp.map.error.retireConflict" },
+  setWarehouse: {
+    conflict: "erp.map.error.setConflict",
+    "not-found": "erp.map.error.storeNotFound",
+  },
+  retireWarehouse: { conflict: "erp.map.error.retireConflict" },
 };
 
 /** The message a failure reads as for `op`. A rate limit with a wait has its own key. */
 export function failureKey(op: MappingOp, failure: MappingFailure): MessageKey {
-  switch (failure.kind) {
-    case "validation":
-      return isRead(op) ? "erp.map.error.readRejected" : "erp.map.error.validation";
-    case "session":
-      return "erp.map.error.session";
-    case "unavailable":
-      return "erp.map.error.unavailable";
-    case "origin":
-      return "erp.map.error.origin";
-    case "not-found":
-      return isRead(op)
-        ? "erp.map.error.unavailable"
-        : NOT_FOUND_KEYS[op as keyof typeof NOT_FOUND_KEYS];
-    case "conflict":
-      return isRead(op) ? "erp.map.error.failed" : CONFLICT_KEYS[op as keyof typeof CONFLICT_KEYS];
-    case "rate-limited":
-      return failure.retryAfter === undefined
-        ? "erp.map.error.rateLimited"
-        : "erp.map.error.rateLimitedWait";
-    case "unknown":
-      return "erp.map.error.unknownOutcome";
-    default:
-      return "erp.map.error.failed";
+  if (failure.kind === "rate-limited" && failure.retryAfter !== undefined) {
+    return "erp.map.error.rateLimitedWait";
   }
+  const own = isRead(op) ? READ_KEYS : WRITE_KEYS[op as WriteOp];
+  return own[failure.kind] ?? KIND_KEYS[failure.kind];
 }
 
 // --- Labels -------------------------------------------------------------------------
