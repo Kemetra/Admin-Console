@@ -127,4 +127,117 @@ export const erp: MessagesOf<typeof ar> = {
   "erp.runs.noMismatches": "None recorded",
   "erp.runs.mismatch": "{kind}: {count}",
   "erp.runs.unknownStore": "Unknown store",
+
+  // --- ERPNext item & warehouse mappings (RT-725) ------------------------------
+  "erp.map.link": "Item & warehouse mappings",
+  "erp.map.title": "ERPNext mappings: items & warehouses",
+  "erp.map.sub":
+    "Map {tenant}'s products and stores to ERPNext references. Only a confirmed mapping is used for posting.",
+  "erp.map.back": "Back to connection & sync",
+  "erp.map.scopePrompt": "Select a tenant to view its ERPNext mappings.",
+  "erp.map.review": "Review",
+  "erp.map.notYet": "Not confirmed yet",
+  "erp.map.col.actions": "Actions",
+  "erp.map.form.required": "Enter the ERPNext reference.",
+  "erp.map.form.storeRequired": "Choose a store.",
+
+  "erp.map.error.validation": "The server rejected these values. Check them and try again.",
+  "erp.map.error.readRejected":
+    "The server rejected this request. Change the filter and try again.",
+  "erp.map.error.session": "Your session has ended. Sign in again.",
+  "erp.map.error.unavailable": "This section isn't available to your role.",
+  "erp.map.error.origin":
+    "The server refused a change from this page. Reload the console and try again.",
+  "erp.map.error.productNotFound":
+    "This product isn't available to you. No suggestion was recorded.",
+  "erp.map.error.mappingNotFound":
+    "This mapping no longer exists or isn't available to you. The list was refreshed.",
+  "erp.map.error.storeNotFound": "This store isn't available to you. No mapping was set.",
+  "erp.map.error.suggestConflict":
+    "This product already has an active mapping. The list was refreshed.",
+  "erp.map.error.confirmConflict":
+    "This mapping changed since you loaded it, or can no longer be confirmed. The list was refreshed; check it and try again.",
+  "erp.map.error.retireConflict":
+    "This mapping changed since you loaded it, or was already retired. The list was refreshed; check it and try again.",
+  "erp.map.error.setConflict":
+    "This store already has an active warehouse mapping. The list was refreshed.",
+  "erp.map.error.rateLimited": "Too many requests. Wait a moment, then try again.",
+  "erp.map.error.rateLimitedWait": "Too many requests. Wait {seconds} seconds, then try again.",
+  "erp.map.error.unknownTitle": "Unknown result",
+  "erp.map.error.unknownOutcome":
+    "No clear answer came back, so the change may or may not have been applied. The list was refreshed: check it before trying again.",
+  "erp.map.error.failed": "Couldn't load the mappings. Try again.",
+
+  "erp.map.state.suggested": "Suggested — not used for posting",
+  "erp.map.state.confirmed": "Confirmed",
+  "erp.map.state.unknown": "Unknown",
+  "erp.map.source.barcode": "Barcode",
+  "erp.map.source.itemCode": "Item code",
+  "erp.map.source.manual": "Manual",
+  "erp.map.purpose.stock": "Stock",
+  "erp.map.purpose.returns": "Returns",
+
+  "erp.map.items.title": "Item mappings",
+  "erp.map.items.note":
+    "Each product maps to one ERPNext Item. A suggested mapping isn't used for posting until it's confirmed.",
+  "erp.map.items.loading": "item mappings",
+  "erp.map.items.empty": "No active item mappings.",
+  "erp.map.items.emptySuggested": "No suggestions waiting for review.",
+  "erp.map.items.emptyConfirmed": "No confirmed item mappings.",
+  "erp.map.items.filter": "State",
+  "erp.map.items.filter.all": "All active mappings",
+  "erp.map.items.filter.suggested": "Waiting for review",
+  "erp.map.items.filter.confirmed": "Confirmed",
+  "erp.map.items.col.product": "Product ID",
+  "erp.map.items.col.item": "ERPNext Item",
+  "erp.map.items.col.state": "State",
+  "erp.map.items.col.source": "Source",
+  "erp.map.items.col.suggestedAt": "Suggested",
+  "erp.map.items.col.confirmedAt": "Confirmed",
+  "erp.map.items.confirm.label": "Confirm item mapping",
+  "erp.map.items.confirm.prompt":
+    "Confirm mapping product {product} to ERPNext Item {item}? Posting will use this mapping.",
+  "erp.map.items.confirm.action": "Confirm",
+  "erp.map.items.retire.label": "Retire item mapping",
+  "erp.map.items.retire.prompt":
+    "Retire the mapping of product {product} to ERPNext Item {item}? It stays in the history and is no longer used.",
+  "erp.map.items.retire.action": "Retire",
+  "erp.map.items.suggest.label": "Suggest a replacement item",
+  "erp.map.items.suggest.lead":
+    "The mapping of product {product} was retired. You can suggest a new ERPNext Item for it.",
+  "erp.map.items.suggest.ref": "ERPNext Item reference",
+  "erp.map.items.suggest.note":
+    "The suggestion is recorded unconfirmed and isn't used for posting until it's confirmed.",
+  "erp.map.items.suggest.prompt": "Suggest mapping product {product} to ERPNext Item {item}?",
+  "erp.map.items.suggest.action": "Record suggestion",
+  "erp.map.items.suggest.dismiss": "Not now",
+  "erp.map.items.notice.confirmed": "Mapping confirmed.",
+  "erp.map.items.notice.retired": "Mapping retired.",
+  "erp.map.items.notice.suggested":
+    "Suggestion recorded. It isn't used for posting until it's confirmed.",
+
+  "erp.map.wh.title": "Warehouse mappings",
+  "erp.map.wh.note": "Each store maps to one ERPNext Warehouse for stock.",
+  "erp.map.wh.loading": "warehouse mappings",
+  "erp.map.wh.empty": "No active warehouse mappings.",
+  "erp.map.wh.col.store": "Store",
+  "erp.map.wh.col.purpose": "Purpose",
+  "erp.map.wh.col.warehouse": "ERPNext Warehouse",
+  "erp.map.wh.col.setAt": "Set",
+  "erp.map.wh.set.label": "Set a warehouse mapping",
+  "erp.map.wh.set.store": "Store",
+  "erp.map.wh.set.pickStore": "Choose a store",
+  "erp.map.wh.set.ref": "ERPNext Warehouse reference",
+  "erp.map.wh.set.prompt": "Map store {store} to ERPNext Warehouse {warehouse}?",
+  "erp.map.wh.set.action": "Set mapping",
+  "erp.map.wh.set.storesFailed":
+    "Couldn't load the store list, so no mapping can be set right now.",
+  "erp.map.wh.set.allMapped":
+    "Every store of yours has an active warehouse mapping. To change one, retire it, then set a new one.",
+  "erp.map.wh.retire.label": "Retire warehouse mapping",
+  "erp.map.wh.retire.prompt":
+    "Retire the mapping of store {store} to ERPNext Warehouse {warehouse}? It stays in the history and is no longer used.",
+  "erp.map.wh.retire.action": "Retire",
+  "erp.map.wh.notice.set": "Warehouse mapping set.",
+  "erp.map.wh.notice.retired": "Warehouse mapping retired.",
 };

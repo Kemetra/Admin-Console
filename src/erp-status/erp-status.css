@@ -148,3 +148,10 @@
     background: CanvasText;
   }
 }
+
+/* RT-725: the header's link to the mappings sits beside Refresh. */
+.erp-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

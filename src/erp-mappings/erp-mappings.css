@@ -1,0 +1,60 @@
+/* RT-725 ERPNext mapping screens. Existing tokens only; no new colour, font or
+ * dependency. Logical properties throughout (RTL by structure). */
+
+.map-ref {
+  font-family: var(--font-mono);
+  font-size: var(--text-machine);
+  overflow-wrap: anywhere;
+}
+
+.map-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.map-confirm,
+.map-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-object);
+  background: var(--color-surface-sunken);
+}
+.map-confirm__msg,
+.map-form__lead {
+  margin: 0;
+  color: var(--color-text);
+}
+.map-confirm__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.map-form__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--space-3);
+}
+.map-form__error {
+  margin: 0;
+  color: var(--color-danger);
+  font-size: var(--text-meta);
+}
+
+/* The confirm row under a table row: no hover wash, so it does not read as a row. */
+.map-confirm-row:hover {
+  background-color: transparent;
+}
+
+.map-notice:empty {
+  display: none;
+}
+.map-notice {
+  margin: 0;
+  color: var(--color-success);
+  font-weight: var(--weight-medium);
+}
