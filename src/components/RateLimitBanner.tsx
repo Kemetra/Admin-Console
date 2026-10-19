@@ -36,12 +36,8 @@ export function RateLimitBanner({
   if (announced.current.seq !== seq) announced.current = { seq, seconds: secondsLeft };
 
   const visible = seq > 0 && (!dismissible || seq !== dismissedSeq);
-  let announcement = "";
-  if (visible) {
-    announcement = active
-      ? t("rateLimit.wait", { count: announced.current.seconds })
-      : t("rateLimit.ready");
-  }
+  const message = (count: number) =>
+    active ? t("rateLimit.wait", { count }) : t("rateLimit.ready");
 
   const retry = () => {
     setDismissedSeq(seq);
@@ -56,26 +52,50 @@ export function RateLimitBanner({
   return (
     <div className="rate-limit-banner">
       <output className="sr-only" aria-live="polite" aria-atomic="true">
-        {announcement}
+        {visible ? message(announced.current.seconds) : ""}
       </output>
       {visible ? (
-        <div className="rtc-alert rtc-alert--warning">
-          <strong className="rtc-alert__title">{t("rateLimit.title")}</strong>
-          <span className="rtc-alert__body" aria-hidden="true">
-            {active ? t("rateLimit.wait", { count: secondsLeft }) : t("rateLimit.ready")}
-          </span>
-          <span className="rtc-alert__action rate-limit-banner__actions">
-            <button type="button" className="btn-secondary" disabled={active} onClick={retry}>
-              {t("common.tryAgain")}
-            </button>
-            {dismissible ? (
-              <button type="button" className="btn-ghost" onClick={() => setDismissedSeq(seq)}>
-                {t("rateLimit.dismiss")}
-              </button>
-            ) : null}
-          </span>
-        </div>
+        <RateLimitAlert
+          message={message(secondsLeft)}
+          waiting={active}
+          onRetry={retry}
+          onDismiss={dismissible ? () => setDismissedSeq(seq) : undefined}
+        />
       ) : null}
+    </div>
+  );
+}
+
+/** The visible part of the banner; the live region above carries the announcement. */
+function RateLimitAlert({
+  message,
+  waiting,
+  onRetry,
+  onDismiss,
+}: Readonly<{
+  message: string;
+  waiting: boolean;
+  onRetry: () => void;
+  /** Omitted where the banner must stay (the full-page state). */
+  onDismiss?: () => void;
+}>): React.JSX.Element {
+  const t = useT();
+  return (
+    <div className="rtc-alert rtc-alert--warning">
+      <strong className="rtc-alert__title">{t("rateLimit.title")}</strong>
+      <span className="rtc-alert__body" aria-hidden="true">
+        {message}
+      </span>
+      <span className="rtc-alert__action rate-limit-banner__actions">
+        <button type="button" className="btn-secondary" disabled={waiting} onClick={onRetry}>
+          {t("common.tryAgain")}
+        </button>
+        {onDismiss ? (
+          <button type="button" className="btn-ghost" onClick={onDismiss}>
+            {t("rateLimit.dismiss")}
+          </button>
+        ) : null}
+      </span>
     </div>
   );
 }
