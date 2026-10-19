@@ -78,3 +78,48 @@
   display: grid;
   gap: var(--space-4);
 }
+
+/* RT-724: the bulk-dismiss bar above the pending queue. The selection is
+ * explicit and counted (UX-10 "bulk scope is explicit and countable"). */
+.unknown-item-bulk {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+.unknown-item-bulk__page {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  font-size: var(--text-control);
+}
+.unknown-item-bulk__count {
+  color: var(--color-text-muted);
+  font-size: var(--text-control);
+}
+.unknown-item-bulk > .confirm-delete,
+.unknown-item-bulk > .rtc-alert {
+  flex-basis: 100%;
+}
+.unknown-item-select {
+  inline-size: 18px;
+  block-size: 18px;
+  accent-color: var(--color-primary);
+}
+
+/* RT-724: the create-product form inside the inspect drawer. */
+.unknown-item-form {
+  margin-block-start: var(--space-5);
+}
+.unknown-item-form__fields {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.unknown-item-form__legend {
+  padding: 0;
+  margin-block-end: var(--space-2);
+  font: var(--weight-strong) var(--text-body) / var(--leading-title) var(--font-sans);
+}

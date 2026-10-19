@@ -16,7 +16,7 @@ import { Icon, type IconNameFor } from "@/components/icons/Icon";
  * status) is intentionally NOT rendered — a
  * dead control reads as a fake to an operator (PRODUCT.md P4/P5); each arrives as
  * its own slice when wired. Gated nav entries are the one exception, and they
- * announce it explicitly with a gate badge (RF-3 / RF-4).
+ * announce it explicitly with a gate badge (RF-3).
  */
 import { useActiveContextValue } from "@/context/ActiveContextProvider";
 import { canReadDevices } from "@/devices/deviceLogic";
@@ -28,6 +28,7 @@ import { canReadSales } from "@/sales/saleLogic";
 import { canReadShiftCloses } from "@/shift-closes/shiftCloseLogic";
 import { canReadStockDiscrepancies } from "@/stock-discrepancies/stockDiscrepancyLogic";
 import { ThemeToggle } from "@/theme/ThemeToggle";
+import { canReadUnknownItems } from "@/unknown-items/unknownItemAccess";
 import { Fragment } from "react";
 import { NavLink } from "react-router";
 import { ScopeHeader } from "./ScopeHeader";
@@ -48,7 +49,7 @@ const LIVE_NAV: { label: MessageKey; to: string; icon: NavIcon }[] = [
  * Role-gated destinations, each under its own section: shown only for the roles
  * the API lets read the surface (RT-178 stock discrepancies, RT-18 shift
  * closes, RT-560 ERP connection, RT-371 devices, RT-421 payer accounts, RT-587
- * sales). The nav mirrors the API; it is not an authorization decision.
+ * sales, RT-724 unknown items). The nav mirrors the API; it is not an authorization decision.
  */
 const ROLE_NAV: {
   section: MessageKey;
@@ -71,6 +72,15 @@ const ROLE_NAV: {
     to: "/stock-discrepancies",
     icon: "inventory",
     canRead: canReadStockDiscrepancies,
+  },
+  {
+    // RT-724: the unknown-items review queue left the RF-4 gate once its
+    // RF-4b actions shipped; listed for the roles the list API serves.
+    section: "shell.nav.section.catalog",
+    label: "shell.nav.unknownItems",
+    to: "/unknown-items",
+    icon: "unknownItem",
+    canRead: canReadUnknownItems,
   },
   {
     section: "shell.nav.section.cash",
@@ -112,7 +122,6 @@ const ROLE_NAV: {
  */
 const GATED_NAV: { label: MessageKey; gate: string; icon: NavIcon }[] = [
   { label: "shell.nav.catalog", gate: "RF-3", icon: "product" },
-  { label: "shell.nav.unknownItems", gate: "RF-4", icon: "unknownItem" },
 ];
 
 export interface AppShellProps {
