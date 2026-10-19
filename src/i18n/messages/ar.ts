@@ -5,6 +5,7 @@
  * never by English text. tests/unit/i18n-catalog.test.ts fails on a key
  * defined by two modules.
  */
+import { aiPlan } from "./ar/aiPlan";
 import { audit } from "./ar/audit";
 import { auth } from "./ar/auth";
 import { cashPolicy } from "./ar/cashPolicy";
@@ -41,6 +42,7 @@ export const AR_MODULES = {
   saleSync,
   cashPolicy,
   inventory,
+  aiPlan,
 };
 
 export const ar = {
@@ -61,4 +63,5 @@ export const ar = {
   ...saleSync,
   ...cashPolicy,
   ...inventory,
+  ...aiPlan,
 };
