@@ -23,6 +23,12 @@ vi.mock("@/lib/sale-queries", () => ({
   consoleListSales: (...a: unknown[]) => consoleListSales(...a),
   consoleGetSale: (...a: unknown[]) => consoleGetSale(...a),
 }));
+// RT-726: the sync sections on this page read their own wrappers; hermetic here.
+vi.mock("@/lib/sale-sync-ops-queries", () => ({
+  consoleGetSaleSyncStatus: () => new Promise(() => {}),
+  consoleGetSaleAuditTimeline: () => new Promise(() => {}),
+  consoleRepairSaleSync: vi.fn(),
+}));
 const readStore = vi.fn();
 vi.mock("@/lib/rf2-queries", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/rf2-queries")>();
