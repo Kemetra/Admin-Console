@@ -16,7 +16,7 @@ import { useT } from "@/i18n";
 import { type ScopeMembership, scopeMenuStores } from "@/shell/scope-stores";
 import { useSignOut } from "@/shell/useSignOut";
 import { useStoreList } from "@/stores/useStoreQueries";
-import { useSearchParams } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { ConnectionPanel } from "./ConnectionPanel";
 import { PostingBacklog } from "./PostingBacklog";
 import { ReconciliationRuns } from "./ReconciliationRuns";
@@ -95,9 +95,14 @@ function ErpStatusContent({ scope }: Readonly<{ scope: ErpScope }>): React.JSX.E
             {t.rich("erp.sub", { tenant: <bdi>{scope.tenantName}</bdi> })}
           </p>
         </div>
-        <button type="button" className="btn-secondary" onClick={refreshAll}>
-          {t("erp.refresh")}
-        </button>
+        <div className="erp-head-actions">
+          <Link className="btn-secondary" to="/erp-connection/mappings">
+            {t("erp.map.link")}
+          </Link>
+          <button type="button" className="btn-secondary" onClick={refreshAll}>
+            {t("erp.refresh")}
+          </button>
+        </div>
       </header>
 
       <ConnectionPanel state={connections} />

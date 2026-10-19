@@ -1,0 +1,120 @@
+/**
+ * RT-725 data layer: typed wrappers over the generated `apiClient` for the
+ * ERPNext item and warehouse mapping operations Backend-Core serves
+ * (`catalog/erpnext-item-map.yaml`, `catalog/erpnext-warehouse-map.yaml`). All
+ * are owner / tenant_admin, tenant-scoped, cookie-session; a wrong role is the
+ * API's non-disclosing 404.
+ *
+ *   - Items: `tenantAdminListErpnextItemMappings`,
+ *     `tenantAdminSuggestErpnextItemMapping` (only for a product id already
+ *     known from a mapping row: no catalog read contract exists yet),
+ *     `tenantAdminConfirmErpnextItemMapping`, `tenantAdminRetireErpnextItemMapping`.
+ *   - Warehouses: `tenantAdminListErpnextWarehouseMappings`,
+ *     `tenantAdminSetErpnextWarehouseMapping`,
+ *     `tenantAdminRetireErpnextWarehouseMapping`.
+ *
+ * Every call goes to Backend-Core; nothing reaches ERPNext or the Connector.
+ * Same `{ status, data?, error? }` shape as the other wrappers, plus the
+ * `Retry-After` seconds a console 429 carries. A mutation is sent once: no
+ * wrapper retries, and a request that never got an answer rejects (the caller
+ * reads that as an unknown outcome).
+ */
+import { apiClient } from "@/generated/client";
+import type { ErpnextItemMapSchema, ErpnextWarehouseMapSchema } from "@/generated/schema";
+
+type ItemSchemas = ErpnextItemMapSchema.components["schemas"];
+type WarehouseSchemas = ErpnextWarehouseMapSchema.components["schemas"];
+
+// --- Generated projections (no hand-typed shapes) -----------------------------
+
+export type ErpnextItemMapping = ItemSchemas["ErpnextItemMapping"];
+export type ItemMappingState = ErpnextItemMapping["state"];
+export type SuggestItemMappingRequest = ItemSchemas["SuggestErpnextItemMappingRequest"];
+export type ErpnextWarehouseMapping = WarehouseSchemas["ErpnextWarehouseMapping"];
+export type SetWarehouseMappingRequest = WarehouseSchemas["SetErpnextWarehouseMappingRequest"];
+
+/** What every wrapper returns. `retryAfter` is the 429 wait in seconds, when sent. */
+export interface MappingResult<P> {
+  status: number;
+  data?: P;
+  error?: unknown;
+  retryAfter?: number;
+}
+
+/** Whole seconds from a `Retry-After` header; anything else is no wait. */
+function retrySeconds(res: Response): number | undefined {
+  const seconds = Number(res.headers.get("Retry-After"));
+  return Number.isInteger(seconds) && seconds > 0 ? seconds : undefined;
+}
+
+function withRetryAfter<P>(status: number, data: P | undefined, error: unknown, res: Response) {
+  const result: MappingResult<P> = { status, data, error };
+  const wait = status === 429 ? retrySeconds(res) : undefined;
+  if (wait !== undefined) result.retryAfter = wait;
+  return result;
+}
+
+// --- Item mappings ---------------------------------------------------------------
+
+/** GET /api/v1/catalog/erpnext-item-mappings[?state=]. */
+export async function tenantAdminListErpnextItemMappings(state?: ItemMappingState) {
+  const { data, error, response } = await apiClient.GET("/api/v1/catalog/erpnext-item-mappings", {
+    params: { query: state ? { state } : {} },
+  });
+  return withRetryAfter(response.status, data, error, response);
+}
+
+/** POST /api/v1/catalog/erpnext-item-mappings: a manual, inert suggestion. */
+export async function tenantAdminSuggestErpnextItemMapping(body: SuggestItemMappingRequest) {
+  const { data, error, response } = await apiClient.POST("/api/v1/catalog/erpnext-item-mappings", {
+    body,
+  });
+  return withRetryAfter(response.status, data, error, response);
+}
+
+/** POST /api/v1/catalog/erpnext-item-mappings/{id}/confirm with the observed version. */
+export async function tenantAdminConfirmErpnextItemMapping(id: string, version: number) {
+  const { data, error, response } = await apiClient.POST(
+    "/api/v1/catalog/erpnext-item-mappings/{id}/confirm",
+    { params: { path: { id } }, body: { version } },
+  );
+  return withRetryAfter(response.status, data, error, response);
+}
+
+/** POST /api/v1/catalog/erpnext-item-mappings/{id}/retire with the observed version. */
+export async function tenantAdminRetireErpnextItemMapping(id: string, version: number) {
+  const { data, error, response } = await apiClient.POST(
+    "/api/v1/catalog/erpnext-item-mappings/{id}/retire",
+    { params: { path: { id } }, body: { version } },
+  );
+  return withRetryAfter(response.status, data, error, response);
+}
+
+// --- Warehouse mappings ------------------------------------------------------------
+
+/** GET /api/v1/catalog/erpnext-warehouse-mappings. */
+export async function tenantAdminListErpnextWarehouseMappings() {
+  const { data, error, response } = await apiClient.GET(
+    "/api/v1/catalog/erpnext-warehouse-mappings",
+    {},
+  );
+  return withRetryAfter(response.status, data, error, response);
+}
+
+/** POST /api/v1/catalog/erpnext-warehouse-mappings: store → ERPNext Warehouse. */
+export async function tenantAdminSetErpnextWarehouseMapping(body: SetWarehouseMappingRequest) {
+  const { data, error, response } = await apiClient.POST(
+    "/api/v1/catalog/erpnext-warehouse-mappings",
+    { body },
+  );
+  return withRetryAfter(response.status, data, error, response);
+}
+
+/** POST /api/v1/catalog/erpnext-warehouse-mappings/{id}/retire with the observed version. */
+export async function tenantAdminRetireErpnextWarehouseMapping(id: string, version: number) {
+  const { data, error, response } = await apiClient.POST(
+    "/api/v1/catalog/erpnext-warehouse-mappings/{id}/retire",
+    { params: { path: { id } }, body: { version } },
+  );
+  return withRetryAfter(response.status, data, error, response);
+}
