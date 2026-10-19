@@ -89,14 +89,16 @@ describe("ERPNext mapping wrappers (RT-725)", () => {
     expect(POST).toHaveBeenCalledWith("/api/v1/catalog/erpnext-warehouse-mappings", { body });
   });
 
-  test("a 429 reports its Retry-After seconds; a malformed one or another status does not", async () => {
+  test("a 429 reports its Retry-After seconds (shared classifier); another status does not", async () => {
     POST.mockResolvedValueOnce(answer(429, undefined, { "Retry-After": "30" }));
     await expect(tenantAdminConfirmErpnextItemMapping(ID, 1)).resolves.toMatchObject({
       status: 429,
       retryAfter: 30,
     });
     POST.mockResolvedValueOnce(answer(429, undefined, { "Retry-After": "soon" }));
-    expect((await tenantAdminConfirmErpnextItemMapping(ID, 1)).retryAfter).toBeUndefined();
+    expect((await tenantAdminConfirmErpnextItemMapping(ID, 1)).retryAfter).toBe(30);
+    POST.mockResolvedValueOnce(answer(429, undefined, { "Retry-After": "99999" }));
+    expect((await tenantAdminConfirmErpnextItemMapping(ID, 1)).retryAfter).toBe(3600);
     POST.mockResolvedValueOnce(answer(409, undefined, { "Retry-After": "30" }));
     expect((await tenantAdminConfirmErpnextItemMapping(ID, 1)).retryAfter).toBeUndefined();
   });

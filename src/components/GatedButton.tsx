@@ -10,7 +10,7 @@
 import { RateLimitCountdown } from "@/components/RateLimitBanner";
 import { useRateLimit } from "@/lib/useRateLimit";
 
-export type GatedButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
+export type GatedButtonProps = React.ComponentPropsWithRef<"button"> & {
   type?: "button" | "submit";
 };
 

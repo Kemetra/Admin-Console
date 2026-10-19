@@ -8,8 +8,12 @@
  * The outcome shown is the server's: a 200 shows the status it returned; a
  * 5xx or a lost response is "not confirmed" (the server may have acted), and
  * the next confirmation replays the same Idempotency-Key.
+ *
+ * "Confirm repair" is the one write, so it sits behind the shared 429 gate
+ * (RT-621 `GatedButton`): while a Retry-After runs it is held and sends nothing.
  */
 import { Banner, type BannerVariant } from "@/components/Banner";
+import { GatedButton } from "@/components/GatedButton";
 import { type T, useT } from "@/i18n";
 import { useEffect, useRef, useState } from "react";
 import { Machine } from "./parts";
@@ -103,16 +107,15 @@ export function RepairControl({
             {t.rich("saleSync.repair.confirmPrompt", { ref: <Machine value={reference} /> })}
           </p>
           <div className="surface__confirm-actions">
-            <button
+            <GatedButton
               ref={confirmButton}
-              type="button"
               className="btn-primary"
               disabled={repair.pending}
               onClick={() => void confirm()}
             >
               {repair.pending ? <span className="spinner" aria-hidden="true" /> : null}
               {t("saleSync.repair.confirm")}
-            </button>
+            </GatedButton>
             <button
               type="button"
               className="btn-secondary"

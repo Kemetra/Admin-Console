@@ -91,11 +91,13 @@ describe("product reconciliation wrappers", () => {
     });
   });
 
-  test("a 429 carries the parsed Retry-After; other statuses never do", async () => {
+  test("a 429 carries the shared classifier's Retry-After; other statuses never do", async () => {
     POST.mockResolvedValue({ error: {}, response: response(429, { "Retry-After": "17" }) });
     expect((await triggerProductReconciliationRun(KEY)).retryAfterSeconds).toBe(17);
     GET.mockResolvedValue({ error: {}, response: response(429, { "Retry-After": "soon" }) });
-    expect((await listProductReconciliationRuns()).retryAfterSeconds).toBeUndefined();
+    expect((await listProductReconciliationRuns()).retryAfterSeconds).toBe(30);
+    GET.mockResolvedValue({ error: {}, response: response(429, { "Retry-After": "7200" }) });
+    expect((await listProductReconciliationRuns()).retryAfterSeconds).toBe(3600);
     GET.mockResolvedValue({ error: {}, response: response(503, { "Retry-After": "5" }) });
     expect((await listProductReconciliationBacklog()).retryAfterSeconds).toBeUndefined();
   });

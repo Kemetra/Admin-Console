@@ -81,9 +81,11 @@ describe("sale sync-ops wrappers", () => {
     expect((await consoleListNeedsRepair({})).retryAfter).toBe(12);
   });
 
-  test("an unusable Retry-After, or one on another status, is ignored", async () => {
+  test("an unusable Retry-After falls back to 30 s; one on another status is ignored", async () => {
     GET.mockResolvedValue({ response: response(429, { "Retry-After": "soon" }) });
-    expect((await consoleGetSaleSyncStatus(SALE)).retryAfter).toBeUndefined();
+    expect((await consoleGetSaleSyncStatus(SALE)).retryAfter).toBe(30);
+    GET.mockResolvedValue({ response: response(429, { "Retry-After": "0" }) });
+    expect((await consoleGetSaleSyncStatus(SALE)).retryAfter).toBe(1);
     POST.mockResolvedValue({ response: response(503, { "Retry-After": "5" }) });
     expect((await consoleRepairSaleSync(SALE, KEY)).retryAfter).toBeUndefined();
   });

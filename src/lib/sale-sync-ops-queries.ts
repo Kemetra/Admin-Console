@@ -15,6 +15,7 @@
  */
 import { apiClient } from "@/generated/client";
 import type { SaleSyncOpsSchema } from "@/generated/schema";
+import { classifyRateLimit } from "@/lib/rate-limit";
 
 type Schemas = SaleSyncOpsSchema.components["schemas"];
 
@@ -31,11 +32,12 @@ export type NeedsRepairQuery = NonNullable<
   SaleSyncOpsSchema.operations["consoleListNeedsRepair"]["parameters"]["query"]
 >;
 
-/** Whole seconds from a 429's `Retry-After`, when the server sent a usable one. */
+/** A 429's wait in seconds via the shared RT-621 classifier (30 s fallback, [1, 3600]). */
 function retryAfterOf(response: Response): number | undefined {
-  if (response.status !== 429) return undefined;
-  const seconds = Number(response.headers.get("Retry-After"));
-  return Number.isInteger(seconds) && seconds > 0 ? seconds : undefined;
+  return classifyRateLimit({
+    status: response.status,
+    retryAfter: response.headers.get("Retry-After"),
+  })?.retryAfterSeconds;
 }
 
 function resultOf<D, E>(res: { data?: D; error?: E; response: Response }) {

@@ -31,6 +31,7 @@ vi.mock("@/context/ActiveContextProvider", () => ({
 }));
 
 import { createQueryClient } from "@/lib/query";
+import { reportRateLimited, resetRateLimit } from "@/lib/rate-limit";
 import { SaleSyncSections } from "@/sale-sync/SaleSyncSections";
 
 function renderSections(): void {
@@ -245,6 +246,23 @@ describe("SaleSyncSections (RT-726)", () => {
     fireEvent.click(within(confirm).getByRole("button", { name: "Cancel" }));
     expect(api.consoleRepairSaleSync).not.toHaveBeenCalled();
     await waitFor(() => expect(document.activeElement?.textContent).toBe("Request repair"));
+  });
+
+  test("while a Retry-After runs (RT-621), Confirm repair is held and nothing is sent", async () => {
+    renderSections();
+    const confirm = await openConfirm();
+    act(() => reportRateLimited(30));
+    try {
+      const button = within(confirm).getAllByRole("button")[0] as HTMLButtonElement;
+      expect(button.textContent).toContain("Confirm repair");
+      expect(button.disabled).toBe(true);
+      fireEvent.click(button);
+      expect(api.consoleRepairSaleSync).not.toHaveBeenCalled();
+    } finally {
+      act(() => resetRateLimit());
+    }
+    const button = within(confirm).getByRole("button", { name: "Confirm repair" });
+    expect((button as HTMLButtonElement).disabled).toBe(false);
   });
 
   test("a confirmed repair is sent once and shows the server's new status", async () => {

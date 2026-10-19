@@ -13,7 +13,7 @@ import { AsOf, Panel } from "@/erp-status/parts";
 import { DateTime, type T, useT } from "@/i18n";
 import type { ErpnextWarehouseMapping } from "@/lib/erp-mapping-queries";
 import { useId, useState } from "react";
-import { FailureBanner, InlineConfirm, Ref } from "./MappingParts";
+import { FailureBanner, InlineConfirm, Ref, RetryButton } from "./MappingParts";
 import { cleanRef, purposeKey, unmappedStores } from "./mappingLogic";
 import {
   type ListView,
@@ -302,11 +302,7 @@ function WarehouseTable({
   }
   if (list.failure) {
     const retry =
-      list.failure.kind === "unavailable" ? undefined : (
-        <button type="button" className="btn-secondary" onClick={list.retry}>
-          {t("erp.retry")}
-        </button>
-      );
+      list.failure.kind === "unavailable" ? undefined : <RetryButton onRetry={list.retry} />;
     return <FailureBanner op="listWarehouses" failure={list.failure} action={retry} />;
   }
   if (list.rows.length === 0)
@@ -420,11 +416,7 @@ export function WarehouseMappings({
         <FailureBanner
           op="listWarehouses"
           failure={list.staleFailure}
-          action={
-            <button type="button" className="btn-secondary" onClick={list.retry}>
-              {t("erp.retry")}
-            </button>
-          }
+          action={<RetryButton onRetry={list.retry} />}
         />
       ) : null}
       <WarehouseTable
