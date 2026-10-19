@@ -188,7 +188,7 @@ export function useUnknownItemBulkDismiss(activeTenantId: string | null) {
   const attempt = useKeyedAttempt();
   return useMutation({
     mutationFn: async (ids: string[]): Promise<UnknownItemWriteResult<BulkDismissOutcome[]>> => {
-      const fingerprint = JSON.stringify([...ids].sort());
+      const fingerprint = JSON.stringify([...ids].sort((a, b) => a.localeCompare(b)));
       const res = await bulkDismissUnknownItems(ids, attempt.keyFor(fingerprint));
       if (res.status >= 400) {
         const render = mapUnknownItemError({ ...res, op: "bulkDismiss" });
