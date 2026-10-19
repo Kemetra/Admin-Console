@@ -20,6 +20,7 @@
  */
 import { apiClient } from "@/generated/client";
 import type { ProductReconciliationSchema } from "@/generated/schema";
+import { classifyRateLimit } from "@/lib/rate-limit";
 
 type Schemas = ProductReconciliationSchema.components["schemas"];
 
@@ -45,11 +46,12 @@ export interface ClassPageQuery extends PageQuery {
   class?: MismatchClass;
 }
 
-/** Whole seconds from a 429's `Retry-After` (1..3600), or undefined. */
+/** A 429's wait in seconds via the shared RT-621 classifier (30 s fallback, [1, 3600]). */
 function retryAfterOf(response: Response): number | undefined {
-  if (response.status !== 429) return undefined;
-  const seconds = Number.parseInt(response.headers.get("retry-after") ?? "", 10);
-  return Number.isNaN(seconds) ? undefined : seconds;
+  return classifyRateLimit({
+    status: response.status,
+    retryAfter: response.headers.get("retry-after"),
+  })?.retryAfterSeconds;
 }
 
 /** What the generated client resolves to, for any operation. */

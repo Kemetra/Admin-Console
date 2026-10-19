@@ -21,6 +21,7 @@
  */
 import { apiClient } from "@/generated/client";
 import type { ErpnextItemMapSchema, ErpnextWarehouseMapSchema } from "@/generated/schema";
+import { classifyRateLimit } from "@/lib/rate-limit";
 
 type ItemSchemas = ErpnextItemMapSchema.components["schemas"];
 type WarehouseSchemas = ErpnextWarehouseMapSchema.components["schemas"];
@@ -41,15 +42,13 @@ export interface MappingResult<P> {
   retryAfter?: number;
 }
 
-/** Whole seconds from a `Retry-After` header; anything else is no wait. */
-function retrySeconds(res: Response): number | undefined {
-  const seconds = Number(res.headers.get("Retry-After"));
-  return Number.isInteger(seconds) && seconds > 0 ? seconds : undefined;
-}
-
 function withRetryAfter<P>(status: number, data: P | undefined, error: unknown, res: Response) {
   const result: MappingResult<P> = { status, data, error };
-  const wait = status === 429 ? retrySeconds(res) : undefined;
+  // The shared RT-621 classifier: 429 only, 30 s fallback, clamped to [1, 3600].
+  const wait = classifyRateLimit({
+    status,
+    retryAfter: res.headers.get("Retry-After"),
+  })?.retryAfterSeconds;
   if (wait !== undefined) result.retryAfter = wait;
   return result;
 }
