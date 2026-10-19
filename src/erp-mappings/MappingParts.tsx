@@ -3,9 +3,11 @@
  * contract refusal has its own words and keeps the request id) and the inline
  * confirm step every mutation passes through (DESIGN.md: an inline confirm, not
  * a reflexive modal). The confirm names exactly what will change; its primary
- * is disabled while the change is in flight, so one click sends one request.
+ * is disabled while the change is in flight, so one click sends one request,
+ * and while a Retry-After runs (RT-621's shared gate).
  */
 import { Banner, type BannerVariant } from "@/components/Banner";
+import { GatedButton } from "@/components/GatedButton";
 import { useT } from "@/i18n";
 import { type MappingFailure, type MappingOp, failureKey } from "./mappingLogic";
 
@@ -75,20 +77,29 @@ export function InlineConfirm({
       {failure ? <FailureBanner op={op} failure={failure} /> : null}
       <p className="map-confirm__msg">{prompt}</p>
       <div className="map-confirm__actions">
-        <button
-          type="button"
+        <GatedButton
           className={destructive ? "btn-destructive" : "btn-primary"}
           onClick={onConfirm}
           disabled={pending}
         >
           {pending ? <span className="spinner" aria-hidden="true" /> : null}
           {confirmLabel}
-        </button>
+        </GatedButton>
         <button type="button" className="btn-secondary" onClick={onCancel} disabled={pending}>
           {t("common.cancel")}
         </button>
       </div>
     </section>
+  );
+}
+
+/** Re-read a list. Gated by a running Retry-After (RT-621), like every read control. */
+export function RetryButton({ onRetry }: Readonly<{ onRetry: () => void }>): React.JSX.Element {
+  const t = useT();
+  return (
+    <GatedButton className="btn-secondary" onClick={onRetry}>
+      {t("erp.retry")}
+    </GatedButton>
   );
 }
 
