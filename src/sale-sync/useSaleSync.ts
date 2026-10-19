@@ -152,7 +152,10 @@ export interface NeedsRepairState {
   inlineError?: SyncError;
   /** When the rows on screen were read (ms since epoch). */
   asOf?: number;
+  /** Retries what failed: the failed page after a Load more, else the read. */
   retry: () => void;
+  /** Re-reads the queue from its first page, whatever failed before. */
+  refresh: () => void;
   hasMore: boolean;
   isFetchingNextPage: boolean;
   loadMore: () => void;
@@ -199,6 +202,7 @@ export function useNeedsRepairList(
     ...pagesState(result.data?.pages ?? [], errorOf(result.error), result.dataUpdatedAt),
     isLoading: active && result.isLoading,
     retry: () => (result.isFetchNextPageError ? loadMore() : void result.refetch()),
+    refresh: () => void result.refetch(),
     hasMore: result.hasNextPage,
     isFetchingNextPage: result.isFetchingNextPage,
     loadMore,

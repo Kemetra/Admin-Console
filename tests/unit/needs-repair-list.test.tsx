@@ -175,6 +175,20 @@ describe("NeedsRepairList (RT-726)", () => {
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
   });
 
+  test("after a failed Load more, Refresh re-reads the queue, not the failed page", async () => {
+    api.consoleListNeedsRepair
+      .mockResolvedValueOnce(page([repairItem()], SALE))
+      .mockResolvedValueOnce(failure(500))
+      .mockResolvedValue(page([repairItem()], SALE));
+    renderList();
+    await screen.findByRole("link", { name: "Open sale POS-CAI-0042" });
+    fireEvent.click(screen.getByRole("button", { name: "Load more" }));
+    await screen.findByText(/could not be refreshed/);
+    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    await waitFor(() => expect(api.consoleListNeedsRepair).toHaveBeenCalledTimes(3));
+    expect(api.consoleListNeedsRepair).toHaveBeenLastCalledWith({});
+  });
+
   test.each([
     [400, "The server rejected this request.", false],
     [401, "Your session has ended. Sign in again.", false],

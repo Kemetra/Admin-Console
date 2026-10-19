@@ -219,7 +219,12 @@ function Content({ scope }: Readonly<{ scope: SaleScope }>): React.JSX.Element {
             {t.rich("saleSync.list.sub", { tenant: <bdi>{scope.tenantName}</bdi> })}
           </p>
         </div>
-        <button type="button" className="btn-secondary" onClick={list.retry} disabled={!validStore}>
+        <button
+          type="button"
+          className="btn-secondary"
+          onClick={list.refresh}
+          disabled={!validStore}
+        >
           {t("saleSync.list.refresh")}
         </button>
       </header>
