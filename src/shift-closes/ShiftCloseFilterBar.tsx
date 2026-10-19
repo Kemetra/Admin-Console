@@ -5,6 +5,7 @@
  * selected store's zone, else UTC, and the bar says which. The bar never offers
  * a zero-variance view: "exception" is non-zero variance only, set in the query.
  */
+import { GatedButton } from "@/components/GatedButton";
 import { InlineError } from "@/components/InlineError";
 import { type MessageKey, useT } from "@/i18n";
 import { useState } from "react";
@@ -222,9 +223,9 @@ export function ShiftCloseFilterBar({
       <ScopeFields draft={draft} set={set} errors={errors} stores={stores} />
       <ValueFields draft={draft} set={set} errors={errors} />
       <div className="shift-filters__actions">
-        <button type="submit" className="btn-primary">
+        <GatedButton type="submit" className="btn-primary">
           {t("shift.filter.apply")}
-        </button>
+        </GatedButton>
         <button type="button" className="btn-ghost" onClick={clear}>
           {t("shift.filter.clear")}
         </button>

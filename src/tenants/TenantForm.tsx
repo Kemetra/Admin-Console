@@ -1,4 +1,5 @@
 import { Banner } from "@/components/Banner";
+import { GatedButton } from "@/components/GatedButton";
 import { InlineError } from "@/components/InlineError";
 import { type MessageKey, useT } from "@/i18n";
 import { textField } from "@/lib/form-field";
@@ -129,10 +130,10 @@ export function TenantForm({
         </div>
 
         <div className="surface__actions">
-          <button type="submit" className="btn-primary" disabled={pending}>
+          <GatedButton type="submit" className="btn-primary" disabled={pending}>
             {pending ? <span className="spinner" aria-hidden="true" /> : null}
             {submitLabel}
-          </button>
+          </GatedButton>
           <button
             type="button"
             className="btn-secondary"

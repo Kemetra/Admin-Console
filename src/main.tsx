@@ -1,4 +1,5 @@
 import { apiClient } from "@/generated/client";
+import { installRateLimitTracking } from "@/lib/rate-limit";
 import { installRequestIdHeader } from "@/lib/request-id";
 import { AppErrorBoundary } from "@/observability/AppErrorBoundary";
 import { telemetryConfigSource } from "@/observability/runtime-config";
@@ -16,6 +17,8 @@ if (!rootElement) {
 
 // RT-633: one X-Request-Id per Backend-Core call (contract RT-629 section 2).
 installRequestIdHeader(apiClient);
+// RT-621: every 429 feeds the shared Retry-After clock (banner, gates, retry).
+installRateLimitTracking(apiClient);
 
 createRoot(rootElement).render(
   <StrictMode>

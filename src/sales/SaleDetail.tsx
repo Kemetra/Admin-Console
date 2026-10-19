@@ -3,6 +3,7 @@ import { Banner } from "@/components/Banner";
 import { ListState } from "@/components/ListState";
 import { DateTime, Money, useT } from "@/i18n";
 import type { SaleDetail as Detail } from "@/lib/sale-queries";
+import { SaleSyncSections } from "@/sale-sync/SaleSyncSections";
 import { useStoreOf } from "@/shift-closes/useShiftCloses";
 /**
  * RT-587 — One sale (spec 012 J2, read-only). Only what the detail projection
@@ -12,6 +13,10 @@ import { useStoreOf } from "@/shift-closes/useShiftCloses";
  * days fixed at capture. A missing fact says "not recorded". No write, reprint
  * or repair is offered (FR-010). A 404 is the API's uniform refusal and reads
  * as not found or not available, whatever the cause.
+ *
+ * RT-726: for owner / tenant_admin the page also hosts the sale sync-ops
+ * sections (`src/sale-sync/`): the server sync status, the sync timeline and
+ * the guarded repair request. This module itself still reads only.
  */
 import { Link, useLocation, useParams } from "react-router";
 import {
@@ -164,6 +169,7 @@ function Loaded({ detail }: Readonly<{ detail: Detail }>): React.JSX.Element {
       <VoidSection detail={detail} timeZone={detail.storeTimezone} />
       <ReturnsSection detail={detail} timeZone={detail.storeTimezone} />
       <ErpSection detail={detail} />
+      <SaleSyncSections saleRef={detail.summary.saleRef} timeZone={detail.storeTimezone} />
       <RelatedSection detail={detail} />
     </div>
   );

@@ -150,7 +150,7 @@ test("S1: owner → search → detail → Back keeps the query; console routes o
   // AC-15: trace every request the sales journey makes, from the nav click on.
   const requested: URL[] = [];
   p.on("request", (r) => requested.push(new URL(r.url())));
-  await p.getByRole("link", { name: t("sales.nav.label") }).click();
+  await p.getByRole("link", { name: t("sales.nav.label"), exact: true }).click();
   await expect(p.getByRole("heading", { name: t("sales.list.title") })).toBeVisible();
   await expect(p.getByText(t("sales.list.queryPrompt"))).toBeVisible();
   expect(queries).toHaveLength(0);
@@ -206,7 +206,10 @@ test("S1: owner → search → detail → Back keeps the query; console routes o
   ];
   expect(api).toContain("/api/v1/sales");
   expect(api).toContain(`/api/v1/sales/${SALE}`);
-  for (const path of api) expect(path).toMatch(/^\/api\/v1\/(sales|stores|context)(\/|$)/);
+  // RT-726: an owner's detail also reads the sale's sync status and timeline.
+  for (const path of api) {
+    expect(path).toMatch(/^\/api\/v1\/(sales|stores|context|catalog\/sale-sync-ops\/sales)(\/|$)/);
+  }
 });
 
 test("S2: an empty page with a cursor offers Load more, never 'no sales'", async ({

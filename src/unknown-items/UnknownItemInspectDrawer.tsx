@@ -1,5 +1,6 @@
 import { Banner } from "@/components/Banner";
 import { Drawer } from "@/components/Drawer";
+import { GatedButton } from "@/components/GatedButton";
 import { ListState } from "@/components/ListState";
 import { DateTime, type MessageKey, useT } from "@/i18n";
 import {
@@ -65,7 +66,7 @@ function ReopenAction({
       {error ? <UnknownItemErrorBanner error={error} /> : null}
       {reopen.isError ? <Banner variant="danger" message={t("errors.server")} /> : null}
       <div className="unknown-item-detail__actions">
-        <button
+        <GatedButton
           type="button"
           className="btn-primary"
           disabled={reopen.isPending}
@@ -79,7 +80,7 @@ function ReopenAction({
         >
           {reopen.isPending ? <span className="spinner" aria-hidden="true" /> : null}
           {t("unknownItems.reopen.action")}
-        </button>
+        </GatedButton>
       </div>
     </div>
   );

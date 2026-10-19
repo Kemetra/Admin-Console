@@ -10,7 +10,14 @@
  * This module is pure orchestration logic — no React, no fetch — so it is
  * unit-testable in isolation. The concrete `refreshSession` (op #3) and the
  * cache-clear/redirect side effect are injected by the caller.
+ *
+ * RT-621: a 429 is never a lost session. A 429 on the original request passes
+ * straight through (only 401 refreshes), and a refresh that is itself refused
+ * with 429 does NOT call `onSessionLost`: the caller gets a 429 result back and
+ * shows the rate-limit state instead of the sign-in page.
  */
+
+import { RATE_LIMITED_STATUS } from "./rate-limit";
 
 /** Minimal shape we care about from any consumed response. */
 export interface MaybeUnauthorized {
@@ -18,8 +25,11 @@ export interface MaybeUnauthorized {
 }
 
 export interface AuthRetryDeps {
-  /** Calls `refreshSession` (op #3). Resolves `{ ok: true }` on a renewed session. */
-  refreshSession: () => Promise<{ ok: boolean }>;
+  /**
+   * Calls `refreshSession` (op #3). Resolves `{ ok: true }` on a renewed session;
+   * pass the refresh's `status` so a 429 is told apart from a lost session.
+   */
+  refreshSession: () => Promise<{ ok: boolean; status?: number }>;
   /** Side effect when the session cannot be renewed: clear cache + redirect to SF-1. */
   onSessionLost: () => void;
 }
@@ -30,9 +40,9 @@ export interface AuthRetryDeps {
  * than one `refreshSession` for a burst of expired calls.
  */
 export function createAuthRetry(deps: AuthRetryDeps) {
-  let inFlightRefresh: Promise<{ ok: boolean }> | null = null;
+  let inFlightRefresh: Promise<{ ok: boolean; status?: number }> | null = null;
 
-  function refreshOnce(): Promise<{ ok: boolean }> {
+  function refreshOnce(): Promise<{ ok: boolean; status?: number }> {
     inFlightRefresh ??= deps.refreshSession().finally(() => {
       inFlightRefresh = null;
     });
@@ -48,6 +58,11 @@ export function createAuthRetry(deps: AuthRetryDeps) {
     }
 
     const refreshed = await refreshOnce();
+    if (refreshed.status === RATE_LIMITED_STATUS) {
+      // Rate limited, not signed out: report the 429 so no caller reads the
+      // surviving 401 as an expired session.
+      return { ...first, status: RATE_LIMITED_STATUS };
+    }
     if (!refreshed.ok) {
       deps.onSessionLost();
       return first;

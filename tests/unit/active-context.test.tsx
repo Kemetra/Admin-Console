@@ -104,4 +104,38 @@ describe("useActiveContext", () => {
     expect(client.switchActiveStore).toHaveBeenCalledWith("s9");
     expect(result.current.context?.active_store?.id).toBe("s1");
   });
+  // RT-621: a 429 never becomes "signed out".
+  test("429 context read -> rateLimited, not sessionLost; no refresh", async () => {
+    vi.mocked(client.getActiveContext).mockResolvedValue({ status: 429 } as never);
+    const { result } = renderHook(() => useActiveContext(), { wrapper });
+
+    await waitFor(() => expect(result.current.rateLimited).toBe(true));
+    expect(result.current.sessionLost).toBe(false);
+    expect(client.refreshSession).not.toHaveBeenCalled();
+  });
+
+  test("401 context + refresh refused with 429 -> rateLimited, not sessionLost", async () => {
+    vi.mocked(client.getActiveContext).mockResolvedValue({ status: 401 } as never);
+    vi.mocked(client.refreshSession).mockResolvedValue({ status: 429 } as never);
+    const { result } = renderHook(() => useActiveContext(), { wrapper });
+
+    await waitFor(() => expect(result.current.rateLimited).toBe(true));
+    expect(result.current.sessionLost).toBe(false);
+    expect(result.current.context).toBeUndefined();
+  });
+
+  test("a 429 on a re-read keeps the context on screen", async () => {
+    vi.mocked(client.getActiveContext)
+      .mockResolvedValueOnce(ctx() as never)
+      .mockResolvedValue({ status: 429 } as never);
+    vi.mocked(client.switchActiveStore).mockResolvedValue({ status: 200 } as never);
+    const { result } = renderHook(() => useActiveContext(), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    await result.current.switchStore("s9").catch(() => {});
+
+    await waitFor(() => expect(result.current.rateLimited).toBe(true));
+    expect(result.current.sessionLost).toBe(false);
+    expect(result.current.context?.active_tenant?.name).toBe("Northstar Retail");
+  });
 });

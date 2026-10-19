@@ -25,6 +25,15 @@ export const common: MessagesOf<typeof ar> = {
   "errors.server": "Something went wrong. Try again.",
   "errors.generic": "The request could not be completed.",
 
+  "rateLimit.title": "Too many requests",
+  "rateLimit.wait": {
+    one: "You can try again in {count} second.",
+    other: "You can try again in {count} seconds.",
+  },
+  "rateLimit.ready": "You can try again now.",
+  "rateLimit.dismiss": "Dismiss",
+  "rateLimit.gate": { one: "Wait {count}s", other: "Wait {count}s" },
+
   "format.dateTime": "{date}, {time}",
   "format.dateTimeUtc": "{date}, {time} UTC",
   "format.duration.hours": { one: "{count} hour", other: "{count} hours" },

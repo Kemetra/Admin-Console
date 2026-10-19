@@ -1,6 +1,7 @@
 import { Banner } from "@/components/Banner";
 import { ConfirmDelete } from "@/components/ConfirmDelete";
 import { Drawer } from "@/components/Drawer";
+import { GatedButton } from "@/components/GatedButton";
 import { type MessageKey, useT } from "@/i18n";
 import { textField } from "@/lib/form-field";
 /**
@@ -136,10 +137,10 @@ export function EditMember({
         </div>
 
         <div className="surface__actions">
-          <button type="submit" className="btn-primary" disabled={pending}>
+          <GatedButton type="submit" className="btn-primary" disabled={pending}>
             {update.isPending ? <span className="spinner" aria-hidden="true" /> : null}
             {t("operators.edit.save")}
-          </button>
+          </GatedButton>
           <button type="button" className="btn-secondary" onClick={onClose} disabled={pending}>
             {t("common.cancel")}
           </button>

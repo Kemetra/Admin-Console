@@ -1,3 +1,4 @@
+import { RateLimitBanner } from "@/components/RateLimitBanner";
 import { TowerMark } from "@/components/TowerMark";
 import { Icon, type IconNameFor } from "@/components/icons/Icon";
 /**
@@ -24,6 +25,7 @@ import { canReadErpStatus } from "@/erp-status/erpStatusLogic";
 import { type MessageKey, roleKey, useT } from "@/i18n";
 import { LocaleSwitch } from "@/i18n/LocaleSwitch";
 import { canReadPayers } from "@/payers/payerAccess";
+import { canUseSaleSyncOps } from "@/sale-sync/saleSyncLogic";
 import { canReadSales } from "@/sales/saleLogic";
 import { canReadShiftCloses } from "@/shift-closes/shiftCloseLogic";
 import { canReadStockDiscrepancies } from "@/stock-discrepancies/stockDiscrepancyLogic";
@@ -49,7 +51,9 @@ const LIVE_NAV: { label: MessageKey; to: string; icon: NavIcon }[] = [
  * Role-gated destinations, each under its own section: shown only for the roles
  * the API lets read the surface (RT-178 stock discrepancies, RT-18 shift
  * closes, RT-560 ERP connection, RT-371 devices, RT-421 payer accounts, RT-587
- * sales, RT-724 unknown items). The nav mirrors the API; it is not an authorization decision.
+ * sales, RT-724 unknown items, RT-726 sales needing repair). Consecutive entries
+ * of one section share its heading. The nav mirrors the API; it is not an
+ * authorization decision.
  */
 const ROLE_NAV: {
   section: MessageKey;
@@ -99,6 +103,15 @@ const ROLE_NAV: {
     canRead: canReadErpStatus,
   },
   {
+    // RT-726: the NEEDS_REPAIR queue, beside the ERP status in the same
+    // section, for the roles the sale sync-ops API serves (owner / tenant_admin).
+    section: "erp.nav.section",
+    label: "saleSync.nav.label",
+    to: "/sales-needing-repair",
+    icon: "sale",
+    canRead: canUseSaleSyncOps,
+  },
+  {
     // RT-371: the device registry, for the roles the RT-365 API lets read it.
     section: "devices.nav.section",
     label: "devices.nav.label",
@@ -140,6 +153,7 @@ export function AppShell({
   const { context } = useActiveContextValue();
   const user = context?.user;
   const roleCode = context?.active_role_code;
+  const roleNav = ROLE_NAV.filter((entry) => entry.canRead(roleCode));
   const initials = (user?.display_name ?? user?.email ?? "?")
     .split(/[\s@.]+/)
     .slice(0, 2)
@@ -200,9 +214,11 @@ export function AppShell({
             <span className="nav-entry__label">{t(item.label)}</span>
           </NavLink>
         ))}
-        {ROLE_NAV.filter((entry) => entry.canRead(context?.active_role_code)).map((entry) => (
+        {roleNav.map((entry, index) => (
           <Fragment key={entry.to}>
-            <div className="nav-section">{t(entry.section)}</div>
+            {roleNav[index - 1]?.section === entry.section ? null : (
+              <div className="nav-section">{t(entry.section)}</div>
+            )}
             <NavLink
               to={entry.to}
               className={({ isActive }) =>
@@ -232,6 +248,8 @@ export function AppShell({
 
       {/* data-dirty-scope: forms edited in here count as unsaved work (RT-268). */}
       <main className="content" data-dirty-scope>
+        {/* RT-621: any 429 shows here, above the surface, without blocking it. */}
+        <RateLimitBanner />
         {children}
       </main>
     </div>

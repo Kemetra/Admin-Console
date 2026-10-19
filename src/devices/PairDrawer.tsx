@@ -7,6 +7,7 @@
  */
 import { Banner } from "@/components/Banner";
 import { Drawer } from "@/components/Drawer";
+import { GatedButton } from "@/components/GatedButton";
 import { useT } from "@/i18n";
 import type { PairingCodeIssued } from "@/lib/device-queries";
 import { type StoreDirectory, useStoreDirectory } from "@/shift-closes/useShiftCloses";
@@ -81,10 +82,10 @@ function IssueForm({
         onChange={onChange}
       />
       <div className="surface__actions">
-        <button type="submit" className="btn-primary" disabled={pending}>
+        <GatedButton type="submit" className="btn-primary" disabled={pending}>
           {pending ? <span className="spinner" aria-hidden="true" /> : null}
           {t("devices.issue.confirm")}
-        </button>
+        </GatedButton>
         <button type="button" className="btn-secondary" onClick={onClose} disabled={pending}>
           {t("common.cancel")}
         </button>

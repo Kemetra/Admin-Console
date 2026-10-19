@@ -52,6 +52,7 @@ describe("production navigation", () => {
       "Unknown items",
       "Shift closes",
       "Connection & sync",
+      "Sales needing repair",
       "Devices",
       "Payer accounts",
       "Sign out",
@@ -89,6 +90,26 @@ describe("production navigation", () => {
     expect(entryLabels(nav)).not.toContain("Connection & sync");
     expect(within(nav).queryByText("Integration")).toBeNull();
   });
+
+  // RT-726: the NEEDS_REPAIR queue shares the "Integration" heading (one
+  // heading, not two), for the roles the sale sync-ops API serves.
+  test.each(["owner", "tenant_admin"])(
+    "RT-726: %s sees Sales needing repair under the one Integration heading",
+    (role) => {
+      const nav = renderShell(role, false);
+      expect(
+        within(nav).getByRole("link", { name: "Sales needing repair" }).getAttribute("href"),
+      ).toBe("/sales-needing-repair");
+      expect(within(nav).getAllByText("Integration")).toHaveLength(1);
+    },
+  );
+
+  test.each(["store_manager", "store_staff", "cashier", "auditor"])(
+    "RT-726: %s has no Sales needing repair entry",
+    (role) => {
+      expect(entryLabels(renderShell(role, false))).not.toContain("Sales needing repair");
+    },
+  );
 
   // RT-371: the device registry, in its own "Point of sale" section, for the
   // roles the RT-365 API lets read it.
