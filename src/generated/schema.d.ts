@@ -3,7 +3,7 @@
  * Do not make direct changes to the file.
  */
 
-// Source: Data-Pulse-2 @ 35114fd49d7765dccf4e4c9f3b5c3a6e2d6dd828
+// Source: Data-Pulse-2 @ aa994f472fc1ae3485a212af95ed8339c505d366
 // Sources:
 // - packages/contracts/openapi/auth.openapi.yaml
 // - packages/contracts/openapi/context.openapi.yaml
@@ -22,6 +22,12 @@
 // - packages/contracts/openapi/console-sales.openapi.yaml
 // - packages/contracts/openapi/cash-variance-policy.openapi.yaml
 // - packages/contracts/openapi/console-telemetry.openapi.yaml
+// - packages/contracts/openapi/catalog/erpnext-item-map.yaml
+// - packages/contracts/openapi/catalog/erpnext-warehouse-map.yaml
+// - packages/contracts/openapi/catalog/product-reconciliation.yaml
+// - packages/contracts/openapi/catalog/tracking-profile.yaml
+// - packages/contracts/openapi/sale-sync-ops/sale-sync-ops.yaml
+// - packages/contracts/openapi/inventory/inventory.yaml
 //
 // The upstream OpenAPI files are separate documents with overlapping component
 // names, so this file namespaces each generated source and composes their path
@@ -563,11 +569,38 @@ export namespace ContextSchema {
                 store_access_kind?: "all" | "specific";
                 accessible_store_ids?: string[];
             };
+            /** @description The canonical error envelope (code, message, request_id). */
+            Error: {
+                error: {
+                    code: string;
+                    message: string;
+                    /** Format: uuid */
+                    request_id?: string;
+                };
+            };
         };
-        responses: never;
+        responses: {
+            /** @description 429 `rate_limited` (RT-574): the caller's per-user budget for this class of operation is spent. The body is the canonical error envelope with a non-disclosing message (no budget, class or window); its `request_id` equals the `X-Request-Id` response header. Honour `Retry-After`; never auto-retry a mutation. A 429 is not a 401: it never means the session ended. The console limit is server-configured and may not be enforced, so a client must handle a 429 but must not expect one. */
+            TooManyRequests: {
+                headers: {
+                    "Retry-After": components["headers"]["ConsoleRetryAfter"];
+                    /** @description Always `no-store` on a 429. */
+                    "Cache-Control": "no-store";
+                    /** @description The request id, equal to `error.request_id` in the body: the inbound `X-Request-Id` when it is a well-formed UUID, otherwise a server-minted one. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
         parameters: never;
         requestBodies: never;
-        headers: never;
+        headers: {
+            /** @description Whole seconds the caller should wait before retrying, sent on every console 429 (RT-574 D5). Its own bound, 1 to 3600; it is not the POS `RetryAfter` header. */
+            ConsoleRetryAfter: number;
+        };
         pathItems: never;
     }
     export type $defs = Record<string, never>;
@@ -597,6 +630,7 @@ export namespace ContextSchema {
                     };
                     content?: never;
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         switchActiveTenant: {
@@ -640,6 +674,7 @@ export namespace ContextSchema {
                     };
                     content?: never;
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         switchActiveStore: {
@@ -688,6 +723,7 @@ export namespace ContextSchema {
                     };
                     content?: never;
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         clearActiveStore: {
@@ -715,6 +751,7 @@ export namespace ContextSchema {
                     };
                     content?: never;
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
     }
@@ -825,11 +862,38 @@ export namespace TenantsSchema {
                 /** Format: date-time */
                 revoked_at?: string | null;
             };
+            /** @description The canonical error envelope (code, message, request_id). */
+            Error: {
+                error: {
+                    code: string;
+                    message: string;
+                    /** Format: uuid */
+                    request_id?: string;
+                };
+            };
         };
-        responses: never;
+        responses: {
+            /** @description 429 `rate_limited` (RT-574): the caller's per-user budget for this class of operation is spent. The body is the canonical error envelope with a non-disclosing message (no budget, class or window); its `request_id` equals the `X-Request-Id` response header. Honour `Retry-After`; never auto-retry a mutation. A 429 is not a 401: it never means the session ended. The console limit is server-configured and may not be enforced, so a client must handle a 429 but must not expect one. */
+            TooManyRequests: {
+                headers: {
+                    "Retry-After": components["headers"]["ConsoleRetryAfter"];
+                    /** @description Always `no-store` on a 429. */
+                    "Cache-Control": "no-store";
+                    /** @description The request id, equal to `error.request_id` in the body: the inbound `X-Request-Id` when it is a well-formed UUID, otherwise a server-minted one. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
         parameters: never;
         requestBodies: never;
-        headers: never;
+        headers: {
+            /** @description Whole seconds the caller should wait before retrying, sent on every console 429 (RT-574 D5). Its own bound, 1 to 3600; it is not the POS `RetryAfter` header. */
+            ConsoleRetryAfter: number;
+        };
         pathItems: never;
     }
     export type $defs = Record<string, never>;
@@ -852,6 +916,7 @@ export namespace TenantsSchema {
                         "application/json": components["schemas"]["TenantSummary"][];
                     };
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         createTenant: {
@@ -890,6 +955,7 @@ export namespace TenantsSchema {
                     };
                     content?: never;
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         readTenant: {
@@ -919,6 +985,7 @@ export namespace TenantsSchema {
                     };
                     content?: never;
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         softDeleteTenant: {
@@ -946,6 +1013,7 @@ export namespace TenantsSchema {
                     };
                     content?: never;
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         updateTenant: {
@@ -986,6 +1054,7 @@ export namespace TenantsSchema {
                     };
                     content?: never;
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         listMembers: {
@@ -1015,6 +1084,7 @@ export namespace TenantsSchema {
                     };
                     content?: never;
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
     }
@@ -1181,12 +1251,30 @@ export namespace StoresSchema {
                 };
             };
         };
-        responses: never;
+        responses: {
+            /** @description 429 `rate_limited` (RT-574): the caller's per-user budget for this class of operation is spent. The body is the canonical error envelope with a non-disclosing message (no budget, class or window); its `request_id` equals the `X-Request-Id` response header. Honour `Retry-After`; never auto-retry a mutation. A 429 is not a 401: it never means the session ended. The console limit is server-configured and may not be enforced, so a client must handle a 429 but must not expect one. */
+            TooManyRequests: {
+                headers: {
+                    "Retry-After": components["headers"]["ConsoleRetryAfter"];
+                    /** @description Always `no-store` on a 429. */
+                    "Cache-Control": "no-store";
+                    /** @description The request id, equal to `error.request_id` in the body: the inbound `X-Request-Id` when it is a well-formed UUID, otherwise a server-minted one. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
         parameters: {
             StoreId: string;
         };
         requestBodies: never;
-        headers: never;
+        headers: {
+            /** @description Whole seconds the caller should wait before retrying, sent on every console 429 (RT-574 D5). Its own bound, 1 to 3600; it is not the POS `RetryAfter` header. */
+            ConsoleRetryAfter: number;
+        };
         pathItems: never;
     }
     export type $defs = Record<string, never>;
@@ -1216,6 +1304,7 @@ export namespace StoresSchema {
                     };
                     content?: never;
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         createStore: {
@@ -1270,6 +1359,7 @@ export namespace StoresSchema {
                     };
                     content?: never;
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         readStore: {
@@ -1299,6 +1389,7 @@ export namespace StoresSchema {
                     };
                     content?: never;
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         softDeleteStore: {
@@ -1333,6 +1424,7 @@ export namespace StoresSchema {
                     };
                     content?: never;
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         updateStore: {
@@ -1391,6 +1483,7 @@ export namespace StoresSchema {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         previewStoreTimezoneChange: {
@@ -1438,6 +1531,7 @@ export namespace StoresSchema {
                     };
                     content?: never;
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
     }
@@ -1547,11 +1641,38 @@ export namespace MembershipsSchema {
                 /** Format: date-time */
                 revoked_at?: string | null;
             };
+            /** @description The canonical error envelope (code, message, request_id). */
+            Error: {
+                error: {
+                    code: string;
+                    message: string;
+                    /** Format: uuid */
+                    request_id?: string;
+                };
+            };
         };
-        responses: never;
+        responses: {
+            /** @description 429 `rate_limited` (RT-574): the caller's per-user budget for this class of operation is spent. The body is the canonical error envelope with a non-disclosing message (no budget, class or window); its `request_id` equals the `X-Request-Id` response header. Honour `Retry-After`; never auto-retry a mutation. A 429 is not a 401: it never means the session ended. The console limit is server-configured and may not be enforced, so a client must handle a 429 but must not expect one. */
+            TooManyRequests: {
+                headers: {
+                    "Retry-After": components["headers"]["ConsoleRetryAfter"];
+                    /** @description Always `no-store` on a 429. */
+                    "Cache-Control": "no-store";
+                    /** @description The request id, equal to `error.request_id` in the body: the inbound `X-Request-Id` when it is a well-formed UUID, otherwise a server-minted one. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
         parameters: never;
         requestBodies: never;
-        headers: never;
+        headers: {
+            /** @description Whole seconds the caller should wait before retrying, sent on every console 429 (RT-574 D5). Its own bound, 1 to 3600; it is not the POS `RetryAfter` header. */
+            ConsoleRetryAfter: number;
+        };
         pathItems: never;
     }
     export type $defs = Record<string, never>;
@@ -1623,6 +1744,7 @@ export namespace MembershipsSchema {
                     };
                     content?: never;
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         revokeMembership: {
@@ -1657,6 +1779,7 @@ export namespace MembershipsSchema {
                     };
                     content?: never;
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         updateMembership: {
@@ -1697,6 +1820,7 @@ export namespace MembershipsSchema {
                     };
                     content?: never;
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         acceptInvitation: {
@@ -1789,11 +1913,38 @@ export namespace AuditSchema {
                     [key: string]: unknown;
                 };
             };
+            /** @description The canonical error envelope (code, message, request_id). */
+            Error: {
+                error: {
+                    code: string;
+                    message: string;
+                    /** Format: uuid */
+                    request_id?: string;
+                };
+            };
         };
-        responses: never;
+        responses: {
+            /** @description 429 `rate_limited` (RT-574): the caller's per-user budget for this class of operation is spent. The body is the canonical error envelope with a non-disclosing message (no budget, class or window); its `request_id` equals the `X-Request-Id` response header. Honour `Retry-After`; never auto-retry a mutation. A 429 is not a 401: it never means the session ended. The console limit is server-configured and may not be enforced, so a client must handle a 429 but must not expect one. */
+            TooManyRequests: {
+                headers: {
+                    "Retry-After": components["headers"]["ConsoleRetryAfter"];
+                    /** @description Always `no-store` on a 429. */
+                    "Cache-Control": "no-store";
+                    /** @description The request id, equal to `error.request_id` in the body: the inbound `X-Request-Id` when it is a well-formed UUID, otherwise a server-minted one. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
         parameters: never;
         requestBodies: never;
-        headers: never;
+        headers: {
+            /** @description Whole seconds the caller should wait before retrying, sent on every console 429 (RT-574 D5). Its own bound, 1 to 3600; it is not the POS `RetryAfter` header. */
+            ConsoleRetryAfter: number;
+        };
         pathItems: never;
     }
     export type $defs = Record<string, never>;
@@ -1852,6 +2003,7 @@ export namespace AuditSchema {
                     };
                     content?: never;
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
     }
@@ -2223,7 +2375,7 @@ export namespace UnknownItemsSchema {
             /** @description Canonical error envelope shared with `auth.openapi.yaml`, `outbox.openapi.yaml`, and others. The `error.code` enum is documented in `research.md` §R2 (FR-091 taxonomy). */
             Error: {
                 error: {
-                    /** @description Stable machine-readable error code (FR-091 / 007 FR-100 taxonomy). The closed 8-category review-queue BUSINESS-FAILURE vocabulary is: `validation`, `target_unavailable`, `alias_conflict`, `idempotency_key_conflict`, `already_reconciled`, `not_found`, `forbidden` (007's 8th category — in-scope insufficient authority, distinct from `not_found`), and `system_failure`. NOTE: the `425 Too Early` idempotency in-progress signal is a TRANSPORT-level retry indicator, NOT a business-failure category — it is outside this closed set (the runtime interceptor emits a diagnostic `idempotency_in_progress` marker on 425; see the per-op 425 response and the recorded contract/runtime body-shape finding). Request-shape failures use the platform-wide runtime code `validation_error` (`ErrorCodes.VALIDATION`). */
+                    /** @description Stable machine-readable error code (FR-091 / 007 FR-100 taxonomy). The closed 8-category review-queue BUSINESS-FAILURE vocabulary is: `validation`, `target_unavailable`, `alias_conflict`, `idempotency_key_conflict`, `already_reconciled`, `not_found`, `forbidden` (007's 8th category — in-scope insufficient authority, distinct from `not_found`), and `system_failure`. NOTE: the `425 Too Early` idempotency in-progress signal is a TRANSPORT-level retry indicator, NOT a business-failure category — it is outside this closed set (the runtime interceptor emits a diagnostic `idempotency_in_progress` marker on 425; see the per-op 425 response and the recorded contract/runtime body-shape finding). Request-shape failures use the platform-wide runtime code `validation_error` (`ErrorCodes.VALIDATION`). The console 429 code `rate_limited` is likewise outside the business-failure set. */
                     code: string;
                     /** @description Human-readable summary; no sensitive data. */
                     message: string;
@@ -2235,10 +2387,28 @@ export namespace UnknownItemsSchema {
                 };
             };
         };
-        responses: never;
+        responses: {
+            /** @description 429 `rate_limited` (RT-574): the caller's per-user budget for this class of operation is spent. The body is the canonical error envelope with a non-disclosing message (no budget, class or window); its `request_id` equals the `X-Request-Id` response header. Honour `Retry-After`; never auto-retry a mutation. A 429 is not a 401: it never means the session ended. The console limit is server-configured and may not be enforced, so a client must handle a 429 but must not expect one. */
+            TooManyRequests: {
+                headers: {
+                    "Retry-After": components["headers"]["ConsoleRetryAfter"];
+                    /** @description Always `no-store` on a 429. */
+                    "Cache-Control": "no-store";
+                    /** @description The request id, equal to `error.request_id` in the body: the inbound `X-Request-Id` when it is a well-formed UUID, otherwise a server-minted one. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
         parameters: never;
         requestBodies: never;
-        headers: never;
+        headers: {
+            /** @description Whole seconds the caller should wait before retrying, sent on every console 429 (RT-574 D5). Its own bound, 1 to 3600; it is not the POS `RetryAfter` header. */
+            ConsoleRetryAfter: number;
+        };
         pathItems: never;
     }
     export type $defs = Record<string, never>;
@@ -2380,6 +2550,7 @@ export namespace UnknownItemsSchema {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         tenantAdminDismissUnknownItem: {
@@ -2448,6 +2619,7 @@ export namespace UnknownItemsSchema {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         tenantAdminLinkUnknownItem: {
@@ -2520,6 +2692,7 @@ export namespace UnknownItemsSchema {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         tenantAdminCreateProductFromUnknownItem: {
@@ -2592,6 +2765,7 @@ export namespace UnknownItemsSchema {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         tenantAdminInspectUnknownItem: {
@@ -2651,6 +2825,7 @@ export namespace UnknownItemsSchema {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         tenantAdminReopenUnknownItem: {
@@ -2737,6 +2912,7 @@ export namespace UnknownItemsSchema {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         tenantAdminBulkDismissUnknownItems: {
@@ -2811,6 +2987,7 @@ export namespace UnknownItemsSchema {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
     }
@@ -3029,6 +3206,20 @@ export namespace SettlementSchema {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description 429 `rate_limited` (RT-574): the caller's per-user budget for this class of operation is spent. The body is the canonical error envelope with a non-disclosing message (no budget, class or window); its `request_id` equals the `X-Request-Id` response header. Honour `Retry-After`; never auto-retry a mutation. A 429 is not a 401: it never means the session ended. The console limit is server-configured and may not be enforced, so a client must handle a 429 but must not expect one. */
+            TooManyRequests: {
+                headers: {
+                    "Retry-After": components["headers"]["ConsoleRetryAfter"];
+                    /** @description Always `no-store` on a 429. */
+                    "Cache-Control": "no-store";
+                    /** @description The request id, equal to `error.request_id` in the body: the inbound `X-Request-Id` when it is a well-formed UUID, otherwise a server-minted one. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
         parameters: {
             /** @description The payer's stable reference (`PayerAccount.payerRef`). A malformed value is a 400 `validation_error`. */
@@ -3043,7 +3234,10 @@ export namespace SettlementSchema {
             IdempotencyKey: string;
         };
         requestBodies: never;
-        headers: never;
+        headers: {
+            /** @description Whole seconds the caller should wait before retrying, sent on every console 429 (RT-574 D5). Its own bound, 1 to 3600; it is not the POS `RetryAfter` header. */
+            ConsoleRetryAfter: number;
+        };
         pathItems: never;
     }
     export type $defs = Record<string, never>;
@@ -3076,6 +3270,7 @@ export namespace SettlementSchema {
                 400: components["responses"]["ValidationFailure"];
                 401: components["responses"]["Unauthorized"];
                 403: components["responses"]["Forbidden"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -3109,6 +3304,7 @@ export namespace SettlementSchema {
                 403: components["responses"]["ForbiddenOrOriginRejected"];
                 404: components["responses"]["NotFound"];
                 409: components["responses"]["Conflict"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -3145,6 +3341,7 @@ export namespace SettlementSchema {
                 403: components["responses"]["ForbiddenOrOriginRejected"];
                 404: components["responses"]["PayerNotFound"];
                 409: components["responses"]["PayerUpdateConflict"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -3565,7 +3762,7 @@ export namespace ErpnextReconciliationSchema {
             /** @description Canonical error envelope, identical to the shared shape in `auth.openapi.yaml` / `catalog/erpnext-warehouse-map.yaml` (used verbatim). Cross-tenant / out-of-scope refusals are non-disclosing (§II/§XII). */
             Error: {
                 error: {
-                    /** @description Stable machine-readable error code. Closed set on this surface: validation_error | not_found | idempotency_key_conflict | not_re_resolvable | system_failure (plus the generic 401 refusal). */
+                    /** @description Stable machine-readable error code. Closed set on this surface: validation_error | not_found | idempotency_key_conflict | not_re_resolvable | system_failure (plus the generic 401 refusal and the console 429 `rate_limited`). */
                     code: string;
                     /** @description Human-readable summary. No sensitive data, no cause enumeration. */
                     message: string;
@@ -3632,6 +3829,20 @@ export namespace ErpnextReconciliationSchema {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description 429 `rate_limited` (RT-574): the caller's per-user budget for this class of operation is spent. The body is the canonical error envelope with a non-disclosing message (no budget, class or window); its `request_id` equals the `X-Request-Id` response header. Honour `Retry-After`; never auto-retry a mutation. A 429 is not a 401: it never means the session ended. The console limit is server-configured and may not be enforced, so a client must handle a 429 but must not expect one. */
+            TooManyRequests: {
+                headers: {
+                    "Retry-After": components["headers"]["ConsoleRetryAfter"];
+                    /** @description Always `no-store` on a 429. */
+                    "Cache-Control": "no-store";
+                    /** @description The request id, equal to `error.request_id` in the body: the inbound `X-Request-Id` when it is a well-formed UUID, otherwise a server-minted one. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
         parameters: {
             /** @description Opaque pagination cursor from a prior page's `nextCursor`. Omit to start. The posting backlog's cursor is a numeric token (1–18 digits); anything else is a 400 `validation_error`. */
@@ -3661,6 +3872,8 @@ export namespace ErpnextReconciliationSchema {
         headers: {
             /** @description Present and `true` on an idempotent-replay response. */
             IdempotentReplayed: boolean;
+            /** @description Whole seconds the caller should wait before retrying, sent on every console 429 (RT-574 D5). Its own bound, 1 to 3600; it is not the POS `RetryAfter` header. */
+            ConsoleRetryAfter: number;
         };
         pathItems: never;
     }
@@ -3695,6 +3908,7 @@ export namespace ErpnextReconciliationSchema {
                 };
                 400: components["responses"]["ValidationFailure"];
                 401: components["responses"]["Unauthorized"];
+                429: components["responses"]["TooManyRequests"];
             };
         };
         repairPosting: {
@@ -3740,6 +3954,7 @@ export namespace ErpnextReconciliationSchema {
                 403: components["responses"]["OriginRejected"];
                 404: components["responses"]["NotFound"];
                 409: components["responses"]["Conflict"];
+                429: components["responses"]["TooManyRequests"];
             };
         };
         reResolvePosting: {
@@ -3776,6 +3991,7 @@ export namespace ErpnextReconciliationSchema {
                 403: components["responses"]["OriginRejected"];
                 404: components["responses"]["NotFound"];
                 409: components["responses"]["NotReResolvable"];
+                429: components["responses"]["TooManyRequests"];
             };
         };
         triggerReconciliationRun: {
@@ -3818,6 +4034,7 @@ export namespace ErpnextReconciliationSchema {
                 403: components["responses"]["OriginRejected"];
                 404: components["responses"]["NotFound"];
                 409: components["responses"]["Conflict"];
+                429: components["responses"]["TooManyRequests"];
             };
         };
         getReconciliationRun: {
@@ -3843,6 +4060,7 @@ export namespace ErpnextReconciliationSchema {
                 };
                 401: components["responses"]["Unauthorized"];
                 404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
             };
         };
         listReconciliationResults: {
@@ -3876,6 +4094,7 @@ export namespace ErpnextReconciliationSchema {
                 400: components["responses"]["ValidationFailure"];
                 401: components["responses"]["Unauthorized"];
                 404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
             };
         };
         repairStockMismatch: {
@@ -3923,6 +4142,7 @@ export namespace ErpnextReconciliationSchema {
                 403: components["responses"]["OriginRejected"];
                 404: components["responses"]["NotFound"];
                 409: components["responses"]["Conflict"];
+                429: components["responses"]["TooManyRequests"];
             };
         };
         listErpnextNegativeOnHandStores: {
@@ -3951,6 +4171,7 @@ export namespace ErpnextReconciliationSchema {
                 400: components["responses"]["ValidationFailure"];
                 401: components["responses"]["Unauthorized"];
                 404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
             };
         };
         listErpnextNegativeOnHand: {
@@ -3982,6 +4203,7 @@ export namespace ErpnextReconciliationSchema {
                 400: components["responses"]["ValidationFailure"];
                 401: components["responses"]["Unauthorized"];
                 404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
             };
         };
     }
@@ -4278,6 +4500,20 @@ export namespace ShiftClosesSchema {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description 429 `rate_limited` (RT-574): the caller's per-user budget for this class of operation is spent. The body is the canonical error envelope with a non-disclosing message (no budget, class or window); its `request_id` equals the `X-Request-Id` response header. Honour `Retry-After`; never auto-retry a mutation. A 429 is not a 401: it never means the session ended. The console limit is server-configured and may not be enforced, so a client must handle a 429 but must not expect one. */
+            TooManyRequests: {
+                headers: {
+                    "Retry-After": components["headers"]["ConsoleRetryAfter"];
+                    /** @description Always `no-store` on a 429. */
+                    "Cache-Control": "no-store";
+                    /** @description The request id, equal to `error.request_id` in the body: the inbound `X-Request-Id` when it is a well-formed UUID, otherwise a server-minted one. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
         parameters: {
             /** @description The shift's client-generated id (`shiftId` on the POS contract). Case insensitive: normalised to lower case before the lookup. A value that is not a UUID is 400 `validation_error` and never reaches the database. */
@@ -4308,7 +4544,10 @@ export namespace ShiftClosesSchema {
             PageSize: number;
         };
         requestBodies: never;
-        headers: never;
+        headers: {
+            /** @description Whole seconds the caller should wait before retrying, sent on every console 429 (RT-574 D5). Its own bound, 1 to 3600; it is not the POS `RetryAfter` header. */
+            ConsoleRetryAfter: number;
+        };
         pathItems: never;
     }
     export type $defs = Record<string, never>;
@@ -4359,6 +4598,7 @@ export namespace ShiftClosesSchema {
                 400: components["responses"]["ValidationFailure"];
                 401: components["responses"]["Unauthorized"];
                 404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -4386,6 +4626,7 @@ export namespace ShiftClosesSchema {
                 400: components["responses"]["ValidationFailure"];
                 401: components["responses"]["Unauthorized"];
                 404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -4571,7 +4812,7 @@ export namespace ConnectorAdminSchema {
             /** @description Canonical error envelope, identical to the shared shape in `auth.openapi.yaml` / `catalog/erpnext-warehouse-map.yaml` (used verbatim). Cross-tenant / out-of-scope / wrong-principal refusals are non-disclosing (§II/§XII) — they never enumerate the underlying cause. */
             Error: {
                 error: {
-                    /** @description Stable machine-readable error code. Closed set on this surface: validation_error | not_found | conflict | idempotency_key_conflict | system_failure (plus the generic 401 refusal). */
+                    /** @description Stable machine-readable error code. Closed set on this surface: validation_error | not_found | conflict | idempotency_key_conflict | system_failure (plus the generic 401 refusal and the console 429 `rate_limited`). */
                     code: string;
                     /** @description Human-readable summary. No sensitive data, no cause enumeration. */
                     message: string;
@@ -4583,7 +4824,22 @@ export namespace ConnectorAdminSchema {
                 };
             };
         };
-        responses: never;
+        responses: {
+            /** @description 429 `rate_limited` (RT-574): the caller's per-user budget for this class of operation is spent. The body is the canonical error envelope with a non-disclosing message (no budget, class or window); its `request_id` equals the `X-Request-Id` response header. Honour `Retry-After`; never auto-retry a mutation. A 429 is not a 401: it never means the session ended. The console limit is server-configured and may not be enforced, so a client must handle a 429 but must not expect one. */
+            TooManyRequests: {
+                headers: {
+                    "Retry-After": components["headers"]["ConsoleRetryAfter"];
+                    /** @description Always `no-store` on a 429. */
+                    "Cache-Control": "no-store";
+                    /** @description The request id, equal to `error.request_id` in the body: the inbound `X-Request-Id` when it is a well-formed UUID, otherwise a server-minted one. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
         parameters: {
             /** @description UUIDv7 primary key of the `connector_registration` row. */
             InstanceId: string;
@@ -4593,7 +4849,10 @@ export namespace ConnectorAdminSchema {
             IdempotencyKey: string;
         };
         requestBodies: never;
-        headers: never;
+        headers: {
+            /** @description Whole seconds the caller should wait before retrying, sent on every console 429 (RT-574 D5). Its own bound, 1 to 3600; it is not the POS `RetryAfter` header. */
+            ConsoleRetryAfter: number;
+        };
         pathItems: never;
     }
     export type $defs = Record<string, never>;
@@ -4627,6 +4886,7 @@ export namespace ConnectorAdminSchema {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         tenantAdminRegisterConnectorInstance: {
@@ -4687,6 +4947,7 @@ export namespace ConnectorAdminSchema {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         tenantAdminDisableConnectorInstance: {
@@ -4737,6 +4998,7 @@ export namespace ConnectorAdminSchema {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         tenantAdminIssueConnectorCredential: {
@@ -4809,6 +5071,7 @@ export namespace ConnectorAdminSchema {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         tenantAdminRotateConnectorCredential: {
@@ -4871,6 +5134,7 @@ export namespace ConnectorAdminSchema {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         tenantAdminRevokeConnectorCredential: {
@@ -4933,6 +5197,7 @@ export namespace ConnectorAdminSchema {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
     }
@@ -5073,7 +5338,7 @@ export namespace ConnectorHealthSchema {
             /** @description Canonical error envelope, identical to the shared shape in `auth.openapi.yaml` / `posting-feed.yaml` / `stock-view.yaml` / `reconciliation.yaml` (verbatim — no extra fields). Cross-tenant / out-of-scope refusals are non-disclosing (§II/§XII). */
             Error: {
                 error: {
-                    /** @description Stable machine-readable error code. Closed set on this surface: validation_error | not_found | system_failure (plus the generic 401 auth refusal and the 403 forbidden-role refusal). */
+                    /** @description Stable machine-readable error code. Closed set on this surface: validation_error | not_found | system_failure (plus the generic 401 auth refusal, the 403 forbidden-role refusal and the console 429 `rate_limited`). */
                     code: string;
                     /** @description Human-readable summary. No sensitive data, no cause enumeration. */
                     message: string;
@@ -5131,13 +5396,30 @@ export namespace ConnectorHealthSchema {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description 429 `rate_limited` (RT-574): the caller's per-user budget for this class of operation is spent. The body is the canonical error envelope with a non-disclosing message (no budget, class or window); its `request_id` equals the `X-Request-Id` response header. Honour `Retry-After`; never auto-retry a mutation. A 429 is not a 401: it never means the session ended. The console limit is server-configured and may not be enforced, so a client must handle a 429 but must not expect one. */
+            TooManyRequests: {
+                headers: {
+                    "Retry-After": components["headers"]["ConsoleRetryAfter"];
+                    /** @description Always `no-store` on a 429. */
+                    "Cache-Control": "no-store";
+                    /** @description The request id, equal to `error.request_id` in the body: the inbound `X-Request-Id` when it is a well-formed UUID, otherwise a server-minted one. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
         parameters: {
             /** @description The 018 `connector_registration(id)` to read. Resolves only within the caller's tenant scope — out-of-scope / cross-tenant / absent ids are a non-disclosing `not_found` (safe 404, §II/§XII). A path param so it cannot be body-forged. */
             RegistrationId: string;
         };
         requestBodies: never;
-        headers: never;
+        headers: {
+            /** @description Whole seconds the caller should wait before retrying, sent on every console 429 (RT-574 D5). Its own bound, 1 to 3600; it is not the POS `RetryAfter` header. */
+            ConsoleRetryAfter: number;
+        };
         pathItems: never;
     }
     export type $defs = Record<string, never>;
@@ -5189,6 +5471,7 @@ export namespace ConnectorHealthSchema {
                 };
                 401: components["responses"]["Unauthorized"];
                 403: components["responses"]["Forbidden"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -5216,6 +5499,7 @@ export namespace ConnectorHealthSchema {
                 401: components["responses"]["Unauthorized"];
                 403: components["responses"]["Forbidden"];
                 404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -5381,7 +5665,7 @@ export namespace SyncOpsSchema {
             /** @description Canonical error envelope, identical to the shared shape in `auth` / `outbox` / `pos-sales` / `erpnext-reconciliation`. Cross-tenant / out-of-scope refusals are non-disclosing (§II/§XII). */
             Error: {
                 error: {
-                    /** @description Stable machine-readable code. Closed set: validation_error | unauthorized | forbidden | not_found | system_failure. */
+                    /** @description Stable machine-readable code. Closed set: validation_error | unauthorized | forbidden | not_found | system_failure | rate_limited (the console 429). */
                     code: string;
                     /** @description Human-readable summary. No sensitive data, no cause enumeration. */
                     message: string;
@@ -5439,6 +5723,20 @@ export namespace SyncOpsSchema {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description 429 `rate_limited` (RT-574): the caller's per-user budget for this class of operation is spent. The body is the canonical error envelope with a non-disclosing message (no budget, class or window); its `request_id` equals the `X-Request-Id` response header. Honour `Retry-After`; never auto-retry a mutation. A 429 is not a 401: it never means the session ended. The console limit is server-configured and may not be enforced, so a client must handle a 429 but must not expect one. */
+            TooManyRequests: {
+                headers: {
+                    "Retry-After": components["headers"]["ConsoleRetryAfter"];
+                    /** @description Always `no-store` on a 429. */
+                    "Cache-Control": "no-store";
+                    /** @description The request id, equal to `error.request_id` in the body: the inbound `X-Request-Id` when it is a well-formed UUID, otherwise a server-minted one. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
         parameters: {
             /** @description Optional in-scope store filter. Validated against the operator's accessible stores; an out-of-scope id is a non-disclosing 404. */
@@ -5451,7 +5749,10 @@ export namespace SyncOpsSchema {
             PageSize: number;
         };
         requestBodies: never;
-        headers: never;
+        headers: {
+            /** @description Whole seconds the caller should wait before retrying, sent on every console 429 (RT-574 D5). Its own bound, 1 to 3600; it is not the POS `RetryAfter` header. */
+            ConsoleRetryAfter: number;
+        };
         pathItems: never;
     }
     export type $defs = Record<string, never>;
@@ -5481,6 +5782,7 @@ export namespace SyncOpsSchema {
                 401: components["responses"]["Unauthorized"];
                 403: components["responses"]["Forbidden"];
                 404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -5513,6 +5815,7 @@ export namespace SyncOpsSchema {
                 401: components["responses"]["Unauthorized"];
                 403: components["responses"]["Forbidden"];
                 404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -5545,6 +5848,7 @@ export namespace SyncOpsSchema {
                 401: components["responses"]["Unauthorized"];
                 403: components["responses"]["Forbidden"];
                 404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -6301,6 +6605,20 @@ export namespace DevicesSchema {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description 429 `rate_limited` (RT-574): the caller's per-user budget for this class of operation is spent. The body is the canonical error envelope with a non-disclosing message (no budget, class or window); its `request_id` equals the `X-Request-Id` response header. Honour `Retry-After`; never auto-retry a mutation. A 429 is not a 401: it never means the session ended. The console limit is server-configured and may not be enforced, so a client must handle a 429 but must not expect one. */
+            TooManyRequests: {
+                headers: {
+                    "Retry-After": components["headers"]["ConsoleRetryAfter"];
+                    /** @description Always `no-store` on a 429. */
+                    "Cache-Control": "no-store";
+                    /** @description The request id, equal to `error.request_id` in the body: the inbound `X-Request-Id` when it is a well-formed UUID, otherwise a server-minted one. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
         parameters: {
             /** @description The device id (`devices.id`, which is the paired `terminal_id`). Case insensitive: normalised to lower case before the lookup. A value that is not a UUID is 400 `validation_error` and never reaches the database. */
@@ -6323,7 +6641,10 @@ export namespace DevicesSchema {
             IdempotencyKey: string;
         };
         requestBodies: never;
-        headers: never;
+        headers: {
+            /** @description Whole seconds the caller should wait before retrying, sent on every console 429 (RT-574 D5). Its own bound, 1 to 3600; it is not the POS `RetryAfter` header. */
+            ConsoleRetryAfter: number;
+        };
         pathItems: never;
     }
     export type $defs = Record<string, never>;
@@ -6358,6 +6679,7 @@ export namespace DevicesSchema {
                 400: components["responses"]["ValidationFailure"];
                 401: components["responses"]["Unauthorized"];
                 404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -6385,6 +6707,7 @@ export namespace DevicesSchema {
                 400: components["responses"]["ValidationFailure"];
                 401: components["responses"]["Unauthorized"];
                 404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -6419,6 +6742,7 @@ export namespace DevicesSchema {
                 404: components["responses"]["NotFound"];
                 409: components["responses"]["UnresolvedCashSession"];
                 422: components["responses"]["RecoveryRequirementsUnmet"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -6452,6 +6776,7 @@ export namespace DevicesSchema {
                 403: components["responses"]["OriginRejected"];
                 404: components["responses"]["NotFound"];
                 409: components["responses"]["DeviceRetireConflict"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -6484,6 +6809,7 @@ export namespace DevicesSchema {
                 400: components["responses"]["ValidationFailure"];
                 401: components["responses"]["Unauthorized"];
                 404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -6515,6 +6841,7 @@ export namespace DevicesSchema {
                 400: components["responses"]["ValidationFailure"];
                 401: components["responses"]["Unauthorized"];
                 404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -6549,6 +6876,7 @@ export namespace DevicesSchema {
                 404: components["responses"]["NotFound"];
                 409: components["responses"]["PairingCodeIssueConflict"];
                 425: components["responses"]["IdempotencyInProgress"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -6578,6 +6906,7 @@ export namespace DevicesSchema {
                 403: components["responses"]["OriginRejected"];
                 404: components["responses"]["NotFound"];
                 409: components["responses"]["PairingCodeUsed"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -6876,6 +7205,20 @@ export namespace ConsoleSalesSchema {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description 429 `rate_limited` (RT-574): the caller's per-user budget for this class of operation is spent. The body is the canonical error envelope with a non-disclosing message (no budget, class or window); its `request_id` equals the `X-Request-Id` response header. Honour `Retry-After`; never auto-retry a mutation. A 429 is not a 401: it never means the session ended. The console limit is server-configured and may not be enforced, so a client must handle a 429 but must not expect one. */
+            TooManyRequests: {
+                headers: {
+                    "Retry-After": components["headers"]["ConsoleRetryAfter"];
+                    /** @description Always `no-store` on a 429. */
+                    "Cache-Control": "no-store";
+                    /** @description The request id, equal to `error.request_id` in the body: the inbound `X-Request-Id` when it is a well-formed UUID, otherwise a server-minted one. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
         parameters: {
             /** @description REQUIRED in v1 (OD-556-2). The one store whose sales are listed. Validated against the caller's store scope: a store outside it, or of another tenant, is the non-disclosing 404. Case insensitive: the one lower-cased value is the one scope-checked, cursor-bound and queried. A missing, malformed or repeated value is 400 `validation_error`. */
@@ -6905,6 +7248,8 @@ export namespace ConsoleSalesSchema {
         headers: {
             /** @description `no-store` on every 200: the bodies carry staff display names and the receipt header (tax registration id), so no shared or browser cache keeps them. */
             CacheControlNoStore: "no-store";
+            /** @description Whole seconds the caller should wait before retrying, sent on every console 429 (RT-574 D5). Its own bound, 1 to 3600; it is not the POS `RetryAfter` header. */
+            ConsoleRetryAfter: number;
         };
         pathItems: never;
     }
@@ -6953,6 +7298,7 @@ export namespace ConsoleSalesSchema {
                 400: components["responses"]["ValidationFailure"];
                 401: components["responses"]["Unauthorized"];
                 404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -6981,6 +7327,7 @@ export namespace ConsoleSalesSchema {
                 400: components["responses"]["ValidationFailure"];
                 401: components["responses"]["Unauthorized"];
                 404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -7444,6 +7791,20 @@ export namespace CashVariancePolicySchema {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description 429 `rate_limited` (RT-574): the caller's per-user budget for this class of operation is spent. The body is the canonical error envelope with a non-disclosing message (no budget, class or window); its `request_id` equals the `X-Request-Id` response header. Honour `Retry-After`; never auto-retry a mutation. A 429 is not a 401: it never means the session ended. The console limit is server-configured and may not be enforced, so a client must handle a 429 but must not expect one. */
+            TooManyRequests: {
+                headers: {
+                    "Retry-After": components["headers"]["ConsoleRetryAfter"];
+                    /** @description Always `no-store` on a 429. */
+                    "Cache-Control": "no-store";
+                    /** @description The request id, equal to `error.request_id` in the body: the inbound `X-Request-Id` when it is a well-formed UUID, otherwise a server-minted one. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
         parameters: {
             /** @description Must be the session's tenant; another tenant, or a role outside the operation's list, is the non-disclosing 404. */
@@ -7469,6 +7830,8 @@ export namespace CashVariancePolicySchema {
             IdempotentReplayed: boolean;
             /** @description Seconds to wait before retrying a 425 with the same `Idempotency-Key` and body. */
             RetryAfterInProgress: number;
+            /** @description Whole seconds the caller should wait before retrying, sent on every console 429 (RT-574 D5). Its own bound, 1 to 3600; it is not the POS `RetryAfter` header. */
+            ConsoleRetryAfter: number;
         };
         pathItems: never;
     }
@@ -7535,6 +7898,7 @@ export namespace CashVariancePolicySchema {
                 400: components["responses"]["ReadValidationFailure"];
                 401: components["responses"]["Unauthorized"];
                 404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -7567,6 +7931,7 @@ export namespace CashVariancePolicySchema {
                 400: components["responses"]["ReadValidationFailure"];
                 401: components["responses"]["Unauthorized"];
                 404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -7606,6 +7971,7 @@ export namespace CashVariancePolicySchema {
                 409: components["responses"]["Conflict"];
                 422: components["responses"]["TenantPolicyUnprocessable"];
                 425: components["responses"]["IdempotencyInProgress"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -7633,6 +7999,7 @@ export namespace CashVariancePolicySchema {
                 400: components["responses"]["ReadValidationFailure"];
                 401: components["responses"]["Unauthorized"];
                 404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -7665,6 +8032,7 @@ export namespace CashVariancePolicySchema {
                 400: components["responses"]["ReadValidationFailure"];
                 401: components["responses"]["Unauthorized"];
                 404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -7704,6 +8072,7 @@ export namespace CashVariancePolicySchema {
                 409: components["responses"]["Conflict"];
                 422: components["responses"]["StoreOverrideUnprocessable"];
                 425: components["responses"]["IdempotencyInProgress"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -7891,6 +8260,2751 @@ export namespace ConsoleTelemetrySchema {
     }
 }
 
-export type paths = AuthSchema.paths & ContextSchema.paths & TenantsSchema.paths & StoresSchema.paths & MembershipsSchema.paths & AuditSchema.paths & UnknownItemsSchema.paths & SettlementSchema.paths & ErpnextReconciliationSchema.paths & ShiftClosesSchema.paths & ConnectorAdminSchema.paths & ConnectorHealthSchema.paths & SyncOpsSchema.paths & DevicesSchema.paths & ConsoleSalesSchema.paths & CashVariancePolicySchema.paths & ConsoleTelemetrySchema.paths;
-export type components = AuthSchema.components & ContextSchema.components & TenantsSchema.components & StoresSchema.components & MembershipsSchema.components & AuditSchema.components & UnknownItemsSchema.components & SettlementSchema.components & ErpnextReconciliationSchema.components & ShiftClosesSchema.components & ConnectorAdminSchema.components & ConnectorHealthSchema.components & SyncOpsSchema.components & DevicesSchema.components & ConsoleSalesSchema.components & CashVariancePolicySchema.components & ConsoleTelemetrySchema.components;
-export type operations = AuthSchema.operations & ContextSchema.operations & TenantsSchema.operations & StoresSchema.operations & MembershipsSchema.operations & AuditSchema.operations & UnknownItemsSchema.operations & SettlementSchema.operations & ErpnextReconciliationSchema.operations & ShiftClosesSchema.operations & ConnectorAdminSchema.operations & ConnectorHealthSchema.operations & SyncOpsSchema.operations & DevicesSchema.operations & ConsoleSalesSchema.operations & CashVariancePolicySchema.operations & ConsoleTelemetrySchema.operations;
+export namespace ErpnextItemMapSchema {
+    export interface paths {
+        "/api/v1/catalog/erpnext-item-mappings": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * List a tenant's ERPNext Item mappings (optionally the review queue).
+             * @description Returns the tenant's active mappings as `ErpnextItemMapping` projections. Filter to the unconfirmed review queue with `state=suggested`. Scoped to the session tenant (RLS); cross-tenant rows are never disclosed.
+             */
+            get: operations["tenantAdminListErpnextItemMappings"];
+            put?: never;
+            /**
+             * Record a manual suggested mapping (tenant_product → ERPNext Item).
+             * @description Creates a MANUAL suggested mapping in `state = 'suggested'` (OQ-7; v1 manual-only per finding AUTO_MATCH_NO_SOURCE). The row is INERT until confirmed — posting-time resolution never resolves a suggested row (confirmed-only invariant). At most ONE active mapping per `tenant_product_id` (OQ-2 1:1); a second active suggestion for the same product is `409 conflict`. `tenant_id` + actor are server-resolved (§XII); they MUST NOT appear in the body.
+             */
+            post: operations["tenantAdminSuggestErpnextItemMapping"];
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/catalog/erpnext-item-mappings/{id}/confirm": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            get?: never;
+            put?: never;
+            /**
+             * Confirm a suggested mapping (Tenant Admin).
+             * @description Transitions the addressed mapping from `suggested` to `confirmed`, recording the confirming actor + timestamp server-side. Carries the expected `version` for optimistic concurrency (§III): the update is `WHERE id = :id AND version = :version`; a mismatch is `409 conflict`. Only confirmed mappings are resolvable at posting time (confirmed-only invariant). Cross-tenant / out-of-scope ids are non-disclosing 404s.
+             */
+            post: operations["tenantAdminConfirmErpnextItemMapping"];
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/catalog/erpnext-item-mappings/{id}/retire": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            get?: never;
+            put?: never;
+            /**
+             * Retire (or re-point) a mapping — append-only.
+             * @description Sets `retired_at` on the addressed active mapping (append-only: the row is preserved as history; a re-point is a retire here followed by a fresh `tenantAdminSuggestErpnextItemMapping`, never an in-place identity rewrite). Carries the expected `version` (§III optimistic concurrency); a mismatch is `409 conflict`. Cross-tenant / out-of-scope ids are non-disclosing 404s.
+             */
+            post: operations["tenantAdminRetireErpnextItemMapping"];
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+    }
+    export type webhooks = Record<string, never>;
+    export interface components {
+        schemas: {
+            /** @description Manual suggest command. Strict (`additionalProperties: false`, §XII): `tenant_id`, `state`, `version`, `suggested_by`/`confirmed_by` are server-resolved and MUST NOT appear here. v1 has no `suggestion_source` field — it is always recorded server-side as `manual` (AUTO_MATCH_NO_SOURCE). */
+            SuggestErpnextItemMappingRequest: {
+                /**
+                 * Format: uuid
+                 * @description The DP2 tenant product to map (003 Tenant Catalog). Scope-checked server-side.
+                 */
+                tenant_product_id: string;
+                /** @description The ERPNext Item reference in DP2 terms (e.g. the Item code/name). Opaque string — no FK, version-independent (012 O-6). */
+                erpnext_item_ref: string;
+            };
+            /** @description Confirm / retire command. Carries ONLY the expected `version` for optimistic concurrency (§III). All identity + actor fields are server-resolved (§XII). */
+            VersionedMutationRequest: {
+                /** @description The version the caller last observed (Postgres int4). The update is `WHERE id = :id AND version = :version`; a mismatch is 409. */
+                version: number;
+            };
+            /** @description The `toBody()` projection of an `erpnext_item_map` row (no raw DB entity, §IV). Identity + lifecycle only — no price, UOM, or store field. */
+            ErpnextItemMapping: {
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                tenant_product_id: string;
+                erpnext_item_ref: string;
+                /**
+                 * @description Lifecycle state. Only `confirmed` mappings are resolvable at posting time.
+                 * @enum {string}
+                 */
+                state: "suggested" | "confirmed";
+                /**
+                 * @description How the candidate was found. v1 always `manual` (AUTO_MATCH_NO_SOURCE).
+                 * @enum {string}
+                 */
+                suggestion_source: "barcode" | "item_code" | "manual";
+                /** @description Optimistic-concurrency token (§III). */
+                version: number;
+                /**
+                 * Format: uuid
+                 * @description Actor that suggested (null when system-suggested — future).
+                 */
+                suggested_by?: string | null;
+                /** Format: date-time */
+                suggested_at: string;
+                /**
+                 * Format: uuid
+                 * @description Tenant Admin that confirmed. Non-null exactly when state = confirmed.
+                 */
+                confirmed_by?: string | null;
+                /** Format: date-time */
+                confirmed_at?: string | null;
+                /**
+                 * Format: date-time
+                 * @description Soft-delete timestamp. Null = active.
+                 */
+                retired_at?: string | null;
+                /** Format: date-time */
+                created_at: string;
+                /** Format: date-time */
+                updated_at: string;
+            };
+            /** @description Canonical error envelope, identical to the shared shape in `auth.openapi.yaml` / `catalog/unknown-items.yaml` (used verbatim). Cross-tenant / out-of-scope refusals are non-disclosing (§II/§XII) — they never enumerate the underlying cause. */
+            Error: {
+                error: {
+                    /** @description Stable machine-readable error code. Closed set on this surface: validation_error | not_found | conflict | system_failure (plus the generic 401 refusal and the console 429 `rate_limited`). */
+                    code: string;
+                    /** @description Human-readable summary. No sensitive data, no cause enumeration. */
+                    message: string;
+                    /**
+                     * Format: uuid
+                     * @description Server-side correlation id; the actual cause is recorded server-side.
+                     */
+                    request_id?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description 429 `rate_limited` (RT-574): the caller's per-user budget for this class of operation is spent. The body is the canonical error envelope with a non-disclosing message (no budget, class or window); its `request_id` equals the `X-Request-Id` response header. Honour `Retry-After`; never auto-retry a mutation. A 429 is not a 401: it never means the session ended. The console limit is server-configured and may not be enforced, so a client must handle a 429 but must not expect one. */
+            TooManyRequests: {
+                headers: {
+                    "Retry-After": components["headers"]["ConsoleRetryAfter"];
+                    /** @description Always `no-store` on a 429. */
+                    "Cache-Control": "no-store";
+                    /** @description The request id, equal to `error.request_id` in the body: the inbound `X-Request-Id` when it is a well-formed UUID, otherwise a server-minted one. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+        parameters: {
+            /** @description UUIDv7 primary key of the `erpnext_item_map` row. */
+            MappingId: string;
+        };
+        requestBodies: never;
+        headers: {
+            /** @description Whole seconds the caller should wait before retrying, sent on every console 429 (RT-574 D5). Its own bound, 1 to 3600; it is not the POS `RetryAfter` header. */
+            ConsoleRetryAfter: number;
+        };
+        pathItems: never;
+    }
+    export type $defs = Record<string, never>;
+    export interface operations {
+        tenantAdminListErpnextItemMappings: {
+            parameters: {
+                query?: {
+                    /** @description Optional lifecycle filter. Omit for all active mappings. */
+                    state?: "suggested" | "confirmed";
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The tenant's active mappings. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["ErpnextItemMapping"][];
+                        };
+                    };
+                };
+                /** @description Bad request (invalid query param). */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Caller is not authenticated. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                429: components["responses"]["TooManyRequests"];
+            };
+        };
+        tenantAdminSuggestErpnextItemMapping: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SuggestErpnextItemMappingRequest"];
+                };
+            };
+            responses: {
+                /** @description Suggested mapping created. */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErpnextItemMapping"];
+                    };
+                };
+                /** @description Bad request (validation failure). */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Caller is not authenticated. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description `origin_rejected` (RT-430): the request is authenticated by the `dp2_session` cookie and its `Origin` header is missing, or is neither the API's own origin nor listed in `ALLOWED_ORIGINS`. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description The addressed `tenant_product_id` is not found OR not in the session tenant's scope (non-disclosing, §II/§XII). */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description An active mapping already exists for this `tenant_product_id` (OQ-2 1:1). `error.code = "conflict"`. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                429: components["responses"]["TooManyRequests"];
+            };
+        };
+        tenantAdminConfirmErpnextItemMapping: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description UUIDv7 primary key of the `erpnext_item_map` row. */
+                    id: components["parameters"]["MappingId"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["VersionedMutationRequest"];
+                };
+            };
+            responses: {
+                /** @description Mapping confirmed. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErpnextItemMapping"];
+                    };
+                };
+                /** @description Bad request (invalid path UUID or body). */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Caller is not authenticated. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description `origin_rejected` (RT-430): the request is authenticated by the `dp2_session` cookie and its `Origin` header is missing, or is neither the API's own origin nor listed in `ALLOWED_ORIGINS`. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Not found OR not in scope (non-disclosing, §II/§XII). */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Optimistic-concurrency conflict (stale `version`) OR the mapping is not in a confirmable state. `error.code = "conflict"` (§III). */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                429: components["responses"]["TooManyRequests"];
+            };
+        };
+        tenantAdminRetireErpnextItemMapping: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description UUIDv7 primary key of the `erpnext_item_map` row. */
+                    id: components["parameters"]["MappingId"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["VersionedMutationRequest"];
+                };
+            };
+            responses: {
+                /** @description Mapping retired. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErpnextItemMapping"];
+                    };
+                };
+                /** @description Bad request (invalid path UUID or body). */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Caller is not authenticated. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description `origin_rejected` (RT-430): the request is authenticated by the `dp2_session` cookie and its `Origin` header is missing, or is neither the API's own origin nor listed in `ALLOWED_ORIGINS`. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Not found OR not in scope (non-disclosing, §II/§XII). */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Optimistic-concurrency conflict (stale `version`) OR already retired. `error.code = "conflict"` (§III). */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                429: components["responses"]["TooManyRequests"];
+            };
+        };
+    }
+}
+
+export namespace ErpnextWarehouseMapSchema {
+    export interface paths {
+        "/api/v1/catalog/erpnext-warehouse-mappings": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * List a tenant's ERPNext Warehouse mappings.
+             * @description Returns the tenant's active mappings as `ErpnextWarehouseMapping` projections. Scoped to the session tenant (RLS); cross-tenant rows are never disclosed.
+             */
+            get: operations["tenantAdminListErpnextWarehouseMappings"];
+            put?: never;
+            /**
+             * Set a manual mapping (store → ERPNext Warehouse).
+             * @description Creates a MANUAL mapping (OQ-3 manual admin-set; no suggest-engine, no import worker). `purpose` defaults server-side to `stock` in v1 (OQ-2 forward-compat). At most ONE active mapping per `(store_id, purpose)` (OQ-2 1:1 in v1); a second active set for the same store is `409 conflict`. `tenant_id` + actor are server-resolved (§XII); they MUST NOT appear in the body.
+             */
+            post: operations["tenantAdminSetErpnextWarehouseMapping"];
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/catalog/erpnext-warehouse-mappings/{id}/retire": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            get?: never;
+            put?: never;
+            /**
+             * Retire (or re-point) a mapping — append-only.
+             * @description Sets `retired_at` on the addressed active mapping (append-only: the row is preserved as history; a re-point is a retire here followed by a fresh `tenantAdminSetErpnextWarehouseMapping`, never an in-place identity rewrite). Carries the expected `version` (§III optimistic concurrency); a mismatch is `409 conflict`. Cross-tenant / out-of-scope ids are non-disclosing 404s.
+             */
+            post: operations["tenantAdminRetireErpnextWarehouseMapping"];
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+    }
+    export type webhooks = Record<string, never>;
+    export interface components {
+        schemas: {
+            /** @description Manual set command. Strict (`additionalProperties: false`, §XII): `tenant_id`, `purpose`, `version`, `set_by` are server-resolved and MUST NOT appear here. v1 has no `purpose` field — it is always recorded server-side as `stock` (OQ-2; the `returns` purpose is a future widening). */
+            SetErpnextWarehouseMappingRequest: {
+                /**
+                 * Format: uuid
+                 * @description The DP2 store to map (001 stores). Scope-checked server-side.
+                 */
+                store_id: string;
+                /** @description The ERPNext Warehouse reference in DP2 terms (e.g. the Warehouse name). Opaque string — no FK, version-independent (012 O-6). */
+                erpnext_warehouse_ref: string;
+            };
+            /** @description Retire command. Carries ONLY the expected `version` for optimistic concurrency (§III). All identity + actor fields are server-resolved (§XII). */
+            VersionedMutationRequest: {
+                /** @description The version the caller last observed (Postgres int4). The update is `WHERE id = :id AND version = :version`; a mismatch is 409. */
+                version: number;
+            };
+            /** @description The `toBody()` projection of an `erpnext_warehouse_map` row (no raw DB entity, §IV). Identity + lifecycle only — NO Bin-quantity, valuation, cost, or on-hand field (OQ-1; the rejected read-down look-alike). */
+            ErpnextWarehouseMapping: {
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                store_id: string;
+                /**
+                 * @description Warehouse role. v1 always `stock` (the `returns` purpose is a future widening).
+                 * @enum {string}
+                 */
+                purpose: "stock" | "returns";
+                erpnext_warehouse_ref: string;
+                /** @description Optimistic-concurrency token (§III). */
+                version: number;
+                /**
+                 * Format: uuid
+                 * @description Tenant Admin that set/last-updated the mapping.
+                 */
+                set_by?: string | null;
+                /** Format: date-time */
+                set_at: string;
+                /**
+                 * Format: date-time
+                 * @description Soft-delete timestamp. Null = active.
+                 */
+                retired_at?: string | null;
+                /** Format: date-time */
+                created_at: string;
+                /** Format: date-time */
+                updated_at: string;
+            };
+            /** @description Canonical error envelope, identical to the shared shape in `auth.openapi.yaml` / `catalog/erpnext-item-map.yaml` (used verbatim). Cross-tenant / out-of-scope refusals are non-disclosing (§II/§XII) — they never enumerate the underlying cause. */
+            Error: {
+                error: {
+                    /** @description Stable machine-readable error code. Closed set on this surface: validation_error | not_found | conflict | system_failure (plus the generic 401 refusal and the console 429 `rate_limited`). */
+                    code: string;
+                    /** @description Human-readable summary. No sensitive data, no cause enumeration. */
+                    message: string;
+                    /**
+                     * Format: uuid
+                     * @description Server-side correlation id; the actual cause is recorded server-side.
+                     */
+                    request_id?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description 429 `rate_limited` (RT-574): the caller's per-user budget for this class of operation is spent. The body is the canonical error envelope with a non-disclosing message (no budget, class or window); its `request_id` equals the `X-Request-Id` response header. Honour `Retry-After`; never auto-retry a mutation. A 429 is not a 401: it never means the session ended. The console limit is server-configured and may not be enforced, so a client must handle a 429 but must not expect one. */
+            TooManyRequests: {
+                headers: {
+                    "Retry-After": components["headers"]["ConsoleRetryAfter"];
+                    /** @description Always `no-store` on a 429. */
+                    "Cache-Control": "no-store";
+                    /** @description The request id, equal to `error.request_id` in the body: the inbound `X-Request-Id` when it is a well-formed UUID, otherwise a server-minted one. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+        parameters: {
+            /** @description UUIDv7 primary key of the `erpnext_warehouse_map` row. */
+            MappingId: string;
+        };
+        requestBodies: never;
+        headers: {
+            /** @description Whole seconds the caller should wait before retrying, sent on every console 429 (RT-574 D5). Its own bound, 1 to 3600; it is not the POS `RetryAfter` header. */
+            ConsoleRetryAfter: number;
+        };
+        pathItems: never;
+    }
+    export type $defs = Record<string, never>;
+    export interface operations {
+        tenantAdminListErpnextWarehouseMappings: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The tenant's active mappings. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["ErpnextWarehouseMapping"][];
+                        };
+                    };
+                };
+                /** @description Caller is not authenticated. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                429: components["responses"]["TooManyRequests"];
+            };
+        };
+        tenantAdminSetErpnextWarehouseMapping: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SetErpnextWarehouseMappingRequest"];
+                };
+            };
+            responses: {
+                /** @description Mapping set. */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErpnextWarehouseMapping"];
+                    };
+                };
+                /** @description Bad request (validation failure). */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Caller is not authenticated. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description `origin_rejected` (RT-430): the request is authenticated by the `dp2_session` cookie and its `Origin` header is missing, or is neither the API's own origin nor listed in `ALLOWED_ORIGINS`. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description The addressed `store_id` is not found OR not in the session tenant's scope (non-disclosing, §II/§XII). */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description An active mapping already exists for this `(store_id, purpose)` (OQ-2 1:1). `error.code = "conflict"`. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                429: components["responses"]["TooManyRequests"];
+            };
+        };
+        tenantAdminRetireErpnextWarehouseMapping: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description UUIDv7 primary key of the `erpnext_warehouse_map` row. */
+                    id: components["parameters"]["MappingId"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["VersionedMutationRequest"];
+                };
+            };
+            responses: {
+                /** @description Mapping retired. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErpnextWarehouseMapping"];
+                    };
+                };
+                /** @description Bad request (invalid path UUID or body). */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Caller is not authenticated. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description `origin_rejected` (RT-430): the request is authenticated by the `dp2_session` cookie and its `Origin` header is missing, or is neither the API's own origin nor listed in `ALLOWED_ORIGINS`. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Not found OR not in scope (non-disclosing, §II/§XII). */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Optimistic-concurrency conflict (stale `version`) OR already retired. `error.code = "conflict"` (§III). */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                429: components["responses"]["TooManyRequests"];
+            };
+        };
+    }
+}
+
+export namespace ProductReconciliationSchema {
+    export interface paths {
+        "/api/v1/catalog/erpnext-product-reconciliation/backlog": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * List the tenant's unmapped-product backlog (US1).
+             * @description Returns the LIVE read-projection of active DP2 products lacking a confirmed-and-active 013 mapping (FR-001/002), classified `unmapped_dp2_product` (no mapping row) | `suggestion_unconfirmed` (only a suggested/retired-confirmed row). Re-resolves the 013 truth on every read (READ-NOT-MIRROR-013). Cursor-paginated, optionally grouped by class. Scoped to the session tenant (RLS); cross-tenant rows are never disclosed.
+             */
+            get: operations["listProductReconciliationBacklog"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/catalog/erpnext-product-reconciliation/repairs": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            get?: never;
+            put?: never;
+            /**
+             * Repair an unmapped/divergent product via the 013 lifecycle (US2).
+             * @description Drives 013's EXISTING `erpnext_item_map` lifecycle (FR-010) — confirm an existing suggestion, suggest-then-confirm a mapping, or re-point a drifted one — under 013's optimistic-concurrency `version` guard. 021 issues NO direct write to `erpnext_item_map`; the 008 sale facts + the 003 catalog are NEVER mutated (FR-014). Idempotent: a confirm of an already-confirmed-and-active mapping is a non-destructive `no_op_echo` echoing the existing mapping (FR-011); a stale `version` is a `409` conflict and the product stays in the backlog (FR-012/013). `tenant_id` + actor are server-resolved (§XII). `Idempotency-Key` REQUIRED.
+             */
+            post: operations["repairProductMapping"];
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/catalog/erpnext-product-reconciliation/runs": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * List the tenant's product-master reconciliation runs (US3).
+             * @description Returns past runs (newest first), cursor-paginated. Scoped to the session tenant (RLS); cross-tenant runs are never disclosed.
+             */
+            get: operations["listProductReconciliationRuns"];
+            put?: never;
+            /**
+             * Trigger an on-demand product-master reconciliation run (US3).
+             * @description Starts a two-sided run comparing the 013 confirmed mapping set against the connector ERPNext-item view (012 seam). Stub-tolerant (FR-007): an absent / partial view is REPORTED via `erpnext_view_status`, never a run failure, and NO `unmapped_erpnext_item` is fabricated from an empty view. The 013 mapping, the 003 catalog, and the 008 sale facts are NEVER mutated by the run (FR-014). DP2 makes NO outbound ERPNext HTTP (FR-016). `tenant_id` + actor are server-resolved (§XII). `Idempotency-Key` REQUIRED.
+             */
+            post: operations["triggerProductReconciliationRun"];
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/catalog/erpnext-product-reconciliation/runs/{runId}/results": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * Get a run's classified mismatch report (US3).
+             * @description Returns the run's classified results in 021's product-master vocabulary (`match` | `unmapped_dp2_product` | `suggestion_unconfirmed` | `unmapped_erpnext_item` | `attribute_drift` | `sellable_state_divergence`), filterable by class, cursor-paginated. A cross-tenant / unknown run id is a non-disclosing 404.
+             */
+            get: operations["getProductReconciliationRunResults"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+    }
+    export type webhooks = Record<string, never>;
+    export interface components {
+        schemas: {
+            /** @description Repair command (US2). Strict (§XII): `tenant_id` + actor are server-resolved and MUST NOT appear. Drives 013's lifecycle (FR-010). */
+            RepairProductMappingRequest: {
+                /**
+                 * @description confirm = confirm an existing 013 suggestion; suggest_confirm = suggest-then-confirm for an unmapped product; re_point = re-point a drifted mapping. All drive 013's EXISTING lifecycle.
+                 * @enum {string}
+                 */
+                repairKind: "confirm" | "suggest_confirm" | "re_point";
+                /**
+                 * Format: uuid
+                 * @description The DP2 product to repair (003 tenant_products). Scope-checked server-side.
+                 */
+                tenantProductId: string;
+                /**
+                 * Format: uuid
+                 * @description The 013 `erpnext_item_map` row to confirm/re-point (required for `confirm` / `re_point`).
+                 */
+                mappingId?: string;
+                /** @description The ERPNext item reference for a `suggest_confirm` (the new mapping target). Opaque string — no FK, version-independent (012 O-6). */
+                erpnextItemRef?: string;
+                /** @description The 013 `version` the confirm/re-point is issued against (optimistic-concurrency guard, §III). A stale value is a 409. */
+                version?: number;
+                /**
+                 * Format: uuid
+                 * @description OPTIONAL — when present (with `resultId`), the repair targets a persisted US3 run result: the result_state transitions open→repaired on a `mapped` outcome (drives the same 013 lifecycle).
+                 */
+                runId?: string;
+                /**
+                 * Format: uuid
+                 * @description The US3 result id to repair (supplied together with `runId`).
+                 */
+                resultId?: string;
+            };
+            /** @description Trigger command (US3). v1 carries NO body field — `tenant_id`, trigger (`on_demand`), and actor are all server-resolved (§XII). Present so a future widening (e.g. a scoped run) has a strict request shape. */
+            TriggerProductRunRequest: Record<string, never>;
+            /** @description One row of the US1 live backlog — the `toBody()` projection (no raw DB entity, §IV). Computed live from 003 ⟕ 013; NOT a persisted 021 row (READ-NOT-MIRROR-013). NO money / valuation field. */
+            BacklogItem: {
+                /**
+                 * Format: uuid
+                 * @description The active DP2 product lacking a confirmed-and-active mapping.
+                 */
+                tenantProductId: string;
+                /**
+                 * @description unmapped_dp2_product = no mapping row at all; suggestion_unconfirmed = only a suggested (or retired-confirmed) 013 row exists.
+                 * @enum {string}
+                 */
+                mismatchClass: "unmapped_dp2_product" | "suggestion_unconfirmed";
+                /**
+                 * Format: uuid
+                 * @description The inert 013 suggestion row id (for `suggestion_unconfirmed`).
+                 */
+                suggestionMappingId?: string | null;
+                /** @description 013 suggestion provenance (`manual` in v1). */
+                suggestionSource?: string | null;
+                /** Format: uuid */
+                suggestedBy?: string | null;
+                /** Format: date-time */
+                suggestedAt?: string | null;
+                /** @description The suggested ERPNext item reference (for `suggestion_unconfirmed`). */
+                erpnextItemRef?: string | null;
+                /**
+                 * Format: date-time
+                 * @description When the gap was observed (the read timestamp).
+                 */
+                observedAt: string;
+            };
+            BacklogPage: {
+                items: components["schemas"]["BacklogItem"][];
+                /** @description The advanced cursor, or null on the last page. */
+                nextCursor: string | null;
+            };
+            /** @description The `toBody()` projection of an `erpnext_product_reconciliation_run` row. TENANT-scoped (no store axis — a mapping is tenant-wide). NO `kind` (021 has one run kind; the backlog is a read-projection). NO money field. */
+            ProductReconciliationRun: {
+                /** Format: uuid */
+                id: string;
+                /**
+                 * @description v1 emits `on_demand`; `scheduled` reserved.
+                 * @enum {string}
+                 */
+                trigger: "on_demand" | "scheduled";
+                /** @enum {string} */
+                status: "running" | "completed" | "failed";
+                /**
+                 * @description The connector-view availability for the run — an absent view is a REPORTED condition, never a failed run (FR-007).
+                 * @enum {string}
+                 */
+                erpnextViewStatus: "available" | "unavailable" | "partial";
+                /** Format: date-time */
+                startedAt: string;
+                /** Format: date-time */
+                finishedAt: string | null;
+                /** @description Counts by mismatch class (BUSINESS-class counts only; no PII/money). */
+                summary: {
+                    [key: string]: unknown;
+                } | null;
+            };
+            RunPage: {
+                items: components["schemas"]["ProductReconciliationRun"][];
+                nextCursor: string | null;
+            };
+            /** @description One classified line of a run's mismatch report — the `toBody()` projection. `mismatchClass` is 021's product-master vocabulary ONLY. NO money / valuation field. */
+            ProductReconciliationResult: {
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                runId: string;
+                /** @enum {string} */
+                mismatchClass: "match" | "unmapped_dp2_product" | "suggestion_unconfirmed" | "unmapped_erpnext_item" | "attribute_drift" | "sellable_state_divergence";
+                /**
+                 * Format: uuid
+                 * @description The DP2 product ref (null for an `unmapped_erpnext_item` line).
+                 */
+                tenantProductId: string | null;
+                /** @description The ERPNext item ref (null for an `unmapped_dp2_product` line). */
+                erpnextItemRef: string | null;
+                /**
+                 * @description 021's OWN orthogonal workflow status.
+                 * @enum {string}
+                 */
+                resultState: "open" | "repaired" | "accepted";
+                /** @description Operator-facing attribute / drift values (never PII/money in labels). */
+                detail: {
+                    [key: string]: unknown;
+                } | null;
+            };
+            ResultPage: {
+                items: components["schemas"]["ProductReconciliationResult"][];
+                nextCursor: string | null;
+            };
+            /** @description The `toBody()` projection of a recorded repair attempt (DP2 → operator). NO money / valuation field. */
+            RecordedProductRepair: {
+                /** @enum {string} */
+                targetKind: "backlog_item" | "result";
+                /**
+                 * Format: uuid
+                 * @description The tenant_products.id (backlog repair) or the result id (run repair).
+                 */
+                targetRef: string;
+                /** @enum {string} */
+                repairKind: "confirm" | "suggest_confirm" | "re_point";
+                /**
+                 * @description mapped = the 013 mapping is now confirmed-and-active; no_op_echo = an already-confirmed-active mapping (FR-011); conflict = 013's version guard fired (FR-012); still_unmapped = the product remains in the backlog (FR-013).
+                 * @enum {string}
+                 */
+                outcome: "mapped" | "still_unmapped" | "no_op_echo" | "conflict";
+                /**
+                 * Format: uuid
+                 * @description The resolved confirmed-and-active 013 mapping id (echoed on success/no-op).
+                 */
+                resolvedItemMapId: string | null;
+                /** Format: date-time */
+                recordedAt: string;
+            };
+            /** @description Canonical error envelope, identical to the shared shape in `auth.openapi.yaml` / `catalog/erpnext-item-map.yaml` (used verbatim). Cross-tenant / out-of-scope refusals are non-disclosing (§II/§XII). */
+            Error: {
+                error: {
+                    /** @description Stable machine-readable error code. Closed set on this surface: validation_error | not_found | conflict | system_failure (plus the generic 401 refusal and the console 429 `rate_limited`). */
+                    code: string;
+                    /** @description Human-readable summary. No sensitive data, no cause enumeration. */
+                    message: string;
+                    /**
+                     * Format: uuid
+                     * @description Server-side correlation id; the actual cause is recorded server-side.
+                     */
+                    request_id?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description 429 `rate_limited` (RT-574): the caller's per-user budget for this class of operation is spent. The body is the canonical error envelope with a non-disclosing message (no budget, class or window); its `request_id` equals the `X-Request-Id` response header. Honour `Retry-After`; never auto-retry a mutation. A 429 is not a 401: it never means the session ended. The console limit is server-configured and may not be enforced, so a client must handle a 429 but must not expect one. */
+            TooManyRequests: {
+                headers: {
+                    "Retry-After": components["headers"]["ConsoleRetryAfter"];
+                    /** @description Always `no-store` on a 429. */
+                    "Cache-Control": "no-store";
+                    /** @description The request id, equal to `error.request_id` in the body: the inbound `X-Request-Id` when it is a well-formed UUID, otherwise a server-minted one. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+        parameters: {
+            /** @description Required on the mutating ops (repair, trigger-run). Reuses the platform idempotency interceptor — a replay returns the recorded outcome; a token mismatch is 409 (O-3, no new primitive). */
+            IdempotencyKey: string;
+            /** @description UUIDv7 primary key of the `erpnext_product_reconciliation_run` row. */
+            RunId: string;
+            /** @description Opaque pagination cursor (the last item id the caller saw). The server accepts only a UUID here; anything else is a 400 `validation_error` (RT-66: declared to match the runtime Zod `uuid()` rule). */
+            CursorQuery: string;
+            /** @description Page size (clamped server-side to the 500/req ceiling). */
+            LimitQuery: number;
+            /** @description Filter / group by 021's product-master mismatch class. */
+            ClassQuery: "match" | "unmapped_dp2_product" | "suggestion_unconfirmed" | "unmapped_erpnext_item" | "attribute_drift" | "sellable_state_divergence";
+        };
+        requestBodies: never;
+        headers: {
+            /** @description Whole seconds the caller should wait before retrying, sent on every console 429 (RT-574 D5). Its own bound, 1 to 3600; it is not the POS `RetryAfter` header. */
+            ConsoleRetryAfter: number;
+        };
+        pathItems: never;
+    }
+    export type $defs = Record<string, never>;
+    export interface operations {
+        listProductReconciliationBacklog: {
+            parameters: {
+                query?: {
+                    /** @description Opaque pagination cursor (the last item id the caller saw). The server accepts only a UUID here; anything else is a 400 `validation_error` (RT-66: declared to match the runtime Zod `uuid()` rule). */
+                    cursor?: components["parameters"]["CursorQuery"];
+                    /** @description Page size (clamped server-side to the 500/req ceiling). */
+                    limit?: components["parameters"]["LimitQuery"];
+                    /** @description Filter / group by 021's product-master mismatch class. */
+                    class?: components["parameters"]["ClassQuery"];
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description A page of the unmapped-product backlog. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BacklogPage"];
+                    };
+                };
+                /** @description Caller is not authenticated. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                429: components["responses"]["TooManyRequests"];
+            };
+        };
+        repairProductMapping: {
+            parameters: {
+                query?: never;
+                header: {
+                    /** @description Required on the mutating ops (repair, trigger-run). Reuses the platform idempotency interceptor — a replay returns the recorded outcome; a token mismatch is 409 (O-3, no new primitive). */
+                    "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RepairProductMappingRequest"];
+                };
+            };
+            responses: {
+                /** @description Idempotent replay OR a non-destructive `no_op_echo` of an already-confirmed-active mapping (FR-011). */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RecordedProductRepair"];
+                    };
+                };
+                /** @description Repair recorded. */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RecordedProductRepair"];
+                    };
+                };
+                /** @description Bad request (validation failure). */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Caller is not authenticated. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description `origin_rejected` (RT-430): the request is authenticated by the `dp2_session` cookie and its `Origin` header is missing, or is neither the API's own origin nor listed in `ALLOWED_ORIGINS`. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description The addressed product / mapping is not found OR not in the session tenant's scope (non-disclosing, §II/§XII). */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Optimistic-concurrency conflict (stale 013 `version`) OR an idempotency-key conflict. `error.code = "conflict"` (§III / FR-012). */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                429: components["responses"]["TooManyRequests"];
+            };
+        };
+        listProductReconciliationRuns: {
+            parameters: {
+                query?: {
+                    /** @description Opaque pagination cursor (the last item id the caller saw). The server accepts only a UUID here; anything else is a 400 `validation_error` (RT-66: declared to match the runtime Zod `uuid()` rule). */
+                    cursor?: components["parameters"]["CursorQuery"];
+                    /** @description Page size (clamped server-side to the 500/req ceiling). */
+                    limit?: components["parameters"]["LimitQuery"];
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description A page of reconciliation runs. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RunPage"];
+                    };
+                };
+                /** @description Caller is not authenticated. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                429: components["responses"]["TooManyRequests"];
+            };
+        };
+        triggerProductReconciliationRun: {
+            parameters: {
+                query?: never;
+                header: {
+                    /** @description Required on the mutating ops (repair, trigger-run). Reuses the platform idempotency interceptor — a replay returns the recorded outcome; a token mismatch is 409 (O-3, no new primitive). */
+                    "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["TriggerProductRunRequest"];
+                };
+            };
+            responses: {
+                /** @description Run started. */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProductReconciliationRun"];
+                    };
+                };
+                /** @description Bad request (validation failure). */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Caller is not authenticated. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description `origin_rejected` (RT-430): the request is authenticated by the `dp2_session` cookie and its `Origin` header is missing, or is neither the API's own origin nor listed in `ALLOWED_ORIGINS`. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Idempotency-key conflict. `error.code = "conflict"`. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                429: components["responses"]["TooManyRequests"];
+            };
+        };
+        getProductReconciliationRunResults: {
+            parameters: {
+                query?: {
+                    /** @description Opaque pagination cursor (the last item id the caller saw). The server accepts only a UUID here; anything else is a 400 `validation_error` (RT-66: declared to match the runtime Zod `uuid()` rule). */
+                    cursor?: components["parameters"]["CursorQuery"];
+                    /** @description Page size (clamped server-side to the 500/req ceiling). */
+                    limit?: components["parameters"]["LimitQuery"];
+                    /** @description Filter / group by 021's product-master mismatch class. */
+                    class?: components["parameters"]["ClassQuery"];
+                };
+                header?: never;
+                path: {
+                    /** @description UUIDv7 primary key of the `erpnext_product_reconciliation_run` row. */
+                    runId: components["parameters"]["RunId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description A page of the run's classified results. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ResultPage"];
+                    };
+                };
+                /** @description Caller is not authenticated. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Run not found OR not in scope (non-disclosing, §II/§XII). */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                429: components["responses"]["TooManyRequests"];
+            };
+        };
+    }
+}
+
+export namespace TrackingProfileSchema {
+    export interface paths {
+        "/api/v1/catalog/products/{productId}/tracking-profile": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /** Read a product's Tracking Profile. */
+            get: operations["tenantAdminGetTrackingProfile"];
+            /**
+             * Set a product's Tracking Profile.
+             * @description Replaces both fields. Refused with `409 tracking_activation_pending` for `tracking_mode` `batch` or `serial` while tracked selling is not enabled, and with `409 tracking_profile_locked` when the values change and the product already has an inventory effect or a captured sale line (387). `expiry_required: true` is valid only with `tracking_mode: batch` (400 otherwise).
+             */
+            put: operations["tenantAdminSetTrackingProfile"];
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+    }
+    export type webhooks = Record<string, never>;
+    export interface components {
+        schemas: {
+            /** @description Full replacement. Strict (`additionalProperties: false`, §XII): `tenant_id`, `product_id` and the actor are server-resolved and MUST NOT appear here. */
+            SetTrackingProfileRequest: {
+                tracking_mode: components["schemas"]["TrackingMode"];
+                /** @description True only with `tracking_mode: batch` (386). */
+                expiry_required: boolean;
+            };
+            /**
+             * @description G7-1 (decision 384): `none` = untracked; `batch` = every unit belongs to a lot; `serial` = every unit has its own serial number.
+             * @enum {string}
+             */
+            TrackingMode: "none" | "batch" | "serial";
+            /** @description The `toBody()` projection of a product's Tracking Profile (no raw DB entity, §IV). */
+            TrackingProfile: {
+                /** Format: uuid */
+                product_id: string;
+                tracking_mode: components["schemas"]["TrackingMode"];
+                expiry_required: boolean;
+                /** @description True once the product has an inventory effect or a captured sale line; the profile can then no longer change (387). */
+                profile_locked: boolean;
+            };
+            /** @description Canonical error envelope, identical to the shared shape in `auth.openapi.yaml` / `catalog/erpnext-warehouse-map.yaml` (used verbatim). Cross-tenant / out-of-scope refusals are non-disclosing (§II/§XII) — they never enumerate the underlying cause. */
+            Error: {
+                error: {
+                    /** @description Stable machine-readable error code. Closed set on this surface: validation_error | not_found | tracking_activation_pending | tracking_profile_locked | origin_rejected | system_failure (plus the generic 401 refusal and the console 429 `rate_limited`). */
+                    code: string;
+                    /** @description Human-readable summary. No sensitive data, no cause enumeration. */
+                    message: string;
+                    /**
+                     * Format: uuid
+                     * @description Server-side correlation id; the actual cause is recorded server-side.
+                     */
+                    request_id?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description 429 `rate_limited` (RT-574): the caller's per-user budget for this class of operation is spent. The body is the canonical error envelope with a non-disclosing message (no budget, class or window); its `request_id` equals the `X-Request-Id` response header. Honour `Retry-After`; never auto-retry a mutation. A 429 is not a 401: it never means the session ended. The console limit is server-configured and may not be enforced, so a client must handle a 429 but must not expect one. */
+            TooManyRequests: {
+                headers: {
+                    "Retry-After": components["headers"]["ConsoleRetryAfter"];
+                    /** @description Always `no-store` on a 429. */
+                    "Cache-Control": "no-store";
+                    /** @description The request id, equal to `error.request_id` in the body: the inbound `X-Request-Id` when it is a well-formed UUID, otherwise a server-minted one. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+        parameters: {
+            /** @description The Tenant Catalog product (`tenant_products.id`). */
+            ProductId: string;
+        };
+        requestBodies: never;
+        headers: {
+            /** @description Whole seconds the caller should wait before retrying, sent on every console 429 (RT-574 D5). Its own bound, 1 to 3600; it is not the POS `RetryAfter` header. */
+            ConsoleRetryAfter: number;
+        };
+        pathItems: never;
+    }
+    export type $defs = Record<string, never>;
+    export interface operations {
+        tenantAdminGetTrackingProfile: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The Tenant Catalog product (`tenant_products.id`). */
+                    productId: components["parameters"]["ProductId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The product's Tracking Profile. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TrackingProfile"];
+                    };
+                };
+                /** @description Bad request (invalid path UUID). */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Caller is not authenticated. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Not found OR not in scope (non-disclosing, §II/§XII). */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                429: components["responses"]["TooManyRequests"];
+            };
+        };
+        tenantAdminSetTrackingProfile: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The Tenant Catalog product (`tenant_products.id`). */
+                    productId: components["parameters"]["ProductId"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SetTrackingProfileRequest"];
+                };
+            };
+            responses: {
+                /** @description The profile after the update. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TrackingProfile"];
+                    };
+                };
+                /** @description Bad request (validation failure). */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Caller is not authenticated. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description `origin_rejected` (RT-430): the request is authenticated by the `dp2_session` cookie and its `Origin` header is missing, or is neither the API's own origin nor listed in `ALLOWED_ORIGINS`. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Not found OR not in scope (non-disclosing, §II/§XII). */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description `tracking_activation_pending`: a `batch` / `serial` profile cannot be selected yet. `tracking_profile_locked`: the product has inventory or sale history, so its profile is locked (387). */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                429: components["responses"]["TooManyRequests"];
+            };
+        };
+    }
+}
+
+export namespace SaleSyncOpsSchema {
+    export interface paths {
+        "/api/v1/catalog/sale-sync-ops/sales/{saleRef}/status": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * Read one sale's server-authoritative sync-status.
+             * @description Resolve a single sale's DP-2-owned sync-status. Object-level authz: a sale outside the operator's (tenant, store) scope returns a non-disclosing 404, identical to genuinely-absent (FR-063/102).
+             */
+            get: operations["consoleGetSaleSyncStatus"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/catalog/sale-sync-ops/needs-repair": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * List the NEEDS_REPAIR queue (newest-first, keyset paginated).
+             * @description The dead-letter NEEDS_REPAIR queue: tenant-scoped (RLS) and optionally store-filtered, newest-first by the time-ordered sale reference, opaque keyset/cursor paginated (spec clarify 2026-06-12). Open `failed-needs-repair` items only — resolved items are retained for audit but not listed. Never a silent drop (Principle V/XIII).
+             */
+            get: operations["consoleListNeedsRepair"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/catalog/sale-sync-ops/sales/{saleRef}/audit-timeline": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * Read the correlation/audit timeline for one sale (028 provenance).
+             * @description The read-only correlation/audit timeline for one sale — 028 provenance, redacted at the emitter (Principle XIII/XIV). Object-level authz + non-disclosing 404, identical to the status read.
+             */
+            get: operations["consoleGetSaleAuditTimeline"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/catalog/sale-sync-ops/sales/{saleRef}/repair": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            get?: never;
+            put?: never;
+            /**
+             * Server-mediated repair/retry of a NEEDS_REPAIR sale sync.
+             * @description Issue a SERVER-MEDIATED repair/retry for a DP-2-classified NEEDS_REPAIR sale. The op is audited, acts ONLY on a `failed-needs-repair` item, and performs NO sale-fact rewrite (no change to the immutable `sales` / `sale_lines` / terminal-event rows — only the SaaS-owned sync-status and the deadletter resolution are touched). There is NO POS-local override path (repair authority is Console-mediated only — DP3 / §13 item 3).
+             *     An item not currently in a repairable (`failed-needs-repair`, open) state returns 409 `repair_conflict` — deterministic, no side effect. `Idempotency-Key` is REQUIRED (reuses the existing IdempotencyInterceptor).
+             */
+            post: operations["consoleRepairSaleSync"];
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+    }
+    export type webhooks = Record<string, never>;
+    export interface components {
+        schemas: {
+            /**
+             * @description The server-authoritative sale-status vocabulary (§7). DP-2 sets it; POS never overrides (the terminal observes, DP-2 decides).
+             * @enum {string}
+             */
+            SyncStatusValue: "captured" | "synced" | "failed-retryable" | "failed-needs-repair";
+            /** @description Wire projection of a sale's server-authoritative sync-status. Carries no `tenant_id` (implicit in the session scope), no money, no line amounts, no `payload_hash`, no `created_by`. */
+            SaleSyncStatus: {
+                /** Format: uuid */
+                saleRef: string;
+                /** Format: uuid */
+                storeId: string;
+                syncStatus: components["schemas"]["SyncStatusValue"];
+                sourceSystem: string;
+                externalId: string;
+                /**
+                 * Format: date-time
+                 * @description Null until the off-request drain sets it (FR-071).
+                 */
+                processedAt?: string | null;
+                /** @description Present (non-null) when the sale has an OPEN dead-letter row — the §8 classification + redacted reason + retry accounting. Null otherwise. */
+                deadLetter?: components["schemas"]["DeadLetterDetail"] | null;
+            };
+            /** @description The §8 dead-letter classification for a quarantined sale-sync. Provenance is on the parent `SaleSyncStatus`; the reason is a REDACTED machine label, never a raw upstream error body (Principle XIII/XIV). */
+            DeadLetterDetail: {
+                /** @enum {string} */
+                classification: "retryable" | "needs-repair";
+                /** @description Redacted machine label (e.g. auth_revoked, validation_error). */
+                reasonCode: string;
+                retryCount: number;
+                /** Format: date-time */
+                quarantinedAt: string;
+                /**
+                 * Format: date-time
+                 * @description Set when a server-mediated repair resolved the item; null while open.
+                 */
+                resolvedAt?: string | null;
+            };
+            /** @description A single NEEDS_REPAIR queue row (newest-first list projection). */
+            NeedsRepairItem: {
+                /** Format: uuid */
+                saleRef: string;
+                /** Format: uuid */
+                storeId: string;
+                syncStatus: components["schemas"]["SyncStatusValue"];
+                sourceSystem: string;
+                externalId: string;
+                /** @description Redacted machine label. */
+                reasonCode: string;
+                retryCount?: number;
+                /** Format: date-time */
+                quarantinedAt: string;
+            };
+            /** @description A keyset page of NEEDS_REPAIR items, newest-first. */
+            NeedsRepairPage: {
+                items: components["schemas"]["NeedsRepairItem"][];
+                /** @description Opaque cursor for the next page; null on the last page. */
+                nextCursor: string | null;
+            };
+            /** @description The read-only correlation/audit timeline for one sale (028 provenance). Entries are redacted at the emitter — no raw payload, no money, no PII. */
+            SaleAuditTimeline: {
+                /** Format: uuid */
+                saleRef: string;
+                entries: components["schemas"]["AuditTimelineEntry"][];
+            };
+            /** @description One redacted audit/correlation event in the sale's timeline. */
+            AuditTimelineEntry: {
+                /** Format: date-time */
+                at: string;
+                /** @description Stable machine event label (e.g. sale.captured, sync.failed, repair.requested). */
+                event: string;
+                /** Format: uuid */
+                correlationId?: string | null;
+            };
+            /** @description Canonical error envelope, identical to the shared shape. Cross-tenant / out-of-scope refusals are non-disclosing (§II/§XII) — they never enumerate the underlying cause. */
+            Error: {
+                error: {
+                    /** @description Stable machine-readable error code. */
+                    code: string;
+                    /** @description Human-readable summary. No sensitive data, no cause enumeration. */
+                    message: string;
+                    /**
+                     * Format: uuid
+                     * @description Server-side correlation id; the actual cause is recorded server-side.
+                     */
+                    request_id?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description validation_error (400) — malformed query/path, unknown key (strict), bad cursor. */
+            ValidationFailure: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Unauthenticated (401) — missing/invalid session cookie, or a non-cookie credential (machine bearer / POS clerkJwt) rejected. Non-disclosing. 401 semantics owned by 028 (G10). */
+            Unauthorized: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Insufficient role (403) — authenticated but the operator lacks the required role. 403 semantics owned by 028 (G10). */
+            Forbidden: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Insufficient role (403) — authenticated but the operator lacks the required role. 403 semantics owned by 028 (G10). Also `origin_rejected` (RT-430): the request is authenticated by the `dp2_session` cookie and its `Origin` header is missing, or is neither the API's own origin nor listed in `ALLOWED_ORIGINS`. */
+            ForbiddenOrOriginRejected: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description not_found (404) — the sale ref does not resolve within the operator's (tenant, store) scope. Non-disclosing: identical for cross-tenant, out-of-scope, and genuinely-absent ids (FR-102, SI-004, §II/§XII). */
+            NotFound: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description repair_conflict (409) — the targeted item is not in a repairable (open `failed-needs-repair`) state. Deterministic, no side effect. This is DISTINCT from the live provenance-conflict 409 on the POS terminal surface (F-3), which is NOT touched by this contract. */
+            RepairConflict: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description system_failure (500) — unexpected server error; cause recorded server-side by request_id. */
+            SystemFailure: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 429 `rate_limited` (RT-574): the caller's per-user budget for this class of operation is spent. The body is the canonical error envelope with a non-disclosing message (no budget, class or window); its `request_id` equals the `X-Request-Id` response header. Honour `Retry-After`; never auto-retry a mutation. A 429 is not a 401: it never means the session ended. The console limit is server-configured and may not be enforced, so a client must handle a 429 but must not expect one. */
+            TooManyRequests: {
+                headers: {
+                    "Retry-After": components["headers"]["ConsoleRetryAfter"];
+                    /** @description Always `no-store` on a 429. */
+                    "Cache-Control": "no-store";
+                    /** @description The request id, equal to `error.request_id` in the body: the inbound `X-Request-Id` when it is a well-formed UUID, otherwise a server-minted one. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+        parameters: {
+            /** @description Stable server-issued sale reference (= `sales.id`). Resolves only within the operator's (tenant, store) scope — out-of-scope refs are non-disclosing 404s (FR-063/102). */
+            SaleRef: string;
+            /** @description Optional in-scope store filter. Validated against the operator's accessible stores; an out-of-scope id is a non-disclosing 404. */
+            StoreIdQuery: string;
+            /** @description Opaque keyset pagination cursor from a prior page's `nextCursor`. Opaque — do not decode or construct. Omit for the first page. The value is a UUIDv7 sale reference; anything else is a 400 `validation_error`. */
+            Cursor: string;
+            /** @description Maximum items per page (bounded). The server MAY return fewer. */
+            PageSize: number;
+            /** @description REQUIRED on the repair write. Reuses the existing IdempotencyInterceptor — identical retry replays the stored response; key-reuse with a different logical payload returns 409 `idempotency_key_conflict`. */
+            IdempotencyKey: string;
+        };
+        requestBodies: never;
+        headers: {
+            /** @description Whole seconds the caller should wait before retrying, sent on every console 429 (RT-574 D5). Its own bound, 1 to 3600; it is not the POS `RetryAfter` header. */
+            ConsoleRetryAfter: number;
+        };
+        pathItems: never;
+    }
+    export type $defs = Record<string, never>;
+    export interface operations {
+        consoleGetSaleSyncStatus: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Stable server-issued sale reference (= `sales.id`). Resolves only within the operator's (tenant, store) scope — out-of-scope refs are non-disclosing 404s (FR-063/102). */
+                    saleRef: components["parameters"]["SaleRef"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The sale's sync-status projection. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SaleSyncStatus"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+        consoleListNeedsRepair: {
+            parameters: {
+                query?: {
+                    /** @description Optional in-scope store filter. Validated against the operator's accessible stores; an out-of-scope id is a non-disclosing 404. */
+                    store_id?: components["parameters"]["StoreIdQuery"];
+                    /** @description Opaque keyset pagination cursor from a prior page's `nextCursor`. Opaque — do not decode or construct. Omit for the first page. The value is a UUIDv7 sale reference; anything else is a 400 `validation_error`. */
+                    cursor?: components["parameters"]["Cursor"];
+                    /** @description Maximum items per page (bounded). The server MAY return fewer. */
+                    page_size?: components["parameters"]["PageSize"];
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description A page of NEEDS_REPAIR items, newest-first. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["NeedsRepairPage"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+        consoleGetSaleAuditTimeline: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Stable server-issued sale reference (= `sales.id`). Resolves only within the operator's (tenant, store) scope — out-of-scope refs are non-disclosing 404s (FR-063/102). */
+                    saleRef: components["parameters"]["SaleRef"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The sale's audit timeline. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SaleAuditTimeline"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+        consoleRepairSaleSync: {
+            parameters: {
+                query?: never;
+                header: {
+                    /** @description REQUIRED on the repair write. Reuses the existing IdempotencyInterceptor — identical retry replays the stored response; key-reuse with a different logical payload returns 409 `idempotency_key_conflict`. */
+                    "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                };
+                path: {
+                    /** @description Stable server-issued sale reference (= `sales.id`). Resolves only within the operator's (tenant, store) scope — out-of-scope refs are non-disclosing 404s (FR-063/102). */
+                    saleRef: components["parameters"]["SaleRef"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Repair accepted — the item was re-queued for sync. Returns the sale's updated sync-status projection. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SaleSyncStatus"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["ForbiddenOrOriginRejected"];
+                404: components["responses"]["NotFound"];
+                409: components["responses"]["RepairConflict"];
+                429: components["responses"]["TooManyRequests"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+    }
+}
+
+export namespace InventorySchema {
+    export interface paths {
+        "/api/inventory/v1/stores/{storeId}/movements": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * List the movements behind a balance, in a stable order.
+             * @description List stock movements for the path-scoped store (and optional product) in a stable order (FR-004). `productId` MAY be omitted to list ad-hoc (null-product) movements scoped to the store — those are auditable ledger entries that roll up to no product's on-hand (SC-001). Each entry is a `toBody` projection carrying type, signed quantity, timestamps, acting principal (`createdBy`), reason, and provenance / linkage refs.
+             */
+            get: operations["listStockMovements"];
+            put?: never;
+            /**
+             * Append a stock movement (inbound / outbound / adjustment).
+             * @description Append an append-only stock movement at the path-scoped store. `movementType` is one of `inbound` | `outbound` | `adjustment` (write-off is a reason-coded `outbound`; `transfer_out`/`transfer_in`/`count_correction` are produced only by `createStockTransfer` / `recordStockCount`, never accepted here). Quantity is a SIGNED exact-decimal string in the product's single stocking unit (see `DecimalQuantity` — `outbound` carries a negative value, `inbound` positive); a unit inconsistent with the product's stocking unit is rejected (no coercion, FR-022). `adjustment` requires a `reason`. A movement MAY carry `saleId` / `saleLineId` / `terminalEventRef` as provenance only (FR-032/025). Negative resulting on-hand is allowed and flagged, never rejected (FR-024). The `storeId` is the PATH-scoped selection target, authorized server-side against the principal's store-access set; tenant / store-write-authority / actor are resolved server-side and are NEVER taken from the body (Constitution §XII, FR-052). Idempotent via the required `Idempotency-Key` header (FR-030).
+             */
+            post: operations["createStockMovement"];
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/inventory/v1/stores/{storeId}/locations": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * List the stock locations of a store.
+             * @description RT-432 (RT-290 G4-1): the path-scoped store's stock locations, the `primary` location first, then by `code`. Read-only: a store's primary location is created with the store and its identity never changes. Store authorization is the same object-level rule as the other store-scoped reads; a store outside the caller's scope is a non-disclosing 404.
+             */
+            get: operations["listStockLocations"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/inventory/v1/products/{productId}/tracking-identities": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * List the tracking identities (batches / serials) of a product.
+             * @description RT-448 (RT-50 Gate 7 G7-2): the tenant's tracking identities of the path product, ordered by `kind`, then `expiryDate` (earliest first, none last), then `code`. Identities are tenant-wide, not store-scoped. Read-only: identities are ERP-born (G7-3) and nothing in this version creates one, so the list is empty until identity birth lands (RT-453). Owner / tenant-admin only; a product outside the caller's tenant, and a caller without the role, is a non-disclosing 404. Keyset-paged: a serial product has one identity per unit. `cursor` is the opaque `nextCursor` of the previous page for the same product; a malformed cursor, or one from another product, is a 400.
+             */
+            get: operations["listTrackingIdentities"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/inventory/v1/on-hand/{storeId}/{productId}": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * Derived on-hand for a (store, product).
+             * @description The compute-on-read signed SUM of the product's movements at the store (FR-003). A `(store, product)` with no movements returns a deterministic zero (FR-005), never an error. The projection carries a `negativeBalance` flag that is `true` when the derived quantity is below zero (FR-024); on-hand is never a stored mutable value.
+             */
+            get: operations["getOnHand"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/inventory/v1/transfers": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            get?: never;
+            put?: never;
+            /**
+             * Transfer stock between stores as linked movements.
+             * @description Create an intra-tenant transfer as LINKED movements — a `transfer_out` at the source store and a `transfer_in` at the destination, sharing a transfer group id so they are mutually discoverable (FR-020/SC-004). Source ≠ destination and quantity > 0 (else validation error). The destination store MUST belong to the same tenant; a cross-tenant destination is a non-disclosing 404 (FR-051). A transfer-out driving the source on-hand below zero is still recorded and flagged, never rejected (FR-024). Idempotent via the `Idempotency-Key` header.
+             */
+            post: operations["createStockTransfer"];
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/inventory/v1/stores/{storeId}/counts": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            get?: never;
+            put?: never;
+            /**
+             * Record a physical count; append a correction movement for any variance.
+             * @description Record a physical stock count for a product at the path-scoped store. Any variance from the derived on-hand is appended as a `count_correction` movement (signed variance) linked to the count; the movement history is NEVER rewritten (FR-021/SC-005). After the count, the derived on-hand equals the counted quantity. A zero-variance count is deterministic (no correction, or an explicit zero-variance record). The `storeId` is the PATH-scoped selection target, authorized server-side; it is never taken from the body (§XII). Idempotent via the `Idempotency-Key` header.
+             */
+            post: operations["recordStockCount"];
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/inventory/v1/admin/sale-linked-backfill": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            get?: never;
+            put?: never;
+            /**
+             * PLATFORM/ADMIN: backfill sale-linked outbound / restock movements.
+             * @deprecated
+             * @description Platform/admin-invoked backfill that creates outbound (or restock) movements referencing CAPTURED 008 sale / terminal-event rows as provenance (FR-032/033). It reads the captured (immutable) sale fact directly — it does NOT subscribe to `sale.captured` and does NOT read `processed_at`-stamped rows (decoupling, SC-002). Dedup is on the provenance pair (`sourceSystem + externalId` / sale-ref); a re-run converges to the same ledger state (no double-apply, FR-031/033). The request is bounded (default 500 movements); over-ceiling is rejected (429). This is NOT a public route — it uses the `platformAdmin` scheme, never `cookieAuth` operator sessions.
+             */
+            post: operations["backfillSaleLinkedMovements"];
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+    }
+    export type webhooks = Record<string, never>;
+    export interface components {
+        schemas: {
+            /** @description Strict command. The store is the PATH parameter (`storeId`), authorized server-side; `tenantId`, `createdBy`, `receivedAt`, and any derived balance are resolved server-side. NONE of these are accepted from the body — there is no body `storeId` (Constitution §XII, FR-052). */
+            CreateStockMovementCommand: {
+                /**
+                 * @description Write-off is a reason-coded `outbound`. transfer/count types are produced by their own operations only.
+                 * @enum {string}
+                 */
+                movementType: "inbound" | "outbound" | "adjustment";
+                /** @description SIGNED, non-zero quantity in the stocking unit — `inbound` is positive, `outbound` is negative; `movementType` is the semantic label, the sign is authoritative for the on-hand SUM. The server validates that the sign agrees with `movementType` (FR-022). */
+                quantity: components["schemas"]["NonZeroDecimalQuantity"];
+                stockingUnit: components["schemas"]["StockingUnit"];
+                /**
+                 * Format: uuid
+                 * @description Resolved Tenant Catalog product. Null for ad-hoc / unresolved references (provenance only; never auto-created — FR-023).
+                 */
+                tenantProductRef?: string | null;
+                /** @description Required for `adjustment` (and recommended for write-off outbounds); bounded, PII-free. */
+                reason?: string;
+                /**
+                 * Format: date-time
+                 * @description Business-event time (UTC). Backfilled / out-of-order values are normal; the server clock is the security clock.
+                 */
+                occurredAt?: string;
+                /**
+                 * Format: uuid
+                 * @description Provenance only — references a CAPTURED 008 sale (FR-032). Never required; never mutates the sale fact.
+                 */
+                saleId?: string | null;
+                /**
+                 * Format: uuid
+                 * @description Provenance only — references a captured 008 sale line.
+                 */
+                saleLineId?: string | null;
+                /**
+                 * Format: uuid
+                 * @description Provenance only — references an 008 void/refund terminal event (restock, FR-025).
+                 */
+                terminalEventRef?: string | null;
+                /**
+                 * Format: uuid
+                 * @description RT-432 (RT-290 G4-6): a stock location of the path store. Omitted ⇒ the store's primary location. A location that is not one of the path store's locations is a non-disclosing 404; an inactive location is a 400.
+                 */
+                stockLocationId?: string;
+                /** @description RT-432 (RT-290 G4-6). Omitted ⇒ `sellable`. */
+                inventoryStatus?: components["schemas"]["InventoryStatus"];
+            };
+            /** @description Strict command. `sourceStoreId` is the operator's authorized scope (validated server-side against the principal's store-access set — it grants no authority by being in the body, §XII); `destinationStoreId` is a legitimate TARGET reference (not write-authority over the actor's scope). Both resolve within the caller's tenant. */
+            CreateStockTransferCommand: {
+                /**
+                 * Format: uuid
+                 * @description Source store; authorized server-side against the principal's store-access set.
+                 */
+                sourceStoreId: string;
+                /**
+                 * Format: uuid
+                 * @description Target store. MUST be in the same tenant (cross-tenant ⇒ non-disclosing 404) and MUST differ from source.
+                 */
+                destinationStoreId: string;
+                /** Format: uuid */
+                tenantProductRef: string;
+                /** @description Strictly positive; a zero-quantity transfer is a validation error. */
+                quantity: components["schemas"]["PositiveDecimalQuantity"];
+                stockingUnit: components["schemas"]["StockingUnit"];
+                reason?: string;
+            };
+            /** @description Strict command. The store is the PATH parameter (`storeId`), authorized server-side; never a body field (§XII). */
+            RecordStockCountCommand: {
+                /** Format: uuid */
+                tenantProductRef: string;
+                /** @description The physical count (non-negative); the signed variance vs derived on-hand becomes the correction movement. */
+                countedQuantity: components["schemas"]["NonNegativeDecimalQuantity"];
+                stockingUnit: components["schemas"]["StockingUnit"];
+                /** Format: date-time */
+                countedAt?: string;
+            };
+            /** @description Bounded batch (default max 500 items); over-ceiling ⇒ 429. */
+            SaleLinkedBackfillCommand: {
+                /** @description Provenance source for the dedup pair `(sourceSystem, externalId)`. */
+                sourceSystem: string;
+                items: components["schemas"]["SaleLinkedBackfillItem"][];
+            };
+            SaleLinkedBackfillItem: {
+                /** @description Stable provenance id paired with `sourceSystem` for dedup. */
+                externalId: string;
+                /** Format: uuid */
+                storeId: string;
+                /** Format: uuid */
+                saleId?: string | null;
+                /** Format: uuid */
+                saleLineId?: string | null;
+                /** Format: uuid */
+                terminalEventRef?: string | null;
+                /** Format: uuid */
+                tenantProductRef?: string | null;
+                quantity: components["schemas"]["DecimalQuantity"];
+                stockingUnit: string;
+                /**
+                 * @description outbound = sale decrement; restock = void/refund/return inbound (FR-025).
+                 * @default outbound
+                 * @enum {string}
+                 */
+                direction: "outbound" | "restock";
+            };
+            /** @description toBody projection of a stock_movements row. The lineage-only `idempotency_key` column and internal fields are NOT projected. */
+            StockMovement: {
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                storeId: string;
+                /** @enum {string} */
+                movementType: "inbound" | "outbound" | "adjustment" | "transfer_out" | "transfer_in" | "count_correction";
+                quantity: components["schemas"]["DecimalQuantity"];
+                stockingUnit: string;
+                /** Format: uuid */
+                tenantProductRef?: string | null;
+                reason?: string | null;
+                /** Format: date-time */
+                occurredAt: string;
+                /** Format: date-time */
+                receivedAt: string;
+                /**
+                 * Format: uuid
+                 * @description The acting principal's user id (FR-004 "acting principal"). An internal actor reference — NOT customer PII; the full audit record lives in the audit pipeline (§XIII).
+                 */
+                createdBy: string;
+                /** Format: uuid */
+                saleId?: string | null;
+                /** Format: uuid */
+                saleLineId?: string | null;
+                /** Format: uuid */
+                terminalEventRef?: string | null;
+                /** Format: uuid */
+                transferGroupId?: string | null;
+                /** Format: uuid */
+                stockCountId?: string | null;
+                /**
+                 * @description RT-425 (RT-289 G2-2, decision 768): where the effect originated. Every movement written by this API is `retail`.
+                 * @enum {string}
+                 */
+                origin: "retail" | "erp_external";
+                /**
+                 * @description RT-425 (RT-289 G2-3): the effect's ERP integration state. `not_posted` = no ERP posting intent represents the effect; `pending` / `confirmed` / `rejected` / `reconciliation_required` follow its ERP posting intent; `external` = an ERP-origin effect. A confirmation never adds quantity (decision 771). Null only for a movement with no integration record.
+                 * @enum {string|null}
+                 */
+                integrationState?: "not_posted" | "pending" | "confirmed" | "rejected" | "reconciliation_required" | "external" | null;
+                /**
+                 * Format: date-time
+                 * @description RT-425 (RT-289 G2-4): when ERPNext confirmed the effect (server time of the `posted` acknowledgement); null unless `integrationState` is `confirmed`.
+                 */
+                erpConfirmedAt?: string | null;
+                /**
+                 * Format: uuid
+                 * @description RT-432 (RT-290 G4-1, G4-4): the effect's stock location, always one of `storeId`'s locations.
+                 */
+                stockLocationId: string;
+                inventoryStatus: components["schemas"]["InventoryStatus"];
+                /** @description RT-432 (RT-290 G4-5): true for a movement recorded before positions existed. Its position is READ as the store's primary location and `sellable`; the movement itself is never rewritten. */
+                positionInterpreted: boolean;
+                /**
+                 * Format: uuid
+                 * @description RT-448 (RT-50 G7-2): the tracking identity (batch / serial) of the movement's own product. Null for an untracked product, and for every movement written by this version (tracked selling is not active).
+                 */
+                trackingIdentityId: string | null;
+            };
+            StockMovementList: {
+                /** @description Bounded by the `limit` query parameter ceiling (max 200), symmetric with the request-side caps. */
+                items: components["schemas"]["StockMovement"][];
+                /** @description Opaque cursor for the next page; null when exhausted. */
+                nextCursor?: string | null;
+            };
+            /** @description Derived on-hand projection. `quantity` is the compute-on-read signed SUM (FR-003) over every location and inventory status of the store — the physical on-hand (decision 732). `negativeBalance` is true when `quantity` < 0 (FR-024); on-hand is never a stored mutable value. RT-432: `sellableQuantity` and `statusQuantities` split the same movements by inventory status (decision 745); a movement recorded before positions existed counts as `sellable`. Available To Sell is not projected here. */
+            OnHand: {
+                /** Format: uuid */
+                storeId: string;
+                /** Format: uuid */
+                productId: string;
+                quantity: components["schemas"]["DecimalQuantity"];
+                stockingUnit?: string | null;
+                /** @description True when the derived quantity is below zero (allow-and-flag, FR-024). */
+                negativeBalance: boolean;
+                /** @description RT-432 — the `sellable` share of `quantity` (decision 733). May be negative. */
+                sellableQuantity: components["schemas"]["DecimalQuantity"];
+                /** @description RT-432 — one entry per inventory status, in the order of the `InventoryStatus` enum; a status with no movements reads zero. The entries sum to `quantity`. */
+                statusQuantities: components["schemas"]["StatusQuantity"][];
+            };
+            /**
+             * @description RT-432 (RT-290 G4-2, decision 751): the closed set of inventory statuses. All are physical stock; only `sellable` is sellable (733).
+             * @enum {string}
+             */
+            InventoryStatus: "sellable" | "return_inspection" | "quality_hold" | "damaged" | "expired" | "recall_hold";
+            StatusQuantity: {
+                inventoryStatus: components["schemas"]["InventoryStatus"];
+                quantity: components["schemas"]["DecimalQuantity"];
+            };
+            /** @description RT-432 (RT-290 G4-1): a stock location inside exactly one store. Every store has exactly one `primary` location, created with the store. */
+            StockLocation: {
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                storeId: string;
+                code: string;
+                name: string;
+                /** @enum {string} */
+                kind: "primary" | "storage";
+                isActive: boolean;
+            };
+            StockLocationList: {
+                items: components["schemas"]["StockLocation"][];
+            };
+            /** @description RT-448 (RT-50 G7-2, G7-3): an Inventory-owned batch or serial of one product. `kind`, `code` and the product never change. No ERPNext document name is projected (M-9). */
+            TrackingIdentity: {
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                productId: string;
+                /** @enum {string} */
+                kind: "batch" | "serial";
+                /** @description The lot or serial number exactly as printed on the pack; matched exactly, never fuzzily (313). */
+                code: string;
+                /**
+                 * Format: date
+                 * @description The calendar expiry date. A lot is sellable through this date, inclusive, at the selling store's business date (G7-5).
+                 */
+                expiryDate: string | null;
+                /** Format: date */
+                manufacturedOn: string | null;
+                /**
+                 * @description Identities are ERP-born only (G7-3).
+                 * @enum {string}
+                 */
+                origin: "erp_external";
+            };
+            TrackingIdentityList: {
+                /** @description Bounded by the `limit` query parameter (max 200). */
+                items: components["schemas"]["TrackingIdentity"][];
+                /** @description Opaque cursor for the next page; null when exhausted. */
+                nextCursor: string | null;
+            };
+            StockTransfer: {
+                /** Format: uuid */
+                transferGroupId: string;
+                outbound: components["schemas"]["StockMovement"];
+                inbound: components["schemas"]["StockMovement"];
+            };
+            StockCountResult: {
+                /** Format: uuid */
+                stockCountId: string;
+                countedQuantity: components["schemas"]["DecimalQuantity"];
+                /** @description Signed variance (counted − derived on-hand). Zero ⇒ no correction movement. */
+                variance: components["schemas"]["DecimalQuantity"];
+                /** @description The appended count_correction movement, or null on zero variance. */
+                correctionMovement?: components["schemas"]["StockMovement"] | null;
+            };
+            SaleLinkedBackfillResult: {
+                /** @description Movements newly appended this run. */
+                created: number;
+                /** @description Items skipped because their provenance pair already applied (idempotent re-run, FR-033). */
+                deduped: number;
+            };
+            /** @description Unit the quantity is expressed in; MUST match the product's stocking unit (cross-unit rejected, FR-022). 1–32 characters and not whitespace-only (the server trims it; a blank unit is a 400). */
+            StockingUnit: string;
+            /** @description Signed, non-zero exact-decimal quantity as a STRING (`numeric(19,4)`): ≤15 integer and ≤4 fraction digits. Zero is a 400 for every movement type. */
+            NonZeroDecimalQuantity: string;
+            /** @description Strictly positive exact-decimal quantity as a STRING (`numeric(19,4)`): unsigned, ≤15 integer and ≤4 fraction digits, and not zero. */
+            PositiveDecimalQuantity: string;
+            /** @description Non-negative exact-decimal quantity as a STRING (`numeric(19,4)`): unsigned, ≤15 integer and ≤4 fraction digits. */
+            NonNegativeDecimalQuantity: string;
+            /** @description Exact-decimal quantity as a STRING (`numeric(p,s)` at rest); no float on the wire. May be negative on a derived on-hand (allow-and-flag, FR-024). There is NO money / currency / tender field anywhere in this contract. */
+            DecimalQuantity: string;
+            /** @description Canonical error envelope, identical to the shared shape in `auth.openapi.yaml` / `outbox.openapi.yaml` (used verbatim — no extra fields, no `details`). Cross-tenant / out-of-scope refusals are non-disclosing (§II/§XII) — they never enumerate the underlying cause. NOTE: negative resulting stock is NOT an error (allow-and-flag, FR-024) — there is no error code for going below zero. */
+            Error: {
+                error: {
+                    /** @description Stable machine-readable error code. */
+                    code: string;
+                    /** @description Human-readable summary. No sensitive data, no cause enumeration. */
+                    message: string;
+                    /**
+                     * Format: uuid
+                     * @description Server-side correlation id; the actual cause is recorded server-side.
+                     */
+                    request_id?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description 400 — strict-schema validation failure: unknown keys, malformed values, a non-positive / zero transfer quantity, a same-store transfer, a cross-unit quantity (FR-022), or a missing `reason` on an adjustment. */
+            ValidationFailure: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 401 — no valid session / credential. */
+            Unauthorized: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 403 — authenticated but insufficient role within the resolved tenant. */
+            Forbidden: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 403 — authenticated but insufficient role within the resolved tenant. Also `origin_rejected` (RT-430): the request is authenticated by the `dp2_session` cookie and its `Origin` header is missing, or is neither the API's own origin nor listed in `ALLOWED_ORIGINS`. */
+            ForbiddenOrOriginRejected: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 404 — the target (movement / on-hand / store / product / sale ref / destination store) does not exist OR belongs to another tenant. The two are INDISTINGUISHABLE by design (non-disclosing, §II/§XII, FR-051). */
+            NotFoundOrCrossTenant: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 409 — an `Idempotency-Key` replay with a DIFFERENT body (FR-030), or a provenance-pair conflict on the backfill path. */
+            IdempotencyConflict: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 429 — backfill request exceeded the per-request ceiling (default 500 items). */
+            RateLimited: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 5xx — internal failure; the cause is recorded server-side under `request_id`. */
+            SystemFailure: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 429 `rate_limited` (RT-574): the caller's per-user budget for this class of operation is spent. The body is the canonical error envelope with a non-disclosing message (no budget, class or window); its `request_id` equals the `X-Request-Id` response header. Honour `Retry-After`; never auto-retry a mutation. A 429 is not a 401: it never means the session ended. The console limit is server-configured and may not be enforced, so a client must handle a 429 but must not expect one. */
+            TooManyRequests: {
+                headers: {
+                    "Retry-After": components["headers"]["ConsoleRetryAfter"];
+                    /** @description Always `no-store` on a 429. */
+                    "Cache-Control": "no-store";
+                    /** @description The request id, equal to `error.request_id` in the body: the inbound `X-Request-Id` when it is a well-formed UUID, otherwise a server-minted one. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+        parameters: {
+            /** @description Replay-safety key for write operations (FR-030). A replay with the same key + same body returns the prior result with no second movement; a replay with the same key + different body is a 409 conflict. Resolved by the reused 001/005 idempotency interceptor (the manual-movement dedup contract; the backfill additionally dedups on its provenance pair). */
+            IdempotencyKey: string;
+            /** @description Store the request is scoped to; access is authorized server-side. */
+            StoreIdPath: string;
+            /** @description Tenant Catalog product; resolved inside the caller's tenant only. */
+            ProductIdPath: string;
+        };
+        requestBodies: never;
+        headers: {
+            /** @description Whole seconds the caller should wait before retrying, sent on every console 429 (RT-574 D5). Its own bound, 1 to 3600; it is not the POS `RetryAfter` header. */
+            ConsoleRetryAfter: number;
+        };
+        pathItems: never;
+    }
+    export type $defs = Record<string, never>;
+    export interface operations {
+        listStockMovements: {
+            parameters: {
+                query?: {
+                    /** @description Tenant Catalog product id; omit to list ad-hoc (null-product) movements. */
+                    productId?: string;
+                    cursor?: string;
+                    limit?: number;
+                };
+                header?: never;
+                path: {
+                    /** @description Store the request is scoped to; access is authorized server-side. */
+                    storeId: components["parameters"]["StoreIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description A page of movements in stable order. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StockMovementList"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFoundOrCrossTenant"];
+                429: components["responses"]["TooManyRequests"];
+                "5XX": components["responses"]["SystemFailure"];
+            };
+        };
+        createStockMovement: {
+            parameters: {
+                query?: never;
+                header: {
+                    /** @description Replay-safety key for write operations (FR-030). A replay with the same key + same body returns the prior result with no second movement; a replay with the same key + different body is a 409 conflict. Resolved by the reused 001/005 idempotency interceptor (the manual-movement dedup contract; the backfill additionally dedups on its provenance pair). */
+                    "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                };
+                path: {
+                    /** @description Store the request is scoped to; access is authorized server-side. */
+                    storeId: components["parameters"]["StoreIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateStockMovementCommand"];
+                };
+            };
+            responses: {
+                /** @description Movement appended. */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StockMovement"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["ForbiddenOrOriginRejected"];
+                404: components["responses"]["NotFoundOrCrossTenant"];
+                409: components["responses"]["IdempotencyConflict"];
+                429: components["responses"]["TooManyRequests"];
+                "5XX": components["responses"]["SystemFailure"];
+            };
+        };
+        listStockLocations: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Store the request is scoped to; access is authorized server-side. */
+                    storeId: components["parameters"]["StoreIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The store's stock locations. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StockLocationList"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFoundOrCrossTenant"];
+                429: components["responses"]["TooManyRequests"];
+                "5XX": components["responses"]["SystemFailure"];
+            };
+        };
+        listTrackingIdentities: {
+            parameters: {
+                query?: {
+                    cursor?: string;
+                    limit?: number;
+                };
+                header?: never;
+                path: {
+                    /** @description Tenant Catalog product; resolved inside the caller's tenant only. */
+                    productId: components["parameters"]["ProductIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The product's tracking identities. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TrackingIdentityList"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFoundOrCrossTenant"];
+                429: components["responses"]["TooManyRequests"];
+                "5XX": components["responses"]["SystemFailure"];
+            };
+        };
+        getOnHand: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Store the request is scoped to; access is authorized server-side. */
+                    storeId: components["parameters"]["StoreIdPath"];
+                    productId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The derived on-hand projection. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OnHand"];
+                    };
+                };
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFoundOrCrossTenant"];
+                429: components["responses"]["TooManyRequests"];
+                "5XX": components["responses"]["SystemFailure"];
+            };
+        };
+        createStockTransfer: {
+            parameters: {
+                query?: never;
+                header: {
+                    /** @description Replay-safety key for write operations (FR-030). A replay with the same key + same body returns the prior result with no second movement; a replay with the same key + different body is a 409 conflict. Resolved by the reused 001/005 idempotency interceptor (the manual-movement dedup contract; the backfill additionally dedups on its provenance pair). */
+                    "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateStockTransferCommand"];
+                };
+            };
+            responses: {
+                /** @description Transfer recorded as a linked movement pair. */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StockTransfer"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["ForbiddenOrOriginRejected"];
+                404: components["responses"]["NotFoundOrCrossTenant"];
+                409: components["responses"]["IdempotencyConflict"];
+                429: components["responses"]["TooManyRequests"];
+                "5XX": components["responses"]["SystemFailure"];
+            };
+        };
+        recordStockCount: {
+            parameters: {
+                query?: never;
+                header: {
+                    /** @description Replay-safety key for write operations (FR-030). A replay with the same key + same body returns the prior result with no second movement; a replay with the same key + different body is a 409 conflict. Resolved by the reused 001/005 idempotency interceptor (the manual-movement dedup contract; the backfill additionally dedups on its provenance pair). */
+                    "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                };
+                path: {
+                    /** @description Store the request is scoped to; access is authorized server-side. */
+                    storeId: components["parameters"]["StoreIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RecordStockCountCommand"];
+                };
+            };
+            responses: {
+                /** @description Count recorded; correction movement (if any) appended. */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StockCountResult"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["ForbiddenOrOriginRejected"];
+                404: components["responses"]["NotFoundOrCrossTenant"];
+                409: components["responses"]["IdempotencyConflict"];
+                429: components["responses"]["TooManyRequests"];
+                "5XX": components["responses"]["SystemFailure"];
+            };
+        };
+        backfillSaleLinkedMovements: {
+            parameters: {
+                query?: never;
+                header: {
+                    /** @description Replay-safety key for write operations (FR-030). A replay with the same key + same body returns the prior result with no second movement; a replay with the same key + different body is a 409 conflict. Resolved by the reused 001/005 idempotency interceptor (the manual-movement dedup contract; the backfill additionally dedups on its provenance pair). */
+                    "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SaleLinkedBackfillCommand"];
+                };
+            };
+            responses: {
+                /** @description Backfill result — created vs deduped counts. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SaleLinkedBackfillResult"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["Forbidden"];
+                404: components["responses"]["NotFoundOrCrossTenant"];
+                409: components["responses"]["IdempotencyConflict"];
+                429: components["responses"]["RateLimited"];
+                "5XX": components["responses"]["SystemFailure"];
+            };
+        };
+    }
+}
+
+export type paths = AuthSchema.paths & ContextSchema.paths & TenantsSchema.paths & StoresSchema.paths & MembershipsSchema.paths & AuditSchema.paths & UnknownItemsSchema.paths & SettlementSchema.paths & ErpnextReconciliationSchema.paths & ShiftClosesSchema.paths & ConnectorAdminSchema.paths & ConnectorHealthSchema.paths & SyncOpsSchema.paths & DevicesSchema.paths & ConsoleSalesSchema.paths & CashVariancePolicySchema.paths & ConsoleTelemetrySchema.paths & ErpnextItemMapSchema.paths & ErpnextWarehouseMapSchema.paths & ProductReconciliationSchema.paths & TrackingProfileSchema.paths & SaleSyncOpsSchema.paths & InventorySchema.paths;
+export type components = AuthSchema.components & ContextSchema.components & TenantsSchema.components & StoresSchema.components & MembershipsSchema.components & AuditSchema.components & UnknownItemsSchema.components & SettlementSchema.components & ErpnextReconciliationSchema.components & ShiftClosesSchema.components & ConnectorAdminSchema.components & ConnectorHealthSchema.components & SyncOpsSchema.components & DevicesSchema.components & ConsoleSalesSchema.components & CashVariancePolicySchema.components & ConsoleTelemetrySchema.components & ErpnextItemMapSchema.components & ErpnextWarehouseMapSchema.components & ProductReconciliationSchema.components & TrackingProfileSchema.components & SaleSyncOpsSchema.components & InventorySchema.components;
+export type operations = AuthSchema.operations & ContextSchema.operations & TenantsSchema.operations & StoresSchema.operations & MembershipsSchema.operations & AuditSchema.operations & UnknownItemsSchema.operations & SettlementSchema.operations & ErpnextReconciliationSchema.operations & ShiftClosesSchema.operations & ConnectorAdminSchema.operations & ConnectorHealthSchema.operations & SyncOpsSchema.operations & DevicesSchema.operations & ConsoleSalesSchema.operations & CashVariancePolicySchema.operations & ConsoleTelemetrySchema.operations & ErpnextItemMapSchema.operations & ErpnextWarehouseMapSchema.operations & ProductReconciliationSchema.operations & TrackingProfileSchema.operations & SaleSyncOpsSchema.operations & InventorySchema.operations;
