@@ -54,3 +54,22 @@
   color: var(--color-info);
   border-color: currentColor;
 }
+
+/* RT-621: the 429 banner sits above the routed surface and never blocks it. */
+.rate-limit-banner:has(.rtc-alert) {
+  margin-block-end: var(--space-5);
+}
+
+.rate-limited-area {
+  padding: var(--space-7) var(--space-6);
+}
+
+.rate-limit-banner__actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.rate-limit-countdown {
+  margin-inline-start: var(--space-2);
+  font-variant-numeric: tabular-nums;
+}

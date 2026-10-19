@@ -34,6 +34,7 @@ import { rf4aRoutes } from "@/shell/rf4aRoutes";
 import { rf5Routes } from "@/shell/rf5Routes";
 import { rf6Routes } from "@/shell/rf6Routes";
 import { saleRoutes } from "@/shell/saleRoutes";
+import { saleSyncRoutes } from "@/shell/saleSyncRoutes";
 import { shiftCloseRoutes } from "@/shell/shiftCloseRoutes";
 import { stockDiscrepancyRoutes } from "@/shell/stockDiscrepancyRoutes";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -85,6 +86,7 @@ const router = createBrowserRouter(
         {productReconciliationRoutes}
         {deviceRoutes}
         {saleRoutes}
+        {saleSyncRoutes}
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Route>,

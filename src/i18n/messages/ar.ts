@@ -15,6 +15,7 @@ import { money } from "./ar/money";
 import { operators } from "./ar/operators";
 import { overview } from "./ar/overview";
 import { productRecon } from "./ar/productRecon";
+import { saleSync } from "./ar/saleSync";
 import { sales } from "./ar/sales";
 import { shell } from "./ar/shell";
 import { shift } from "./ar/shift";
@@ -36,6 +37,7 @@ export const AR_MODULES = {
   productRecon,
   devices,
   sales,
+  saleSync,
   cashPolicy,
 };
 
@@ -54,5 +56,6 @@ export const ar = {
   ...productRecon,
   ...devices,
   ...sales,
+  ...saleSync,
   ...cashPolicy,
 };

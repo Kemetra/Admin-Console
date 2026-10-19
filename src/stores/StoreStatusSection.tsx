@@ -1,3 +1,4 @@
+import { GatedButton } from "@/components/GatedButton";
 import { useT } from "@/i18n";
 import { type Rf2ErrorRender, mapRf2Error } from "@/lib/rf2-queries";
 /**
@@ -67,7 +68,7 @@ export function StoreStatusSection({
           {t("stores.status.current")} <StoreStateBadge isActive={isActive} />
         </p>
         {confirming ? null : (
-          <button
+          <GatedButton
             type="button"
             className="btn-secondary"
             onClick={active ? () => setConfirming(true) : () => apply(true)}
@@ -75,7 +76,7 @@ export function StoreStatusSection({
           >
             {active ? null : spinner}
             {t(active ? "stores.status.suspend" : "stores.status.activate")}
-          </button>
+          </GatedButton>
         )}
       </div>
 
@@ -85,7 +86,7 @@ export function StoreStatusSection({
             {t.rich("stores.status.confirmPrompt", { name: <bdi>{storeName}</bdi> })}
           </p>
           <div className="surface__confirm-actions">
-            <button
+            <GatedButton
               type="button"
               className="btn-destructive"
               onClick={() => apply(false)}
@@ -93,7 +94,7 @@ export function StoreStatusSection({
             >
               {spinner}
               {t("stores.status.suspend")}
-            </button>
+            </GatedButton>
             <button
               type="button"
               className="btn-secondary"

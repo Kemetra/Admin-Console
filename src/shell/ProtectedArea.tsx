@@ -1,5 +1,4 @@
 import { NoAccess } from "@/auth/NoAccess";
-import { useActiveContextValue } from "@/context/ActiveContextProvider";
 /**
  * Protected area (SF-2/SF-3, T031). Renders the right surface based on the
  * server-resolved context — never a frontend authorization decision
@@ -15,7 +14,12 @@ import { useActiveContextValue } from "@/context/ActiveContextProvider";
  * refresh also fails the session is lost and we route to SF-1. This is why a
  * 401 (not signed in / expired) is distinct from a 200 with zero memberships
  * (signed in, no access).
+ *
+ * RT-621: a 429 on the context read is not "signed out". With no context yet,
+ * the area shows the rate-limit banner (countdown + retry), never /signin.
  */
+import { RateLimitBanner } from "@/components/RateLimitBanner";
+import { useActiveContextValue } from "@/context/ActiveContextProvider";
 import { Navigate, Outlet, useLocation } from "react-router";
 import { AppShell } from "./AppShell";
 import { ScopeGate } from "./ScopeGate";
@@ -23,10 +27,17 @@ import { type SignInRedirectState, returnPathOf } from "./return-path";
 import { useSignOut } from "./useSignOut";
 
 export function ProtectedArea(): React.JSX.Element | null {
-  const { context, isLoading, sessionLost, membershipCount } = useActiveContextValue();
+  const { context, isLoading, sessionLost, rateLimited, membershipCount } = useActiveContextValue();
   const signOut = useSignOut();
   const location = useLocation();
 
+  if (!context && !sessionLost && rateLimited) {
+    return (
+      <main className="rate-limited-area">
+        <RateLimitBanner dismissible={false} />
+      </main>
+    );
+  }
   if (isLoading) {
     return null;
   }

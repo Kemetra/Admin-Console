@@ -4,6 +4,7 @@
  * resource before a soft-delete. Single destructive primary + a cancel
  * (single-primary rule). Used by SF-T3 / SF-S3 (design-brief §7).
  */
+import { GatedButton } from "@/components/GatedButton";
 import { useT } from "@/i18n";
 import "./confirm-delete.css";
 
@@ -42,10 +43,15 @@ export function ConfirmDelete({
         })}
       </p>
       <div className="confirm-delete__actions">
-        <button type="button" className="btn-destructive" onClick={onConfirm} disabled={pending}>
+        <GatedButton
+          type="button"
+          className="btn-destructive"
+          onClick={onConfirm}
+          disabled={pending}
+        >
           {pending ? <span className="spinner" aria-hidden="true" /> : null}
           {confirmLabel}
-        </button>
+        </GatedButton>
         <button type="button" className="btn-secondary" onClick={onCancel} disabled={pending}>
           {t("common.cancel")}
         </button>

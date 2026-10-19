@@ -1,3 +1,4 @@
+import { GatedButton } from "@/components/GatedButton";
 import { TowerMark } from "@/components/TowerMark";
 import { useActiveContextValue } from "@/context/ActiveContextProvider";
 import { roleKey, useT } from "@/i18n";
@@ -50,7 +51,7 @@ export function ScopeGate(): React.JSX.Element {
         <ul className="pick-list" aria-label={t("shell.gate.listLabel")}>
           {filtered.map((m) => (
             <li key={m.tenant_id}>
-              <button
+              <GatedButton
                 type="button"
                 className="pick"
                 onClick={() => m.tenant_id && void switchTenant(m.tenant_id)}
@@ -67,7 +68,7 @@ export function ScopeGate(): React.JSX.Element {
                   </bdi>
                 </span>
                 {m.role_code ? <span className="pick__role">{t(roleKey(m.role_code))}</span> : null}
-              </button>
+              </GatedButton>
             </li>
           ))}
         </ul>

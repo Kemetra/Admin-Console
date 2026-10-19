@@ -1,5 +1,6 @@
 import { BackArrow } from "@/components/BackArrow";
 import { Banner } from "@/components/Banner";
+import { GatedButton } from "@/components/GatedButton";
 import { ListState } from "@/components/ListState";
 import { type MessageKey, useT } from "@/i18n";
 import type { NegativeOnHandItem, StockSnapshotStatus } from "@/lib/stock-discrepancy-queries";
@@ -98,14 +99,14 @@ function RefreshButton({
   const t = useT();
   return (
     <div className="refresh-action">
-      <button
+      <GatedButton
         type="button"
         className="btn-primary"
         onClick={onRequest}
         disabled={isPending || blockReason !== null}
       >
         {isPending ? t("stock.refresh.requesting") : t("stock.refresh.action")}
-      </button>
+      </GatedButton>
       {blockReason ? <small className="muted">{t(blockReason)}</small> : null}
     </div>
   );

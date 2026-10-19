@@ -5,6 +5,7 @@
  * proposes today in that store's zone; nothing is read until Search applies
  * the form to the URL. The server stays the authority on the range (AC-2).
  */
+import { GatedButton } from "@/components/GatedButton";
 import { InlineError } from "@/components/InlineError";
 import { type MessageKey, useT } from "@/i18n";
 import type { StoreInfo } from "@/shift-closes/useShiftCloses";
@@ -324,9 +325,9 @@ export function SaleFilterBar({
       <ScopeFields draft={draft} set={set} errors={errors} stores={stores} onStore={chooseStore} />
       <ValueFields draft={draft} set={set} errors={errors} />
       <div className="sale-filters__actions">
-        <button type="submit" className="btn-primary">
+        <GatedButton type="submit" className="btn-primary">
           {t("sales.filter.apply")}
-        </button>
+        </GatedButton>
         <button type="button" className="btn-ghost" onClick={clear}>
           {t("sales.filter.clear")}
         </button>
