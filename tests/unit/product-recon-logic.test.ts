@@ -1,7 +1,7 @@
 import {
   BACKLOG_CLASSES,
   RESULT_CLASSES,
-  backlogRepairBlock,
+  backlogRepair,
   canUseProductReconciliation,
   classFilter,
   classView,
@@ -10,10 +10,12 @@ import {
   detailEntries,
   isRunId,
   itemRefOf,
+  mappingRefOf,
+  mappingRepairRequest,
   readErrorOf,
   refusalView,
   repairOutcomeView,
-  resultRepairBlock,
+  resultRepair,
   resultStateView,
   runStatusView,
   runTriggerKey,
@@ -23,6 +25,7 @@ import {
 } from "@/product-reconciliation/productReconLogic";
 import { describe, expect, test } from "vitest";
 import {
+  MAPPING_B,
   PRODUCT_A,
   REQUEST_ID,
   RESULT_A,
@@ -95,22 +98,117 @@ describe("server values: known ones map, unknown stays Unknown", () => {
   });
 });
 
-describe("repair eligibility (suggest_confirm only: confirm/re_point need a version not exposed here)", () => {
-  test("an unmapped backlog product can be repaired; a suggestion needs its version", () => {
-    expect(backlogRepairBlock(backlogItem())).toBeNull();
-    expect(backlogRepairBlock(suggestionItem())).toBe("needs-version");
+describe("repair eligibility (RT-733: confirm / re_point with the version the server sent)", () => {
+  test("an unmapped backlog product is suggest_confirm; a suggestion is confirm at its version", () => {
+    expect(backlogRepair(backlogItem())).toEqual({
+      repairKind: "suggest_confirm",
+      tenantProductId: PRODUCT_A,
+    });
+    expect(backlogRepair(suggestionItem())).toEqual({
+      repairKind: "confirm",
+      tenantProductId: suggestionItem().tenantProductId,
+      mapping: { mappingId: MAPPING_B, version: 3 },
+      erpnextItemRef: "ITEM-COLA-330",
+    });
   });
 
-  test("only an open unmapped result with a product can be repaired", () => {
-    expect(resultRepairBlock(result())).toBeNull();
-    expect(resultRepairBlock(result({ resultState: "repaired" }))).toBe("not-open");
-    expect(resultRepairBlock(result({ mismatchClass: "suggestion_unconfirmed" }))).toBe(
-      "needs-version",
-    );
+  test("a suggestion without both the mapping id and version is never sent with a guess", () => {
+    for (const over of [
+      { suggestionMappingVersion: null },
+      { suggestionMappingVersion: undefined },
+      { suggestionMappingVersion: 0 },
+      { suggestionMappingVersion: 2.5 },
+      { suggestionMappingId: null },
+      { suggestionMappingId: "not-a-uuid" },
+    ]) {
+      expect(backlogRepair({ ...suggestionItem(), ...over })).toBe("needs-version");
+    }
+  });
+
+  test("results: open lines with a product are repairable by class", () => {
+    const ids = { runId: RUN_A, resultId: RESULT_A };
+    const mapped = { mappingId: MAPPING_B, mappingVersion: 7, erpnextItemRef: "ITEM-1" };
+    expect(resultRepair(result())).toEqual({
+      repairKind: "suggest_confirm",
+      tenantProductId: PRODUCT_A,
+      ...ids,
+    });
+    expect(resultRepair(result({ mismatchClass: "suggestion_unconfirmed", ...mapped }))).toEqual({
+      repairKind: "confirm",
+      tenantProductId: PRODUCT_A,
+      mapping: { mappingId: MAPPING_B, version: 7 },
+      erpnextItemRef: "ITEM-1",
+      ...ids,
+    });
+    expect(resultRepair(result({ mismatchClass: "attribute_drift", ...mapped }))).toEqual({
+      repairKind: "re_point",
+      tenantProductId: PRODUCT_A,
+      mapping: { mappingId: MAPPING_B, version: 7 },
+      erpnextItemRef: "ITEM-1",
+      ...ids,
+    });
+    expect(resultRepair(result({ mismatchClass: "suggestion_unconfirmed" }))).toBe("needs-version");
+    expect(resultRepair(result({ mismatchClass: "attribute_drift" }))).toBe("not-repairable");
+    expect(resultRepair(result({ resultState: "repaired", ...mapped }))).toBe("not-open");
     expect(
-      resultRepairBlock(result({ mismatchClass: "unmapped_erpnext_item", tenantProductId: null })),
+      resultRepair(result({ mismatchClass: "unmapped_erpnext_item", tenantProductId: null })),
     ).toBe("not-repairable");
-    expect(resultRepairBlock(result({ mismatchClass: "attribute_drift" }))).toBe("not-repairable");
+    expect(resultRepair(result({ mismatchClass: "match", ...mapped }))).toBe("not-repairable");
+  });
+
+  test("mappingRefOf takes both facts as sent, or nothing", () => {
+    expect(mappingRefOf(MAPPING_B, 1)).toEqual({ mappingId: MAPPING_B, version: 1 });
+    expect(mappingRefOf(MAPPING_B, null)).toBeNull();
+    expect(mappingRefOf(null, 1)).toBeNull();
+  });
+
+  test("a confirm / re_point request carries mappingId + version, never an item ref", () => {
+    const mapping = { mappingId: MAPPING_B, version: 4 };
+    expect(
+      mappingRepairRequest({
+        repairKind: "confirm",
+        tenantProductId: PRODUCT_A,
+        mapping,
+        erpnextItemRef: "ITEM-1",
+      }),
+    ).toEqual({
+      repairKind: "confirm",
+      tenantProductId: PRODUCT_A,
+      mappingId: MAPPING_B,
+      version: 4,
+    });
+    expect(
+      mappingRepairRequest({
+        repairKind: "re_point",
+        tenantProductId: PRODUCT_A,
+        mapping,
+        runId: RUN_A,
+        resultId: RESULT_A,
+      }),
+    ).toEqual({
+      repairKind: "re_point",
+      tenantProductId: PRODUCT_A,
+      mappingId: MAPPING_B,
+      version: 4,
+      runId: RUN_A,
+      resultId: RESULT_A,
+    });
+    expect(mappingRepairRequest({ repairKind: "confirm", tenantProductId: PRODUCT_A })).toBeNull();
+    expect(
+      mappingRepairRequest({ repairKind: "suggest_confirm", tenantProductId: PRODUCT_A, mapping }),
+    ).toBeNull();
+  });
+
+  test("a no_op_echo of a confirm / re_point names the mapping (FR-011)", () => {
+    expect(repairOutcomeView("no_op_echo", "confirm").messageKey).toBe(
+      "productRecon.repair.outcome.no_op_echo_mapping",
+    );
+    expect(repairOutcomeView("no_op_echo", "re_point").messageKey).toBe(
+      "productRecon.repair.outcome.no_op_echo_mapping",
+    );
+    expect(repairOutcomeView("no_op_echo", "suggest_confirm").messageKey).toBe(
+      "productRecon.repair.outcome.no_op_echo",
+    );
   });
 
   test("the item reference is trimmed and bounded to the contract's 1..180", () => {
@@ -121,13 +219,26 @@ describe("repair eligibility (suggest_confirm only: confirm/re_point need a vers
   });
 
   test("the request is strict: no tenant or actor, run + result only together", () => {
-    expect(suggestConfirmRequest({ tenantProductId: PRODUCT_A }, "ITEM-1")).toEqual({
+    expect(
+      suggestConfirmRequest(
+        { repairKind: "suggest_confirm", tenantProductId: PRODUCT_A },
+        "ITEM-1",
+      ),
+    ).toEqual({
       repairKind: "suggest_confirm",
       tenantProductId: PRODUCT_A,
       erpnextItemRef: "ITEM-1",
     });
     expect(
-      suggestConfirmRequest({ tenantProductId: PRODUCT_A, runId: RUN_A, resultId: RESULT_A }, "I"),
+      suggestConfirmRequest(
+        {
+          repairKind: "suggest_confirm",
+          tenantProductId: PRODUCT_A,
+          runId: RUN_A,
+          resultId: RESULT_A,
+        },
+        "I",
+      ),
     ).toEqual({
       repairKind: "suggest_confirm",
       tenantProductId: PRODUCT_A,
@@ -136,7 +247,10 @@ describe("repair eligibility (suggest_confirm only: confirm/re_point need a vers
       resultId: RESULT_A,
     });
     expect(
-      suggestConfirmRequest({ tenantProductId: PRODUCT_A, runId: RUN_A }, "I"),
+      suggestConfirmRequest(
+        { repairKind: "suggest_confirm", tenantProductId: PRODUCT_A, runId: RUN_A },
+        "I",
+      ),
     ).not.toHaveProperty("runId");
   });
 });

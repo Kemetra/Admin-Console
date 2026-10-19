@@ -2,7 +2,8 @@
  * RT-727 — ERPNext product-master reconciliation (Backend-Core spec 021), for
  * owner / tenant_admin, in the Integration area beside the ERP connection
  * status. Two panels over Backend-Core only: the live unmapped-product backlog
- * (with the `suggest_confirm` repair) and the run history (with "Start a run").
+ * (with the `suggest_confirm` repair, and `confirm` of a suggestion, RT-733)
+ * and the run history (with "Start a run").
  *
  * Gate first: any other role gets the existing NoAccess state and nothing is
  * requested; the API is the authority (a non-disclosing 404 otherwise) and the

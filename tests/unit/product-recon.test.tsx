@@ -1,5 +1,5 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import {
@@ -39,6 +39,7 @@ vi.mock("@/context/ActiveContextProvider", () => ({
 }));
 
 import { createQueryClient } from "@/lib/query";
+import { reportRateLimited, resetRateLimit } from "@/lib/rate-limit";
 import { ProductReconciliation } from "@/product-reconciliation/ProductReconciliation";
 import { RunResults } from "@/product-reconciliation/RunResults";
 
@@ -120,11 +121,21 @@ describe("listProductReconciliationBacklog", () => {
     const suggestion = within(backlogRegion()).getByRole("row", { name: new RegExp(PRODUCT_B) });
     expect(within(suggestion).getByText("Suggestion not confirmed")).toBeDefined();
     expect(within(suggestion).getByText("ITEM-COLA-330")).toBeDefined();
-    expect(within(suggestion).queryByRole("button")).toBeNull();
-    expect(
-      within(suggestion).getByText("Confirm this suggestion from the item mappings screen."),
-    ).toBeDefined();
+    expect(within(suggestion).getByRole("button", { name: "Confirm" })).toBeDefined();
     expect(api.listProductReconciliationBacklog).toHaveBeenCalledWith({});
+  });
+
+  test("a suggestion without its mapping version links to the item mappings screen", async () => {
+    api.listProductReconciliationBacklog.mockResolvedValue(
+      ok({ items: [{ ...suggestionItem(), suggestionMappingVersion: null }], nextCursor: null }),
+    );
+    renderAt("/product-reconciliation");
+    const row = await within(backlogRegion()).findByRole("row", { name: new RegExp(PRODUCT_B) });
+    expect(within(row).queryByRole("button")).toBeNull();
+    const link = within(row).getByRole("link", {
+      name: "Confirm this suggestion from the item mappings screen.",
+    });
+    expect(link.getAttribute("href")).toBe("/erp-connection/mappings");
   });
 
   test("an unknown class reads Unknown with the raw value, never a known label", async () => {
@@ -432,6 +443,126 @@ describe("repairProductMapping: explicit, confirmed, never retried", () => {
     expect((await within(panel).findByRole("alert")).textContent).toContain("Try again in 4s.");
     expect(api.repairProductMapping).toHaveBeenCalledTimes(1);
   });
+
+  test("while a Retry-After runs (RT-621), Map and confirm is held and nothing is sent", async () => {
+    const panel = await openRepair("ITEM-1");
+    act(() => reportRateLimited(30));
+    try {
+      const confirm = within(panel).getByRole("region", { name: "Confirm the product mapping" });
+      const button = within(confirm).getAllByRole("button")[0] as HTMLButtonElement;
+      expect(button.disabled).toBe(true);
+      fireEvent.click(button);
+      expect(api.repairProductMapping).not.toHaveBeenCalled();
+    } finally {
+      act(() => resetRateLimit());
+    }
+  });
+});
+
+describe("repairProductMapping confirm (RT-733): the mapping id and version as received", () => {
+  async function openConfirm(): Promise<HTMLElement> {
+    renderAt("/product-reconciliation");
+    const row = await within(backlogRegion()).findByRole("row", { name: new RegExp(PRODUCT_B) });
+    fireEvent.click(within(row).getByRole("button", { name: "Confirm" }));
+    return screen.getByRole("region", { name: "Confirm the suggested mapping" });
+  }
+
+  test("the confirm step names product, item, mapping and version; one strict request", async () => {
+    api.repairProductMapping.mockResolvedValue(
+      ok(repair({ targetRef: PRODUCT_B, repairKind: "confirm" }), 201),
+    );
+    const panel = await openConfirm();
+    for (const text of [PRODUCT_B, "ITEM-COLA-330", MAPPING_B, "version 3"]) {
+      expect(panel.textContent).toContain(text);
+    }
+    expect(api.repairProductMapping).not.toHaveBeenCalled();
+    fireEvent.click(within(panel).getByRole("button", { name: "Confirm mapping" }));
+    await within(panel).findByText("The mapping is now confirmed and active.");
+    expect(api.repairProductMapping).toHaveBeenCalledTimes(1);
+    const [body, key] = api.repairProductMapping.mock.calls[0];
+    expect(body).toEqual({
+      repairKind: "confirm",
+      tenantProductId: PRODUCT_B,
+      mappingId: MAPPING_B,
+      version: 3,
+    });
+    expect(key).toMatch(UUID);
+    expect(within(panel).queryByRole("button", { name: "Confirm mapping" })).toBeNull();
+    await waitFor(() => expect(api.listProductReconciliationBacklog).toHaveBeenCalledTimes(2));
+  });
+
+  test("a double click sends one request", async () => {
+    api.repairProductMapping.mockResolvedValue(ok(repair({ repairKind: "confirm" }), 201));
+    const panel = await openConfirm();
+    const button = within(panel).getByRole("button", { name: "Confirm mapping" });
+    fireEvent.click(button);
+    fireEvent.click(button);
+    await within(panel).findByText("The mapping is now confirmed and active.");
+    expect(api.repairProductMapping).toHaveBeenCalledTimes(1);
+  });
+
+  test("Cancel closes the panel and sends nothing", async () => {
+    const panel = await openConfirm();
+    fireEvent.click(within(panel).getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("region", { name: "Confirm the suggested mapping" })).toBeNull();
+    expect(api.repairProductMapping).not.toHaveBeenCalled();
+  });
+
+  test("confirming an already-confirmed mapping is the FR-011 no-op echo", async () => {
+    api.repairProductMapping.mockResolvedValue(
+      ok(repair({ repairKind: "confirm", outcome: "no_op_echo" }), 200),
+    );
+    const panel = await openConfirm();
+    fireEvent.click(within(panel).getByRole("button", { name: "Confirm mapping" }));
+    expect(
+      await within(panel).findByText(
+        "This mapping was already confirmed and active. Nothing changed.",
+      ),
+    ).toBeDefined();
+    expect(within(panel).getByRole("button", { name: "Close" })).toBeDefined();
+  });
+
+  test("a stale version (409) re-reads the list, offers only Close, and is not retried", async () => {
+    api.repairProductMapping.mockResolvedValue(failure(409, "conflict"));
+    const panel = await openConfirm();
+    fireEvent.click(within(panel).getByRole("button", { name: "Confirm mapping" }));
+    const alert = await within(panel).findByRole("alert");
+    expect(alert.textContent).toContain("version 3 is no longer current");
+    expect(alert.textContent).toContain(REQUEST_ID);
+    expect(within(panel).queryByRole("button", { name: "Confirm mapping" })).toBeNull();
+    await waitFor(() => expect(api.listProductReconciliationBacklog).toHaveBeenCalledTimes(2));
+    expect(api.repairProductMapping).toHaveBeenCalledTimes(1);
+    fireEvent.click(within(panel).getByRole("button", { name: "Close" }));
+    expect(screen.queryByRole("region", { name: "Confirm the suggested mapping" })).toBeNull();
+  });
+
+  test("any other refusal is shown and the operator may confirm again, with a new key", async () => {
+    api.repairProductMapping.mockResolvedValueOnce(failure(500, "system_failure"));
+    api.repairProductMapping.mockResolvedValueOnce(ok(repair({ repairKind: "confirm" }), 201));
+    const panel = await openConfirm();
+    fireEvent.click(within(panel).getByRole("button", { name: "Confirm mapping" }));
+    expect((await within(panel).findByRole("alert")).textContent).toContain("outcome is unknown");
+    expect(api.repairProductMapping).toHaveBeenCalledTimes(1);
+    fireEvent.click(within(panel).getByRole("button", { name: "Confirm mapping" }));
+    await within(panel).findByText("The mapping is now confirmed and active.");
+    const [[, first], [, second]] = api.repairProductMapping.mock.calls;
+    expect(first).not.toBe(second);
+  });
+
+  test("while a Retry-After runs (RT-621), Confirm mapping is held and nothing is sent", async () => {
+    const panel = await openConfirm();
+    act(() => reportRateLimited(30));
+    try {
+      const button = within(panel).getAllByRole("button")[0] as HTMLButtonElement;
+      expect(button.disabled).toBe(true);
+      fireEvent.click(button);
+      expect(api.repairProductMapping).not.toHaveBeenCalled();
+    } finally {
+      act(() => resetRateLimit());
+    }
+    const button = within(panel).getByRole("button", { name: "Confirm mapping" });
+    expect((button as HTMLButtonElement).disabled).toBe(false);
+  });
 });
 
 describe("getProductReconciliationRunResults", () => {
@@ -501,6 +632,61 @@ describe("getProductReconciliationRunResults", () => {
       runId: RUN_A,
       resultId: RESULT_A,
     });
+  });
+
+  test("an open suggestion line is confirmed, a drift line re-pointed, with the line's version", async () => {
+    api.getProductReconciliationRunResults.mockResolvedValue(
+      ok({
+        items: [
+          result({
+            mismatchClass: "suggestion_unconfirmed",
+            erpnextItemRef: "ITEM-COLA-330",
+            mappingId: MAPPING_B,
+            mappingVersion: 5,
+          }),
+          result({
+            id: PRODUCT_B,
+            mismatchClass: "attribute_drift",
+            erpnextItemRef: "ITEM-COLA-330",
+            mappingId: MAPPING_B,
+            mappingVersion: 6,
+          }),
+        ],
+        nextCursor: null,
+      }),
+    );
+    api.repairProductMapping.mockResolvedValue(
+      ok(repair({ targetKind: "result", repairKind: "re_point" }), 201),
+    );
+    renderAt(`/product-reconciliation/runs/${RUN_A}`);
+    const results = region("Classified results");
+    await within(results).findByRole("button", { name: "Re-point" });
+    const [, suggestion, drift] = within(results).getAllByRole("row");
+    expect(within(suggestion).getByRole("button", { name: "Confirm" })).toBeDefined();
+    fireEvent.click(within(drift).getByRole("button", { name: "Re-point" }));
+    const panel = screen.getByRole("region", { name: "Re-point the mapping" });
+    expect(panel.textContent).toContain("version 6");
+    fireEvent.click(within(panel).getByRole("button", { name: "Re-point and confirm" }));
+    await within(panel).findByText("The mapping is now confirmed and active.");
+    expect(api.repairProductMapping.mock.calls[0][0]).toEqual({
+      repairKind: "re_point",
+      tenantProductId: PRODUCT_A,
+      mappingId: MAPPING_B,
+      version: 6,
+      runId: RUN_A,
+      resultId: PRODUCT_B,
+    });
+  });
+
+  test("a suggestion line without its version links to the item mappings screen", async () => {
+    api.getProductReconciliationRunResults.mockResolvedValue(
+      ok({ items: [result({ mismatchClass: "suggestion_unconfirmed" })], nextCursor: null }),
+    );
+    renderAt(`/product-reconciliation/runs/${RUN_A}`);
+    const link = await screen.findByRole("link", {
+      name: "Confirm this suggestion from the item mappings screen.",
+    });
+    expect(link.getAttribute("href")).toBe("/erp-connection/mappings");
   });
 
   test("a 404 is the non-disclosing 'run not available', with no retry", async () => {

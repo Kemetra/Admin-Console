@@ -4,29 +4,37 @@
  * cursor-paged. Each line shows its class, the product and ERPNext item refs,
  * 021's own result state and the detail as received. An open
  * `unmapped_dp2_product` line can be repaired (`suggest_confirm` with the run
- * and result ids, so the line moves open → repaired on `mapped`). An unknown or
+ * and result ids, so the line moves open → repaired on `mapped`); an open
+ * `suggestion_unconfirmed` line is `confirm`ed and an open `attribute_drift`
+ * line `re_point`ed with the line's `mappingId` + `mappingVersion` (RT-733).
+ * An unknown or
  * out-of-scope run is the API's non-disclosing 404; a malformed run id is
  * never sent and reads the same.
  */
 import { BackArrow } from "@/components/BackArrow";
 import { AsOf, Panel, StatusPill } from "@/erp-status/parts";
 import { type T, useT } from "@/i18n";
-import type {
-  MismatchClass,
-  ProductReconciliationResult,
-} from "@/lib/product-reconciliation-queries";
+import type { MismatchClass } from "@/lib/product-reconciliation-queries";
 import { useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
 import { ReconGate } from "./ProductReconciliation";
 import { RepairPanel } from "./RepairPanel";
-import { ClassFilter, ClassPill, Raw, ReadErrorBanner, Received, ReconTable } from "./parts";
+import {
+  ClassFilter,
+  ClassPill,
+  Raw,
+  ReadErrorBanner,
+  Received,
+  ReconTable,
+  RepairAction,
+} from "./parts";
 import {
   RESULT_CLASSES,
   type RepairTarget,
   classFilter,
   detailEntries,
   isRunId,
-  resultRepairBlock,
+  resultRepair,
   resultStateView,
 } from "./productReconLogic";
 import { type ReconScope, useRunResults } from "./useProductReconciliation";
@@ -48,33 +56,6 @@ function headers(t: T): { key: string; header: string }[] {
 function Ref({ value }: Readonly<{ value: string | null }>): React.JSX.Element {
   const t = useT();
   return value ? <Raw value={value} /> : <span className="muted">{t("productRecon.none")}</span>;
-}
-
-function RowAction({
-  result,
-  onRepair,
-}: Readonly<{
-  result: ProductReconciliationResult;
-  onRepair: (target: RepairTarget) => void;
-}>): React.JSX.Element {
-  const t = useT();
-  const block = resultRepairBlock(result);
-  if (block === "needs-version") {
-    return <span className="muted">{t("productRecon.repair.needsVersion")}</span>;
-  }
-  if (block !== null || !result.tenantProductId) {
-    return <span className="muted">{t("productRecon.none")}</span>;
-  }
-  const tenantProductId = result.tenantProductId;
-  return (
-    <button
-      type="button"
-      className="btn-secondary"
-      onClick={() => onRepair({ tenantProductId, runId: result.runId, resultId: result.id })}
-    >
-      {t("productRecon.repair.open")}
-    </button>
-  );
 }
 
 function BackLink(): React.JSX.Element {
@@ -134,7 +115,7 @@ function Results({
               <Received entries={detailEntries(result.detail)} emptyKey="productRecon.none" />
             </td>
             <td>
-              <RowAction result={result} onRepair={setTarget} />
+              <RepairAction plan={resultRepair(result)} onRepair={setTarget} />
             </td>
           </tr>
         )}

@@ -138,9 +138,25 @@ export const productRecon = {
   "productRecon.repair.recordedTitle": "سُجّلت المعالجة",
   "productRecon.repair.outcome.mapped": "أصبح الربط مؤكدًا وفعّالًا.",
   "productRecon.repair.outcome.no_op_echo": "كان للمنتج ربط مؤكد وفعّال من قبل. لم يتغير شيء.",
+  "productRecon.repair.outcome.no_op_echo_mapping":
+    "كان هذا الربط مؤكدًا وفعّالًا من قبل. لم يتغير شيء.",
   "productRecon.repair.outcome.still_unmapped": "ما زال المنتج بلا ربط.",
   "productRecon.repair.outcome.conflict": "تغيّر الربط في الوقت نفسه. ما زال المنتج بلا ربط مؤكد.",
   "productRecon.repair.outcome.unknown": "سجّل الخادم نتيجة لا تعرفها هذه النسخة.",
+
+  // --- Repair of an existing mapping (confirm / re_point, RT-733) -------------------------------
+  "productRecon.repair.confirmOpen": "تأكيد",
+  "productRecon.repair.repointOpen": "إعادة توجيه",
+  "productRecon.repair.mapping.confirmLabel": "تأكيد الربط المقترح",
+  "productRecon.repair.mapping.repointLabel": "إعادة توجيه الربط",
+  "productRecon.repair.mapping.confirmPrompt":
+    "سيُؤكَّد الربط المقترح للمنتج {product} بصنف ERPNext {ref} (الربط {mapping}، الإصدار {version}). هل تريد المتابعة؟",
+  "productRecon.repair.mapping.repointPrompt":
+    "سيُعاد توجيه الربط {mapping} للمنتج {product} (صنف ERPNext {ref}) ويُؤكَّد عند الإصدار {version}. إن كان مؤكدًا وفعّالًا من قبل فلن يتغير شيء. هل تريد المتابعة؟",
+  "productRecon.repair.mapping.confirm": "تأكيد الربط",
+  "productRecon.repair.mapping.repoint": "إعادة التوجيه والتأكيد",
+  "productRecon.refusal.staleVersion":
+    "لم يُنفَّذ الطلب: تغيّر الربط بعد قراءة هذه القائمة، فلم يعد الإصدار {version} هو الحالي (أو سبق استخدام هذا الطلب). أُعيدت قراءة القائمة؛ أغلق اللوحة وافتح الصف مرة أخرى للتعامل مع الإصدار الحالي.",
 
   // --- Refused mutations (never retried automatically) -----------------------------------------------
   "productRecon.refusal.rejected": "رفض الخادم الطلب لأن بياناته غير صالحة. لم يتغير شيء.",

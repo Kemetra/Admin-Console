@@ -130,11 +130,27 @@ export const productRecon: MessagesOf<typeof ar> = {
   "productRecon.repair.outcome.mapped": "The mapping is now confirmed and active.",
   "productRecon.repair.outcome.no_op_echo":
     "The product already had a confirmed, active mapping. Nothing changed.",
+  "productRecon.repair.outcome.no_op_echo_mapping":
+    "This mapping was already confirmed and active. Nothing changed.",
   "productRecon.repair.outcome.still_unmapped": "The product is still unmapped.",
   "productRecon.repair.outcome.conflict":
     "The mapping changed at the same time. The product still has no confirmed mapping.",
   "productRecon.repair.outcome.unknown":
     "The server recorded an outcome this version doesn't know.",
+
+  // --- Repair of an existing mapping (confirm / re_point, RT-733) -------------------------------
+  "productRecon.repair.confirmOpen": "Confirm",
+  "productRecon.repair.repointOpen": "Re-point",
+  "productRecon.repair.mapping.confirmLabel": "Confirm the suggested mapping",
+  "productRecon.repair.mapping.repointLabel": "Re-point the mapping",
+  "productRecon.repair.mapping.confirmPrompt":
+    "The suggested mapping of product {product} to ERPNext item {ref} will be confirmed (mapping {mapping}, version {version}). Continue?",
+  "productRecon.repair.mapping.repointPrompt":
+    "Mapping {mapping} of product {product} (ERPNext item {ref}) will be re-pointed and confirmed at version {version}. If it is already confirmed and active, nothing changes. Continue?",
+  "productRecon.repair.mapping.confirm": "Confirm mapping",
+  "productRecon.repair.mapping.repoint": "Re-point and confirm",
+  "productRecon.refusal.staleVersion":
+    "Not carried out: the mapping changed after this list was read, so version {version} is no longer current (or this request was already used). The list has been re-read: close this panel and open the row again to act on the current version.",
 
   // --- Refused mutations (never retried automatically) -----------------------------------------------
   "productRecon.refusal.rejected": "The server rejected the request as invalid. Nothing changed.",

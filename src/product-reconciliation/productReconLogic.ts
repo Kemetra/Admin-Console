@@ -7,12 +7,13 @@
  * reads "Unknown": it is never folded into a known one. Counts and detail
  * values are shown as the server sent them; nothing is computed or invented.
  *
- * Repair scope: the contract's `confirm` and `re_point` need the 013 mapping
- * `version`, which none of the five operations here exposes. The only repair
- * this surface can issue with server-provided facts is `suggest_confirm` for a
- * product with no mapping at all (`unmapped_dp2_product`), with the ERPNext
- * item reference the operator types. A `suggestion_unconfirmed` row says so
- * instead of guessing a version.
+ * Repair scope: `suggest_confirm` for a product with no mapping at all
+ * (`unmapped_dp2_product`), with the ERPNext item reference the operator types.
+ * Since RT-733 the reads carry the 013 mapping id and `version`, so a
+ * `suggestion_unconfirmed` row is `confirm`ed and an open `attribute_drift`
+ * result is `re_point`ed against exactly the id and version the server sent.
+ * A row without both facts is never sent with a guessed version: it points to
+ * the item mappings screen instead.
  *
  * RT-399: helpers return catalog message keys, never copy.
  */
@@ -170,27 +171,73 @@ export function resultStateView(state: string): StatusView {
 
 // --- Repair ------------------------------------------------------------------------------
 
+export type RepairKind = RepairProductMappingRequest["repairKind"];
+
+/** The 013 row a `confirm` / `re_point` acts on, at the version the server last sent. */
+export interface MappingRef {
+  mappingId: string;
+  version: number;
+}
+
 /** What a repair addresses: a backlog product, or an open result of a run. */
 export interface RepairTarget {
+  repairKind: RepairKind;
   tenantProductId: string;
+  /** Required for `confirm` / `re_point`; never set for `suggest_confirm`. */
+  mapping?: MappingRef;
+  /** The mapping's ERPNext item reference as received, shown on the confirm step. */
+  erpnextItemRef?: string | null;
   /** Set together for a run-result repair, so the result moves open → repaired. */
   runId?: string;
   resultId?: string;
 }
 
-/** Why a row cannot be repaired here, or null when `suggest_confirm` applies. */
-export type RepairBlock = "needs-version" | "not-open" | "not-repairable" | null;
+/** Why a row cannot be repaired here. */
+export type RepairBlock = "needs-version" | "not-open" | "not-repairable";
 
-export function backlogRepairBlock(item: BacklogItem): RepairBlock {
-  if (item.mismatchClass === "unmapped_dp2_product") return null;
-  if (item.mismatchClass === "suggestion_unconfirmed") return "needs-version";
+/** A row's repair: the target to open, or why there is none. */
+export type RepairPlan = RepairTarget | RepairBlock;
+
+/** Both facts as the server sent them, or null: a version is never guessed. */
+export function mappingRefOf(
+  mappingId: string | null | undefined,
+  version: number | null | undefined,
+): MappingRef | null {
+  if (!mappingId || !UUID_PATTERN.test(mappingId)) return null;
+  if (typeof version !== "number" || !Number.isInteger(version) || version < 1) return null;
+  return { mappingId, version };
+}
+
+export function backlogRepair(item: BacklogItem): RepairPlan {
+  const tenantProductId = item.tenantProductId;
+  if (item.mismatchClass === "unmapped_dp2_product") {
+    return { repairKind: "suggest_confirm", tenantProductId };
+  }
+  if (item.mismatchClass === "suggestion_unconfirmed") {
+    const mapping = mappingRefOf(item.suggestionMappingId, item.suggestionMappingVersion);
+    if (!mapping) return "needs-version";
+    return { repairKind: "confirm", tenantProductId, mapping, erpnextItemRef: item.erpnextItemRef };
+  }
   return "not-repairable";
 }
 
-export function resultRepairBlock(result: ProductReconciliationResult): RepairBlock {
+export function resultRepair(result: ProductReconciliationResult): RepairPlan {
   if (result.resultState !== "open") return "not-open";
-  if (result.mismatchClass === "suggestion_unconfirmed") return "needs-version";
-  if (result.mismatchClass === "unmapped_dp2_product" && result.tenantProductId) return null;
+  const tenantProductId = result.tenantProductId;
+  if (!tenantProductId) return "not-repairable";
+  const ids = { runId: result.runId, resultId: result.id };
+  if (result.mismatchClass === "unmapped_dp2_product") {
+    return { repairKind: "suggest_confirm", tenantProductId, ...ids };
+  }
+  const mapping = mappingRefOf(result.mappingId, result.mappingVersion);
+  const erpnextItemRef = result.erpnextItemRef;
+  if (result.mismatchClass === "suggestion_unconfirmed") {
+    if (!mapping) return "needs-version";
+    return { repairKind: "confirm", tenantProductId, mapping, erpnextItemRef, ...ids };
+  }
+  if (result.mismatchClass === "attribute_drift" && mapping) {
+    return { repairKind: "re_point", tenantProductId, mapping, erpnextItemRef, ...ids };
+  }
   return "not-repairable";
 }
 
@@ -212,7 +259,23 @@ export function suggestConfirmRequest(
     repairKind: "suggest_confirm",
     tenantProductId: target.tenantProductId,
     erpnextItemRef,
-    ...(target.runId && target.resultId ? { runId: target.runId, resultId: target.resultId } : {}),
+    ...resultIdsOf(target),
+  };
+}
+
+function resultIdsOf(target: RepairTarget): { runId?: string; resultId?: string } {
+  return target.runId && target.resultId ? { runId: target.runId, resultId: target.resultId } : {};
+}
+
+/** A `confirm` / `re_point` with the id and version as received; null without both. */
+export function mappingRepairRequest(target: RepairTarget): RepairProductMappingRequest | null {
+  if (target.repairKind === "suggest_confirm" || !target.mapping) return null;
+  return {
+    repairKind: target.repairKind,
+    tenantProductId: target.tenantProductId,
+    mappingId: target.mapping.mappingId,
+    version: target.mapping.version,
+    ...resultIdsOf(target),
   };
 }
 
@@ -336,8 +399,15 @@ const UNKNOWN_OUTCOME: OutcomeView = {
   messageKey: "productRecon.repair.outcome.unknown",
 };
 
-/** The recorded repair outcome as the server reported it; an unknown one stays unknown. */
-export function repairOutcomeView(outcome: string): OutcomeView {
+/**
+ * The recorded repair outcome as the server reported it; an unknown one stays
+ * unknown. A `no_op_echo` of a `confirm` / `re_point` (FR-011) is about the
+ * mapping the operator acted on, so it says that mapping was already confirmed.
+ */
+export function repairOutcomeView(outcome: string, repairKind?: RepairKind): OutcomeView {
+  if (outcome === "no_op_echo" && (repairKind === "confirm" || repairKind === "re_point")) {
+    return { variant: "info", messageKey: "productRecon.repair.outcome.no_op_echo_mapping" };
+  }
   return lookup(REPAIR_OUTCOME_VIEWS, outcome, UNKNOWN_OUTCOME);
 }
 
