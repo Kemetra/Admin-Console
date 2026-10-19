@@ -272,8 +272,8 @@ function StoreView({
 }: Readonly<{ scope: InventoryScope; storeId: string }>): React.JSX.Element {
   const t = useT();
   const name = useStoreName(scope.tenantId, storeId);
-  const locations = useStockLocations(scope, storeId, true);
-  const movements = useStoreMovements(scope, storeId, true);
+  const locations = useStockLocations({ scope, storeId });
+  const movements = useStoreMovements({ scope, storeId });
   return (
     <div className="surface">
       <BackLink to="/inventory" label={t("inventory.store.back")} />

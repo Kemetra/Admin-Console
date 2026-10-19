@@ -12,6 +12,7 @@
 import { useActiveContextValue } from "@/context/ActiveContextProvider";
 import {
   type OnHand,
+  type PageQuery,
   type StockLocationList,
   type StockMovement,
   type StockMovementList,
@@ -43,18 +44,27 @@ export function useInventoryScope(): InventoryScope {
   };
 }
 
-type ScopeKey = Pick<InventoryScope, "tenantId" | "activeStoreId">;
+/** One store's inventory, read within the active scope. */
+export interface StoreTarget {
+  scope: InventoryScope;
+  storeId: string;
+}
+
+/** One product at one store, reached from a movement row. */
+export interface ProductTarget extends StoreTarget {
+  productId: string;
+}
+
+function scopeKey({ scope }: StoreTarget) {
+  return ["inventory", scope.tenantId, scope.activeStoreId] as const;
+}
 
 export const inventoryQueryKeys = {
-  all: (scope: ScopeKey) => ["inventory", scope.tenantId, scope.activeStoreId] as const,
-  movements: (scope: ScopeKey, storeId: string) =>
-    [...inventoryQueryKeys.all(scope), "movements", storeId] as const,
-  locations: (scope: ScopeKey, storeId: string) =>
-    [...inventoryQueryKeys.all(scope), "locations", storeId] as const,
-  onHand: (scope: ScopeKey, storeId: string, productId: string) =>
-    [...inventoryQueryKeys.all(scope), "on-hand", storeId, productId] as const,
-  tracking: (scope: ScopeKey, productId: string) =>
-    [...inventoryQueryKeys.all(scope), "tracking", productId] as const,
+  movements: (t: StoreTarget) => [...scopeKey(t), "movements", t.storeId] as const,
+  locations: (t: StoreTarget) => [...scopeKey(t), "locations", t.storeId] as const,
+  onHand: (t: ProductTarget) => [...scopeKey(t), "on-hand", t.storeId, t.productId] as const,
+  // Identities are tenant-wide, not store-scoped.
+  tracking: (t: ProductTarget) => [...scopeKey(t), "tracking", t.productId] as const,
 };
 
 class InventoryFetchError extends Error {
@@ -110,33 +120,35 @@ function readState<T>(result: UseQueryResult<T>): ReadState<T> {
   };
 }
 
-export function useStockLocations(
-  scope: InventoryScope,
-  storeId: string,
-  enabled: boolean,
-): ReadState<StockLocationList> {
+/** One read: requested only with a tenant, never retried on its own. */
+function useInventoryRead<T>(read: {
+  queryKey: readonly unknown[];
+  scope: InventoryScope;
+  load: () => Promise<ApiResult<T>>;
+}): ReadState<T> {
   const result = useQuery({
-    queryKey: inventoryQueryKeys.locations(scope, storeId),
-    enabled: enabled && Boolean(scope.tenantId),
-    queryFn: () => listStockLocations(storeId).then(dataOrThrow),
+    queryKey: read.queryKey,
+    enabled: Boolean(read.scope.tenantId),
+    queryFn: () => read.load().then(dataOrThrow),
     retry: false,
   });
   return readState(result);
 }
 
-export function useOnHand(
-  scope: InventoryScope,
-  storeId: string,
-  productId: string,
-  enabled: boolean,
-): ReadState<OnHand> {
-  const result = useQuery({
-    queryKey: inventoryQueryKeys.onHand(scope, storeId, productId),
-    enabled: enabled && Boolean(scope.tenantId),
-    queryFn: () => getOnHand(storeId, productId).then(dataOrThrow),
-    retry: false,
+export function useStockLocations(target: StoreTarget): ReadState<StockLocationList> {
+  return useInventoryRead({
+    queryKey: inventoryQueryKeys.locations(target),
+    scope: target.scope,
+    load: () => listStockLocations(target.storeId),
   });
-  return readState(result);
+}
+
+export function useOnHand(target: ProductTarget): ReadState<OnHand> {
+  return useInventoryRead({
+    queryKey: inventoryQueryKeys.onHand(target),
+    scope: target.scope,
+    load: () => getOnHand(target.storeId, target.productId),
+  });
 }
 
 // --- Paged reads --------------------------------------------------------------------
@@ -186,36 +198,38 @@ function pagedState<T, P extends { items: T[] }>(result: InfiniteLike<P>): Paged
 
 const FIRST_PAGE: string | undefined = undefined;
 
-type PageParam = { pageParam: string | undefined };
-
-/** The store's whole ledger (`scope=all`), newest first; Load more follows `nextCursor`. */
-export function useStoreMovements(scope: InventoryScope, storeId: string, enabled: boolean) {
+/** A keyset-paged read: Load more follows `nextCursor`; a null cursor ends it. */
+function useInventoryPages<T, P extends { items: T[]; nextCursor?: string | null }>(read: {
+  queryKey: readonly unknown[];
+  scope: InventoryScope;
+  fetchPage: (query: PageQuery) => Promise<ApiResult<P>>;
+}): PagedState<T> {
   const result = useInfiniteQuery({
-    queryKey: inventoryQueryKeys.movements(scope, storeId),
-    enabled: enabled && Boolean(scope.tenantId),
+    queryKey: read.queryKey,
+    enabled: Boolean(read.scope.tenantId),
     initialPageParam: FIRST_PAGE,
-    queryFn: ({ pageParam }: PageParam) =>
-      listStoreMovements(storeId, pageParam ? { cursor: pageParam } : {}).then(
-        dataOrThrow<StockMovementList>,
-      ),
+    queryFn: ({ pageParam }: { pageParam: string | undefined }) =>
+      read.fetchPage(pageParam ? { cursor: pageParam } : {}).then(dataOrThrow<P>),
     getNextPageParam: nextCursorOf,
     retry: false,
   });
-  return pagedState<StockMovement, StockMovementList>(result);
+  return pagedState<T, P>(result);
 }
 
-/** The product's tracking identities; only requested for owner / tenant_admin. */
-export function useTrackingIdentities(scope: InventoryScope, productId: string, enabled: boolean) {
-  const result = useInfiniteQuery({
-    queryKey: inventoryQueryKeys.tracking(scope, productId),
-    enabled: enabled && Boolean(scope.tenantId),
-    initialPageParam: FIRST_PAGE,
-    queryFn: ({ pageParam }: PageParam) =>
-      listTrackingIdentities(productId, pageParam ? { cursor: pageParam } : {}).then(
-        dataOrThrow<TrackingIdentityList>,
-      ),
-    getNextPageParam: nextCursorOf,
-    retry: false,
+/** The store's whole ledger (`scope=all`), newest first. */
+export function useStoreMovements(target: StoreTarget): PagedState<StockMovement> {
+  return useInventoryPages<StockMovement, StockMovementList>({
+    queryKey: inventoryQueryKeys.movements(target),
+    scope: target.scope,
+    fetchPage: (query) => listStoreMovements(target.storeId, query),
   });
-  return pagedState<TrackingIdentity, TrackingIdentityList>(result);
+}
+
+/** The product's tracking identities; only mounted for owner / tenant_admin. */
+export function useTrackingIdentities(target: ProductTarget): PagedState<TrackingIdentity> {
+  return useInventoryPages<TrackingIdentity, TrackingIdentityList>({
+    queryKey: inventoryQueryKeys.tracking(target),
+    scope: target.scope,
+    fetchPage: (query) => listTrackingIdentities(target.productId, query),
+  });
 }

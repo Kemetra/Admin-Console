@@ -29,6 +29,7 @@ import { BackLink, LoadMore, Machine, Quantity, ReadError, StaleError, Unknown }
 import {
   type InventoryScope,
   type PagedState,
+  type ProductTarget,
   type ReadState,
   useInventoryScope,
   useOnHand,
@@ -210,12 +211,9 @@ function TrackingBody({ list }: Readonly<{ list: PagedState<TrackingIdentity> }>
   );
 }
 
-function TrackingSection({
-  scope,
-  productId,
-}: Readonly<{ scope: InventoryScope; productId: string }>) {
+function TrackingSection({ target }: Readonly<{ target: ProductTarget }>) {
   const t = useT();
-  const list = useTrackingIdentities(scope, productId, true);
+  const list = useTrackingIdentities(target);
   // The API's refusal (403 / non-disclosing 404) means: not for this caller. Omit.
   if (list.error && isHiddenSection(list.error.kind)) return null;
   return (
@@ -235,7 +233,7 @@ function ProductView({
   target,
 }: Readonly<{ scope: InventoryScope; target: Target }>): React.JSX.Element {
   const t = useT();
-  const onHand = useOnHand(scope, target.storeId, target.productId, true);
+  const onHand = useOnHand({ scope, ...target });
   return (
     <div className="surface">
       <BackLink to={`/inventory/stores/${target.storeId}`} label={t("inventory.product.back")} />
@@ -248,9 +246,7 @@ function ProductView({
         </div>
       </header>
       <OnHandSection onHand={onHand} />
-      {canReadTracking(scope.role) ? (
-        <TrackingSection scope={scope} productId={target.productId} />
-      ) : null}
+      {canReadTracking(scope.role) ? <TrackingSection target={{ scope, ...target }} /> : null}
     </div>
   );
 }
