@@ -2,22 +2,28 @@
 # (src/generated/schema.d.ts, RT-677). Rewritten by `pnpm generate:client --repin <ref>`.
 # Do not hand-edit: the generator checks every file below against its git blob SHA.
 repo: Kemetra/Backend-Core
-commit: 35114fd49d7765dccf4e4c9f3b5c3a6e2d6dd828
+commit: aa994f472fc1ae3485a212af95ed8339c505d366
 source: packages/contracts/openapi
-file: audit.openapi.yaml c7a0c1c0422f37cf8d9c987e66cbdb321e8bcc77
+file: audit.openapi.yaml 8e95225759325d77b6c38c3924fd5f2b9964f9cb
 file: auth.openapi.yaml 5d8858be107b1d19d10bfa79c004b0b4eb91e7c7
-file: cash-variance-policy.openapi.yaml fd35a99fa8f238dfc0e30bb8969b35928e59950e
-file: catalog/unknown-items.yaml 5d264f510235470ee2a0fc161779a87ae60b076d
-file: connector/connector-admin.yaml db10d8e12e39cc4ed92c0714980b0d7cc0d976ec
-file: console-sales.openapi.yaml 6440d613e2da344d47b8da643d123a776e942f00
-file: console-telemetry.openapi.yaml d369f78bbe71c101ae35d5475aae1ad4af549869
-file: context.openapi.yaml f6f021820c692cebd3094789057e92414a85ab54
-file: devices.openapi.yaml d90ab3edabe8dda1cf4da5d112fee1d65a92847a
-file: erpnext-connector/connector-health.yaml 352e823253631170e491e4b20f433d473b78f84e
-file: erpnext-reconciliation/reconciliation.yaml 33280a2ab8dbe911ed81332474040738d867002d
-file: erpnext-sync-ops/console-sync-ops.yaml 64aaa624dc0b0904fa2b6a67831dfe1272e6a6f7
-file: memberships.openapi.yaml c9770fd9a8070c95643652bc0395265d89b70d93
-file: settlement/settlement.yaml c8f998250af892754ab564e444dee22934c3daac
-file: shift-closes.openapi.yaml 584b184f37959c5c94df32c6d8f447ace9c6a314
-file: stores.openapi.yaml 13f7815ffccc803c78e7fde299f640fa240f1642
-file: tenants.openapi.yaml cea4bb919ac905255ba96060e3f876ad19b5202c
+file: cash-variance-policy.openapi.yaml e5fd0d477c161e8aeb4eb87c817b8fce782e5f2c
+file: catalog/erpnext-item-map.yaml 467bf860f4d00028fc4cd476d1959b93c9ce52a2
+file: catalog/erpnext-warehouse-map.yaml d2db8f505c0879a7b2c6e4c866985670e07da46a
+file: catalog/product-reconciliation.yaml f5cefb460c2d5d268035ca1659cf174c03b2ccbc
+file: catalog/tracking-profile.yaml f8d9dc228be581bbede72df7ade9289afc5a9504
+file: catalog/unknown-items.yaml 7656b15a44cc2ac670246fcf96ec871442b9a295
+file: connector/connector-admin.yaml 39496d0b0c6fcde87870d057cbe1d2837bb581f0
+file: console-sales.openapi.yaml 326861363baa9907a970bb9eec42a9ed5980f297
+file: console-telemetry.openapi.yaml 3c28599418ec7a749641b214886c08c2cc49a1ba
+file: context.openapi.yaml 0e582fb936398491576421fe3addc0982c276667
+file: devices.openapi.yaml af2f39e03fed8f05225520b2952571df5cf7497a
+file: erpnext-connector/connector-health.yaml b0cc7095899e3d6c3b9ec7aa60c595a53861470a
+file: erpnext-reconciliation/reconciliation.yaml 10d14cb9720f219dc6cd591de81656d630f7a429
+file: erpnext-sync-ops/console-sync-ops.yaml dfb4cd0abde4077fcf268e180aec6c9098060314
+file: inventory/inventory.yaml 665ead4e39f84983ac0413ee816b84747b12664e
+file: memberships.openapi.yaml 4707510990d44ecdef32b06e93541382ebb27b24
+file: sale-sync-ops/sale-sync-ops.yaml 83a995ff987c769dc2416034fbb3ee57b5e6d8eb
+file: settlement/settlement.yaml 5a6e568f0e087652c4d5d5d2d75c386d6e6f37bc
+file: shift-closes.openapi.yaml 4fe610244c7146936f635e8266d6f245149201d7
+file: stores.openapi.yaml dc4c4664f7757dd100ba63c1d841b14172bdb38d
+file: tenants.openapi.yaml d8bfacb51c5b55454250c0e8b0546f049403b5a6
