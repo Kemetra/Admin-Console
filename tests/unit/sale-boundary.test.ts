@@ -7,7 +7,9 @@ import { readSource, sourcesUnder } from "./source-scan";
  * read only the two console sales operations of the generated client: no
  * write, no POS route or POS credential, no ERPNext / Frappe / Connector call,
  * no hand-rolled fetch and no Authorization header (cookie transport). Static
- * source scan, comments stripped.
+ * source scan, comments stripped. RT-726's sync sections and guarded repair,
+ * which the detail page hosts, live in `src/sale-sync/` with their own
+ * boundary (tests/unit/sale-sync-boundary.test.ts).
  */
 const wrapperSrc = readSource("src/lib/sale-queries.ts");
 const feature = sourcesUnder("src/sales");

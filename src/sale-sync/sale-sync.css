@@ -1,0 +1,44 @@
+/* RT-726 sale sync-ops surfaces. Existing tokens only; no new colour, font or
+ * dependency. Status badges carry their meaning in text; colour only
+ * reinforces it. Logical properties throughout (RTL by structure). */
+
+.sale-sync__machine {
+  font-family: var(--font-mono);
+  font-size: var(--text-machine);
+}
+
+.sale-sync__subtitle {
+  margin: 0;
+  font: var(--weight-strong) var(--text-body) / var(--leading-title) var(--font-sans);
+}
+
+.sale-sync__dead-letter,
+.sale-sync__repair {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-inline-size: 65ch;
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--color-border);
+}
+.sale-sync__repair .content__sub {
+  margin: 0;
+}
+
+.sale-sync__filter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-inline-size: 280px;
+}
+.sale-sync__filter label {
+  font: var(--weight-strong) var(--text-meta) / var(--leading-tight) var(--font-sans);
+  color: var(--color-text-muted);
+}
+
+.sale-sync__note,
+.sale-sync__asof {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-meta);
+}
