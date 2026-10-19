@@ -3,7 +3,7 @@
  * Do not make direct changes to the file.
  */
 
-// Source: Data-Pulse-2 @ 35114fd49d7765dccf4e4c9f3b5c3a6e2d6dd828
+// Source: Data-Pulse-2 @ aa994f472fc1ae3485a212af95ed8339c505d366
 // Sources:
 // - packages/contracts/openapi/auth.openapi.yaml
 // - packages/contracts/openapi/context.openapi.yaml
@@ -563,11 +563,38 @@ export namespace ContextSchema {
                 store_access_kind?: "all" | "specific";
                 accessible_store_ids?: string[];
             };
+            /** @description The canonical error envelope (code, message, request_id). */
+            Error: {
+                error: {
+                    code: string;
+                    message: string;
+                    /** Format: uuid */
+                    request_id?: string;
+                };
+            };
         };
-        responses: never;
+        responses: {
+            /** @description 429 `rate_limited` (RT-574): the caller's per-user budget for this class of operation is spent. The body is the canonical error envelope with a non-disclosing message (no budget, class or window); its `request_id` equals the `X-Request-Id` response header. Honour `Retry-After`; never auto-retry a mutation. A 429 is not a 401: it never means the session ended. The console limit is server-configured and may not be enforced, so a client must handle a 429 but must not expect one. */
+            TooManyRequests: {
+                headers: {
+                    "Retry-After": components["headers"]["ConsoleRetryAfter"];
+                    /** @description Always `no-store` on a 429. */
+                    "Cache-Control": "no-store";
+                    /** @description The request id, equal to `error.request_id` in the body: the inbound `X-Request-Id` when it is a well-formed UUID, otherwise a server-minted one. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
         parameters: never;
         requestBodies: never;
-        headers: never;
+        headers: {
+            /** @description Whole seconds the caller should wait before retrying, sent on every console 429 (RT-574 D5). Its own bound, 1 to 3600; it is not the POS `RetryAfter` header. */
+            ConsoleRetryAfter: number;
+        };
         pathItems: never;
     }
     export type $defs = Record<string, never>;
@@ -597,6 +624,7 @@ export namespace ContextSchema {
                     };
                     content?: never;
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         switchActiveTenant: {
@@ -640,6 +668,7 @@ export namespace ContextSchema {
                     };
                     content?: never;
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         switchActiveStore: {
@@ -688,6 +717,7 @@ export namespace ContextSchema {
                     };
                     content?: never;
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         clearActiveStore: {
@@ -715,6 +745,7 @@ export namespace ContextSchema {
                     };
                     content?: never;
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
     }
@@ -825,11 +856,38 @@ export namespace TenantsSchema {
                 /** Format: date-time */
                 revoked_at?: string | null;
             };
+            /** @description The canonical error envelope (code, message, request_id). */
+            Error: {
+                error: {
+                    code: string;
+                    message: string;
+                    /** Format: uuid */
+                    request_id?: string;
+                };
+            };
         };
-        responses: never;
+        responses: {
+            /** @description 429 `rate_limited` (RT-574): the caller's per-user budget for this class of operation is spent. The body is the canonical error envelope with a non-disclosing message (no budget, class or window); its `request_id` equals the `X-Request-Id` response header. Honour `Retry-After`; never auto-retry a mutation. A 429 is not a 401: it never means the session ended. The console limit is server-configured and may not be enforced, so a client must handle a 429 but must not expect one. */
+            TooManyRequests: {
+                headers: {
+                    "Retry-After": components["headers"]["ConsoleRetryAfter"];
+                    /** @description Always `no-store` on a 429. */
+                    "Cache-Control": "no-store";
+                    /** @description The request id, equal to `error.request_id` in the body: the inbound `X-Request-Id` when it is a well-formed UUID, otherwise a server-minted one. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
         parameters: never;
         requestBodies: never;
-        headers: never;
+        headers: {
+            /** @description Whole seconds the caller should wait before retrying, sent on every console 429 (RT-574 D5). Its own bound, 1 to 3600; it is not the POS `RetryAfter` header. */
+            ConsoleRetryAfter: number;
+        };
         pathItems: never;
     }
     export type $defs = Record<string, never>;
@@ -852,6 +910,7 @@ export namespace TenantsSchema {
                         "application/json": components["schemas"]["TenantSummary"][];
                     };
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         createTenant: {
@@ -890,6 +949,7 @@ export namespace TenantsSchema {
                     };
                     content?: never;
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         readTenant: {
@@ -919,6 +979,7 @@ export namespace TenantsSchema {
                     };
                     content?: never;
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         softDeleteTenant: {
@@ -946,6 +1007,7 @@ export namespace TenantsSchema {
                     };
                     content?: never;
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         updateTenant: {
@@ -986,6 +1048,7 @@ export namespace TenantsSchema {
                     };
                     content?: never;
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         listMembers: {
@@ -1015,6 +1078,7 @@ export namespace TenantsSchema {
                     };
                     content?: never;
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
     }
@@ -1181,12 +1245,30 @@ export namespace StoresSchema {
                 };
             };
         };
-        responses: never;
+        responses: {
+            /** @description 429 `rate_limited` (RT-574): the caller's per-user budget for this class of operation is spent. The body is the canonical error envelope with a non-disclosing message (no budget, class or window); its `request_id` equals the `X-Request-Id` response header. Honour `Retry-After`; never auto-retry a mutation. A 429 is not a 401: it never means the session ended. The console limit is server-configured and may not be enforced, so a client must handle a 429 but must not expect one. */
+            TooManyRequests: {
+                headers: {
+                    "Retry-After": components["headers"]["ConsoleRetryAfter"];
+                    /** @description Always `no-store` on a 429. */
+                    "Cache-Control": "no-store";
+                    /** @description The request id, equal to `error.request_id` in the body: the inbound `X-Request-Id` when it is a well-formed UUID, otherwise a server-minted one. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
         parameters: {
             StoreId: string;
         };
         requestBodies: never;
-        headers: never;
+        headers: {
+            /** @description Whole seconds the caller should wait before retrying, sent on every console 429 (RT-574 D5). Its own bound, 1 to 3600; it is not the POS `RetryAfter` header. */
+            ConsoleRetryAfter: number;
+        };
         pathItems: never;
     }
     export type $defs = Record<string, never>;
@@ -1216,6 +1298,7 @@ export namespace StoresSchema {
                     };
                     content?: never;
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         createStore: {
@@ -1270,6 +1353,7 @@ export namespace StoresSchema {
                     };
                     content?: never;
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         readStore: {
@@ -1299,6 +1383,7 @@ export namespace StoresSchema {
                     };
                     content?: never;
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         softDeleteStore: {
@@ -1333,6 +1418,7 @@ export namespace StoresSchema {
                     };
                     content?: never;
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         updateStore: {
@@ -1391,6 +1477,7 @@ export namespace StoresSchema {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         previewStoreTimezoneChange: {
@@ -1438,6 +1525,7 @@ export namespace StoresSchema {
                     };
                     content?: never;
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
     }
@@ -1547,11 +1635,38 @@ export namespace MembershipsSchema {
                 /** Format: date-time */
                 revoked_at?: string | null;
             };
+            /** @description The canonical error envelope (code, message, request_id). */
+            Error: {
+                error: {
+                    code: string;
+                    message: string;
+                    /** Format: uuid */
+                    request_id?: string;
+                };
+            };
         };
-        responses: never;
+        responses: {
+            /** @description 429 `rate_limited` (RT-574): the caller's per-user budget for this class of operation is spent. The body is the canonical error envelope with a non-disclosing message (no budget, class or window); its `request_id` equals the `X-Request-Id` response header. Honour `Retry-After`; never auto-retry a mutation. A 429 is not a 401: it never means the session ended. The console limit is server-configured and may not be enforced, so a client must handle a 429 but must not expect one. */
+            TooManyRequests: {
+                headers: {
+                    "Retry-After": components["headers"]["ConsoleRetryAfter"];
+                    /** @description Always `no-store` on a 429. */
+                    "Cache-Control": "no-store";
+                    /** @description The request id, equal to `error.request_id` in the body: the inbound `X-Request-Id` when it is a well-formed UUID, otherwise a server-minted one. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
         parameters: never;
         requestBodies: never;
-        headers: never;
+        headers: {
+            /** @description Whole seconds the caller should wait before retrying, sent on every console 429 (RT-574 D5). Its own bound, 1 to 3600; it is not the POS `RetryAfter` header. */
+            ConsoleRetryAfter: number;
+        };
         pathItems: never;
     }
     export type $defs = Record<string, never>;
@@ -1623,6 +1738,7 @@ export namespace MembershipsSchema {
                     };
                     content?: never;
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         revokeMembership: {
@@ -1657,6 +1773,7 @@ export namespace MembershipsSchema {
                     };
                     content?: never;
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         updateMembership: {
@@ -1697,6 +1814,7 @@ export namespace MembershipsSchema {
                     };
                     content?: never;
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         acceptInvitation: {
@@ -1789,11 +1907,38 @@ export namespace AuditSchema {
                     [key: string]: unknown;
                 };
             };
+            /** @description The canonical error envelope (code, message, request_id). */
+            Error: {
+                error: {
+                    code: string;
+                    message: string;
+                    /** Format: uuid */
+                    request_id?: string;
+                };
+            };
         };
-        responses: never;
+        responses: {
+            /** @description 429 `rate_limited` (RT-574): the caller's per-user budget for this class of operation is spent. The body is the canonical error envelope with a non-disclosing message (no budget, class or window); its `request_id` equals the `X-Request-Id` response header. Honour `Retry-After`; never auto-retry a mutation. A 429 is not a 401: it never means the session ended. The console limit is server-configured and may not be enforced, so a client must handle a 429 but must not expect one. */
+            TooManyRequests: {
+                headers: {
+                    "Retry-After": components["headers"]["ConsoleRetryAfter"];
+                    /** @description Always `no-store` on a 429. */
+                    "Cache-Control": "no-store";
+                    /** @description The request id, equal to `error.request_id` in the body: the inbound `X-Request-Id` when it is a well-formed UUID, otherwise a server-minted one. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
         parameters: never;
         requestBodies: never;
-        headers: never;
+        headers: {
+            /** @description Whole seconds the caller should wait before retrying, sent on every console 429 (RT-574 D5). Its own bound, 1 to 3600; it is not the POS `RetryAfter` header. */
+            ConsoleRetryAfter: number;
+        };
         pathItems: never;
     }
     export type $defs = Record<string, never>;
@@ -1852,6 +1997,7 @@ export namespace AuditSchema {
                     };
                     content?: never;
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
     }
@@ -2223,7 +2369,7 @@ export namespace UnknownItemsSchema {
             /** @description Canonical error envelope shared with `auth.openapi.yaml`, `outbox.openapi.yaml`, and others. The `error.code` enum is documented in `research.md` §R2 (FR-091 taxonomy). */
             Error: {
                 error: {
-                    /** @description Stable machine-readable error code (FR-091 / 007 FR-100 taxonomy). The closed 8-category review-queue BUSINESS-FAILURE vocabulary is: `validation`, `target_unavailable`, `alias_conflict`, `idempotency_key_conflict`, `already_reconciled`, `not_found`, `forbidden` (007's 8th category — in-scope insufficient authority, distinct from `not_found`), and `system_failure`. NOTE: the `425 Too Early` idempotency in-progress signal is a TRANSPORT-level retry indicator, NOT a business-failure category — it is outside this closed set (the runtime interceptor emits a diagnostic `idempotency_in_progress` marker on 425; see the per-op 425 response and the recorded contract/runtime body-shape finding). Request-shape failures use the platform-wide runtime code `validation_error` (`ErrorCodes.VALIDATION`). */
+                    /** @description Stable machine-readable error code (FR-091 / 007 FR-100 taxonomy). The closed 8-category review-queue BUSINESS-FAILURE vocabulary is: `validation`, `target_unavailable`, `alias_conflict`, `idempotency_key_conflict`, `already_reconciled`, `not_found`, `forbidden` (007's 8th category — in-scope insufficient authority, distinct from `not_found`), and `system_failure`. NOTE: the `425 Too Early` idempotency in-progress signal is a TRANSPORT-level retry indicator, NOT a business-failure category — it is outside this closed set (the runtime interceptor emits a diagnostic `idempotency_in_progress` marker on 425; see the per-op 425 response and the recorded contract/runtime body-shape finding). Request-shape failures use the platform-wide runtime code `validation_error` (`ErrorCodes.VALIDATION`). The console 429 code `rate_limited` is likewise outside the business-failure set. */
                     code: string;
                     /** @description Human-readable summary; no sensitive data. */
                     message: string;
@@ -2235,10 +2381,28 @@ export namespace UnknownItemsSchema {
                 };
             };
         };
-        responses: never;
+        responses: {
+            /** @description 429 `rate_limited` (RT-574): the caller's per-user budget for this class of operation is spent. The body is the canonical error envelope with a non-disclosing message (no budget, class or window); its `request_id` equals the `X-Request-Id` response header. Honour `Retry-After`; never auto-retry a mutation. A 429 is not a 401: it never means the session ended. The console limit is server-configured and may not be enforced, so a client must handle a 429 but must not expect one. */
+            TooManyRequests: {
+                headers: {
+                    "Retry-After": components["headers"]["ConsoleRetryAfter"];
+                    /** @description Always `no-store` on a 429. */
+                    "Cache-Control": "no-store";
+                    /** @description The request id, equal to `error.request_id` in the body: the inbound `X-Request-Id` when it is a well-formed UUID, otherwise a server-minted one. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
         parameters: never;
         requestBodies: never;
-        headers: never;
+        headers: {
+            /** @description Whole seconds the caller should wait before retrying, sent on every console 429 (RT-574 D5). Its own bound, 1 to 3600; it is not the POS `RetryAfter` header. */
+            ConsoleRetryAfter: number;
+        };
         pathItems: never;
     }
     export type $defs = Record<string, never>;
@@ -2380,6 +2544,7 @@ export namespace UnknownItemsSchema {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         tenantAdminDismissUnknownItem: {
@@ -2448,6 +2613,7 @@ export namespace UnknownItemsSchema {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         tenantAdminLinkUnknownItem: {
@@ -2520,6 +2686,7 @@ export namespace UnknownItemsSchema {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         tenantAdminCreateProductFromUnknownItem: {
@@ -2592,6 +2759,7 @@ export namespace UnknownItemsSchema {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         tenantAdminInspectUnknownItem: {
@@ -2651,6 +2819,7 @@ export namespace UnknownItemsSchema {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         tenantAdminReopenUnknownItem: {
@@ -2737,6 +2906,7 @@ export namespace UnknownItemsSchema {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         tenantAdminBulkDismissUnknownItems: {
@@ -2811,6 +2981,7 @@ export namespace UnknownItemsSchema {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
     }
@@ -3029,6 +3200,20 @@ export namespace SettlementSchema {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description 429 `rate_limited` (RT-574): the caller's per-user budget for this class of operation is spent. The body is the canonical error envelope with a non-disclosing message (no budget, class or window); its `request_id` equals the `X-Request-Id` response header. Honour `Retry-After`; never auto-retry a mutation. A 429 is not a 401: it never means the session ended. The console limit is server-configured and may not be enforced, so a client must handle a 429 but must not expect one. */
+            TooManyRequests: {
+                headers: {
+                    "Retry-After": components["headers"]["ConsoleRetryAfter"];
+                    /** @description Always `no-store` on a 429. */
+                    "Cache-Control": "no-store";
+                    /** @description The request id, equal to `error.request_id` in the body: the inbound `X-Request-Id` when it is a well-formed UUID, otherwise a server-minted one. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
         parameters: {
             /** @description The payer's stable reference (`PayerAccount.payerRef`). A malformed value is a 400 `validation_error`. */
@@ -3043,7 +3228,10 @@ export namespace SettlementSchema {
             IdempotencyKey: string;
         };
         requestBodies: never;
-        headers: never;
+        headers: {
+            /** @description Whole seconds the caller should wait before retrying, sent on every console 429 (RT-574 D5). Its own bound, 1 to 3600; it is not the POS `RetryAfter` header. */
+            ConsoleRetryAfter: number;
+        };
         pathItems: never;
     }
     export type $defs = Record<string, never>;
@@ -3076,6 +3264,7 @@ export namespace SettlementSchema {
                 400: components["responses"]["ValidationFailure"];
                 401: components["responses"]["Unauthorized"];
                 403: components["responses"]["Forbidden"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -3109,6 +3298,7 @@ export namespace SettlementSchema {
                 403: components["responses"]["ForbiddenOrOriginRejected"];
                 404: components["responses"]["NotFound"];
                 409: components["responses"]["Conflict"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -3145,6 +3335,7 @@ export namespace SettlementSchema {
                 403: components["responses"]["ForbiddenOrOriginRejected"];
                 404: components["responses"]["PayerNotFound"];
                 409: components["responses"]["PayerUpdateConflict"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -3565,7 +3756,7 @@ export namespace ErpnextReconciliationSchema {
             /** @description Canonical error envelope, identical to the shared shape in `auth.openapi.yaml` / `catalog/erpnext-warehouse-map.yaml` (used verbatim). Cross-tenant / out-of-scope refusals are non-disclosing (§II/§XII). */
             Error: {
                 error: {
-                    /** @description Stable machine-readable error code. Closed set on this surface: validation_error | not_found | idempotency_key_conflict | not_re_resolvable | system_failure (plus the generic 401 refusal). */
+                    /** @description Stable machine-readable error code. Closed set on this surface: validation_error | not_found | idempotency_key_conflict | not_re_resolvable | system_failure (plus the generic 401 refusal and the console 429 `rate_limited`). */
                     code: string;
                     /** @description Human-readable summary. No sensitive data, no cause enumeration. */
                     message: string;
@@ -3632,6 +3823,20 @@ export namespace ErpnextReconciliationSchema {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description 429 `rate_limited` (RT-574): the caller's per-user budget for this class of operation is spent. The body is the canonical error envelope with a non-disclosing message (no budget, class or window); its `request_id` equals the `X-Request-Id` response header. Honour `Retry-After`; never auto-retry a mutation. A 429 is not a 401: it never means the session ended. The console limit is server-configured and may not be enforced, so a client must handle a 429 but must not expect one. */
+            TooManyRequests: {
+                headers: {
+                    "Retry-After": components["headers"]["ConsoleRetryAfter"];
+                    /** @description Always `no-store` on a 429. */
+                    "Cache-Control": "no-store";
+                    /** @description The request id, equal to `error.request_id` in the body: the inbound `X-Request-Id` when it is a well-formed UUID, otherwise a server-minted one. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
         parameters: {
             /** @description Opaque pagination cursor from a prior page's `nextCursor`. Omit to start. The posting backlog's cursor is a numeric token (1–18 digits); anything else is a 400 `validation_error`. */
@@ -3661,6 +3866,8 @@ export namespace ErpnextReconciliationSchema {
         headers: {
             /** @description Present and `true` on an idempotent-replay response. */
             IdempotentReplayed: boolean;
+            /** @description Whole seconds the caller should wait before retrying, sent on every console 429 (RT-574 D5). Its own bound, 1 to 3600; it is not the POS `RetryAfter` header. */
+            ConsoleRetryAfter: number;
         };
         pathItems: never;
     }
@@ -3695,6 +3902,7 @@ export namespace ErpnextReconciliationSchema {
                 };
                 400: components["responses"]["ValidationFailure"];
                 401: components["responses"]["Unauthorized"];
+                429: components["responses"]["TooManyRequests"];
             };
         };
         repairPosting: {
@@ -3740,6 +3948,7 @@ export namespace ErpnextReconciliationSchema {
                 403: components["responses"]["OriginRejected"];
                 404: components["responses"]["NotFound"];
                 409: components["responses"]["Conflict"];
+                429: components["responses"]["TooManyRequests"];
             };
         };
         reResolvePosting: {
@@ -3776,6 +3985,7 @@ export namespace ErpnextReconciliationSchema {
                 403: components["responses"]["OriginRejected"];
                 404: components["responses"]["NotFound"];
                 409: components["responses"]["NotReResolvable"];
+                429: components["responses"]["TooManyRequests"];
             };
         };
         triggerReconciliationRun: {
@@ -3818,6 +4028,7 @@ export namespace ErpnextReconciliationSchema {
                 403: components["responses"]["OriginRejected"];
                 404: components["responses"]["NotFound"];
                 409: components["responses"]["Conflict"];
+                429: components["responses"]["TooManyRequests"];
             };
         };
         getReconciliationRun: {
@@ -3843,6 +4054,7 @@ export namespace ErpnextReconciliationSchema {
                 };
                 401: components["responses"]["Unauthorized"];
                 404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
             };
         };
         listReconciliationResults: {
@@ -3876,6 +4088,7 @@ export namespace ErpnextReconciliationSchema {
                 400: components["responses"]["ValidationFailure"];
                 401: components["responses"]["Unauthorized"];
                 404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
             };
         };
         repairStockMismatch: {
@@ -3923,6 +4136,7 @@ export namespace ErpnextReconciliationSchema {
                 403: components["responses"]["OriginRejected"];
                 404: components["responses"]["NotFound"];
                 409: components["responses"]["Conflict"];
+                429: components["responses"]["TooManyRequests"];
             };
         };
         listErpnextNegativeOnHandStores: {
@@ -3951,6 +4165,7 @@ export namespace ErpnextReconciliationSchema {
                 400: components["responses"]["ValidationFailure"];
                 401: components["responses"]["Unauthorized"];
                 404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
             };
         };
         listErpnextNegativeOnHand: {
@@ -3982,6 +4197,7 @@ export namespace ErpnextReconciliationSchema {
                 400: components["responses"]["ValidationFailure"];
                 401: components["responses"]["Unauthorized"];
                 404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
             };
         };
     }
@@ -4278,6 +4494,20 @@ export namespace ShiftClosesSchema {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description 429 `rate_limited` (RT-574): the caller's per-user budget for this class of operation is spent. The body is the canonical error envelope with a non-disclosing message (no budget, class or window); its `request_id` equals the `X-Request-Id` response header. Honour `Retry-After`; never auto-retry a mutation. A 429 is not a 401: it never means the session ended. The console limit is server-configured and may not be enforced, so a client must handle a 429 but must not expect one. */
+            TooManyRequests: {
+                headers: {
+                    "Retry-After": components["headers"]["ConsoleRetryAfter"];
+                    /** @description Always `no-store` on a 429. */
+                    "Cache-Control": "no-store";
+                    /** @description The request id, equal to `error.request_id` in the body: the inbound `X-Request-Id` when it is a well-formed UUID, otherwise a server-minted one. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
         parameters: {
             /** @description The shift's client-generated id (`shiftId` on the POS contract). Case insensitive: normalised to lower case before the lookup. A value that is not a UUID is 400 `validation_error` and never reaches the database. */
@@ -4308,7 +4538,10 @@ export namespace ShiftClosesSchema {
             PageSize: number;
         };
         requestBodies: never;
-        headers: never;
+        headers: {
+            /** @description Whole seconds the caller should wait before retrying, sent on every console 429 (RT-574 D5). Its own bound, 1 to 3600; it is not the POS `RetryAfter` header. */
+            ConsoleRetryAfter: number;
+        };
         pathItems: never;
     }
     export type $defs = Record<string, never>;
@@ -4359,6 +4592,7 @@ export namespace ShiftClosesSchema {
                 400: components["responses"]["ValidationFailure"];
                 401: components["responses"]["Unauthorized"];
                 404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -4386,6 +4620,7 @@ export namespace ShiftClosesSchema {
                 400: components["responses"]["ValidationFailure"];
                 401: components["responses"]["Unauthorized"];
                 404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -4571,7 +4806,7 @@ export namespace ConnectorAdminSchema {
             /** @description Canonical error envelope, identical to the shared shape in `auth.openapi.yaml` / `catalog/erpnext-warehouse-map.yaml` (used verbatim). Cross-tenant / out-of-scope / wrong-principal refusals are non-disclosing (§II/§XII) — they never enumerate the underlying cause. */
             Error: {
                 error: {
-                    /** @description Stable machine-readable error code. Closed set on this surface: validation_error | not_found | conflict | idempotency_key_conflict | system_failure (plus the generic 401 refusal). */
+                    /** @description Stable machine-readable error code. Closed set on this surface: validation_error | not_found | conflict | idempotency_key_conflict | system_failure (plus the generic 401 refusal and the console 429 `rate_limited`). */
                     code: string;
                     /** @description Human-readable summary. No sensitive data, no cause enumeration. */
                     message: string;
@@ -4583,7 +4818,22 @@ export namespace ConnectorAdminSchema {
                 };
             };
         };
-        responses: never;
+        responses: {
+            /** @description 429 `rate_limited` (RT-574): the caller's per-user budget for this class of operation is spent. The body is the canonical error envelope with a non-disclosing message (no budget, class or window); its `request_id` equals the `X-Request-Id` response header. Honour `Retry-After`; never auto-retry a mutation. A 429 is not a 401: it never means the session ended. The console limit is server-configured and may not be enforced, so a client must handle a 429 but must not expect one. */
+            TooManyRequests: {
+                headers: {
+                    "Retry-After": components["headers"]["ConsoleRetryAfter"];
+                    /** @description Always `no-store` on a 429. */
+                    "Cache-Control": "no-store";
+                    /** @description The request id, equal to `error.request_id` in the body: the inbound `X-Request-Id` when it is a well-formed UUID, otherwise a server-minted one. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
         parameters: {
             /** @description UUIDv7 primary key of the `connector_registration` row. */
             InstanceId: string;
@@ -4593,7 +4843,10 @@ export namespace ConnectorAdminSchema {
             IdempotencyKey: string;
         };
         requestBodies: never;
-        headers: never;
+        headers: {
+            /** @description Whole seconds the caller should wait before retrying, sent on every console 429 (RT-574 D5). Its own bound, 1 to 3600; it is not the POS `RetryAfter` header. */
+            ConsoleRetryAfter: number;
+        };
         pathItems: never;
     }
     export type $defs = Record<string, never>;
@@ -4627,6 +4880,7 @@ export namespace ConnectorAdminSchema {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         tenantAdminRegisterConnectorInstance: {
@@ -4687,6 +4941,7 @@ export namespace ConnectorAdminSchema {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         tenantAdminDisableConnectorInstance: {
@@ -4737,6 +4992,7 @@ export namespace ConnectorAdminSchema {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         tenantAdminIssueConnectorCredential: {
@@ -4809,6 +5065,7 @@ export namespace ConnectorAdminSchema {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         tenantAdminRotateConnectorCredential: {
@@ -4871,6 +5128,7 @@ export namespace ConnectorAdminSchema {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
         tenantAdminRevokeConnectorCredential: {
@@ -4933,6 +5191,7 @@ export namespace ConnectorAdminSchema {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
+                429: components["responses"]["TooManyRequests"];
             };
         };
     }
@@ -5073,7 +5332,7 @@ export namespace ConnectorHealthSchema {
             /** @description Canonical error envelope, identical to the shared shape in `auth.openapi.yaml` / `posting-feed.yaml` / `stock-view.yaml` / `reconciliation.yaml` (verbatim — no extra fields). Cross-tenant / out-of-scope refusals are non-disclosing (§II/§XII). */
             Error: {
                 error: {
-                    /** @description Stable machine-readable error code. Closed set on this surface: validation_error | not_found | system_failure (plus the generic 401 auth refusal and the 403 forbidden-role refusal). */
+                    /** @description Stable machine-readable error code. Closed set on this surface: validation_error | not_found | system_failure (plus the generic 401 auth refusal, the 403 forbidden-role refusal and the console 429 `rate_limited`). */
                     code: string;
                     /** @description Human-readable summary. No sensitive data, no cause enumeration. */
                     message: string;
@@ -5131,13 +5390,30 @@ export namespace ConnectorHealthSchema {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description 429 `rate_limited` (RT-574): the caller's per-user budget for this class of operation is spent. The body is the canonical error envelope with a non-disclosing message (no budget, class or window); its `request_id` equals the `X-Request-Id` response header. Honour `Retry-After`; never auto-retry a mutation. A 429 is not a 401: it never means the session ended. The console limit is server-configured and may not be enforced, so a client must handle a 429 but must not expect one. */
+            TooManyRequests: {
+                headers: {
+                    "Retry-After": components["headers"]["ConsoleRetryAfter"];
+                    /** @description Always `no-store` on a 429. */
+                    "Cache-Control": "no-store";
+                    /** @description The request id, equal to `error.request_id` in the body: the inbound `X-Request-Id` when it is a well-formed UUID, otherwise a server-minted one. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
         parameters: {
             /** @description The 018 `connector_registration(id)` to read. Resolves only within the caller's tenant scope — out-of-scope / cross-tenant / absent ids are a non-disclosing `not_found` (safe 404, §II/§XII). A path param so it cannot be body-forged. */
             RegistrationId: string;
         };
         requestBodies: never;
-        headers: never;
+        headers: {
+            /** @description Whole seconds the caller should wait before retrying, sent on every console 429 (RT-574 D5). Its own bound, 1 to 3600; it is not the POS `RetryAfter` header. */
+            ConsoleRetryAfter: number;
+        };
         pathItems: never;
     }
     export type $defs = Record<string, never>;
@@ -5189,6 +5465,7 @@ export namespace ConnectorHealthSchema {
                 };
                 401: components["responses"]["Unauthorized"];
                 403: components["responses"]["Forbidden"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -5216,6 +5493,7 @@ export namespace ConnectorHealthSchema {
                 401: components["responses"]["Unauthorized"];
                 403: components["responses"]["Forbidden"];
                 404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -5381,7 +5659,7 @@ export namespace SyncOpsSchema {
             /** @description Canonical error envelope, identical to the shared shape in `auth` / `outbox` / `pos-sales` / `erpnext-reconciliation`. Cross-tenant / out-of-scope refusals are non-disclosing (§II/§XII). */
             Error: {
                 error: {
-                    /** @description Stable machine-readable code. Closed set: validation_error | unauthorized | forbidden | not_found | system_failure. */
+                    /** @description Stable machine-readable code. Closed set: validation_error | unauthorized | forbidden | not_found | system_failure | rate_limited (the console 429). */
                     code: string;
                     /** @description Human-readable summary. No sensitive data, no cause enumeration. */
                     message: string;
@@ -5439,6 +5717,20 @@ export namespace SyncOpsSchema {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description 429 `rate_limited` (RT-574): the caller's per-user budget for this class of operation is spent. The body is the canonical error envelope with a non-disclosing message (no budget, class or window); its `request_id` equals the `X-Request-Id` response header. Honour `Retry-After`; never auto-retry a mutation. A 429 is not a 401: it never means the session ended. The console limit is server-configured and may not be enforced, so a client must handle a 429 but must not expect one. */
+            TooManyRequests: {
+                headers: {
+                    "Retry-After": components["headers"]["ConsoleRetryAfter"];
+                    /** @description Always `no-store` on a 429. */
+                    "Cache-Control": "no-store";
+                    /** @description The request id, equal to `error.request_id` in the body: the inbound `X-Request-Id` when it is a well-formed UUID, otherwise a server-minted one. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
         parameters: {
             /** @description Optional in-scope store filter. Validated against the operator's accessible stores; an out-of-scope id is a non-disclosing 404. */
@@ -5451,7 +5743,10 @@ export namespace SyncOpsSchema {
             PageSize: number;
         };
         requestBodies: never;
-        headers: never;
+        headers: {
+            /** @description Whole seconds the caller should wait before retrying, sent on every console 429 (RT-574 D5). Its own bound, 1 to 3600; it is not the POS `RetryAfter` header. */
+            ConsoleRetryAfter: number;
+        };
         pathItems: never;
     }
     export type $defs = Record<string, never>;
@@ -5481,6 +5776,7 @@ export namespace SyncOpsSchema {
                 401: components["responses"]["Unauthorized"];
                 403: components["responses"]["Forbidden"];
                 404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -5513,6 +5809,7 @@ export namespace SyncOpsSchema {
                 401: components["responses"]["Unauthorized"];
                 403: components["responses"]["Forbidden"];
                 404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -5545,6 +5842,7 @@ export namespace SyncOpsSchema {
                 401: components["responses"]["Unauthorized"];
                 403: components["responses"]["Forbidden"];
                 404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -6301,6 +6599,20 @@ export namespace DevicesSchema {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description 429 `rate_limited` (RT-574): the caller's per-user budget for this class of operation is spent. The body is the canonical error envelope with a non-disclosing message (no budget, class or window); its `request_id` equals the `X-Request-Id` response header. Honour `Retry-After`; never auto-retry a mutation. A 429 is not a 401: it never means the session ended. The console limit is server-configured and may not be enforced, so a client must handle a 429 but must not expect one. */
+            TooManyRequests: {
+                headers: {
+                    "Retry-After": components["headers"]["ConsoleRetryAfter"];
+                    /** @description Always `no-store` on a 429. */
+                    "Cache-Control": "no-store";
+                    /** @description The request id, equal to `error.request_id` in the body: the inbound `X-Request-Id` when it is a well-formed UUID, otherwise a server-minted one. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
         parameters: {
             /** @description The device id (`devices.id`, which is the paired `terminal_id`). Case insensitive: normalised to lower case before the lookup. A value that is not a UUID is 400 `validation_error` and never reaches the database. */
@@ -6323,7 +6635,10 @@ export namespace DevicesSchema {
             IdempotencyKey: string;
         };
         requestBodies: never;
-        headers: never;
+        headers: {
+            /** @description Whole seconds the caller should wait before retrying, sent on every console 429 (RT-574 D5). Its own bound, 1 to 3600; it is not the POS `RetryAfter` header. */
+            ConsoleRetryAfter: number;
+        };
         pathItems: never;
     }
     export type $defs = Record<string, never>;
@@ -6358,6 +6673,7 @@ export namespace DevicesSchema {
                 400: components["responses"]["ValidationFailure"];
                 401: components["responses"]["Unauthorized"];
                 404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -6385,6 +6701,7 @@ export namespace DevicesSchema {
                 400: components["responses"]["ValidationFailure"];
                 401: components["responses"]["Unauthorized"];
                 404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -6419,6 +6736,7 @@ export namespace DevicesSchema {
                 404: components["responses"]["NotFound"];
                 409: components["responses"]["UnresolvedCashSession"];
                 422: components["responses"]["RecoveryRequirementsUnmet"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -6452,6 +6770,7 @@ export namespace DevicesSchema {
                 403: components["responses"]["OriginRejected"];
                 404: components["responses"]["NotFound"];
                 409: components["responses"]["DeviceRetireConflict"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -6484,6 +6803,7 @@ export namespace DevicesSchema {
                 400: components["responses"]["ValidationFailure"];
                 401: components["responses"]["Unauthorized"];
                 404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -6515,6 +6835,7 @@ export namespace DevicesSchema {
                 400: components["responses"]["ValidationFailure"];
                 401: components["responses"]["Unauthorized"];
                 404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -6549,6 +6870,7 @@ export namespace DevicesSchema {
                 404: components["responses"]["NotFound"];
                 409: components["responses"]["PairingCodeIssueConflict"];
                 425: components["responses"]["IdempotencyInProgress"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -6578,6 +6900,7 @@ export namespace DevicesSchema {
                 403: components["responses"]["OriginRejected"];
                 404: components["responses"]["NotFound"];
                 409: components["responses"]["PairingCodeUsed"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -6876,6 +7199,20 @@ export namespace ConsoleSalesSchema {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description 429 `rate_limited` (RT-574): the caller's per-user budget for this class of operation is spent. The body is the canonical error envelope with a non-disclosing message (no budget, class or window); its `request_id` equals the `X-Request-Id` response header. Honour `Retry-After`; never auto-retry a mutation. A 429 is not a 401: it never means the session ended. The console limit is server-configured and may not be enforced, so a client must handle a 429 but must not expect one. */
+            TooManyRequests: {
+                headers: {
+                    "Retry-After": components["headers"]["ConsoleRetryAfter"];
+                    /** @description Always `no-store` on a 429. */
+                    "Cache-Control": "no-store";
+                    /** @description The request id, equal to `error.request_id` in the body: the inbound `X-Request-Id` when it is a well-formed UUID, otherwise a server-minted one. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
         parameters: {
             /** @description REQUIRED in v1 (OD-556-2). The one store whose sales are listed. Validated against the caller's store scope: a store outside it, or of another tenant, is the non-disclosing 404. Case insensitive: the one lower-cased value is the one scope-checked, cursor-bound and queried. A missing, malformed or repeated value is 400 `validation_error`. */
@@ -6905,6 +7242,8 @@ export namespace ConsoleSalesSchema {
         headers: {
             /** @description `no-store` on every 200: the bodies carry staff display names and the receipt header (tax registration id), so no shared or browser cache keeps them. */
             CacheControlNoStore: "no-store";
+            /** @description Whole seconds the caller should wait before retrying, sent on every console 429 (RT-574 D5). Its own bound, 1 to 3600; it is not the POS `RetryAfter` header. */
+            ConsoleRetryAfter: number;
         };
         pathItems: never;
     }
@@ -6953,6 +7292,7 @@ export namespace ConsoleSalesSchema {
                 400: components["responses"]["ValidationFailure"];
                 401: components["responses"]["Unauthorized"];
                 404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -6981,6 +7321,7 @@ export namespace ConsoleSalesSchema {
                 400: components["responses"]["ValidationFailure"];
                 401: components["responses"]["Unauthorized"];
                 404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -7444,6 +7785,20 @@ export namespace CashVariancePolicySchema {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description 429 `rate_limited` (RT-574): the caller's per-user budget for this class of operation is spent. The body is the canonical error envelope with a non-disclosing message (no budget, class or window); its `request_id` equals the `X-Request-Id` response header. Honour `Retry-After`; never auto-retry a mutation. A 429 is not a 401: it never means the session ended. The console limit is server-configured and may not be enforced, so a client must handle a 429 but must not expect one. */
+            TooManyRequests: {
+                headers: {
+                    "Retry-After": components["headers"]["ConsoleRetryAfter"];
+                    /** @description Always `no-store` on a 429. */
+                    "Cache-Control": "no-store";
+                    /** @description The request id, equal to `error.request_id` in the body: the inbound `X-Request-Id` when it is a well-formed UUID, otherwise a server-minted one. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
         parameters: {
             /** @description Must be the session's tenant; another tenant, or a role outside the operation's list, is the non-disclosing 404. */
@@ -7469,6 +7824,8 @@ export namespace CashVariancePolicySchema {
             IdempotentReplayed: boolean;
             /** @description Seconds to wait before retrying a 425 with the same `Idempotency-Key` and body. */
             RetryAfterInProgress: number;
+            /** @description Whole seconds the caller should wait before retrying, sent on every console 429 (RT-574 D5). Its own bound, 1 to 3600; it is not the POS `RetryAfter` header. */
+            ConsoleRetryAfter: number;
         };
         pathItems: never;
     }
@@ -7535,6 +7892,7 @@ export namespace CashVariancePolicySchema {
                 400: components["responses"]["ReadValidationFailure"];
                 401: components["responses"]["Unauthorized"];
                 404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -7567,6 +7925,7 @@ export namespace CashVariancePolicySchema {
                 400: components["responses"]["ReadValidationFailure"];
                 401: components["responses"]["Unauthorized"];
                 404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -7606,6 +7965,7 @@ export namespace CashVariancePolicySchema {
                 409: components["responses"]["Conflict"];
                 422: components["responses"]["TenantPolicyUnprocessable"];
                 425: components["responses"]["IdempotencyInProgress"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -7633,6 +7993,7 @@ export namespace CashVariancePolicySchema {
                 400: components["responses"]["ReadValidationFailure"];
                 401: components["responses"]["Unauthorized"];
                 404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -7665,6 +8026,7 @@ export namespace CashVariancePolicySchema {
                 400: components["responses"]["ReadValidationFailure"];
                 401: components["responses"]["Unauthorized"];
                 404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
@@ -7704,6 +8066,7 @@ export namespace CashVariancePolicySchema {
                 409: components["responses"]["Conflict"];
                 422: components["responses"]["StoreOverrideUnprocessable"];
                 425: components["responses"]["IdempotencyInProgress"];
+                429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
         };
