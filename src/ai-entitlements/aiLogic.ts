@@ -173,6 +173,8 @@ function minimalFeatureOf(item: unknown): MinimalFeatureModel | undefined {
  */
 export function toPanelModel(data: unknown, view: AiPlanView): PanelModel | undefined {
   if (!isObject(data) || !Array.isArray(data.features)) return undefined;
+  // The contract's discriminator: a body that names no known view is not a view at all.
+  if (data.view !== "full" && data.view !== "minimal") return undefined;
   const evaluatedAt = asString(data.evaluatedAt);
 
   if (view === "full") {

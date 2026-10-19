@@ -163,6 +163,8 @@ describe("toPanelModel, malformed bodies", () => {
     ["an array", []],
     ["no features", { view: "full", state: "active" }],
     ["features not an array", { view: "full", features: {} }],
+    ["no view", { features: [{ featureId: "ai.briefing.daily", availability: "available" }] }],
+    ["an unknown view", { view: "other", features: [] }],
   ])("%s is not a view", (_name, body) => {
     expect(toPanelModel(body, "full")).toBeUndefined();
     expect(toPanelModel(body, "minimal")).toBeUndefined();
