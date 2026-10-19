@@ -149,4 +149,70 @@ export const stock: MessagesOf<typeof ar> = {
   "unknownItems.errors.notFound": "This item is not available.",
   "unknownItems.errors.alreadyReconciled":
     "This item has already been resolved. Refresh to see its current state.",
+
+  // RT-724 (RF-4b): queue status filter, create product, reopen, bulk dismiss.
+  "unknownItems.filters.status": "Status",
+  "unknownItems.emptyStatus": "No items with this status.",
+  "unknownItems.create.action": "Create product",
+  "unknownItems.create.legend": "New product from this identifier",
+  "unknownItems.create.name": "Product name",
+  "unknownItems.create.taxCategory": "Tax category",
+  "unknownItems.create.taxCategoryHint": "The tax category code the product belongs to.",
+  "unknownItems.create.submit": "Create the product",
+  "unknownItems.create.nameRequired": "Enter a product name.",
+  "unknownItems.create.taxCategoryRequired": "Enter a tax category.",
+  "unknownItems.create.success":
+    "Product created and the identifier linked to it. The item has left the review queue.",
+  "unknownItems.reopen.action": "Reopen",
+  "unknownItems.reopen.success": "Item reopened. It is back in the review queue.",
+  "unknownItems.select.column": "Select",
+  "unknownItems.select.row": "Select {value}",
+  "unknownItems.select.page": "Select every item on this page",
+  "unknownItems.bulk.selected": {
+    zero: "No items selected",
+    one: "1 item selected",
+    other: "{count} items selected",
+  },
+  "unknownItems.bulk.action": "Dismiss selected",
+  "unknownItems.bulk.clear": "Clear selection",
+  "unknownItems.bulk.resource": {
+    zero: "no items",
+    one: "1 item",
+    other: "{count} items",
+  },
+  "unknownItems.bulk.overLimit":
+    "You can dismiss at most {max} items at a time. Narrow the selection, then try again.",
+  "unknownItems.bulk.result.dismissed": {
+    zero: "No items were dismissed.",
+    one: "1 item dismissed.",
+    other: "{count} items dismissed.",
+  },
+  "unknownItems.bulk.result.alreadyReconciled": {
+    zero: "No items were already resolved.",
+    one: "1 item was already resolved, so it was not dismissed.",
+    other: "{count} items were already resolved, so they were not dismissed.",
+  },
+  "unknownItems.bulk.result.notFound": {
+    zero: "No items were unavailable.",
+    one: "1 item is no longer available, so it was not dismissed.",
+    other: "{count} items are no longer available, so they were not dismissed.",
+  },
+  "unknownItems.errors.reopenForbidden":
+    "Reopening needs tenant-wide authority. Ask a tenant administrator.",
+  "unknownItems.errors.reopenResolved":
+    "This item has been resolved; only a dismissed item can be reopened. Refresh to see its current state.",
+  "unknownItems.errors.createValidation":
+    "The product could not be created with these details. Check the name and tax category, then try again.",
+  "unknownItems.errors.bulkRejected":
+    "The whole request was rejected and nothing was dismissed. Select at most {max} items, then try again.",
+  "unknownItems.errors.aliasConflict":
+    "This identifier is already linked to another product, so no product was created. Review the catalog before continuing.",
+  "unknownItems.errors.targetUnavailable":
+    "The target product is no longer available, so nothing changed.",
+  "unknownItems.errors.keyConflict":
+    "This request conflicted with an earlier attempt, so nothing changed. Refresh, then try again.",
+  "unknownItems.errors.rateLimited":
+    "Too many requests in a short time, so nothing changed. Wait a moment, then try again.",
+  "unknownItems.errors.inProgress":
+    "The previous request is still being processed. Wait a moment, then try again.",
 };
