@@ -27,6 +27,29 @@ export function RateLimitBanner({
   dismissible = true,
 }: Readonly<RateLimitBannerProps>): React.JSX.Element {
   const t = useT();
+  const banner = useBannerState(dismissible);
+  const message = (count: number) =>
+    banner.active ? t("rateLimit.wait", { count }) : t("rateLimit.ready");
+
+  return (
+    <div className="rate-limit-banner">
+      <output className="sr-only" aria-live="polite" aria-atomic="true">
+        {banner.visible ? message(banner.announcedSeconds) : ""}
+      </output>
+      {banner.visible ? (
+        <RateLimitAlert
+          message={message(banner.secondsLeft)}
+          waiting={banner.active}
+          onRetry={banner.retry}
+          onDismiss={dismissible ? banner.dismiss : undefined}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+/** The banner's state: visibility per 429, the once-only announcement, retry and dismiss. */
+function useBannerState(dismissible: boolean) {
   // Optional: a shell rendered without a query client (tests) still shows the banner.
   const qc = useContext(QueryClientContext);
   const { active, secondsLeft, seq, since } = useRateLimit();
@@ -35,12 +58,9 @@ export function RateLimitBanner({
   const announced = useRef({ seq: 0, seconds: 0 });
   if (announced.current.seq !== seq) announced.current = { seq, seconds: secondsLeft };
 
-  const visible = seq > 0 && (!dismissible || seq !== dismissedSeq);
-  const message = (count: number) =>
-    active ? t("rateLimit.wait", { count }) : t("rateLimit.ready");
-
+  const dismiss = () => setDismissedSeq(seq);
   const retry = () => {
-    setDismissedSeq(seq);
+    dismiss();
     // Re-read what the 429 left behind: failed reads, and reads that returned
     // their refusal as data during this window. Mutations are never replayed.
     void qc?.refetchQueries({
@@ -49,21 +69,14 @@ export function RateLimitBanner({
     });
   };
 
-  return (
-    <div className="rate-limit-banner">
-      <output className="sr-only" aria-live="polite" aria-atomic="true">
-        {visible ? message(announced.current.seconds) : ""}
-      </output>
-      {visible ? (
-        <RateLimitAlert
-          message={message(secondsLeft)}
-          waiting={active}
-          onRetry={retry}
-          onDismiss={dismissible ? () => setDismissedSeq(seq) : undefined}
-        />
-      ) : null}
-    </div>
-  );
+  return {
+    visible: seq > 0 && (!dismissible || seq !== dismissedSeq),
+    active,
+    secondsLeft,
+    announcedSeconds: announced.current.seconds,
+    dismiss,
+    retry,
+  };
 }
 
 /** The visible part of the banner; the live region above carries the announcement. */
