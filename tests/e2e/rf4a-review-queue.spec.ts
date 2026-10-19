@@ -1,3 +1,4 @@
+import { expectNoAxeViolations } from "./axe";
 import { type Page, expect, test } from "./fixtures";
 
 /**
@@ -82,12 +83,13 @@ test("S2: inspect drawer renders the ReviewQueueItem detail read-only", async ({
   const drawer = page.getByRole("dialog", { name: t("unknownItems.drawer.title") });
   await expect(drawer).toBeVisible();
   await expect(drawer.getByText("5012345678900")).toBeVisible();
-  // a pending item offers Dismiss; no link / create-product affordance (RF-4b out):
-  // the drawer's only buttons are Close and Dismiss (locale-independent check).
+  // a pending item offers Create product and Dismiss; no link affordance (RT-724
+  // defers link): the drawer's only buttons are Close, Create product and Dismiss.
   await expect(
     drawer.getByRole("button", { name: t("unknownItems.dismiss.action") }),
   ).toBeVisible();
-  await expect(drawer.getByRole("button")).toHaveCount(2);
+  await expect(drawer.getByRole("button", { name: t("unknownItems.create.action") })).toBeVisible();
+  await expect(drawer.getByRole("button")).toHaveCount(3);
 });
 
 test("S3: dismiss behind a confirm resolves the item", async ({ page, t }) => {
@@ -126,6 +128,120 @@ test("S3: dismiss behind a confirm resolves the item", async ({ page, t }) => {
   await drawer.getByRole("button", { name: dismiss, exact: true }).click();
   // drawer closes on success
   await expect(drawer).toHaveCount(0);
+});
+
+// --- RT-724 (RF-4b) happy paths ---------------------------------------------
+
+async function mockQueue(page: Page, items: unknown[]): Promise<void> {
+  await page.route("**/api/v1/catalog/unknown-items?*", (r) =>
+    r.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ items, next_cursor: null }),
+    }),
+  );
+}
+
+test("S5: create a product from a pending item", async ({ page, t }) => {
+  await mockContext(page);
+  await mockQueue(page, [item]);
+  await page.route("**/api/v1/catalog/unknown-items/u1", (r) =>
+    r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(item) }),
+  );
+  let sent: unknown;
+  await page.route("**/api/v1/catalog/unknown-items/u1/create-product", (r) => {
+    sent = r.request().postDataJSON();
+    return r.fulfill({
+      status: 201,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ...item,
+        resolution_status: "resolved",
+        resolution_action: "created",
+      }),
+    });
+  });
+
+  await page.goto("/unknown-items");
+  await page.getByText("5012345678900").click();
+  const drawer = page.getByRole("dialog", { name: t("unknownItems.drawer.title") });
+  await drawer.getByRole("button", { name: t("unknownItems.create.action") }).click();
+  await drawer.getByLabel(t("unknownItems.create.name")).fill("Sparkling water 1L");
+  await drawer.getByLabel(t("unknownItems.create.taxCategory")).fill("VAT14");
+  await expectNoAxeViolations(page, "create-product form");
+  await drawer.getByRole("button", { name: t("unknownItems.create.submit") }).click();
+
+  await expect(drawer).toHaveCount(0);
+  await expect(page.getByText(t("unknownItems.create.success"))).toBeVisible();
+  expect(sent).toEqual({ name: "Sparkling water 1L", tax_category: "VAT14" });
+});
+
+test("S6: reopen a dismissed item", async ({ page, t }) => {
+  const dismissed = {
+    ...item,
+    id: "u3",
+    identifier_value: "6221234567890",
+    resolution_status: "dismissed",
+    resolution_action: "dismissed",
+  };
+  await mockContext(page);
+  await mockQueue(page, [dismissed]);
+  await page.route("**/api/v1/catalog/unknown-items/u3", (r) =>
+    r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(dismissed) }),
+  );
+  let key: string | null = null;
+  await page.route("**/api/v1/catalog/unknown-items/u3/reopen", (r) => {
+    key = r.request().headers()["idempotency-key"] ?? null;
+    return r.fulfill({
+      status: 201,
+      contentType: "application/json",
+      body: JSON.stringify({ ...dismissed, id: "u4", resolution_status: "pending" }),
+    });
+  });
+
+  await page.goto("/unknown-items");
+  await page.getByLabel(t("unknownItems.filters.status")).selectOption("dismissed");
+  await page.getByText("6221234567890").click();
+  const drawer = page.getByRole("dialog", { name: t("unknownItems.drawer.title") });
+  await drawer.getByRole("button", { name: t("unknownItems.reopen.action") }).click();
+
+  await expect(drawer).toHaveCount(0);
+  await expect(page.getByText(t("unknownItems.reopen.success"))).toBeVisible();
+  expect(key).toMatch(/^[\x21-\x7E]{16,128}$/);
+});
+
+test("S7: bulk dismiss an explicit, counted selection", async ({ page, t }) => {
+  const second = { ...item, id: "u2", identifier_value: "5012345678917" };
+  await mockContext(page);
+  await mockQueue(page, [item, second]);
+  let sent: unknown;
+  await page.route("**/api/v1/catalog/unknown-items/bulk-dismiss", (r) => {
+    sent = r.request().postDataJSON();
+    return r.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        outcomes: [
+          { id: "u1", outcome: "dismissed" },
+          { id: "u2", outcome: "dismissed" },
+        ],
+      }),
+    });
+  });
+
+  await page.goto("/unknown-items");
+  await page.getByLabel(t("unknownItems.select.page")).check();
+  await expect(page.getByText(t("unknownItems.bulk.selected", { count: 2 }))).toBeVisible();
+  await expectNoAxeViolations(page, "queue with a bulk selection");
+  const action = t("unknownItems.bulk.action");
+  await page.getByRole("button", { name: action, exact: true }).click();
+  const confirm = page.getByRole("region", {
+    name: t("components.confirmDelete.label", { action }),
+  });
+  await confirm.getByRole("button", { name: action, exact: true }).click();
+
+  await expect(page.getByText(t("unknownItems.bulk.result.dismissed", { count: 2 }))).toBeVisible();
+  expect(sent).toEqual({ ids: ["u1", "u2"] });
 });
 
 test("S4: 403 forbidden → not-permitted banner with request_id", async ({ page, t }) => {
