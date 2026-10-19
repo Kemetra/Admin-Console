@@ -29,6 +29,8 @@ export interface MappingStore {
 
 export interface StoreOptions {
   stores: MappingStore[];
+  /** The store list is still being read: nothing is offered or claimed yet. */
+  loading: boolean;
   /** The store list could not be read: no store can be offered. */
   failed: boolean;
 }
@@ -202,12 +204,13 @@ function SetForm({
   options: StoreOptions;
   mappings: readonly ErpnextWarehouseMapping[];
   onSet: () => void;
-}>): React.JSX.Element {
+}>): React.JSX.Element | null {
   const t = useT();
   const [draft, setDraft] = useState<SetDraft>(EMPTY_DRAFT);
   const [review, setReview] = useState(false);
   const available = unmappedStores(options.stores, mappings);
 
+  if (options.loading) return null;
   if (options.failed) return <p className="erp-note">{t("erp.map.wh.set.storesFailed")}</p>;
   if (review) {
     return (

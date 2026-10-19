@@ -280,6 +280,28 @@ describe("gate and reads", () => {
     expect(api.tenantAdminListErpnextWarehouseMappings).toHaveBeenCalledTimes(2);
   });
 
+  test("a store read that throws is failed, never 'every store mapped'", async () => {
+    listStores.mockRejectedValue(new TypeError("network"));
+    renderPage();
+    expect(
+      await screen.findByText(
+        "Couldn't load the store list, so no mapping can be set right now.",
+        {},
+        { timeout: 4000 },
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(/To change one, retire it/)).toBeNull();
+  });
+
+  test("while the store list loads, the form claims nothing", async () => {
+    listStores.mockReturnValue(new Promise(() => {}));
+    renderPage();
+    await within(whPanel()).findByRole("row", { name: /Maadi Stores - NS/ });
+    expect(screen.queryByText(/To change one, retire it/)).toBeNull();
+    expect(screen.queryByRole("form", { name: "Set a warehouse mapping" })).toBeNull();
+    expect(screen.queryByText(/Couldn't load the store list/)).toBeNull();
+  });
+
   test("a store list that fails offers no store to set", async () => {
     listStores.mockResolvedValue({ status: 500, error: { error: { code: "x", message: "x" } } });
     renderPage();

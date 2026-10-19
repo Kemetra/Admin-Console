@@ -28,14 +28,16 @@ import "./erp-mappings.css";
 /** The caller's in-scope stores (the scope menu's own rule, RT-354), and whether they loaded. */
 function useMappingStores(tenantId: string): StoreOptions {
   const { context } = useActiveContextValue();
-  const { result } = useStoreList(tenantId);
+  const { result, isLoading } = useStoreList(tenantId);
   const rows = result?.kind === "rows" ? result.rows : [];
   const membership = context?.memberships?.find((m) => m.tenant_id === tenantId) as
     | ScopeMembership
     | undefined;
   return {
     stores: scopeMenuStores(rows, membership, null).map((s) => ({ id: s.id, name: s.name })),
-    failed: result?.kind === "error",
+    loading: isLoading,
+    // A thrown read leaves no result at all: unloaded is failed, never "no stores".
+    failed: !isLoading && result?.kind !== "rows",
   };
 }
 
