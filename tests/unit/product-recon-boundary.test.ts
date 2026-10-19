@@ -53,6 +53,8 @@ describe("product reconciliation boundary (RT-727)", () => {
 
   test("mutations are never retried by the console", () => {
     const hooks = readSource("src/product-reconciliation/useProductReconciliation.ts");
-    expect(hooks.match(/useMutation\(\{\s*retry: false,/g)).toHaveLength(2);
+    expect(hooks.match(/useMutation\(/g)).toHaveLength(1);
+    expect(hooks).toMatch(/useMutation\(\{\s*retry: false,/);
+    expect(hooks.match(/useSingleShot\(/g)).toHaveLength(2);
   });
 });

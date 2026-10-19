@@ -31,6 +31,7 @@ import {
 import {
   type ApiResult,
   type ReadError,
+  type RefusedOutcome,
   type RepairOutcome,
   type TriggerOutcome,
   classifyRepair,
@@ -174,26 +175,34 @@ export function useRunResults(
 }
 
 /** A thrown request (network, aborted) is a generic refusal: it is not retried either. */
-const THROWN = { kind: "refused", refusal: "error" } as const;
+const THROWN: RefusedOutcome = { kind: "refused", refusal: "error" };
 
-/** Start an on-demand run. The variable is the Idempotency-Key for this one confirmed click. */
-export function useTriggerRun(scope: ReconScope) {
+/**
+ * One explicit server call per confirmed click: never retried, a throw becomes
+ * the generic refusal, and `refresh` names what to re-read after the answer.
+ */
+function useSingleShot<V, O>(
+  send: (variables: V) => Promise<O>,
+  refresh: (outcome: O | RefusedOutcome) => readonly unknown[] | null,
+) {
   const qc = useQueryClient();
   return useMutation({
     retry: false,
-    mutationFn: async (idempotencyKey: string): Promise<TriggerOutcome> => {
-      try {
-        return classifyTrigger(await triggerProductReconciliationRun(idempotencyKey));
-      } catch {
-        return THROWN;
-      }
-    },
+    mutationFn: (variables: V): Promise<O | RefusedOutcome> => send(variables).catch(() => THROWN),
     onSuccess: (outcome) => {
-      if (outcome.kind === "started") {
-        void qc.invalidateQueries({ queryKey: productReconKeys.runs(scope.tenantId) });
-      }
+      const queryKey = refresh(outcome);
+      if (queryKey) void qc.invalidateQueries({ queryKey });
     },
   });
+}
+
+/** Start an on-demand run. The variable is the Idempotency-Key for this one confirmed click. */
+export function useTriggerRun(scope: ReconScope) {
+  return useSingleShot(
+    (idempotencyKey: string): Promise<TriggerOutcome> =>
+      triggerProductReconciliationRun(idempotencyKey).then(classifyTrigger),
+    (outcome) => (outcome.kind === "started" ? productReconKeys.runs(scope.tenantId) : null),
+  );
 }
 
 export interface RepairVariables {
@@ -203,20 +212,12 @@ export interface RepairVariables {
 
 /** Repair one product's mapping. Any recorded outcome (or 409) re-reads the surface. */
 export function useRepair(scope: ReconScope) {
-  const qc = useQueryClient();
-  return useMutation({
-    retry: false,
-    mutationFn: async ({ request, idempotencyKey }: RepairVariables): Promise<RepairOutcome> => {
-      try {
-        return classifyRepair(await repairProductMapping(request, idempotencyKey));
-      } catch {
-        return THROWN;
-      }
-    },
-    onSuccess: (outcome) => {
-      if (outcome.kind === "recorded" || outcome.refusal === "conflict") {
-        void qc.invalidateQueries({ queryKey: productReconKeys.all(scope.tenantId) });
-      }
-    },
-  });
+  return useSingleShot(
+    ({ request, idempotencyKey }: RepairVariables): Promise<RepairOutcome> =>
+      repairProductMapping(request, idempotencyKey).then(classifyRepair),
+    (outcome) =>
+      outcome.kind === "recorded" || outcome.refusal === "conflict"
+        ? productReconKeys.all(scope.tenantId)
+        : null,
+  );
 }

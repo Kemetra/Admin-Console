@@ -40,30 +40,138 @@ function RecordedOutcome({
   );
 }
 
+interface RefFormProps {
+  input: string;
+  locked: boolean;
+  onInput: (value: string) => void;
+  onReview: (ref: string) => void;
+  onCancel: () => void;
+}
+
+/** Step 1: the ERPNext item reference, checked against the contract bound before review. */
+function RefForm({ input, locked, onInput, onReview, onCancel }: Readonly<RefFormProps>) {
+  const t = useT();
+  const inputId = useId();
+  const hintId = useId();
+  const [touched, setTouched] = useState(false);
+  const invalid = touched && itemRefOf(input) === null;
+  return (
+    <form
+      className="recon-repair__form"
+      onSubmit={(e) => {
+        e.preventDefault();
+        setTouched(true);
+        const ref = itemRefOf(input);
+        if (ref !== null) onReview(ref);
+      }}
+    >
+      <div className="field">
+        <label htmlFor={inputId}>{t("productRecon.repair.ref")}</label>
+        <input
+          id={inputId}
+          className="input"
+          dir="ltr"
+          maxLength={ITEM_REF_MAX}
+          value={input}
+          aria-invalid={invalid}
+          aria-describedby={hintId}
+          disabled={locked}
+          onChange={(e) => onInput(e.target.value)}
+          onBlur={() => setTouched(true)}
+        />
+        <p id={hintId} className={invalid ? "recon-repair__error" : "recon-repair__hint"}>
+          {t(invalid ? "productRecon.repair.refInvalid" : "productRecon.repair.refHint")}
+        </p>
+      </div>
+      {locked ? null : (
+        <div className="recon-actions">
+          <button type="submit" className="btn-primary">
+            {t("productRecon.repair.review")}
+          </button>
+          <button type="button" className="btn-secondary" onClick={onCancel}>
+            {t("common.cancel")}
+          </button>
+        </div>
+      )}
+    </form>
+  );
+}
+
+interface ConfirmStepProps {
+  productId: string;
+  itemRef: string;
+  pending: boolean;
+  onConfirm: () => void;
+  onBack: () => void;
+}
+
+/** Step 2: names the product and the reference; only this sends the request. */
+function ConfirmStep({
+  productId,
+  itemRef,
+  pending,
+  onConfirm,
+  onBack,
+}: Readonly<ConfirmStepProps>) {
+  const t = useT();
+  return (
+    <section className="recon-confirm" aria-label={t("productRecon.repair.confirmLabel")}>
+      <p>
+        {t.rich("productRecon.repair.confirmPrompt", {
+          product: <Raw value={productId} />,
+          ref: <Raw value={itemRef} />,
+        })}
+      </p>
+      <div className="recon-actions">
+        <button type="button" className="btn-primary" disabled={pending} onClick={onConfirm}>
+          {pending ? <span className="spinner" aria-hidden="true" /> : null}
+          {t("productRecon.repair.confirm")}
+        </button>
+        <button type="button" className="btn-secondary" disabled={pending} onClick={onBack}>
+          {t("productRecon.repair.back")}
+        </button>
+      </div>
+    </section>
+  );
+}
+
+/** The server's answer: a recorded outcome, or a refusal. */
+function Outcome({ outcome }: Readonly<{ outcome: RepairOutcome | null }>) {
+  if (outcome?.kind === "recorded") return <RecordedOutcome outcome={outcome} />;
+  if (outcome?.kind === "refused") return <RefusalBanner outcome={outcome} />;
+  return null;
+}
+
+function CloseButton({ onClose }: Readonly<{ onClose: () => void }>): React.JSX.Element {
+  const t = useT();
+  return (
+    <div className="recon-actions">
+      <button type="button" className="btn-secondary" onClick={onClose}>
+        {t("productRecon.repair.close")}
+      </button>
+    </div>
+  );
+}
+
 export function RepairPanel({
   scope,
   target,
   onClose,
 }: Readonly<RepairPanelProps>): React.JSX.Element {
   const t = useT();
-  const inputId = useId();
-  const hintId = useId();
   const repair = useRepair(scope);
   const [input, setInput] = useState("");
-  const [touched, setTouched] = useState(false);
-  const [confirming, setConfirming] = useState(false);
+  /** The reference under review; set only between Review and the server's answer. */
+  const [reviewing, setReviewing] = useState<string | null>(null);
   const [outcome, setOutcome] = useState<RepairOutcome | null>(null);
-  const ref = itemRefOf(input);
-  const invalid = touched && ref === null;
 
-  async function confirm(): Promise<void> {
-    if (ref === null) return;
+  async function confirm(ref: string): Promise<void> {
     setOutcome(null);
     const result = await repair.mutateAsync({
       request: suggestConfirmRequest(target, ref),
       idempotencyKey: newIdempotencyKey(),
     });
-    setConfirming(false);
+    setReviewing(null);
     setOutcome(result);
   }
 
@@ -75,90 +183,27 @@ export function RepairPanel({
       <p className="content__sub">
         {t.rich("productRecon.repair.product", { product: <Raw value={target.tenantProductId} /> })}
       </p>
-
-      {outcome?.kind === "recorded" ? <RecordedOutcome outcome={outcome} /> : null}
-      {outcome?.kind === "refused" ? <RefusalBanner outcome={outcome} /> : null}
-
-      {recorded ? null : (
-        <form
-          className="recon-repair__form"
-          onSubmit={(e) => {
-            e.preventDefault();
-            setTouched(true);
-            if (ref !== null) setConfirming(true);
-          }}
-        >
-          <div className="field">
-            <label htmlFor={inputId}>{t("productRecon.repair.ref")}</label>
-            <input
-              id={inputId}
-              className="input"
-              dir="ltr"
-              maxLength={ITEM_REF_MAX}
-              value={input}
-              aria-invalid={invalid}
-              aria-describedby={hintId}
-              disabled={confirming || repair.isPending}
-              onChange={(e) => {
-                setInput(e.target.value);
-                setConfirming(false);
-              }}
-              onBlur={() => setTouched(true)}
-            />
-            <p id={hintId} className={invalid ? "recon-repair__error" : "recon-repair__hint"}>
-              {t(invalid ? "productRecon.repair.refInvalid" : "productRecon.repair.refHint")}
-            </p>
-          </div>
-          {confirming ? null : (
-            <div className="recon-actions">
-              <button type="submit" className="btn-primary">
-                {t("productRecon.repair.review")}
-              </button>
-              <button type="button" className="btn-secondary" onClick={onClose}>
-                {t("common.cancel")}
-              </button>
-            </div>
-          )}
-        </form>
-      )}
-
-      {confirming && ref !== null ? (
-        <section className="recon-confirm" aria-label={t("productRecon.repair.confirmLabel")}>
-          <p>
-            {t.rich("productRecon.repair.confirmPrompt", {
-              product: <Raw value={target.tenantProductId} />,
-              ref: <Raw value={ref} />,
-            })}
-          </p>
-          <div className="recon-actions">
-            <button
-              type="button"
-              className="btn-primary"
-              disabled={repair.isPending}
-              onClick={() => void confirm()}
-            >
-              {repair.isPending ? <span className="spinner" aria-hidden="true" /> : null}
-              {t("productRecon.repair.confirm")}
-            </button>
-            <button
-              type="button"
-              className="btn-secondary"
-              disabled={repair.isPending}
-              onClick={() => setConfirming(false)}
-            >
-              {t("productRecon.repair.back")}
-            </button>
-          </div>
-        </section>
-      ) : null}
-
+      <Outcome outcome={outcome} />
       {recorded ? (
-        <div className="recon-actions">
-          <button type="button" className="btn-secondary" onClick={onClose}>
-            {t("productRecon.repair.close")}
-          </button>
-        </div>
-      ) : null}
+        <CloseButton onClose={onClose} />
+      ) : (
+        <RefForm
+          input={input}
+          locked={reviewing !== null}
+          onInput={setInput}
+          onReview={setReviewing}
+          onCancel={onClose}
+        />
+      )}
+      {reviewing === null ? null : (
+        <ConfirmStep
+          productId={target.tenantProductId}
+          itemRef={reviewing}
+          pending={repair.isPending}
+          onConfirm={() => void confirm(reviewing)}
+          onBack={() => setReviewing(null)}
+        />
+      )}
     </section>
   );
 }

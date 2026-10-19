@@ -54,6 +54,37 @@ const READ_ERROR_KEYS: Record<Exclude<ReadError["kind"], "generic">, MessageKey>
   "rate-limited": "productRecon.error.rateLimited",
 };
 
+/** How each read failure presents: its tone, and whether a retry can help. */
+const READ_ERROR_PRESENTATION: Record<
+  ReadError["kind"],
+  { variant: "danger" | "warning"; retryable: boolean }
+> = {
+  session: { variant: "danger", retryable: false },
+  forbidden: { variant: "danger", retryable: false },
+  "not-found": { variant: "warning", retryable: false },
+  rejected: { variant: "warning", retryable: true },
+  "rate-limited": { variant: "warning", retryable: true },
+  generic: { variant: "danger", retryable: true },
+};
+
+/** The copy for a read failure; a panel may name its own not-found and generic failure. */
+function readErrorMessage(
+  t: T,
+  error: ReadError,
+  copy: { failed: string; notFound?: string },
+): string {
+  switch (error.kind) {
+    case "generic":
+      return copy.failed;
+    case "not-found":
+      return copy.notFound ?? t(READ_ERROR_KEYS[error.kind]);
+    case "rate-limited":
+      return rateLimitedCopy(t, READ_ERROR_KEYS[error.kind], error.retryAfterSeconds);
+    default:
+      return t(READ_ERROR_KEYS[error.kind]);
+  }
+}
+
 /** A read failure: the mapped copy, its request id and a retry where retrying can help. */
 export function ReadErrorBanner({
   error,
@@ -70,25 +101,20 @@ export function ReadErrorBanner({
   stale?: boolean;
 }>): React.JSX.Element {
   const t = useT();
-  const retry = (
-    <button type="button" className="btn-secondary" onClick={onRetry}>
-      {t("productRecon.retry")}
-    </button>
-  );
-  const terminal = error.kind === "session" || error.kind === "forbidden";
-  let message: string;
-  if (error.kind === "generic") message = failedMessage;
-  else if (error.kind === "not-found" && notFoundMessage) message = notFoundMessage;
-  else if (error.kind === "rate-limited") {
-    message = rateLimitedCopy(t, READ_ERROR_KEYS[error.kind], error.retryAfterSeconds);
-  } else message = t(READ_ERROR_KEYS[error.kind]);
+  const { variant, retryable } = READ_ERROR_PRESENTATION[error.kind];
   return (
     <Banner
-      variant={terminal || error.kind === "generic" ? "danger" : "warning"}
+      variant={variant}
       title={stale ? t("productRecon.stale") : undefined}
-      message={message}
+      message={readErrorMessage(t, error, { failed: failedMessage, notFound: notFoundMessage })}
       requestId={error.requestId}
-      action={terminal || error.kind === "not-found" ? undefined : retry}
+      action={
+        retryable ? (
+          <button type="button" className="btn-secondary" onClick={onRetry}>
+            {t("productRecon.retry")}
+          </button>
+        ) : undefined
+      }
     />
   );
 }

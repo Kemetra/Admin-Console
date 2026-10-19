@@ -296,24 +296,27 @@ function refusedOf(result: ApiResult<unknown>): RefusedOutcome {
   };
 }
 
+/** 201, or an idempotent replay's 200: the body the server returned. */
+const ACCEPTED = new Set([200, 201]);
+
+function acceptedBody<P>(result: ApiResult<P>): P | undefined {
+  return ACCEPTED.has(result.status) ? result.data : undefined;
+}
+
 export type TriggerOutcome = { kind: "started"; run: ProductReconciliationRun } | RefusedOutcome;
 
 /** 201 (or an idempotent replay's 200) with the run is started; anything else is refused. */
 export function classifyTrigger(result: ApiResult<ProductReconciliationRun>): TriggerOutcome {
-  if ((result.status === 200 || result.status === 201) && result.data) {
-    return { kind: "started", run: result.data };
-  }
-  return refusedOf(result);
+  const run = acceptedBody(result);
+  return run ? { kind: "started", run } : refusedOf(result);
 }
 
 export type RepairOutcome = { kind: "recorded"; repair: RecordedProductRepair } | RefusedOutcome;
 
 /** 201 recorded, or 200 for a replay / `no_op_echo`; anything else is refused. */
 export function classifyRepair(result: ApiResult<RecordedProductRepair>): RepairOutcome {
-  if ((result.status === 200 || result.status === 201) && result.data) {
-    return { kind: "recorded", repair: result.data };
-  }
-  return refusedOf(result);
+  const repair = acceptedBody(result);
+  return repair ? { kind: "recorded", repair } : refusedOf(result);
 }
 
 export interface OutcomeView {

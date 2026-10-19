@@ -52,57 +52,65 @@ function retryAfterOf(response: Response): number | undefined {
   return Number.isNaN(seconds) ? undefined : seconds;
 }
 
+/** What the generated client resolves to, for any operation. */
+interface Fetched {
+  data?: unknown;
+  error?: unknown;
+  response: Response;
+}
+
+/** The uniform wrapper shape for one settled call. */
+async function settle<R extends Fetched>(call: Promise<R>) {
+  const { data, error, response } = await call;
+  return {
+    status: response.status,
+    data: data as R["data"],
+    error: error as R["error"],
+    retryAfterSeconds: retryAfterOf(response),
+  };
+}
+
 // --- Typed operation wrappers -------------------------------------------------
 
 /** GET /api/v1/catalog/erpnext-product-reconciliation/backlog */
-export async function listProductReconciliationBacklog(
-  query: PageQuery & { class?: BacklogClass } = {},
-) {
-  const { data, error, response } = await apiClient.GET(
-    "/api/v1/catalog/erpnext-product-reconciliation/backlog",
-    { params: { query } },
+export function listProductReconciliationBacklog(query: PageQuery & { class?: BacklogClass } = {}) {
+  return settle(
+    apiClient.GET("/api/v1/catalog/erpnext-product-reconciliation/backlog", { params: { query } }),
   );
-  return { status: response.status, data, error, retryAfterSeconds: retryAfterOf(response) };
 }
 
 /** GET /api/v1/catalog/erpnext-product-reconciliation/runs (newest first). */
-export async function listProductReconciliationRuns(query: PageQuery = {}) {
-  const { data, error, response } = await apiClient.GET(
-    "/api/v1/catalog/erpnext-product-reconciliation/runs",
-    { params: { query } },
+export function listProductReconciliationRuns(query: PageQuery = {}) {
+  return settle(
+    apiClient.GET("/api/v1/catalog/erpnext-product-reconciliation/runs", { params: { query } }),
   );
-  return { status: response.status, data, error, retryAfterSeconds: retryAfterOf(response) };
 }
 
 /** POST /api/v1/catalog/erpnext-product-reconciliation/runs. v1 sends an empty body. */
-export async function triggerProductReconciliationRun(idempotencyKey: string) {
-  const { data, error, response } = await apiClient.POST(
-    "/api/v1/catalog/erpnext-product-reconciliation/runs",
-    { params: { header: { "Idempotency-Key": idempotencyKey } }, body: {} },
+export function triggerProductReconciliationRun(idempotencyKey: string) {
+  return settle(
+    apiClient.POST("/api/v1/catalog/erpnext-product-reconciliation/runs", {
+      params: { header: { "Idempotency-Key": idempotencyKey } },
+      body: {},
+    }),
   );
-  return { status: response.status, data, error, retryAfterSeconds: retryAfterOf(response) };
 }
 
 /** GET /api/v1/catalog/erpnext-product-reconciliation/runs/{runId}/results */
-export async function getProductReconciliationRunResults(
-  runId: string,
-  query: ClassPageQuery = {},
-) {
-  const { data, error, response } = await apiClient.GET(
-    "/api/v1/catalog/erpnext-product-reconciliation/runs/{runId}/results",
-    { params: { path: { runId }, query } },
+export function getProductReconciliationRunResults(runId: string, query: ClassPageQuery = {}) {
+  return settle(
+    apiClient.GET("/api/v1/catalog/erpnext-product-reconciliation/runs/{runId}/results", {
+      params: { path: { runId }, query },
+    }),
   );
-  return { status: response.status, data, error, retryAfterSeconds: retryAfterOf(response) };
 }
 
 /** POST /api/v1/catalog/erpnext-product-reconciliation/repairs */
-export async function repairProductMapping(
-  body: RepairProductMappingRequest,
-  idempotencyKey: string,
-) {
-  const { data, error, response } = await apiClient.POST(
-    "/api/v1/catalog/erpnext-product-reconciliation/repairs",
-    { params: { header: { "Idempotency-Key": idempotencyKey } }, body },
+export function repairProductMapping(body: RepairProductMappingRequest, idempotencyKey: string) {
+  return settle(
+    apiClient.POST("/api/v1/catalog/erpnext-product-reconciliation/repairs", {
+      params: { header: { "Idempotency-Key": idempotencyKey } },
+      body,
+    }),
   );
-  return { status: response.status, data, error, retryAfterSeconds: retryAfterOf(response) };
 }
