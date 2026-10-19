@@ -51,6 +51,7 @@ describe("production navigation", () => {
       "Stock discrepancies",
       "Shift closes",
       "Connection & sync",
+      "Product reconciliation",
       "Devices",
       "Payer accounts",
       "Sign out",
@@ -88,6 +89,26 @@ describe("production navigation", () => {
     expect(entryLabels(nav)).not.toContain("Connection & sync");
     expect(within(nav).queryByText("Integration")).toBeNull();
   });
+
+  // RT-727: product reconciliation joins the Integration section (one heading),
+  // for the roles the API lets use it (all five ops are owner / tenant_admin).
+  test.each(["owner", "tenant_admin"])(
+    "RT-727: %s sees Product reconciliation under the one Integration heading",
+    (role) => {
+      const nav = renderShell(role, false);
+      expect(
+        within(nav).getByRole("link", { name: "Product reconciliation" }).getAttribute("href"),
+      ).toBe("/product-reconciliation");
+      expect(within(nav).getAllByText("Integration")).toHaveLength(1);
+    },
+  );
+
+  test.each(["store_manager", "store_staff", "cashier", "auditor"])(
+    "RT-727: %s has no Product reconciliation entry",
+    (role) => {
+      expect(entryLabels(renderShell(role, false))).not.toContain("Product reconciliation");
+    },
+  );
 
   // RT-371: the device registry, in its own "Point of sale" section, for the
   // roles the RT-365 API lets read it.

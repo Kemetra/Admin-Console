@@ -24,6 +24,7 @@ import { canReadErpStatus } from "@/erp-status/erpStatusLogic";
 import { type MessageKey, roleKey, useT } from "@/i18n";
 import { LocaleSwitch } from "@/i18n/LocaleSwitch";
 import { canReadPayers } from "@/payers/payerAccess";
+import { canUseProductReconciliation } from "@/product-reconciliation/productReconLogic";
 import { canReadSales } from "@/sales/saleLogic";
 import { canReadShiftCloses } from "@/shift-closes/shiftCloseLogic";
 import { canReadStockDiscrepancies } from "@/stock-discrepancies/stockDiscrepancyLogic";
@@ -47,8 +48,8 @@ const LIVE_NAV: { label: MessageKey; to: string; icon: NavIcon }[] = [
 /**
  * Role-gated destinations, each under its own section: shown only for the roles
  * the API lets read the surface (RT-178 stock discrepancies, RT-18 shift
- * closes, RT-560 ERP connection, RT-371 devices, RT-421 payer accounts, RT-587
- * sales). The nav mirrors the API; it is not an authorization decision.
+ * closes, RT-560 ERP connection, RT-727 product reconciliation, RT-371
+ * devices, RT-421 payer accounts, RT-587 sales). The nav mirrors the API; it is not an authorization decision.
  */
 const ROLE_NAV: {
   section: MessageKey;
@@ -87,6 +88,15 @@ const ROLE_NAV: {
     to: "/erp-connection",
     icon: "connection",
     canRead: canReadErpStatus,
+  },
+  {
+    // RT-727: ERPNext product-master reconciliation, in the same Integration
+    // section as the connection status (owner / tenant_admin, the API's roles).
+    section: "erp.nav.section",
+    label: "productRecon.nav.label",
+    to: "/product-reconciliation",
+    icon: "product",
+    canRead: canUseProductReconciliation,
   },
   {
     // RT-371: the device registry, for the roles the RT-365 API lets read it.
@@ -191,20 +201,25 @@ export function AppShell({
             <span className="nav-entry__label">{t(item.label)}</span>
           </NavLink>
         ))}
-        {ROLE_NAV.filter((entry) => entry.canRead(context?.active_role_code)).map((entry) => (
-          <Fragment key={entry.to}>
-            <div className="nav-section">{t(entry.section)}</div>
-            <NavLink
-              to={entry.to}
-              className={({ isActive }) =>
-                isActive ? "nav-entry nav-entry--active" : "nav-entry nav-entry--link"
-              }
-            >
-              <Icon name={entry.icon} className="nav-entry__icon" />
-              <span className="nav-entry__label">{t(entry.label)}</span>
-            </NavLink>
-          </Fragment>
-        ))}
+        {ROLE_NAV.filter((entry) => entry.canRead(context?.active_role_code)).map(
+          (entry, i, shown) => (
+            <Fragment key={entry.to}>
+              {/* Consecutive entries of one section share its heading. */}
+              {shown[i - 1]?.section === entry.section ? null : (
+                <div className="nav-section">{t(entry.section)}</div>
+              )}
+              <NavLink
+                to={entry.to}
+                className={({ isActive }) =>
+                  isActive ? "nav-entry nav-entry--active" : "nav-entry nav-entry--link"
+                }
+              >
+                <Icon name={entry.icon} className="nav-entry__icon" />
+                <span className="nav-entry__label">{t(entry.label)}</span>
+              </NavLink>
+            </Fragment>
+          ),
+        )}
         {showGatedNav
           ? GATED_NAV.map((item) => (
               <span key={item.gate} className="nav-entry nav-entry--disabled" aria-disabled="true">

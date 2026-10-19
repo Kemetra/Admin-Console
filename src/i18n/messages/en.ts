@@ -13,6 +13,7 @@ import { erp } from "./en/erp";
 import { money } from "./en/money";
 import { operators } from "./en/operators";
 import { overview } from "./en/overview";
+import { productRecon } from "./en/productRecon";
 import { sales } from "./en/sales";
 import { shell } from "./en/shell";
 import { shift } from "./en/shift";
@@ -32,6 +33,7 @@ export const EN_MODULES = {
   money,
   overview,
   erp,
+  productRecon,
   devices,
   sales,
   cashPolicy,
@@ -49,6 +51,7 @@ export const en: MessagesOf<typeof ar> = {
   ...money,
   ...overview,
   ...erp,
+  ...productRecon,
   ...devices,
   ...sales,
   ...cashPolicy,
