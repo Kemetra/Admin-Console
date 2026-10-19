@@ -24,6 +24,7 @@ import { canReadDevices } from "@/devices/deviceLogic";
 import { canReadErpStatus } from "@/erp-status/erpStatusLogic";
 import { type MessageKey, roleKey, useT } from "@/i18n";
 import { LocaleSwitch } from "@/i18n/LocaleSwitch";
+import { canReadInventory } from "@/inventory/inventoryLogic";
 import { canReadPayers } from "@/payers/payerAccess";
 import { canUseProductReconciliation } from "@/product-reconciliation/productReconLogic";
 import { canUseSaleSyncOps } from "@/sale-sync/saleSyncLogic";
@@ -53,8 +54,8 @@ const LIVE_NAV: { label: MessageKey; to: string; icon: NavIcon }[] = [
  * the API lets read the surface (RT-178 stock discrepancies, RT-18 shift
  * closes, RT-560 ERP connection, RT-371 devices, RT-421 payer accounts, RT-587
  * sales, RT-724 unknown items, RT-726 sales needing repair, RT-727 product
- * reconciliation). Consecutive entries of one section share its heading. The
- * nav mirrors the API; it is not an authorization decision.
+ * reconciliation, RT-728 inventory). Consecutive entries of one section share
+ * its heading. The nav mirrors the API; it is not an authorization decision.
  */
 const ROLE_NAV: {
   section: MessageKey;
@@ -77,6 +78,15 @@ const ROLE_NAV: {
     to: "/stock-discrepancies",
     icon: "inventory",
     canRead: canReadStockDiscrepancies,
+  },
+  {
+    // RT-728: the read-only movement ledger, locations and on-hand, in the same
+    // Inventory section, for the console roles with store-scoped reads.
+    section: "shell.nav.section.inventory",
+    label: "inventory.nav.label",
+    to: "/inventory",
+    icon: "inventory",
+    canRead: canReadInventory,
   },
   {
     // RT-724: the unknown-items review queue left the RF-4 gate once its

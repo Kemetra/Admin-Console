@@ -26,6 +26,7 @@ import { SignInRoute } from "@/shell/SignInRoute";
 import { deviceRoutes } from "@/shell/deviceRoutes";
 import { DirtyGuardProvider } from "@/shell/dirty-guard";
 import { erpStatusRoutes } from "@/shell/erpStatusRoutes";
+import { inventoryRoutes } from "@/shell/inventoryRoutes";
 import { NavigationBlocker } from "@/shell/navigation-blocker";
 import { payerRoutes } from "@/shell/payerRoutes";
 import { productReconciliationRoutes } from "@/shell/productReconciliationRoutes";
@@ -81,6 +82,7 @@ const router = createBrowserRouter(
         {rf6Routes}
         {payerRoutes}
         {stockDiscrepancyRoutes}
+        {inventoryRoutes}
         {shiftCloseRoutes}
         {erpStatusRoutes}
         {productReconciliationRoutes}

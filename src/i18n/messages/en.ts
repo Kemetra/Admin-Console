@@ -10,6 +10,7 @@ import { cashPolicy } from "./en/cashPolicy";
 import { common } from "./en/common";
 import { devices } from "./en/devices";
 import { erp } from "./en/erp";
+import { inventory } from "./en/inventory";
 import { money } from "./en/money";
 import { operators } from "./en/operators";
 import { overview } from "./en/overview";
@@ -39,6 +40,7 @@ export const EN_MODULES = {
   sales,
   saleSync,
   cashPolicy,
+  inventory,
 };
 
 export const en: MessagesOf<typeof ar> = {
@@ -58,4 +60,5 @@ export const en: MessagesOf<typeof ar> = {
   ...sales,
   ...saleSync,
   ...cashPolicy,
+  ...inventory,
 };

@@ -11,6 +11,7 @@ import { cashPolicy } from "./ar/cashPolicy";
 import { common } from "./ar/common";
 import { devices } from "./ar/devices";
 import { erp } from "./ar/erp";
+import { inventory } from "./ar/inventory";
 import { money } from "./ar/money";
 import { operators } from "./ar/operators";
 import { overview } from "./ar/overview";
@@ -39,6 +40,7 @@ export const AR_MODULES = {
   sales,
   saleSync,
   cashPolicy,
+  inventory,
 };
 
 export const ar = {
@@ -58,4 +60,5 @@ export const ar = {
   ...sales,
   ...saleSync,
   ...cashPolicy,
+  ...inventory,
 };
