@@ -240,6 +240,15 @@ describe("a 429 never reaches the sign-in page", () => {
     expect(getActiveContext).toHaveBeenCalledTimes(1);
   });
 
+  test("the full-page rate-limit state cannot be dismissed into a blank page", async () => {
+    getActiveContext.mockImplementation(async () => tooMany(120));
+    renderProtected();
+
+    expect(await screen.findByText("Too many requests")).toBeDefined();
+    expect(screen.queryByRole("button", { name: "Dismiss" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Try again" })).toBeDefined();
+  });
+
   test("a 401 whose refresh is refused with 429 (through the interceptor): no redirect", async () => {
     getActiveContext.mockResolvedValue({ status: 401 });
     refreshSession.mockImplementation(async () => tooMany(120));

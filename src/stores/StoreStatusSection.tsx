@@ -95,14 +95,14 @@ export function StoreStatusSection({
               {spinner}
               {t("stores.status.suspend")}
             </GatedButton>
-            <GatedButton
+            <button
               type="button"
               className="btn-secondary"
               onClick={() => setConfirming(false)}
               disabled={status.isPending}
             >
               {t("common.cancel")}
-            </GatedButton>
+            </button>
           </div>
         </section>
       ) : null}

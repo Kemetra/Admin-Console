@@ -34,7 +34,7 @@ export function ProtectedArea(): React.JSX.Element | null {
   if (!context && !sessionLost && rateLimited) {
     return (
       <main className="rate-limited-area">
-        <RateLimitBanner />
+        <RateLimitBanner dismissible={false} />
       </main>
     );
   }

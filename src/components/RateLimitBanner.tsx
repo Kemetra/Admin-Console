@@ -15,7 +15,17 @@ import { QueryClientContext } from "@tanstack/react-query";
 import { useContext, useRef, useState } from "react";
 import "./banner.css";
 
-export function RateLimitBanner(): React.JSX.Element {
+export interface RateLimitBannerProps {
+  /**
+   * False where the banner is the whole page (the protected area with no
+   * context yet): dismissing it there would leave a blank page with no retry.
+   */
+  dismissible?: boolean;
+}
+
+export function RateLimitBanner({
+  dismissible = true,
+}: Readonly<RateLimitBannerProps>): React.JSX.Element {
   const t = useT();
   // Optional: a shell rendered without a query client (tests) still shows the banner.
   const qc = useContext(QueryClientContext);
@@ -25,7 +35,7 @@ export function RateLimitBanner(): React.JSX.Element {
   const announced = useRef({ seq: 0, seconds: 0 });
   if (announced.current.seq !== seq) announced.current = { seq, seconds: secondsLeft };
 
-  const visible = seq > 0 && seq !== dismissedSeq;
+  const visible = seq > 0 && (!dismissible || seq !== dismissedSeq);
   let announcement = "";
   if (visible) {
     announcement = active
@@ -58,9 +68,11 @@ export function RateLimitBanner(): React.JSX.Element {
             <button type="button" className="btn-secondary" disabled={active} onClick={retry}>
               {t("common.tryAgain")}
             </button>
-            <button type="button" className="btn-ghost" onClick={() => setDismissedSeq(seq)}>
-              {t("rateLimit.dismiss")}
-            </button>
+            {dismissible ? (
+              <button type="button" className="btn-ghost" onClick={() => setDismissedSeq(seq)}>
+                {t("rateLimit.dismiss")}
+              </button>
+            ) : null}
           </span>
         </div>
       ) : null}
