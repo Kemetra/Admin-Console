@@ -1,0 +1,66 @@
+/* RT-665 AI plan & usage section. Existing tokens only; logical properties
+ * throughout (RTL by structure). State is carried by text and a badge, never by
+ * colour alone. */
+
+.ai-plan {
+  display: grid;
+  gap: var(--space-5);
+  margin-block-start: var(--space-6);
+  padding-block-start: var(--space-5);
+  border-block-start: 1px solid var(--color-border);
+}
+.ai-plan__features-title {
+  margin: 0;
+  font: var(--weight-strong) var(--text-control) / var(--leading-body) var(--font-sans);
+  color: var(--color-text);
+}
+.ai-plan__features,
+.ai-plan__meters {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ai-plan__feature {
+  display: grid;
+  gap: var(--space-2);
+  padding-block: var(--space-3);
+  border-block-end: 1px solid var(--color-border);
+}
+.ai-plan__feature-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.ai-plan__id {
+  font-family: var(--font-mono);
+  font-size: var(--text-machine);
+  overflow-wrap: anywhere;
+}
+/* A status can be a sentence: let the pill wrap instead of overflowing. */
+.ai-plan__badge {
+  height: auto;
+  min-height: 22px;
+  padding-block: 2px;
+  white-space: normal;
+}
+.ai-plan__line,
+.ai-plan__meter {
+  margin: 0;
+  font-size: var(--text-control);
+}
+.ai-plan__meter {
+  display: grid;
+  gap: var(--space-1);
+}
+.ai-plan__meter-state {
+  color: var(--color-text);
+}
+.ai-plan__meter-name,
+.ai-plan__meter-detail {
+  color: var(--color-text-muted);
+  font-size: var(--text-machine);
+}

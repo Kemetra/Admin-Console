@@ -182,6 +182,26 @@ export const PIN_FILE_PATH = "contracts/backend-core/PIN" as const;
  *     `BacklogItem.suggestionMappingVersion` and
  *     `ProductReconciliationResult.mappingId` / `mappingVersion`.
  * The other 21 sources are byte-identical. No caller needed a code change.
+ *
+ * TENTH deliberate re-pin (RT-665, 2026-10-19): bumped c2a3bb6 -> 62f8699
+ * (Backend-Core main, through RT-662 #865) and composed the AI entitlements
+ * source `ai-entitlements.openapi.yaml` (1.0.0-draft, contract-only upstream:
+ * the runtime is RT-664). RT-665 wraps only `consoleGetTenantAiEntitlements`;
+ * the owner opt-out write is composed but not called. Drift across the 24
+ * existing sources is additive and touches two of them:
+ *   - `catalog/console-catalog.yaml` 1.1.0-draft (RT-738 #860 / #862, runtime
+ *     RT-730 #858): adds seven console catalog writes (create / update /
+ *     retire product, add / retire identifier, upsert / retire store
+ *     override) and drops the `x-runtime-status: contract-only` markers now
+ *     that the runtime serves the reads. Nothing wraps them; the three reads
+ *     are unchanged on the wire.
+ *   - `erpnext-sync-ops/console-sync-ops.yaml` 1.2.0-draft (RT-565 #866):
+ *     `SyncOpsSummary` gains a required `asOf` and `postingFreshness` in the
+ *     response. The console reads the summary but not these fields, and the
+ *     RT-565 runtime may not serve them yet, so no caller depends on them.
+ * Backend-Core also added `console-sales-summary` and `pos-approvers`; neither
+ * is composed here. The other 22 sources are byte-identical. No caller needed
+ * a code change.
  */
 export const BACKEND_CORE_PIN: ContractsPin = parsePin(
   readFileSync(resolve(repoRoot, PIN_FILE_PATH), "utf8"),
@@ -287,6 +307,11 @@ export const OPENAPI_SOURCE_SPECS: readonly OpenApiSourceSpec[] = [
   // detail and categories. Composed only: nothing wraps it yet, the runtime
   // is RT-730 and the screens are follow-ups. Consume-only; no YAML authored here.
   { name: "ConsoleCatalog", path: "packages/contracts/openapi/catalog/console-catalog.yaml" },
+  // AI entitlements (RT-662 contract #865; RT-665): the protected tenant read
+  // `consoleGetTenantAiEntitlements`. Only the read is wrapped. The owner opt-out
+  // write (`consolePutTenantAiFeatureOptOut`) is composed but not called, and the
+  // server-internal `check` shapes have no path. Consume-only; no YAML authored here.
+  { name: "AiEntitlements", path: "packages/contracts/openapi/ai-entitlements.openapi.yaml" },
 ];
 
 /** Upstream source paths (kept for back-compat / documentation references). */
