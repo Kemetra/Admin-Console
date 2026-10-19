@@ -141,6 +141,16 @@ describe("create product from an unknown item", () => {
     await waitFor(() => expect(listUnknownItems.mock.calls.length).toBeGreaterThan(listCalls));
   });
 
+  test("both inputs are announced as required", async () => {
+    const drawer = await openForm();
+    expect(within(drawer).getByLabelText("Product name").getAttribute("aria-required")).toBe(
+      "true",
+    );
+    expect(within(drawer).getByLabelText("Tax category").getAttribute("aria-required")).toBe(
+      "true",
+    );
+  });
+
   test("empty fields are caught before any request", async () => {
     const drawer = await openForm();
     submit(drawer);
@@ -336,6 +346,25 @@ describe("bulk dismiss", () => {
     );
     expect(screen.getByText("0 items selected")).toBeDefined();
     await waitFor(() => expect(listUnknownItems.mock.calls.length).toBeGreaterThan(listCalls));
+  });
+
+  test("the body is the sorted id set, so a manual retry replays the same body under its key", async () => {
+    bulkDismissUnknownItems
+      .mockResolvedValueOnce(fail(503, "unavailable"))
+      .mockResolvedValueOnce({ status: 200, data: { outcomes: [] } });
+    listUnknownItems.mockResolvedValue(page(PENDING_2, PENDING));
+    renderList();
+    // tick in the reverse of the id order
+    fireEvent.click(await screen.findByLabelText("Select 5012345678917"));
+    fireEvent.click(screen.getByLabelText("Select 5012345678900"));
+    confirm();
+    await screen.findByText(/Something went wrong/);
+    confirm();
+    await waitFor(() => expect(bulkDismissUnknownItems).toHaveBeenCalledTimes(2));
+    const [first, second] = bulkDismissUnknownItems.mock.calls;
+    expect(first[0]).toEqual(["u1", "u2"]);
+    expect(second[0]).toEqual(["u1", "u2"]);
+    expect(second[1]).toBe(first[1]);
   });
 
   test("a not_found outcome is counted without naming the item", async () => {

@@ -37,6 +37,7 @@ function TextField({
   onChange,
   error,
   machine = false,
+  required = false,
 }: Readonly<{
   id: string;
   label: string;
@@ -46,6 +47,8 @@ function TextField({
   error?: MessageKey;
   /** A code rather than words: isolated LTR. */
   machine?: boolean;
+  /** Announced to assistive technology; the form still validates itself (noValidate). */
+  required?: boolean;
 }>): React.JSX.Element {
   const t = useT();
   const describedBy = [hint ? `${id}-hint` : null, error ? `${id}-error` : null]
@@ -60,6 +63,7 @@ function TextField({
         dir={machine ? "ltr" : undefined}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        aria-required={required ? "true" : undefined}
         aria-invalid={error ? "true" : undefined}
         aria-describedby={describedBy || undefined}
         autoComplete="off"
@@ -146,6 +150,7 @@ export function UnknownItemCreateProduct({
           value={name}
           onChange={setName}
           error={fieldErrors?.name}
+          required
         />
         <TextField
           id="unknown-item-tax-category"
@@ -155,6 +160,7 @@ export function UnknownItemCreateProduct({
           onChange={setTaxCategory}
           error={fieldErrors?.taxCategory}
           machine
+          required
         />
 
         <div className="unknown-item-detail__actions">
