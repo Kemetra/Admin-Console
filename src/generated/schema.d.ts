@@ -3,7 +3,7 @@
  * Do not make direct changes to the file.
  */
 
-// Source: Data-Pulse-2 @ c2a3bb68f373f689965af809f9474baace89caa9
+// Source: Data-Pulse-2 @ 62f8699fb785ddd9fb3fffd1f07e1235da95138c
 // Sources:
 // - packages/contracts/openapi/auth.openapi.yaml
 // - packages/contracts/openapi/context.openapi.yaml
@@ -29,6 +29,7 @@
 // - packages/contracts/openapi/sale-sync-ops/sale-sync-ops.yaml
 // - packages/contracts/openapi/inventory/inventory.yaml
 // - packages/contracts/openapi/catalog/console-catalog.yaml
+// - packages/contracts/openapi/ai-entitlements.openapi.yaml
 //
 // The upstream OpenAPI files are separate documents with overlapping component
 // names, so this file namespaces each generated source and composes their path
@@ -5518,7 +5519,7 @@ export namespace SyncOpsSchema {
             };
             /**
              * Consolidated sync-ops summary across domains for the operator's tenant.
-             * @description One tenant-scoped summary aggregating 015 posting health + 017 reconciliation health, with 020 connector_health + 021 product_master reported as `not_available` (forward-compat). Optional `store_id` narrows to one in-scope store. Tenant resolves server-side from the session.
+             * @description One tenant-scoped summary aggregating 015 posting health + 017 reconciliation health, with 020 connector_health + 021 product_master reported as `not_available` (forward-compat). Optional `store_id` narrows to one in-scope store. Tenant resolves server-side from the session. Also carries the posting freshness facts (`postingFreshness`) for the same scope and the instant they were read (`asOf`); facts only, no "posting is current" verdict (1.2.0-draft, RT-565).
              */
             get: operations["consoleGetSyncOpsSummary"];
             put?: never;
@@ -5573,10 +5574,42 @@ export namespace SyncOpsSchema {
     export type webhooks = Record<string, never>;
     export interface components {
         schemas: {
-            /** @description The consolidated sync-ops summary for one tenant (optionally one store). One `DomainSummary` per sync-ops domain. */
+            /** @description The consolidated sync-ops summary for one tenant (optionally one store). One `DomainSummary` per sync-ops domain, plus the posting freshness facts (1.2.0-draft, RT-565) and the instant they were read. */
             SyncOpsSummary: {
                 /** @description One entry per sync-ops domain. v1 populates `posting` + `reconciliation`; `connector_health` + `product_master` are present as `not_available`. */
                 domains: components["schemas"]["DomainSummary"][];
+                /**
+                 * Format: date-time
+                 * @description Server instant of the posting-freshness read, taken inside the one statement that reads every `postingFreshness` fact. Every timestamp in `postingFreshness` is at or before it, and every age is measured against it. The other domain counts are read in the same request but by separate statements, so they may be one commit apart from it.
+                 */
+                asOf: string;
+                postingFreshness: components["schemas"]["PostingFreshness"];
+            };
+            /** @description Whether ERP posting is keeping up, for the tenant or the filtered store, within the caller's store scope. Facts only: there is no "current" or "behind" verdict. Covers materialized posting intents only: sales not yet turned into a posting intent, and reversals deferred before their sale's posting row exists, are not visible here. `lastPosted.state = none` with `pendingCount = 0` means no posting activity, NOT that posting is current. `pendingCount` is 0 exactly when `oldestPendingAt` and `oldestPendingAgeSeconds` are both null (the `if` / `then` / `else` below). */
+            PostingFreshness: {
+                lastPosted: components["schemas"]["LastPosted"];
+                /** @description Posting intents in scope that are not yet posted and not dead-lettered, including intents held from the connector feed. Dead letters are the `posting` domain `headlineCount`, not counted here. */
+                pendingCount: number;
+                /**
+                 * Format: date-time
+                 * @description Creation time of the oldest pending posting intent in scope (not its last retry; a repaired dead letter keeps its creation time). Null exactly when `pendingCount` is 0.
+                 */
+                oldestPendingAt: string | null;
+                /** @description Whole seconds from `oldestPendingAt` to `asOf`, never negative. Null exactly when `pendingCount` is 0. */
+                oldestPendingAgeSeconds: number | null;
+            };
+            /** @description The latest ERP posting confirmation in scope, or why there is none. `at` is a date-time exactly when `state` is `known`, and null for `unknown` / `none` (the `if` / `then` / `else` below). */
+            LastPosted: {
+                /**
+                 * @description `known`: `at` is the latest ERP confirmation (posted-ack) time in scope. `unknown`: postings exist in scope but all predate confirmation-time capture, so the time is not recorded (no other timestamp is substituted). `none`: no posting has succeeded in scope.
+                 * @enum {string}
+                 */
+                state: "known" | "unknown" | "none";
+                /**
+                 * Format: date-time
+                 * @description Latest ERP confirmation (posted-ack) time in scope, at or before `asOf`. Non-null exactly when `state` is `known`.
+                 */
+                at: string | null;
             };
             /** @description Health of one sync-ops domain. `status` is the operator-facing rollup; `not_available` means the domain's source spec (020/021) is not yet built (forward-compat stub — the Console renders a deferred tile). */
             DomainSummary: {
@@ -11036,7 +11069,11 @@ export namespace ConsoleCatalogSchema {
              */
             get: operations["consoleListCatalogProducts"];
             put?: never;
-            post?: never;
+            /**
+             * Create a catalog product (interim, CAT-W1).
+             * @description Interim (pre Change Sets, decision 400). Creates one product in the session's tenant with the given fields; it has no price (O-2), no identifier, no store override and the `none` tracking profile. Roles `owner` / `tenant_admin`. `categoryId`, when given, must name a category of the tenant that is not retired (else 422 `category_unavailable`). An identical retry with the same `Idempotency-Key` replays the stored `201` with `Idempotent-Replayed: true` and creates nothing. Audited as `catalog.product.create`.
+             */
+            post: operations["consoleCreateCatalogProduct"];
             delete?: never;
             options?: never;
             head?: never;
@@ -11061,7 +11098,11 @@ export namespace ConsoleCatalogSchema {
             delete?: never;
             options?: never;
             head?: never;
-            patch?: never;
+            /**
+             * Edit a catalog product's simple fields (interim, CAT-W1).
+             * @description Interim (pre Change Sets, decision 400). Changes the given fields of one product of the session's tenant; a field that is absent is left as is. Editable: `name`, `description` (null clears it), `categoryId` (null clears it), `taxCategory` and `isActive`. Price, the tracking profile and identifiers are not editable here. Roles `owner` / `tenant_admin`. A retired product is 409 `product_retired`; an `expectedUpdatedAt` that is not the product's current `updatedAt` is 409 `stale_write`; a `categoryId` that names no category of the tenant, or a retired one, is 422 `category_unavailable`. Audited as `catalog.product.update`.
+             */
+            patch: operations["consoleUpdateCatalogProduct"];
             trace?: never;
         };
         "/api/v1/catalog/categories": {
@@ -11079,6 +11120,106 @@ export namespace ConsoleCatalogSchema {
             get: operations["consoleListCatalogCategories"];
             put?: never;
             post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/catalog/products/{productId}/retire": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            get?: never;
+            put?: never;
+            /**
+             * Retire a catalog product (interim, CAT-W1).
+             * @description Interim (pre Change Sets, decision 400). Retires one product of the session's tenant: it reads `status: retired` from then on and the POS read-down stops publishing it. Nothing is deleted. Its identifiers stay bound and its store overrides stay as they are; retiring cannot be undone on this surface. Roles `owner` / `tenant_admin`. A product already retired is 409 `product_retired`; a stale `expectedUpdatedAt` is 409 `stale_write`. Audited as `catalog.product.retire`.
+             */
+            post: operations["consoleRetireCatalogProduct"];
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/catalog/products/{productId}/identifiers": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            get?: never;
+            put?: never;
+            /**
+             * Add an identifier to a catalog product (interim, CAT-W1).
+             * @description Interim (pre Change Sets, decision 400). Binds one new active identifier to a product of the session's tenant, tenant-wide or (not for `external_pos_id`) scoped to one store in the caller's store scope. Roles `owner` / `tenant_admin`. A retired product is 409 `product_retired`. An identifier already active in its scope (see **Identifiers**), on any product, is 409 `alias_conflict` and never discloses that product. A `storeId` outside the caller's store scope, of another tenant or soft-deleted is the non-disclosing 404. There is no move: an identifier bound elsewhere must be retired there first (decision 317). A retried add that already succeeded is `alias_conflict`. Audited as `catalog.product_identifier.add`.
+             */
+            post: operations["consoleAddProductIdentifier"];
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/catalog/products/{productId}/identifiers/retire": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            get?: never;
+            put?: never;
+            /**
+             * Retire one of a catalog product's identifiers (interim, CAT-W1).
+             * @description Interim (pre Change Sets, decision 400). Retires the ACTIVE identifier of this product named by its full key (type, value, store, source system); its value is then free to be added again, to this or another product. Roles `owner` / `tenant_admin`. Allowed on a retired product. An identifier that is not active on this product, or whose store is outside the caller's store scope or soft-deleted, is the non-disclosing 404 (whether or not another product holds the value). Audited as `catalog.product_identifier.retire`.
+             */
+            post: operations["consoleRetireProductIdentifier"];
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/catalog/products/{productId}/store-overrides/{storeId}": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            get?: never;
+            /**
+             * Set a store's availability / tax category override (interim, CAT-W2).
+             * @description Interim (pre Change Sets, decision 400). Creates the store's active override for the product, or changes it, with the given fields; a field that is absent is left as is, and `null` clears it. Never changes the override's `price` (O-2). Roles `owner` / `tenant_admin` (any store in their store scope) and `store_manager` (a store in its scope, `isActive` only; a `taxCategory` key is 403 `tax_override_forbidden`, O-4). `expectedUpdatedAt` is the active override's `updatedAt`, or `null` when the caller saw none; a mismatch either way is 409 `stale_write`. A retired product is 409 `product_retired`. A result with no overridden field left (no `isActive`, no `taxCategory` and no price) is 422 `override_empty`: retire the override instead. A store outside the caller's scope, of another tenant or soft-deleted is the non-disclosing 404. Audited as `catalog.store_override.upsert`.
+             */
+            put: operations["consoleUpsertStoreOverride"];
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/catalog/products/{productId}/store-overrides/{storeId}/retire": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            get?: never;
+            put?: never;
+            /**
+             * Retire a store's override (interim, CAT-W2).
+             * @description Interim (pre Change Sets, decision 400). Retires the store's active override for the product; the store then resolves every field from the tenant product. Roles `owner` / `tenant_admin` and `store_manager` (a store in its scope, and only an override with no tax category: else 403 `tax_override_forbidden`, O-4). An override with a price is 409 `price_override_present` for every role (O-2). A stale `expectedUpdatedAt` is 409 `stale_write`. No active override, or a store outside the caller's scope, of another tenant or soft-deleted, is the non-disclosing 404. Allowed on a retired product. Audited as `catalog.store_override.retire`.
+             */
+            post: operations["consoleRetireStoreOverride"];
             delete?: never;
             options?: never;
             head?: never;
@@ -11213,6 +11354,81 @@ export namespace ConsoleCatalogSchema {
             ConsoleCatalogCategoryList: {
                 items: components["schemas"]["ConsoleCatalogCategory"][];
             };
+            /** @description 1 to 500 characters with at least one that is not whitespace, and no NUL. Stored as sent (no trimming). */
+            ProductName: string;
+            /** @description 1 to 2000 characters with no NUL, stored as sent; `null` for none. */
+            ProductDescription: string | null;
+            /** @description A tax category, 1 to 50 characters with at least one that is not whitespace, and no NUL. Stored as sent. */
+            TaxCategoryValue: string;
+            /**
+             * Format: date-time
+             * @description The `updatedAt` the caller last read; compared at millisecond precision. Not the current value → 409 `stale_write`.
+             */
+            ExpectedUpdatedAt: string;
+            /** @description A new product. No price (O-2), no tracking profile (it starts `none`; `catalog/tracking-profile.yaml`), no identifier (add them with `consoleAddProductIdentifier`). */
+            CreateCatalogProductRequest: {
+                name: components["schemas"]["ProductName"];
+                description?: components["schemas"]["ProductDescription"];
+                /**
+                 * Format: uuid
+                 * @description A category of the tenant that is not retired; `null` or absent for none.
+                 */
+                categoryId?: string | null;
+                taxCategory: components["schemas"]["TaxCategoryValue"];
+                /**
+                 * @description The tenant `is_active`; `true` when absent.
+                 * @default true
+                 */
+                isActive: boolean;
+            };
+            /** @description `expectedUpdatedAt` and at least one field to change. An absent field is left as is; `description` and `categoryId` accept `null` to clear. Price, status, tracking and identifiers are not here. */
+            UpdateCatalogProductRequest: {
+                expectedUpdatedAt: components["schemas"]["ExpectedUpdatedAt"];
+                name?: components["schemas"]["ProductName"];
+                description?: components["schemas"]["ProductDescription"];
+                /**
+                 * Format: uuid
+                 * @description A category of the tenant that is not retired; `null` clears the category.
+                 */
+                categoryId?: string | null;
+                taxCategory?: components["schemas"]["TaxCategoryValue"];
+                isActive?: boolean;
+            } | unknown | unknown | unknown | unknown | unknown;
+            /** @description The precondition of a retire: the product's `summary.updatedAt` (product retire) or the active override's `updatedAt` (override retire). */
+            RetireRequest: {
+                expectedUpdatedAt: components["schemas"]["ExpectedUpdatedAt"];
+            };
+            /** @description An identifier's full key: the body of `consoleAddProductIdentifier` (the identifier to bind) and of `consoleRetireProductIdentifier` (the active identifier to retire). `storeId` (absent or `null` for tenant-wide) is never set on an `external_pos_id`; `sourceSystem` is required on an `external_pos_id` and absent or `null` on every other type. */
+            ProductIdentifierKey: {
+                identifierType: components["schemas"]["IdentifierType"];
+                /** @description 1 to 200 characters, stored and compared byte for byte (leading zeros significant). No control character and no leading or trailing whitespace. */
+                value: string;
+                /**
+                 * Format: uuid
+                 * @description A store in the caller's store scope for a store-scoped identifier; absent or `null` for tenant-wide. Case insensitive.
+                 */
+                storeId?: string | null;
+                /** @description The source POS system of an `external_pos_id`. */
+                sourceSystem?: string | null;
+            } & unknown;
+            /** @description `expectedUpdatedAt` and at least one of `isActive` / `taxCategory`. An absent field is left as is; `null` clears it (the store then follows the tenant value). No `price` (O-2). A `store_manager` may send `isActive` only. */
+            UpsertStoreOverrideRequest: {
+                /**
+                 * Format: date-time
+                 * @description The active override's `updatedAt` the caller last read, or `null` when the caller saw no active override for this store. Not the current state → 409 `stale_write`.
+                 */
+                expectedUpdatedAt: string | null;
+                /** @description The store's availability override; `null` clears it. */
+                isActive?: boolean | null;
+                /** @description The store's tax category override (owner / tenant_admin only); `null` clears it. */
+                taxCategory?: components["schemas"]["TaxCategoryValue"] | null;
+            } | unknown | unknown;
+            /** @description The shared `IdempotencyInterceptor`'s 425 body (not the `Error` envelope). */
+            IdempotencyInProgressBody: {
+                /** @constant */
+                error: "idempotency_in_progress";
+                retryAfterSec: number;
+            };
             /** @description Canonical error envelope. Out-of-scope and cross-tenant refusals are non-disclosing (§II, §XII): they never name the cause. */
             Error: {
                 error: {
@@ -11247,7 +11463,7 @@ export namespace ConsoleCatalogSchema {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description not_found (404), non-disclosing: identical for a role outside `owner` / `tenant_admin` / `store_manager`, a `store_id` outside the caller's scope or of another tenant, a product of another tenant and an absent product. */
+            /** @description not_found (404), non-disclosing: identical for a role outside `owner` / `tenant_admin` / `store_manager`, a `store_id` outside the caller's scope, soft-deleted or of another tenant, a product of another tenant and an absent product. */
             NotFound: {
                 headers: {
                     [name: string]: unknown;
@@ -11279,6 +11495,106 @@ export namespace ConsoleCatalogSchema {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description 400 on a write, `error.code` one of: `validation_error` (a malformed path id, a body that does not match the request schema, an unknown or server-owned body key such as a price or a tenant id, an update or upsert with no field to change); and on the create only `idempotency_key_required` / `idempotency_key_malformed`. Checked after the guards and before any database read. Nothing is written. */
+            WriteValidationFailure: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 403 `origin_rejected` (RT-430): a cookie-authenticated write whose `Origin` header is missing, or is neither the API's own origin nor listed in `ALLOWED_ORIGINS`. Nothing is written. */
+            OriginRejected: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 403, `error.code` one of: `origin_rejected` (RT-430, as on every write); `tax_override_forbidden` (a `store_manager` sending a `taxCategory`, or retiring an override that has a tax category; only `owner` / `tenant_admin` may change a store tax override, O-4). Only for a store in the caller's scope; nothing is written. */
+            OverrideForbidden: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description not_found (404), non-disclosing: identical for a role outside the write's list, a product of another tenant, an absent product, a `storeId` outside the caller's store scope, of another tenant or soft-deleted, an identifier that is not active on the product, and an override that is not active. Nothing is written. */
+            WriteNotFound: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 409 `idempotency_key_conflict`: the same `Idempotency-Key` was used with a different body. Nothing is written. */
+            CreateConflict: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 409, `error.code` one of: `product_retired` (the product is retired; it cannot be edited or retired again); `stale_write` (`expectedUpdatedAt` is not the product's current `updatedAt`; reload and retry). Nothing is written. */
+            ProductWriteConflict: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 409, `error.code` one of: `product_retired` (no identifier is added to a retired product); `alias_conflict` (the identifier is already active in its scope, on this or another product). The body never names, counts or hints at the product that holds it (FR-042). Nothing is written. */
+            IdentifierConflict: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 409, `error.code` one of: `stale_write` (`expectedUpdatedAt` does not match the store's active override, or its absence); on the upsert `product_retired` (the product is retired); on the retire `price_override_present` (the override has a price, which these writes never change, O-2). Nothing is written. */
+            OverrideConflict: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 422 `category_unavailable`: `categoryId` names no category of the tenant, or a retired one. Nothing is written. */
+            CategoryUnavailable: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 422 `override_empty`: after the change the override would hold no overridden field (no `isActive`, no `taxCategory` and no price). Retire it with `consoleRetireStoreOverride` instead. Nothing is written. */
+            OverrideEmpty: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 425 `idempotency_in_progress`: the first create with this `Idempotency-Key` is still being processed. Retry after `Retry-After` seconds with the same key and body. Nothing is written by this request. */
+            IdempotencyInProgress: {
+                headers: {
+                    "Retry-After": components["headers"]["RetryAfterInProgress"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyInProgressBody"];
+                };
+            };
         };
         parameters: {
             /** @description One search term, used verbatim (see **Search** in the API description): an exact match on an active `barcode`, `sku` or `plu` identifier (leading zeros significant, no trimming) OR a case-insensitive substring of the product name. Exact identifier hits rank first. A value longer than 100 characters, empty, or given more than once is 400 `validation_error`. */
@@ -11287,7 +11603,7 @@ export namespace ConsoleCatalogSchema {
             StatusQuery: components["schemas"]["ProductStatusFilter"];
             /** @description Only products in this category. Case insensitive. A category the tenant does not have matches nothing (an empty 200). */
             CategoryIdQuery: string;
-            /** @description Adds each item's `storeView` for this store, and limits store-scoped identifiers in the `q` match to this store. It does not filter the products: a product the store does not sell is listed with `storeView.effectiveActive: false`. Validated against the caller's store scope: a store outside it, or of another tenant, is the non-disclosing 404. Case insensitive. */
+            /** @description Adds each item's `storeView` for this store, and limits store-scoped identifiers in the `q` match to this store. It does not filter the products: a product the store does not sell is listed with `storeView.effectiveActive: false`. Validated against the caller's store scope: a store outside it, soft-deleted, or of another tenant, is the non-disclosing 404. Case insensitive. */
             StoreIdQuery: string;
             /** @description Opaque keyset cursor from a prior page's `nextCursor`, bound to the operation, the tenant and every filter (`q`, `status`, `category_id`, `store_id`). Do not decode or construct it; omit it for the first page. Its keyset position includes the last product's name (up to 500 characters), so it can be up to 4096 characters long. A value the server did not issue, cannot decode, or that is reused with other filters is 400 `validation_error`. The caller's store scope is checked on every request and is never carried by the cursor. The cursor carries only a keyset position and a digest of the filters; its position is ANDed with the tenant and the filters and never replaces them. It is never used to look a product up. */
             Cursor: string;
@@ -11295,6 +11611,10 @@ export namespace ConsoleCatalogSchema {
             Limit: number;
             /** @description The product id (`tenant_products.id`). Case insensitive. A value that is not a UUID is 400 `validation_error` and never reaches the database. */
             ProductId: string;
+            /** @description The store (`stores.id`) of the override. Case insensitive. A store outside the caller's store scope, of another tenant or soft-deleted is the non-disclosing 404. */
+            StoreIdPath: string;
+            /** @description REQUIRED on `consoleCreateCatalogProduct`: 16 to 128 printable ASCII characters with no whitespace, as the shared `IdempotencyInterceptor` enforces. Keyed on the verified actor and tenant. An identical retry replays the stored `201` with `Idempotent-Replayed: true`; key reuse with a different body is 409 `idempotency_key_conflict`; a key still being processed is 425 `idempotency_in_progress`. A missing key is 400 `idempotency_key_required`, a malformed one 400 `idempotency_key_malformed`. */
+            IdempotencyKey: string;
         };
         requestBodies: never;
         headers: {
@@ -11302,6 +11622,10 @@ export namespace ConsoleCatalogSchema {
             CacheControlNoStore: "no-store";
             /** @description Whole seconds the caller should wait before retrying, sent on every console 429 (RT-574 D5). Its own bound, 1 to 3600; it is not the POS `RetryAfter` header. */
             ConsoleRetryAfter: number;
+            /** @description Present and `true` on a same-`Idempotency-Key` replay of `consoleCreateCatalogProduct`, which carries the stored `201`. Absent on a first-time create. */
+            IdempotentReplayed: boolean;
+            /** @description Seconds to wait before retrying a 425 with the same `Idempotency-Key` and body. */
+            RetryAfterInProgress: number;
         };
         pathItems: never;
     }
@@ -11316,7 +11640,7 @@ export namespace ConsoleCatalogSchema {
                     status?: components["parameters"]["StatusQuery"];
                     /** @description Only products in this category. Case insensitive. A category the tenant does not have matches nothing (an empty 200). */
                     category_id?: components["parameters"]["CategoryIdQuery"];
-                    /** @description Adds each item's `storeView` for this store, and limits store-scoped identifiers in the `q` match to this store. It does not filter the products: a product the store does not sell is listed with `storeView.effectiveActive: false`. Validated against the caller's store scope: a store outside it, or of another tenant, is the non-disclosing 404. Case insensitive. */
+                    /** @description Adds each item's `storeView` for this store, and limits store-scoped identifiers in the `q` match to this store. It does not filter the products: a product the store does not sell is listed with `storeView.effectiveActive: false`. Validated against the caller's store scope: a store outside it, soft-deleted, or of another tenant, is the non-disclosing 404. Case insensitive. */
                     store_id?: components["parameters"]["StoreIdQuery"];
                     /** @description Opaque keyset cursor from a prior page's `nextCursor`, bound to the operation, the tenant and every filter (`q`, `status`, `category_id`, `store_id`). Do not decode or construct it; omit it for the first page. Its keyset position includes the last product's name (up to 500 characters), so it can be up to 4096 characters long. A value the server did not issue, cannot decode, or that is reused with other filters is 400 `validation_error`. The caller's store scope is checked on every request and is never carried by the cursor. The cursor carries only a keyset position and a digest of the filters; its position is ANDed with the tenant and the filters and never replaces them. It is never used to look a product up. */
                     cursor?: components["parameters"]["Cursor"];
@@ -11342,6 +11666,44 @@ export namespace ConsoleCatalogSchema {
                 400: components["responses"]["ValidationFailure"];
                 401: components["responses"]["Unauthorized"];
                 404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+        consoleCreateCatalogProduct: {
+            parameters: {
+                query?: never;
+                header: {
+                    /** @description REQUIRED on `consoleCreateCatalogProduct`: 16 to 128 printable ASCII characters with no whitespace, as the shared `IdempotencyInterceptor` enforces. Keyed on the verified actor and tenant. An identical retry replays the stored `201` with `Idempotent-Replayed: true`; key reuse with a different body is 409 `idempotency_key_conflict`; a key still being processed is 425 `idempotency_in_progress`. A missing key is 400 `idempotency_key_required`, a malformed one 400 `idempotency_key_malformed`. */
+                    "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateCatalogProductRequest"];
+                };
+            };
+            responses: {
+                /** @description Created. The body is the new product's detail. A same-key retry replays this `201` with `Idempotent-Replayed: true`. */
+                201: {
+                    headers: {
+                        "Cache-Control": components["headers"]["CacheControlNoStore"];
+                        "Idempotent-Replayed": components["headers"]["IdempotentReplayed"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ConsoleCatalogProductDetail"];
+                    };
+                };
+                400: components["responses"]["WriteValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["OriginRejected"];
+                404: components["responses"]["WriteNotFound"];
+                409: components["responses"]["CreateConflict"];
+                422: components["responses"]["CategoryUnavailable"];
+                425: components["responses"]["IdempotencyInProgress"];
                 429: components["responses"]["TooManyRequests"];
                 500: components["responses"]["SystemFailure"];
             };
@@ -11375,6 +11737,42 @@ export namespace ConsoleCatalogSchema {
                 500: components["responses"]["SystemFailure"];
             };
         };
+        consoleUpdateCatalogProduct: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The product id (`tenant_products.id`). Case insensitive. A value that is not a UUID is 400 `validation_error` and never reaches the database. */
+                    productId: components["parameters"]["ProductId"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateCatalogProductRequest"];
+                };
+            };
+            responses: {
+                /** @description Updated. The body is the product's detail after the change. */
+                200: {
+                    headers: {
+                        "Cache-Control": components["headers"]["CacheControlNoStore"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ConsoleCatalogProductDetail"];
+                    };
+                };
+                400: components["responses"]["WriteValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["OriginRejected"];
+                404: components["responses"]["WriteNotFound"];
+                409: components["responses"]["ProductWriteConflict"];
+                422: components["responses"]["CategoryUnavailable"];
+                429: components["responses"]["TooManyRequests"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
         consoleListCatalogCategories: {
             parameters: {
                 query?: never;
@@ -11401,9 +11799,700 @@ export namespace ConsoleCatalogSchema {
                 500: components["responses"]["SystemFailure"];
             };
         };
+        consoleRetireCatalogProduct: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The product id (`tenant_products.id`). Case insensitive. A value that is not a UUID is 400 `validation_error` and never reaches the database. */
+                    productId: components["parameters"]["ProductId"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RetireRequest"];
+                };
+            };
+            responses: {
+                /** @description Retired. The body is the product's detail, `status` `retired`. */
+                200: {
+                    headers: {
+                        "Cache-Control": components["headers"]["CacheControlNoStore"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ConsoleCatalogProductDetail"];
+                    };
+                };
+                400: components["responses"]["WriteValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["OriginRejected"];
+                404: components["responses"]["WriteNotFound"];
+                409: components["responses"]["ProductWriteConflict"];
+                429: components["responses"]["TooManyRequests"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+        consoleAddProductIdentifier: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The product id (`tenant_products.id`). Case insensitive. A value that is not a UUID is 400 `validation_error` and never reaches the database. */
+                    productId: components["parameters"]["ProductId"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ProductIdentifierKey"];
+                };
+            };
+            responses: {
+                /** @description Added. The body is the product's detail after the change. */
+                201: {
+                    headers: {
+                        "Cache-Control": components["headers"]["CacheControlNoStore"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ConsoleCatalogProductDetail"];
+                    };
+                };
+                400: components["responses"]["WriteValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["OriginRejected"];
+                404: components["responses"]["WriteNotFound"];
+                409: components["responses"]["IdentifierConflict"];
+                429: components["responses"]["TooManyRequests"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+        consoleRetireProductIdentifier: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The product id (`tenant_products.id`). Case insensitive. A value that is not a UUID is 400 `validation_error` and never reaches the database. */
+                    productId: components["parameters"]["ProductId"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ProductIdentifierKey"];
+                };
+            };
+            responses: {
+                /** @description Retired. The body is the product's detail after the change. */
+                200: {
+                    headers: {
+                        "Cache-Control": components["headers"]["CacheControlNoStore"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ConsoleCatalogProductDetail"];
+                    };
+                };
+                400: components["responses"]["WriteValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["OriginRejected"];
+                404: components["responses"]["WriteNotFound"];
+                429: components["responses"]["TooManyRequests"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+        consoleUpsertStoreOverride: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The product id (`tenant_products.id`). Case insensitive. A value that is not a UUID is 400 `validation_error` and never reaches the database. */
+                    productId: components["parameters"]["ProductId"];
+                    /** @description The store (`stores.id`) of the override. Case insensitive. A store outside the caller's store scope, of another tenant or soft-deleted is the non-disclosing 404. */
+                    storeId: components["parameters"]["StoreIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpsertStoreOverrideRequest"];
+                };
+            };
+            responses: {
+                /** @description Created or changed. The body is the product's detail after the change; its `storeOverrides` carry the new override. */
+                200: {
+                    headers: {
+                        "Cache-Control": components["headers"]["CacheControlNoStore"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ConsoleCatalogProductDetail"];
+                    };
+                };
+                400: components["responses"]["WriteValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["OverrideForbidden"];
+                404: components["responses"]["WriteNotFound"];
+                409: components["responses"]["OverrideConflict"];
+                422: components["responses"]["OverrideEmpty"];
+                429: components["responses"]["TooManyRequests"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+        consoleRetireStoreOverride: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The product id (`tenant_products.id`). Case insensitive. A value that is not a UUID is 400 `validation_error` and never reaches the database. */
+                    productId: components["parameters"]["ProductId"];
+                    /** @description The store (`stores.id`) of the override. Case insensitive. A store outside the caller's store scope, of another tenant or soft-deleted is the non-disclosing 404. */
+                    storeId: components["parameters"]["StoreIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RetireRequest"];
+                };
+            };
+            responses: {
+                /** @description Retired. The body is the product's detail after the change. */
+                200: {
+                    headers: {
+                        "Cache-Control": components["headers"]["CacheControlNoStore"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ConsoleCatalogProductDetail"];
+                    };
+                };
+                400: components["responses"]["WriteValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["OverrideForbidden"];
+                404: components["responses"]["WriteNotFound"];
+                409: components["responses"]["OverrideConflict"];
+                429: components["responses"]["TooManyRequests"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
     }
 }
 
-export type paths = AuthSchema.paths & ContextSchema.paths & TenantsSchema.paths & StoresSchema.paths & MembershipsSchema.paths & AuditSchema.paths & UnknownItemsSchema.paths & SettlementSchema.paths & ErpnextReconciliationSchema.paths & ShiftClosesSchema.paths & ConnectorAdminSchema.paths & ConnectorHealthSchema.paths & SyncOpsSchema.paths & DevicesSchema.paths & ConsoleSalesSchema.paths & CashVariancePolicySchema.paths & ConsoleTelemetrySchema.paths & ErpnextItemMapSchema.paths & ErpnextWarehouseMapSchema.paths & ProductReconciliationSchema.paths & TrackingProfileSchema.paths & SaleSyncOpsSchema.paths & InventorySchema.paths & ConsoleCatalogSchema.paths;
-export type components = AuthSchema.components & ContextSchema.components & TenantsSchema.components & StoresSchema.components & MembershipsSchema.components & AuditSchema.components & UnknownItemsSchema.components & SettlementSchema.components & ErpnextReconciliationSchema.components & ShiftClosesSchema.components & ConnectorAdminSchema.components & ConnectorHealthSchema.components & SyncOpsSchema.components & DevicesSchema.components & ConsoleSalesSchema.components & CashVariancePolicySchema.components & ConsoleTelemetrySchema.components & ErpnextItemMapSchema.components & ErpnextWarehouseMapSchema.components & ProductReconciliationSchema.components & TrackingProfileSchema.components & SaleSyncOpsSchema.components & InventorySchema.components & ConsoleCatalogSchema.components;
-export type operations = AuthSchema.operations & ContextSchema.operations & TenantsSchema.operations & StoresSchema.operations & MembershipsSchema.operations & AuditSchema.operations & UnknownItemsSchema.operations & SettlementSchema.operations & ErpnextReconciliationSchema.operations & ShiftClosesSchema.operations & ConnectorAdminSchema.operations & ConnectorHealthSchema.operations & SyncOpsSchema.operations & DevicesSchema.operations & ConsoleSalesSchema.operations & CashVariancePolicySchema.operations & ConsoleTelemetrySchema.operations & ErpnextItemMapSchema.operations & ErpnextWarehouseMapSchema.operations & ProductReconciliationSchema.operations & TrackingProfileSchema.operations & SaleSyncOpsSchema.operations & InventorySchema.operations & ConsoleCatalogSchema.operations;
+export namespace AiEntitlementsSchema {
+    export interface paths {
+        "/api/v1/tenants/{tenant_id}/ai/entitlements": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Must be the session's tenant; another tenant, an absent tenant, or a role outside the operation's list, is the non-disclosing 404. */
+                    tenant_id: components["parameters"]["TenantId"];
+                };
+                cookie?: never;
+            };
+            /**
+             * Read the tenant's AI entitlements (full or minimal view by role).
+             * @description `owner`, `tenant_admin` and a platform admin get the `full` view; `store_manager` gets the `minimal` view; every other caller gets the non-disclosing 404. A platform admin is admitted today by the existing `RolesGuard` platform-admin pass; once RT-414 ships, a platform admin who is not a member of the tenant also needs an active support session (see the API description). Read only: it reserves no quota and writes no audit event. No query parameter is accepted.
+             */
+            get: operations["consoleGetTenantAiEntitlements"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/tenants/{tenant_id}/ai/entitlements/opt-outs/{feature_id}": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Must be the session's tenant; another tenant, an absent tenant, or a role outside the operation's list, is the non-disclosing 404. */
+                    tenant_id: components["parameters"]["TenantId"];
+                    /** @description The AI feature to opt out or back in. A well-formed id that the plan catalogue does not know is the non-disclosing 404. */
+                    feature_id: components["parameters"]["FeatureIdPath"];
+                };
+                cookie?: never;
+            };
+            get?: never;
+            /**
+             * Opt one AI feature out of the tenant, or back in up to the plan (owner only).
+             * @description Sets the tenant owner's opt-out of one feature (D-5). `optedOut: true` switches the feature off for the whole tenant; `optedOut: false` switches it back on, only up to what the effective entitlement allows. Subtract-only: an opt-out never enables a feature, raises a limit or acts as a grant, and it never creates an entitlement revision. An opted-out feature is denied with `feature_disabled_tenant`, consumes no quota, and its saved outputs stay readable.
+             *
+             *     Order of checks, each stopping the call: (1) session, `Origin`, tenant and role (`401` / `403 origin_rejected` / `404`); (2) the `Idempotency-Key` (a same-key retry replays the stored response with `Idempotent-Replayed: true`; the same key with another body is `409 idempotency_key_conflict`; a key still in flight is `425`); (3) the body (`400 validation_error`); (4) `{feature_id}` must be a feature of the plan catalogue, else the non-disclosing `404`; (5) under a lock on the tenant's opt-out source, the entitlement and opt-out stores must be readable (`503 entitlement_unavailable`, nothing written); (6) `expectedOptOutVersion` must equal the current `optOutVersion` (`409 ai_opt_out_changed_concurrently`); (7) an opt-in (`optedOut: false`) of a feature the effective entitlement does not include is `422 not_entitled`: an opt-in can never exceed the plan; (8) when the requested state equals the current one, `200` with the current full view, no new opt-out version and no audit row; otherwise write the opt-out, increment `optOutVersion` and write one `ai_entitlement.opt_out_changed` audit row (feature, old and new state, `reason`, new `optOutVersion`) in one transaction, and answer `200` with the updated full view. An opt-out (`optedOut: true`) of a feature that is not entitled is accepted: it only subtracts.
+             */
+            put: operations["consolePutTenantAiFeatureOptOut"];
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+    }
+    export type webhooks = Record<string, never>;
+    export interface components {
+        schemas: {
+            /** @description A feature of the code-owned, versioned AI plan catalogue, for example `ai.briefing.daily`. The catalogue, not this contract, lists the features; the RT-644 §2 identifiers are research hypotheses. An identifier the catalogue does not know is denied (default deny). */
+            AiFeatureId: string;
+            /**
+             * @description The closed set of AI decision reasons (RT-644 §4.4 plus `feature_disabled_tenant` from AD-AI-ENT-001 D-5), by layer:
+             *
+             *       - `not_authorized` (layers 2 to 4): no membership, no capability,
+             *         or a requested store outside the caller's scope (D-4: refused,
+             *         never narrowed). Never disclosed as plan information; an HTTP
+             *         route answers it with its non-disclosing 401 / 404.
+             *       - `tenant_inactive` (layer 1): the tenant is not `active` or is
+             *         deleted.
+             *       - `feature_disabled_system` (layer 0): the system kill switch or an
+             *         unapproved provider / model.
+             *       - `policy_denied` (layer 5): the domain / data policy refuses this
+             *         data class or AI level.
+             *       - `not_entitled` (layer 6): the effective entitlement does not
+             *         include the feature (also state `none`, `expired` or
+             *         `cancelled`).
+             *       - `trial_expired` (layer 6): state `trial` past `effectiveUntil`.
+             *       - `grace_read_only` (layer 6): state `grace`; no new generation,
+             *         saved outputs stay readable (D-7).
+             *       - `feature_disabled_tenant` (layer 6): the tenant owner opted the
+             *         feature out (D-5).
+             *       - `quota_exhausted` (layer 7): the request meter cannot reserve
+             *         the units.
+             *       - `spend_cap_reached` (layer 7): the internal spend cap is
+             *         reached, even with quota left. Never shown to a tenant.
+             *       - `free_credit_exhausted` (layer 7): the platform experiment credit
+             *         pool is empty; never a silent switch to paid spend. Never shown
+             *         to a tenant.
+             *       - `entitlement_unavailable` (fail closed): the entitlement or
+             *         usage store cannot be read; no model request is built.
+             *       - `provider_unavailable` (layer 8): the provider failed or timed
+             *         out after the reservation; the reservation is released and not
+             *         charged (D-8). An execution outcome, never a `check` result.
+             * @enum {string}
+             */
+            AiEntitlementReasonCode: "not_authorized" | "tenant_inactive" | "feature_disabled_system" | "policy_denied" | "not_entitled" | "trial_expired" | "grace_read_only" | "feature_disabled_tenant" | "quota_exhausted" | "spend_cap_reached" | "free_credit_exhausted" | "entitlement_unavailable" | "provider_unavailable";
+            /**
+             * @description SERVER-INTERNAL. The reasons a `check` may deny with: every `AiEntitlementReasonCode` except `provider_unavailable`, which is a layer-8 execution outcome after the reservation and never a `check` result.
+             * @enum {string}
+             */
+            AiCheckDenyReasonCode: "not_authorized" | "tenant_inactive" | "feature_disabled_system" | "policy_denied" | "not_entitled" | "trial_expired" | "grace_read_only" | "feature_disabled_tenant" | "quota_exhausted" | "spend_cap_reached" | "free_credit_exhausted" | "entitlement_unavailable";
+            /**
+             * @description The tenant's effective entitlement lifecycle state (RT-644 §4.3). `none` is the default for every tenant. `grace` denies new generation with `grace_read_only` (D-7 semantics; no length is set here).
+             * @enum {string}
+             */
+            AiEntitlementState: "none" | "trial" | "active" | "grace" | "expired" | "cancelled";
+            /**
+             * @description Whether the feature is usable for the tenant at `evaluatedAt` (layers 0 and 6; see the API description). A snapshot, never a reservation.
+             * @enum {string}
+             */
+            AiFeatureAvailabilityValue: "available" | "unavailable";
+            /** @description The minimal per-feature flag for UI gating (D-6; PE-BC1 shape). No reason, plan, meter or opt-out detail. */
+            AiFeatureAvailability: {
+                featureId: components["schemas"]["AiFeatureId"];
+                availability: components["schemas"]["AiFeatureAvailabilityValue"];
+            };
+            /**
+             * @description The subset of `AiEntitlementReasonCode` the full view may state for an `unavailable` feature. Everything else that makes a feature unavailable (the system kill switch, spend cap, free credit) is shown as `null`, "temporarily unavailable", because tenants never see spend or credit state (§4.7, T12).
+             * @enum {string}
+             */
+            AiTenantFacingReasonCode: "not_entitled" | "trial_expired" | "grace_read_only" | "feature_disabled_tenant";
+            /**
+             * @description A UTC calendar day or a UTC calendar month (D-9).
+             * @enum {string}
+             */
+            AiMeterWindow: "day" | "month";
+            /** @description One request meter in its current UTC window. `remaining = max(0, limit - used - reserved)`. No price, cost or token figure. */
+            AiRequestMeter: {
+                /** @description The catalogue's meter identifier for this feature. */
+                meter: string;
+                /**
+                 * @description v1 customer meters count requests only (D-3).
+                 * @constant
+                 */
+                unit: "request";
+                window: components["schemas"]["AiMeterWindow"];
+                /**
+                 * Format: uuid
+                 * @description The store a per-store meter belongs to (charged to the store being served, D-4); null for a tenant meter, which is charged once per request whatever the number of stores.
+                 */
+                storeRef: string | null;
+                limit: number;
+                /** @description Committed units in the current window. */
+                used: number;
+                /** @description Units reserved by in-flight requests, not yet committed or released. */
+                reserved: number;
+                remaining: number;
+                /**
+                 * Format: date-time
+                 * @description The next UTC window boundary.
+                 */
+                resetsAt: string;
+            };
+            /** @description The tenant owner's opt-out of one feature (D-5): tenant-wide and subtract-only. An opt-out never enables a feature or raises a limit. An active opt-out always has a `changedAt`. */
+            AiTenantOptOut: {
+                optedOut: boolean;
+                /**
+                 * Format: date-time
+                 * @description When the owner last changed it; null when never changed.
+                 */
+                changedAt: string | null;
+            };
+            /** @description One catalogue feature in the full view. The reason names its source: `not_entitled` when the effective entitlement does not include the feature (whatever the opt-out); `feature_disabled_tenant` only when the feature is entitled and the owner opted it out. */
+            AiFeatureEntitlement: {
+                featureId: components["schemas"]["AiFeatureId"];
+                availability: components["schemas"]["AiFeatureAvailabilityValue"];
+                /** @description Null when `available`. When `unavailable`, the tenant-facing reason, or null for "temporarily unavailable" (see `AiTenantFacingReasonCode`). */
+                unavailableReason: components["schemas"]["AiTenantFacingReasonCode"] | null;
+                /** @description Whether the effective entitlement includes the feature, before the tenant opt-out is applied. */
+                entitled: boolean;
+                optOut: components["schemas"]["AiTenantOptOut"];
+                /** @description The feature's request meters; empty when it has none or is not entitled. */
+                meters: components["schemas"]["AiRequestMeter"][];
+            } & (unknown & unknown & unknown & unknown);
+            /** @description The owner / tenant_admin view (D-6). State `none` has no effective revision: `effectiveFrom` and `effectiveUntil` are null, and every feature is unavailable and not entitled. */
+            TenantAiEntitlementsFull: {
+                /**
+                 * @description discriminator enum property added by openapi-typescript
+                 * @enum {string}
+                 */
+                view: "full";
+                /** @description The tenant-wide monotonic entitlement revision the view was evaluated at; 0 when the tenant never had a revision (state `none`). */
+                entitlementVersion: number;
+                /** @description The tenant-wide monotonic version of the owner's opt-out source the view was evaluated at; 0 when the owner never changed an opt-out. Echo it as `expectedOptOutVersion` on the next write. */
+                optOutVersion: number;
+                state: components["schemas"]["AiEntitlementState"];
+                /**
+                 * Format: date-time
+                 * @description Start of the effective revision; null for state `none`.
+                 */
+                effectiveFrom: string | null;
+                /**
+                 * Format: date-time
+                 * @description End the effective revision states, or null when it states none. Never a computed grace length (D-7).
+                 */
+                effectiveUntil: string | null;
+                /** Format: date-time */
+                evaluatedAt: string;
+                /** @description Every catalogue feature, ordered by `featureId`. */
+                features: components["schemas"]["AiFeatureEntitlement"][];
+            };
+            /** @description The store_manager view (D-6): only whether each feature is available. */
+            TenantAiEntitlementsMinimal: {
+                /**
+                 * @description discriminator enum property added by openapi-typescript
+                 * @enum {string}
+                 */
+                view: "minimal";
+                /** Format: date-time */
+                evaluatedAt: string;
+                /** @description Every catalogue feature, ordered by `featureId`. */
+                features: components["schemas"]["AiFeatureAvailability"][];
+            };
+            /** @description The caller's view, chosen by the server from the caller's role. */
+            TenantAiEntitlements: components["schemas"]["TenantAiEntitlementsFull"] | components["schemas"]["TenantAiEntitlementsMinimal"];
+            /** @description The owner's opt-out of the path feature (D-5). The tenant comes from the path and the session, and the feature from the path, never the body. There is no limit, plan, state or grant field: the write can only subtract. */
+            AiFeatureOptOutRequest: {
+                /** @description The read's `optOutVersion` (`0` when no opt-out was ever changed). */
+                expectedOptOutVersion: number;
+                /** @description `true` switches the feature off for the whole tenant; `false` switches it back on, only up to the plan (else 422 `not_entitled`). */
+                optedOut: boolean;
+                /** @description Why the owner changed it. Required (D-5); recorded on the audit row. */
+                reason: string;
+            };
+            /** @description SERVER-INTERNAL, not an HTTP surface: the input of `check(feature_id, target_stores[], units_estimate, idempotency_key)` (RT-644 §4.2). The tenant and the principal come only from the request context, so there is no tenant, user, role or membership property; a caller cannot name them. */
+            AiEntitlementCheckInput: {
+                featureId: components["schemas"]["AiFeatureId"];
+                /** @description Every store the request touches; empty for a tenant-only request. Any store outside the principal's scope refuses the whole request with `not_authorized` (D-4); it is never narrowed. */
+                targetStores: string[];
+                /** @description The request units to reserve (v1: requests). */
+                unitsEstimate: number;
+                /** @description The request's `Idempotency-Key`. The reservation is unique per (tenant, feature, key): a replay returns the same decision and reservation and is counted once (D-3). */
+                idempotencyKey: string;
+            };
+            /** @description SERVER-INTERNAL. The meter a decision reserved against or was refused by. */
+            AiEntitlementMeterSnapshot: {
+                meter: string;
+                window: components["schemas"]["AiMeterWindow"];
+                limit: number;
+                used: number;
+                reserved: number;
+                remaining: number;
+                /** Format: date-time */
+                resetsAt: string;
+            };
+            /** @description SERVER-INTERNAL. Every layer up to 7 allowed and the units are reserved. */
+            AiEntitlementAllow: {
+                /**
+                 * @description discriminator enum property added by openapi-typescript
+                 * @enum {string}
+                 */
+                decision: "allow";
+                /** @description The revision the reservation was made under; in-flight work finishes under it. */
+                entitlementVersion: number;
+                /** @description The owner opt-out version evaluated (0 when never changed). */
+                optOutVersion: number;
+                /** @description The AD-POL-001 policy version, once that engine exists. */
+                policyVersion?: number;
+                meter?: components["schemas"]["AiEntitlementMeterSnapshot"];
+                /** Format: uuid */
+                reservationId: string;
+                /** Format: date-time */
+                evaluatedAt: string;
+            };
+            /** @description SERVER-INTERNAL. The first refusing layer; nothing is reserved and no model request is built. Fails closed: when any layer's state is unknown or unreadable the decision is deny `entitlement_unavailable`. A `quota_exhausted` deny carries the refusing `meter` (with `resetsAt`). Provenance follows the layer: a layer 0 to 5 refusal (`not_authorized`, `tenant_inactive`, `feature_disabled_system`, `policy_denied`) stops before either source is read, so both versions are null; a layer 6 or 7 refusal reports the concrete `entitlementVersion` and `optOutVersion` it evaluated; `entitlement_unavailable` reports a version only for a source that was read before the failure. */
+            AiEntitlementDeny: {
+                /** @constant */
+                decision: "deny";
+                reasonCode: components["schemas"]["AiCheckDenyReasonCode"];
+                /** @description The revision evaluated, or null when the refusal came before the entitlement was read (layers 0 to 5, or `entitlement_unavailable`). */
+                entitlementVersion: number | null;
+                /** @description The owner opt-out version evaluated, or null when the refusal came before the opt-out source was read. */
+                optOutVersion: number | null;
+                policyVersion?: number;
+                meter?: components["schemas"]["AiEntitlementMeterSnapshot"];
+                /** Format: date-time */
+                evaluatedAt: string;
+            } & (unknown & unknown & unknown & {
+                /**
+                 * @description discriminator enum property added by openapi-typescript
+                 * @enum {string}
+                 */
+                decision: "deny";
+            });
+            /** @description SERVER-INTERNAL, not an HTTP surface: the result of `check` (RT-644 §4.2). `allow` carries a reservation and no reason; `deny` carries a reason and no reservation. On `quota_exhausted` the meter states `resetsAt`. */
+            AiEntitlementDecision: components["schemas"]["AiEntitlementAllow"] | components["schemas"]["AiEntitlementDeny"];
+            /** @description Canonical error envelope. Out-of-scope and cross-tenant refusals are non-disclosing (§II, §XII): they never name the cause. */
+            Error: {
+                error: {
+                    /** @description Stable machine-readable error code. */
+                    code: string;
+                    /** @description Human-readable summary. No sensitive data, no cause enumeration. */
+                    message: string;
+                    /**
+                     * Format: uuid
+                     * @description Server-side correlation id; the cause is recorded server-side.
+                     */
+                    request_id?: string;
+                };
+            };
+            /** @description The shared `IdempotencyInterceptor`'s 425 body (not the `Error` envelope). */
+            IdempotencyInProgressBody: {
+                /** @constant */
+                error: "idempotency_in_progress";
+                retryAfterSec: number;
+            };
+        };
+        responses: {
+            /** @description validation_error (400): a malformed `{tenant_id}` or any query parameter (none is accepted). Checked after the guards. */
+            ValidationFailure: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Unauthenticated (401): a missing or invalid session cookie, or a non-cookie credential without a valid session cookie. Non-disclosing. Owned by 028 (G10). */
+            Unauthorized: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description not_found (404), non-disclosing: identical for a role outside the operation's list (`store_staff` on the read; every role but `owner` on the opt-out write), a `{tenant_id}` that is not the session's tenant, an absent tenant, and on the write a `{feature_id}` that the plan catalogue does not know. It never carries plan information. */
+            NotFound: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 400: `validation_error` (a malformed path id or body, an unknown or missing key, an empty or over-long `reason`), or the `IdempotencyInterceptor`'s `idempotency_key_required` / `idempotency_key_malformed`. Nothing is written. */
+            WriteValidationFailure: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 403 `origin_rejected` (RT-430): a cookie-authenticated write whose `Origin` is missing or not allowed. Nothing is written. */
+            OriginRejected: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 409, `error.code` one of: `ai_opt_out_changed_concurrently` (`expectedOptOutVersion` is not the current `optOutVersion`; reload and retry); `idempotency_key_conflict` (the same `Idempotency-Key` with a different body). Nothing is written. */
+            OptOutConflict: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 422 `not_entitled` (a closed-set reason code): an opt-in (`optedOut: false`) of a feature the effective entitlement does not include. An opt-in can never exceed the plan (D-5). Nothing is written. Only the owner, who already reads the full view, can receive it. */
+            OptInExceedsPlan: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 425 `idempotency_in_progress`: a request with the same `Idempotency-Key` is still being processed. Retry after `Retry-After` seconds with the same key and body. */
+            IdempotencyInProgress: {
+                headers: {
+                    "Retry-After": components["headers"]["RetryAfterInProgress"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdempotencyInProgressBody"];
+                };
+            };
+            /** @description system_failure (500): unexpected server error; the cause is recorded server-side under `request_id`. */
+            SystemFailure: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 503 `entitlement_unavailable`: an authorized caller, but the entitlement or opt-out store cannot be read. Fails closed: no guessed view is returned and nothing is written. */
+            EntitlementUnavailable: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 429 `rate_limited` (RT-574): the caller's per-user budget for this class of operation is spent. The body is the canonical error envelope with a non-disclosing message (no budget, class or window); its `request_id` equals the `X-Request-Id` response header. Honour `Retry-After`. A 429 is not a 401: it never means the session ended. The console limit is server-configured and may not be enforced, so a client must handle a 429 but must not expect one. */
+            TooManyRequests: {
+                headers: {
+                    "Retry-After": components["headers"]["ConsoleRetryAfter"];
+                    /** @description Always `no-store` on a 429. */
+                    "Cache-Control": "no-store";
+                    /** @description The request id, equal to `error.request_id` in the body: the inbound `X-Request-Id` when it is a well-formed UUID, otherwise a server-minted one. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+        parameters: {
+            /** @description Must be the session's tenant; another tenant, an absent tenant, or a role outside the operation's list, is the non-disclosing 404. */
+            TenantId: string;
+            /** @description The AI feature to opt out or back in. A well-formed id that the plan catalogue does not know is the non-disclosing 404. */
+            FeatureIdPath: components["schemas"]["AiFeatureId"];
+            /** @description REQUIRED on every opt-out write (G5): 16 to 128 printable ASCII characters with no whitespace, as the shared `IdempotencyInterceptor` enforces. Keyed on the verified actor. An identical retry replays the stored response with `Idempotent-Replayed: true`; key reuse with a different body is 409 `idempotency_key_conflict`; a key still being processed is 425. */
+            IdempotencyKey: string;
+        };
+        requestBodies: never;
+        headers: {
+            /** @description `no-store` on every 200: the body carries the tenant's commercial entitlement state, so no shared or browser cache keeps it. */
+            CacheControlNoStore: "no-store";
+            /** @description Whole seconds the caller should wait before retrying, sent on every console 429 (RT-574 D5). Its own bound, 1 to 3600. */
+            ConsoleRetryAfter: number;
+            /** @description Present and `true` on a same-`Idempotency-Key` replay, which carries the stored status (`200`). Absent on a first-time write. */
+            IdempotentReplayed: boolean;
+            /** @description Seconds to wait before retrying a 425 with the same `Idempotency-Key` and body. */
+            RetryAfterInProgress: number;
+        };
+        pathItems: never;
+    }
+    export type $defs = Record<string, never>;
+    export interface operations {
+        consoleGetTenantAiEntitlements: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Must be the session's tenant; another tenant, an absent tenant, or a role outside the operation's list, is the non-disclosing 404. */
+                    tenant_id: components["parameters"]["TenantId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The caller's view of the tenant's AI entitlements. */
+                200: {
+                    headers: {
+                        "Cache-Control": components["headers"]["CacheControlNoStore"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TenantAiEntitlements"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
+                500: components["responses"]["SystemFailure"];
+                503: components["responses"]["EntitlementUnavailable"];
+            };
+        };
+        consolePutTenantAiFeatureOptOut: {
+            parameters: {
+                query?: never;
+                header: {
+                    /** @description REQUIRED on every opt-out write (G5): 16 to 128 printable ASCII characters with no whitespace, as the shared `IdempotencyInterceptor` enforces. Keyed on the verified actor. An identical retry replays the stored response with `Idempotent-Replayed: true`; key reuse with a different body is 409 `idempotency_key_conflict`; a key still being processed is 425. */
+                    "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                };
+                path: {
+                    /** @description Must be the session's tenant; another tenant, an absent tenant, or a role outside the operation's list, is the non-disclosing 404. */
+                    tenant_id: components["parameters"]["TenantId"];
+                    /** @description The AI feature to opt out or back in. A well-formed id that the plan catalogue does not know is the non-disclosing 404. */
+                    feature_id: components["parameters"]["FeatureIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AiFeatureOptOutRequest"];
+                };
+            };
+            responses: {
+                /** @description Written, or already in the requested state: the updated full view. A same-key retry replays this `200` with `Idempotent-Replayed: true`. */
+                200: {
+                    headers: {
+                        "Cache-Control": components["headers"]["CacheControlNoStore"];
+                        "Idempotent-Replayed": components["headers"]["IdempotentReplayed"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TenantAiEntitlementsFull"];
+                    };
+                };
+                400: components["responses"]["WriteValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["OriginRejected"];
+                404: components["responses"]["NotFound"];
+                409: components["responses"]["OptOutConflict"];
+                422: components["responses"]["OptInExceedsPlan"];
+                425: components["responses"]["IdempotencyInProgress"];
+                429: components["responses"]["TooManyRequests"];
+                500: components["responses"]["SystemFailure"];
+                503: components["responses"]["EntitlementUnavailable"];
+            };
+        };
+    }
+}
+
+export type paths = AuthSchema.paths & ContextSchema.paths & TenantsSchema.paths & StoresSchema.paths & MembershipsSchema.paths & AuditSchema.paths & UnknownItemsSchema.paths & SettlementSchema.paths & ErpnextReconciliationSchema.paths & ShiftClosesSchema.paths & ConnectorAdminSchema.paths & ConnectorHealthSchema.paths & SyncOpsSchema.paths & DevicesSchema.paths & ConsoleSalesSchema.paths & CashVariancePolicySchema.paths & ConsoleTelemetrySchema.paths & ErpnextItemMapSchema.paths & ErpnextWarehouseMapSchema.paths & ProductReconciliationSchema.paths & TrackingProfileSchema.paths & SaleSyncOpsSchema.paths & InventorySchema.paths & ConsoleCatalogSchema.paths & AiEntitlementsSchema.paths;
+export type components = AuthSchema.components & ContextSchema.components & TenantsSchema.components & StoresSchema.components & MembershipsSchema.components & AuditSchema.components & UnknownItemsSchema.components & SettlementSchema.components & ErpnextReconciliationSchema.components & ShiftClosesSchema.components & ConnectorAdminSchema.components & ConnectorHealthSchema.components & SyncOpsSchema.components & DevicesSchema.components & ConsoleSalesSchema.components & CashVariancePolicySchema.components & ConsoleTelemetrySchema.components & ErpnextItemMapSchema.components & ErpnextWarehouseMapSchema.components & ProductReconciliationSchema.components & TrackingProfileSchema.components & SaleSyncOpsSchema.components & InventorySchema.components & ConsoleCatalogSchema.components & AiEntitlementsSchema.components;
+export type operations = AuthSchema.operations & ContextSchema.operations & TenantsSchema.operations & StoresSchema.operations & MembershipsSchema.operations & AuditSchema.operations & UnknownItemsSchema.operations & SettlementSchema.operations & ErpnextReconciliationSchema.operations & ShiftClosesSchema.operations & ConnectorAdminSchema.operations & ConnectorHealthSchema.operations & SyncOpsSchema.operations & DevicesSchema.operations & ConsoleSalesSchema.operations & CashVariancePolicySchema.operations & ConsoleTelemetrySchema.operations & ErpnextItemMapSchema.operations & ErpnextWarehouseMapSchema.operations & ProductReconciliationSchema.operations & TrackingProfileSchema.operations & SaleSyncOpsSchema.operations & InventorySchema.operations & ConsoleCatalogSchema.operations & AiEntitlementsSchema.operations;
