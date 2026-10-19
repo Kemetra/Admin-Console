@@ -28,3 +28,12 @@ authored alongside the layer they cover). `[X]` = done in this slice.
 - [X] T014 `pnpm build` (tsc --noEmit + vite build) — typecheck PASS.
 - [X] T015 `pnpm test` (vitest) — RF-4a unit + boundary PASS.
 - [X] T016 `pnpm lint` (biome) — PASS.
+
+## RT-724 — RF-4b actions
+- [X] T017 Data layer: `createProductFromUnknownItem`, `reopenUnknownItem`, `bulkDismissUnknownItems` (Idempotency-Key on the two keyed ops); `mapUnknownItemError` for `validation_error`, `alias_conflict`, `target_unavailable`, `already_reconciled`, `idempotency_key_conflict`, `forbidden`, 404, 425.
+- [X] T018 Hooks: create / reopen / bulk-dismiss mutations; no automatic retry; a key is reused only for a manual retry after an unsettled outcome (5xx, 425).
+- [X] T019 Drawer: Create product form (name + tax category; input survives errors) and Reopen for dismissed items.
+- [X] T020 Queue: status filter; row selection + bulk-dismiss bar with a counted confirm and per-outcome result banners.
+- [X] T021 Nav: the Unknown items entry leaves the RF-4 gate (Catalog section; owner / tenant_admin / store_manager).
+- [X] T022 Tests: `rf4b-queries`, `rf4b-actions`, boundary + nav updates; e2e S5–S7 with axe.
+- [ ] Deferred: link to an existing product (needs a catalog read contract).

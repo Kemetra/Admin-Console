@@ -164,4 +164,82 @@ export const stock = {
   "unknownItems.errors.notFound": "هذا الصنف غير متاح.",
   "unknownItems.errors.alreadyReconciled":
     "تمت معالجة هذا الصنف مسبقًا. حدّث الصفحة لعرض حالته الحالية.",
+  // RT-724 (RF-4b): queue status filter, create product, reopen, bulk dismiss.
+  "unknownItems.filters.status": "الحالة",
+  "unknownItems.emptyStatus": "لا توجد أصناف بهذه الحالة.",
+  "unknownItems.create.action": "إنشاء صنف",
+  "unknownItems.create.legend": "صنف جديد من هذا المعرّف",
+  "unknownItems.create.name": "اسم الصنف",
+  "unknownItems.create.taxCategory": "فئة الضريبة",
+  "unknownItems.create.taxCategoryHint": "رمز فئة الضريبة التي ينتمي إليها الصنف.",
+  "unknownItems.create.submit": "إنشاء الصنف",
+  "unknownItems.create.nameRequired": "أدخل اسم الصنف.",
+  "unknownItems.create.taxCategoryRequired": "أدخل فئة الضريبة.",
+  "unknownItems.create.success": "تم إنشاء الصنف وربط المعرّف به. لم يعد الصنف في قائمة المراجعة.",
+  "unknownItems.reopen.action": "إعادة فتح",
+  "unknownItems.reopen.success": "أُعيد فتح الصنف وعاد إلى قائمة المراجعة.",
+  "unknownItems.select.column": "تحديد",
+  "unknownItems.select.row": "تحديد {value}",
+  "unknownItems.select.page": "تحديد كل أصناف هذه الصفحة",
+  "unknownItems.bulk.selected": {
+    zero: "لم يُحدَّد أي صنف",
+    one: "تم تحديد صنف واحد",
+    two: "تم تحديد صنفين",
+    few: "تم تحديد {count} أصناف",
+    many: "تم تحديد {count} صنفًا",
+    other: "تم تحديد {count} صنف",
+  },
+  "unknownItems.bulk.action": "استبعاد المحدد",
+  "unknownItems.bulk.clear": "إلغاء التحديد",
+  "unknownItems.bulk.resource": {
+    zero: "لا أصناف",
+    one: "صنف واحد",
+    two: "صنفين",
+    few: "{count} أصناف",
+    many: "{count} صنفًا",
+    other: "{count} صنف",
+  },
+  "unknownItems.bulk.overLimit":
+    "يمكن استبعاد {max} صنف كحد أقصى في المرة الواحدة. قلّل التحديد ثم حاول مرة أخرى.",
+  "unknownItems.bulk.result.dismissed": {
+    zero: "لم يُستبعد أي صنف.",
+    one: "تم استبعاد صنف واحد.",
+    two: "تم استبعاد صنفين.",
+    few: "تم استبعاد {count} أصناف.",
+    many: "تم استبعاد {count} صنفًا.",
+    other: "تم استبعاد {count} صنف.",
+  },
+  "unknownItems.bulk.result.alreadyReconciled": {
+    zero: "لا أصناف تمت معالجتها من قبل.",
+    one: "صنف واحد تمت معالجته من قبل فلم يُستبعد.",
+    two: "صنفان تمت معالجتهما من قبل فلم يُستبعدا.",
+    few: "{count} أصناف تمت معالجتها من قبل فلم تُستبعد.",
+    many: "{count} صنفًا تمت معالجتها من قبل فلم تُستبعد.",
+    other: "{count} صنف تمت معالجته من قبل فلم يُستبعد.",
+  },
+  "unknownItems.bulk.result.notFound": {
+    zero: "لا أصناف غير متاحة.",
+    one: "صنف واحد لم يعد متاحًا فلم يُستبعد.",
+    two: "صنفان لم يعودا متاحين فلم يُستبعدا.",
+    few: "{count} أصناف لم تعد متاحة فلم تُستبعد.",
+    many: "{count} صنفًا لم تعد متاحة فلم تُستبعد.",
+    other: "{count} صنف لم يعد متاحًا فلم يُستبعد.",
+  },
+  "unknownItems.errors.reopenForbidden":
+    "إعادة الفتح تتطلب صلاحية على مستوى المؤسسة كلها. اطلب ذلك من مسؤول المؤسسة.",
+  "unknownItems.errors.reopenResolved":
+    "تمت معالجة هذا الصنف، ولا يُعاد فتح إلا صنف مستبعد. حدّث القائمة لرؤية حالته الحالية.",
+  "unknownItems.errors.createValidation":
+    "تعذّر إنشاء الصنف بهذه البيانات. راجع اسم الصنف وفئة الضريبة ثم حاول مرة أخرى.",
+  "unknownItems.errors.bulkRejected":
+    "رُفض الطلب كاملًا ولم يُستبعد أي صنف. حدّد {max} صنف كحد أقصى ثم حاول مرة أخرى.",
+  "unknownItems.errors.aliasConflict":
+    "هذا المعرّف مرتبط بالفعل بصنف آخر، فلم يُنشأ أي صنف. راجع الكتالوج قبل المتابعة.",
+  "unknownItems.errors.targetUnavailable": "الصنف المطلوب لم يعد متاحًا، فلم يتغير شيء.",
+  "unknownItems.errors.keyConflict":
+    "تعارض هذا الطلب مع محاولة سابقة، فلم يتغير شيء. حدّث القائمة ثم حاول مرة أخرى.",
+  "unknownItems.errors.rateLimited":
+    "طلبات كثيرة جدًا في وقت قصير، فلم يتغير شيء. انتظر لحظة ثم حاول مرة أخرى.",
+  "unknownItems.errors.inProgress":
+    "لا يزال الطلب السابق قيد المعالجة. انتظر لحظة ثم حاول مرة أخرى.",
 } satisfies Messages;
