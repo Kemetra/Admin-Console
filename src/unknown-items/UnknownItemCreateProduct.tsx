@@ -19,7 +19,7 @@ import type {
  */
 import { useState } from "react";
 import { UnknownItemErrorBanner } from "./UnknownItemErrorBanner";
-import { useUnknownItemCreateProduct } from "./useUnknownItemQueries";
+import { type UnknownItemWriteResult, useUnknownItemCreateProduct } from "./useUnknownItemQueries";
 
 export interface UnknownItemCreateProductProps {
   item: ReviewQueueItem;
@@ -76,6 +76,22 @@ function TextField({
   );
 }
 
+/**
+ * The failure of the last attempt, if any: the mapped contract error, or the
+ * generic copy when the request itself never completed.
+ */
+function WriteError({
+  result,
+  requestFailed,
+}: Readonly<{
+  result: UnknownItemWriteResult<unknown> | undefined;
+  requestFailed: boolean;
+}>): React.JSX.Element | null {
+  const t = useT();
+  if (requestFailed) return <Banner variant="danger" message={t("errors.server")} />;
+  return result && !result.ok ? <UnknownItemErrorBanner error={result.render} /> : null;
+}
+
 interface FieldErrors {
   name?: MessageKey;
   taxCategory?: MessageKey;
@@ -101,8 +117,6 @@ export function UnknownItemCreateProduct({
   const [name, setName] = useState("");
   const [taxCategory, setTaxCategory] = useState("");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors | undefined>();
-  const result = create.data;
-  const error = result && !result.ok ? result.render : undefined;
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>): void {
     e.preventDefault();
@@ -124,8 +138,7 @@ export function UnknownItemCreateProduct({
     <form className="unknown-item-form" onSubmit={onSubmit} noValidate>
       <fieldset className="unknown-item-form__fields" disabled={create.isPending}>
         <legend className="unknown-item-form__legend">{t("unknownItems.create.legend")}</legend>
-        {error ? <UnknownItemErrorBanner error={error} /> : null}
-        {create.isError ? <Banner variant="danger" message={t("errors.server")} /> : null}
+        <WriteError result={create.data} requestFailed={create.isError} />
 
         <TextField
           id="unknown-item-product-name"
