@@ -40,7 +40,7 @@ export const aiPlan = {
   "aiPlan.status.temporarilyUnavailable": "غير متاحة مؤقتًا",
   "aiPlan.minimal.available": "متاحة",
   "aiPlan.minimal.unavailable": "غير متاحة — اسأل مالك الحساب",
-  "aiPlan.optOut.since": "أوقفها المالك في {date}",
+  "aiPlan.optOut.since": "آخر تغيير من المالك في {date}",
 
   // --- Meters -----------------------------------------------------------------------
   "aiPlan.meter.window.day": "لكل يوم (UTC)",
@@ -48,7 +48,7 @@ export const aiPlan = {
   "aiPlan.meter.window.unknown": "لكل فترة",
   "aiPlan.meter.scope.tenant": "حصة المؤسسة كلها",
   "aiPlan.meter.scope.store": "حصة المتجر",
-  "aiPlan.meter.left": "المتبقي {remaining} من {limit} طلب، يُعاد التعيين {time}",
+  "aiPlan.meter.left": "المتبقي {remaining} من {limit}، يُعاد التعيين {time}",
   "aiPlan.meter.used": "استُنفدت الحصة، يُعاد التعيين {time}",
   "aiPlan.meter.detail": "الحد {limit}، المستخدم {used}، قيد التنفيذ {reserved}",
 };

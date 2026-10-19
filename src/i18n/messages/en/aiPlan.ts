@@ -38,7 +38,7 @@ export const aiPlan: MessagesOf<typeof ar> = {
   "aiPlan.status.temporarilyUnavailable": "Temporarily unavailable",
   "aiPlan.minimal.available": "Available",
   "aiPlan.minimal.unavailable": "Not available — ask your account owner",
-  "aiPlan.optOut.since": "Switched off by the owner on {date}",
+  "aiPlan.optOut.since": "Last changed by the owner on {date}",
 
   // --- Meters -----------------------------------------------------------------------
   "aiPlan.meter.window.day": "per day (UTC)",
