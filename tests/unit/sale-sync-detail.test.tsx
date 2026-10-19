@@ -296,9 +296,7 @@ describe("SaleSyncSections (RT-726)", () => {
     renderSections();
     const confirm = await openConfirm();
     fireEvent.click(within(confirm).getByRole("button", { name: "Confirm repair" }));
-    expect(
-      await within(statusRegion()).findByText(new RegExp(message.replace(/[.?]/g, "\\$&"))),
-    ).toBeDefined();
+    expect(await within(statusRegion()).findByText(message, { exact: false })).toBeDefined();
     expect(api.consoleRepairSaleSync).toHaveBeenCalledTimes(1);
   });
 
