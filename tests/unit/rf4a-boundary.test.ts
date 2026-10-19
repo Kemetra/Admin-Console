@@ -46,21 +46,21 @@ describe("RF-4a boundary gates", () => {
     expect(allCode).not.toMatch(/[Bb]earer\s+/);
   });
 
-  test("VG-4: RF-4a calls none of the RF-4b / runtime-absent unknown-items ops", () => {
-    // link / create-product are RF-4b (SD-1 deferred); reopen / bulk-dismiss are
-    // runtime-absent at the pin. The RF-4a surface must call none of them.
-    for (const op of [
-      "tenantAdminLinkUnknownItem",
-      "tenantAdminCreateProductFromUnknownItem",
-      "tenantAdminReopenUnknownItem",
-      "tenantAdminBulkDismissUnknownItems",
-      "posCaptureItem",
-      "/link",
-      "/create-product",
-      "/reopen",
-      "/bulk-dismiss",
-    ]) {
+  test("VG-4: the queue never calls link (deferred, RT-724) or the POS capture op", () => {
+    // Link needs a product picker and there is no console catalog read
+    // contract to pick from; a free-text product-id field is not an option.
+    for (const op of ["tenantAdminLinkUnknownItem", "posCaptureItem", "/link", "product_id"]) {
       expect(rf4aCode).not.toContain(op);
+    }
+  });
+
+  test("VG-4: RT-724 calls create-product / reopen / bulk-dismiss through the generated client", () => {
+    for (const path of [
+      '"/api/v1/catalog/unknown-items/{id}/create-product"',
+      '"/api/v1/catalog/unknown-items/{id}/reopen"',
+      '"/api/v1/catalog/unknown-items/bulk-dismiss"',
+    ]) {
+      expect(rf4aCode).toContain(path);
     }
   });
 
