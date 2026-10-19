@@ -3,7 +3,7 @@
  * Do not make direct changes to the file.
  */
 
-// Source: Data-Pulse-2 @ aa994f472fc1ae3485a212af95ed8339c505d366
+// Source: Data-Pulse-2 @ c2a3bb68f373f689965af809f9474baace89caa9
 // Sources:
 // - packages/contracts/openapi/auth.openapi.yaml
 // - packages/contracts/openapi/context.openapi.yaml
@@ -28,6 +28,7 @@
 // - packages/contracts/openapi/catalog/tracking-profile.yaml
 // - packages/contracts/openapi/sale-sync-ops/sale-sync-ops.yaml
 // - packages/contracts/openapi/inventory/inventory.yaml
+// - packages/contracts/openapi/catalog/console-catalog.yaml
 //
 // The upstream OpenAPI files are separate documents with overlapping component
 // names, so this file namespaces each generated source and composes their path
@@ -9154,6 +9155,8 @@ export namespace ProductReconciliationSchema {
                  * @description The inert 013 suggestion row id (for `suggestion_unconfirmed`).
                  */
                 suggestionMappingId?: string | null;
+                /** @description RT-733 (additive). The current 013 `version` of the `suggestionMappingId` row, read live; null when that id is null. Pass it as `version` on a `confirm` / `re_point` repair. A value that has gone stale by the time of the repair is a `409` `conflict`, unless the row is by then confirmed-and-active, which is the idempotent `no_op_echo` (FR-011). */
+                suggestionMappingVersion?: number | null;
                 /** @description 013 suggestion provenance (`manual` in v1). */
                 suggestionSource?: string | null;
                 /** Format: uuid */
@@ -9226,6 +9229,13 @@ export namespace ProductReconciliationSchema {
                 detail: {
                     [key: string]: unknown;
                 } | null;
+                /**
+                 * Format: uuid
+                 * @description RT-733 (additive). The product's current ACTIVE (not retired) 013 `erpnext_item_map` row id, suggested or confirmed, read live when the report is fetched (not when the run ran); null when `tenantProductId` is null or the product has no active mapping.
+                 */
+                mappingId?: string | null;
+                /** @description RT-733 (additive). The current 013 `version` of the `mappingId` row; null when `mappingId` is null. Pass it as `version` on a `confirm` / `re_point` repair. A value that has gone stale by the time of the repair is a `409` `conflict`, unless the row is by then confirmed-and-active, which is the idempotent `no_op_echo` (FR-011). */
+                mappingVersion?: number | null;
             };
             ResultPage: {
                 items: components["schemas"]["ProductReconciliationResult"][];
@@ -10207,8 +10217,10 @@ export namespace InventorySchema {
                 cookie?: never;
             };
             /**
-             * List the movements behind a balance, in a stable order.
-             * @description List stock movements for the path-scoped store (and optional product) in a stable order (FR-004). `productId` MAY be omitted to list ad-hoc (null-product) movements scoped to the store — those are auditable ledger entries that roll up to no product's on-hand (SC-001). Each entry is a `toBody` projection carrying type, signed quantity, timestamps, acting principal (`createdBy`), reason, and provenance / linkage refs.
+             * List the movements of a store, newest first, in keyset pages.
+             * @description List stock movements for the path-scoped store (FR-004). Which movements: `productId` set ⇒ that product's movements; `productId` omitted ⇒ `scope` decides — `adhoc` (the default) lists the ad-hoc (null-product) movements, which are auditable ledger entries that roll up to no product's on-hand (SC-001), and `all` lists every movement of the store, across every product and ad-hoc. Sending `scope` together with `productId` is a 400 `validation_error`. Each entry is a `toBody` projection carrying type, signed quantity, timestamps, acting principal (`createdBy`), reason, and provenance / linkage refs.
+             *
+             *     **Ordering and paging (RT-731).** Newest first: `occurredAt DESC, id DESC`, a total, stable order on values fixed when the movement is written. Keyset pagination with an opaque `cursor` bound to this operation, the tenant, the store and the filters (`productId`, `scope`). Walking the pages with the same filters returns no movement twice and reaches every movement that existed when the walk started. The walk is not a snapshot: a movement written during a walk is returned by that walk only if it sorts after the walk's current position (a backdated `occurredAt`). Only `nextCursor: null` ends the walk.
              */
             get: operations["listStockMovements"];
             put?: never;
@@ -10514,7 +10526,7 @@ export namespace InventorySchema {
             StockMovementList: {
                 /** @description Bounded by the `limit` query parameter ceiling (max 200), symmetric with the request-side caps. */
                 items: components["schemas"]["StockMovement"][];
-                /** @description Opaque cursor for the next page; null when exhausted. */
+                /** @description Opaque cursor for the next page, bound to the request's store and filters; null when exhausted. Absent is read as null. */
                 nextCursor?: string | null;
             };
             /** @description Derived on-hand projection. `quantity` is the compute-on-read signed SUM (FR-003) over every location and inventory status of the store — the physical on-hand (decision 732). `negativeBalance` is true when `quantity` < 0 (FR-024); on-hand is never a stored mutable value. RT-432: `sellableQuantity` and `statusQuantities` split the same movements by inventory status (decision 745); a movement recorded before positions existed counts as `sellable`. Available To Sell is not projected here. */
@@ -10739,8 +10751,11 @@ export namespace InventorySchema {
         listStockMovements: {
             parameters: {
                 query?: {
-                    /** @description Tenant Catalog product id; omit to list ad-hoc (null-product) movements. */
+                    /** @description Tenant Catalog product id; lists that product's movements. Omit it to list by `scope`. */
                     productId?: string;
+                    /** @description RT-731. Only when `productId` is omitted: `adhoc` (the default) lists the store's ad-hoc (null-product) movements; `all` lists every movement of the store, across every product and ad-hoc. Sending it with `productId` is a 400 `validation_error`. */
+                    scope?: "adhoc" | "all";
+                    /** @description Opaque keyset cursor from a prior page's `nextCursor`, bound to the operation, the tenant, the store and the filters (`productId`, `scope`). Do not decode or construct it; omit it for the first page. A value the server did not issue, cannot decode, or that is reused with another store or other filters is 400 `validation_error`. The caller's store scope is checked on every request and is never carried by the cursor. The cursor carries only a keyset position and a digest of the filters; its position is ANDed with the tenant, the store and the filters and never replaces them, so a hand-built cursor can only reposition the walk inside rows the caller may already read. */
                     cursor?: string;
                     limit?: number;
                 };
@@ -10753,7 +10768,7 @@ export namespace InventorySchema {
             };
             requestBody?: never;
             responses: {
-                /** @description A page of movements in stable order. */
+                /** @description A page of movements, newest first. */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -11005,6 +11020,390 @@ export namespace InventorySchema {
     }
 }
 
-export type paths = AuthSchema.paths & ContextSchema.paths & TenantsSchema.paths & StoresSchema.paths & MembershipsSchema.paths & AuditSchema.paths & UnknownItemsSchema.paths & SettlementSchema.paths & ErpnextReconciliationSchema.paths & ShiftClosesSchema.paths & ConnectorAdminSchema.paths & ConnectorHealthSchema.paths & SyncOpsSchema.paths & DevicesSchema.paths & ConsoleSalesSchema.paths & CashVariancePolicySchema.paths & ConsoleTelemetrySchema.paths & ErpnextItemMapSchema.paths & ErpnextWarehouseMapSchema.paths & ProductReconciliationSchema.paths & TrackingProfileSchema.paths & SaleSyncOpsSchema.paths & InventorySchema.paths;
-export type components = AuthSchema.components & ContextSchema.components & TenantsSchema.components & StoresSchema.components & MembershipsSchema.components & AuditSchema.components & UnknownItemsSchema.components & SettlementSchema.components & ErpnextReconciliationSchema.components & ShiftClosesSchema.components & ConnectorAdminSchema.components & ConnectorHealthSchema.components & SyncOpsSchema.components & DevicesSchema.components & ConsoleSalesSchema.components & CashVariancePolicySchema.components & ConsoleTelemetrySchema.components & ErpnextItemMapSchema.components & ErpnextWarehouseMapSchema.components & ProductReconciliationSchema.components & TrackingProfileSchema.components & SaleSyncOpsSchema.components & InventorySchema.components;
-export type operations = AuthSchema.operations & ContextSchema.operations & TenantsSchema.operations & StoresSchema.operations & MembershipsSchema.operations & AuditSchema.operations & UnknownItemsSchema.operations & SettlementSchema.operations & ErpnextReconciliationSchema.operations & ShiftClosesSchema.operations & ConnectorAdminSchema.operations & ConnectorHealthSchema.operations & SyncOpsSchema.operations & DevicesSchema.operations & ConsoleSalesSchema.operations & CashVariancePolicySchema.operations & ConsoleTelemetrySchema.operations & ErpnextItemMapSchema.operations & ErpnextWarehouseMapSchema.operations & ProductReconciliationSchema.operations & TrackingProfileSchema.operations & SaleSyncOpsSchema.operations & InventorySchema.operations;
+export namespace ConsoleCatalogSchema {
+    export interface paths {
+        "/api/v1/catalog/products": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * Search and list the tenant's catalog products (keyset paginated).
+             * @description The products of the session's tenant that match every given filter (filters combine with AND), in the order described under **Ordering and paging**. `status` defaults to `active`. With `store_id`, each item adds that store's effective `storeView`; a `store_id` outside the caller's scope or of another tenant is the non-disclosing 404. A `category_id` that names no category of the tenant matches nothing (an empty 200, never a 404). An empty page (`items: []`, `nextCursor: null`) is a 200. Any query key not listed here is 400 `validation_error`.
+             *     Not audited per request (decision O-6).
+             */
+            get: operations["consoleListCatalogProducts"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/catalog/products/{productId}": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * Read one catalog product with its identifiers and store overrides.
+             * @description One product of the session's tenant, whatever its status (an inactive or retired product is returned, with its `status`). Its `identifiers` are the ACTIVE identifiers that are tenant-wide or scoped to a store in the caller's scope; its `storeOverrides` are the active overrides of stores in the caller's scope. A product of another tenant or an absent id is the non-disclosing 404. The operation takes no query parameter; any query key is 400 `validation_error`.
+             *     Not audited per request (decision O-6).
+             */
+            get: operations["consoleGetCatalogProduct"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/v1/catalog/categories": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * List the tenant's product categories (flat).
+             * @description Every category of the session's tenant that is not retired, ordered `name ASC, categoryId ASC`. Categories are flat (no parent). The list is not paginated: it is the whole set. The operation takes no query parameter; any query key is 400 `validation_error`.
+             *     Not audited per request (decision O-6).
+             */
+            get: operations["consoleListCatalogCategories"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+    }
+    export type webhooks = Record<string, never>;
+    export interface components {
+        schemas: {
+            /** @description Exact-decimal non-negative amount as a string (never a float); `numeric(19,4)` at rest. The currency's minor-unit digits, and more only when the stored value has more significant fraction digits. */
+            DecimalAmount: string;
+            /** @description ISO-4217 alphabetic currency code. */
+            CurrencyCode: string;
+            Money: {
+                amount: components["schemas"]["DecimalAmount"];
+                currencyCode: components["schemas"]["CurrencyCode"];
+            };
+            /**
+             * @description The product's tenant status. `retired`: the product is retired (`retired_at` set). `active` / `inactive`: not retired, and `is_active` true / false.
+             * @enum {string}
+             */
+            ProductStatus: "active" | "inactive" | "retired";
+            /**
+             * @default active
+             * @enum {string}
+             */
+            ProductStatusFilter: "active" | "inactive" | "retired" | "any";
+            /**
+             * @description The product's tracking profile mode (RT-448).
+             * @enum {string}
+             */
+            TrackingMode: "none" | "batch" | "serial";
+            /** @enum {string} */
+            IdentifierType: "barcode" | "sku" | "plu" | "supplier_code" | "external_pos_id";
+            /** @description The product as one store resolves it: Tenant ⊕ Store Override (003 §6.4), computed by the same resolver as the POS read-down. Each overrideable field is the store's active override value when it has one, else the tenant value. */
+            StoreView: {
+                /**
+                 * Format: uuid
+                 * @description The `store_id` query value, lower case.
+                 */
+                storeId: string;
+                /** @description The resolved price; null when neither the override nor the product has one. */
+                effectivePrice: components["schemas"]["Money"] | null;
+                /** @description The resolved `is_active`, and false for a retired product. True does not by itself mean the POS sells it (it also needs a price). */
+                effectiveActive: boolean;
+                effectiveTaxCategory: string;
+                /** @description True when the store has an active override row for the product. */
+                hasOverride: boolean;
+            };
+            /** @description One product in a list, and the summary of its detail. */
+            ConsoleCatalogProductSummary: {
+                /** Format: uuid */
+                productId: string;
+                /** @description The product name (`tenant_products.name`, 1 to 500 characters). */
+                name: string;
+                status: components["schemas"]["ProductStatus"];
+                /** Format: uuid */
+                categoryId: string | null;
+                /** @description The category's name (also when the category is retired); null without a category. */
+                categoryName: string | null;
+                /** @description The value of the product's oldest active tenant-wide `sku` identifier (by creation time, then value); null when it has none. */
+                primarySku: string | null;
+                /** @description The value of the product's oldest active tenant-wide `barcode` identifier (by creation time, then value); null when it has none. */
+                primaryBarcode: string | null;
+                /** @description The tenant default price; null when the product has none. */
+                defaultPrice: components["schemas"]["Money"] | null;
+                /** @description The tenant tax category. */
+                taxCategory: string;
+                trackingMode: components["schemas"]["TrackingMode"];
+                /** Format: date-time */
+                updatedAt: string;
+                /** @description Present only when the list was requested with `store_id`. */
+                storeView?: components["schemas"]["StoreView"];
+            };
+            /** @description One page of `consoleListCatalogProducts`. */
+            ConsoleCatalogProductPage: {
+                items: components["schemas"]["ConsoleCatalogProductSummary"][];
+                /** @description Opaque cursor for the next page; `null` on the last page. A non-null cursor may come with fewer than `limit` items; only `null` ends the walk. */
+                nextCursor: string | null;
+            };
+            ProductIdentifier: {
+                identifierType: components["schemas"]["IdentifierType"];
+                /** @description The identifier as stored (leading zeros preserved). */
+                value: string;
+                /**
+                 * Format: uuid
+                 * @description Null for a tenant-wide identifier; else its store (always in the caller's scope).
+                 */
+                storeId: string | null;
+                /** @description The source system of an `external_pos_id`; null for every other type. */
+                sourceSystem: string | null;
+                /** Format: date-time */
+                createdAt: string;
+            };
+            /** @description One active store override. A null field is not overridden by the store. */
+            StoreOverride: {
+                /** Format: uuid */
+                storeId: string;
+                price: components["schemas"]["Money"] | null;
+                isActive: boolean | null;
+                taxCategory: string | null;
+                /** Format: date-time */
+                updatedAt: string;
+            };
+            /** @description One product: its summary (never with a `storeView`) plus the detail fields. No user ids and no ERP mapping. */
+            ConsoleCatalogProductDetail: {
+                /** @description The product summary; never with a `storeView` (the detail takes no `store_id`). */
+                summary: components["schemas"]["ConsoleCatalogProductSummary"] & unknown;
+                description: string | null;
+                expiryRequired: boolean;
+                /**
+                 * Format: uuid
+                 * @description The global product it was adopted from; null when it was not.
+                 */
+                sourceGlobalProductId: string | null;
+                /** Format: date-time */
+                createdAt: string;
+                /** @description Active identifiers that are tenant-wide or scoped to a store in the caller's scope, ordered by type, store (tenant-wide first), then value. */
+                identifiers: components["schemas"]["ProductIdentifier"][];
+                /** @description Active overrides of stores in the caller's scope, ordered by `storeId`. */
+                storeOverrides: components["schemas"]["StoreOverride"][];
+            };
+            ConsoleCatalogCategory: {
+                /** Format: uuid */
+                categoryId: string;
+                name: string;
+                description: string | null;
+                /** Format: date-time */
+                updatedAt: string;
+            };
+            ConsoleCatalogCategoryList: {
+                items: components["schemas"]["ConsoleCatalogCategory"][];
+            };
+            /** @description Canonical error envelope. Out-of-scope and cross-tenant refusals are non-disclosing (§II, §XII): they never name the cause. */
+            Error: {
+                error: {
+                    /** @description Stable machine-readable error code. */
+                    code: string;
+                    /** @description Human-readable summary. No sensitive data, no cause enumeration. */
+                    message: string;
+                    /**
+                     * Format: uuid
+                     * @description Server-side correlation id; the cause is recorded server-side.
+                     */
+                    request_id?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description validation_error (400): a malformed path or query value, an unknown query key, a query key given more than once, a `q` outside 1..100 characters, a `limit` outside 1..100, a `status` outside the enum, or a cursor the server did not issue for this operation, tenant and filters. Checked after the guards and before any database read. */
+            ValidationFailure: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Unauthenticated (401): no valid session cookie, whether or not a non-cookie credential (a bearer or an operator envelope) is sent. Non-disclosing. Owned by 028 (G10). */
+            Unauthorized: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description not_found (404), non-disclosing: identical for a role outside `owner` / `tenant_admin` / `store_manager`, a `store_id` outside the caller's scope or of another tenant, a product of another tenant and an absent product. */
+            NotFound: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description system_failure (500): unexpected server error; the cause is recorded server-side under `request_id`. */
+            SystemFailure: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 429 `rate_limited` (RT-574): the caller's per-user budget for this class of operation is spent. The body is the canonical error envelope with a non-disclosing message (no budget, class or window); its `request_id` equals the `X-Request-Id` response header. Honour `Retry-After`. A 429 is not a 401: it never means the session ended. The console limit is server-configured and may not be enforced, so a client must handle a 429 but must not expect one. */
+            TooManyRequests: {
+                headers: {
+                    "Retry-After": components["headers"]["ConsoleRetryAfter"];
+                    /** @description Always `no-store` on a 429. */
+                    "Cache-Control": "no-store";
+                    /** @description The request id, equal to `error.request_id` in the body: the inbound `X-Request-Id` when it is a well-formed UUID, otherwise a server-minted one. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+        parameters: {
+            /** @description One search term, used verbatim (see **Search** in the API description): an exact match on an active `barcode`, `sku` or `plu` identifier (leading zeros significant, no trimming) OR a case-insensitive substring of the product name. Exact identifier hits rank first. A value longer than 100 characters, empty, or given more than once is 400 `validation_error`. */
+            SearchQuery: string;
+            /** @description The product's TENANT status (not a store's effective availability). Default `active`. `any` applies no status filter. */
+            StatusQuery: components["schemas"]["ProductStatusFilter"];
+            /** @description Only products in this category. Case insensitive. A category the tenant does not have matches nothing (an empty 200). */
+            CategoryIdQuery: string;
+            /** @description Adds each item's `storeView` for this store, and limits store-scoped identifiers in the `q` match to this store. It does not filter the products: a product the store does not sell is listed with `storeView.effectiveActive: false`. Validated against the caller's store scope: a store outside it, or of another tenant, is the non-disclosing 404. Case insensitive. */
+            StoreIdQuery: string;
+            /** @description Opaque keyset cursor from a prior page's `nextCursor`, bound to the operation, the tenant and every filter (`q`, `status`, `category_id`, `store_id`). Do not decode or construct it; omit it for the first page. Its keyset position includes the last product's name (up to 500 characters), so it can be up to 4096 characters long. A value the server did not issue, cannot decode, or that is reused with other filters is 400 `validation_error`. The caller's store scope is checked on every request and is never carried by the cursor. The cursor carries only a keyset position and a digest of the filters; its position is ANDed with the tenant and the filters and never replaces them. It is never used to look a product up. */
+            Cursor: string;
+            /** @description Maximum items per page. The server MAY return fewer. */
+            Limit: number;
+            /** @description The product id (`tenant_products.id`). Case insensitive. A value that is not a UUID is 400 `validation_error` and never reaches the database. */
+            ProductId: string;
+        };
+        requestBodies: never;
+        headers: {
+            /** @description `no-store` on every 200: the bodies carry tenant prices and store data, so no shared or browser cache keeps them. */
+            CacheControlNoStore: "no-store";
+            /** @description Whole seconds the caller should wait before retrying, sent on every console 429 (RT-574 D5). Its own bound, 1 to 3600; it is not the POS `RetryAfter` header. */
+            ConsoleRetryAfter: number;
+        };
+        pathItems: never;
+    }
+    export type $defs = Record<string, never>;
+    export interface operations {
+        consoleListCatalogProducts: {
+            parameters: {
+                query?: {
+                    /** @description One search term, used verbatim (see **Search** in the API description): an exact match on an active `barcode`, `sku` or `plu` identifier (leading zeros significant, no trimming) OR a case-insensitive substring of the product name. Exact identifier hits rank first. A value longer than 100 characters, empty, or given more than once is 400 `validation_error`. */
+                    q?: components["parameters"]["SearchQuery"];
+                    /** @description The product's TENANT status (not a store's effective availability). Default `active`. `any` applies no status filter. */
+                    status?: components["parameters"]["StatusQuery"];
+                    /** @description Only products in this category. Case insensitive. A category the tenant does not have matches nothing (an empty 200). */
+                    category_id?: components["parameters"]["CategoryIdQuery"];
+                    /** @description Adds each item's `storeView` for this store, and limits store-scoped identifiers in the `q` match to this store. It does not filter the products: a product the store does not sell is listed with `storeView.effectiveActive: false`. Validated against the caller's store scope: a store outside it, or of another tenant, is the non-disclosing 404. Case insensitive. */
+                    store_id?: components["parameters"]["StoreIdQuery"];
+                    /** @description Opaque keyset cursor from a prior page's `nextCursor`, bound to the operation, the tenant and every filter (`q`, `status`, `category_id`, `store_id`). Do not decode or construct it; omit it for the first page. Its keyset position includes the last product's name (up to 500 characters), so it can be up to 4096 characters long. A value the server did not issue, cannot decode, or that is reused with other filters is 400 `validation_error`. The caller's store scope is checked on every request and is never carried by the cursor. The cursor carries only a keyset position and a digest of the filters; its position is ANDed with the tenant and the filters and never replaces them. It is never used to look a product up. */
+                    cursor?: components["parameters"]["Cursor"];
+                    /** @description Maximum items per page. The server MAY return fewer. */
+                    limit?: components["parameters"]["Limit"];
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description One page of the tenant's matching products. */
+                200: {
+                    headers: {
+                        "Cache-Control": components["headers"]["CacheControlNoStore"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ConsoleCatalogProductPage"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+        consoleGetCatalogProduct: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The product id (`tenant_products.id`). Case insensitive. A value that is not a UUID is 400 `validation_error` and never reaches the database. */
+                    productId: components["parameters"]["ProductId"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The product detail projection. */
+                200: {
+                    headers: {
+                        "Cache-Control": components["headers"]["CacheControlNoStore"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ConsoleCatalogProductDetail"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+        consoleListCatalogCategories: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The tenant's active categories. */
+                200: {
+                    headers: {
+                        "Cache-Control": components["headers"]["CacheControlNoStore"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ConsoleCatalogCategoryList"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+    }
+}
+
+export type paths = AuthSchema.paths & ContextSchema.paths & TenantsSchema.paths & StoresSchema.paths & MembershipsSchema.paths & AuditSchema.paths & UnknownItemsSchema.paths & SettlementSchema.paths & ErpnextReconciliationSchema.paths & ShiftClosesSchema.paths & ConnectorAdminSchema.paths & ConnectorHealthSchema.paths & SyncOpsSchema.paths & DevicesSchema.paths & ConsoleSalesSchema.paths & CashVariancePolicySchema.paths & ConsoleTelemetrySchema.paths & ErpnextItemMapSchema.paths & ErpnextWarehouseMapSchema.paths & ProductReconciliationSchema.paths & TrackingProfileSchema.paths & SaleSyncOpsSchema.paths & InventorySchema.paths & ConsoleCatalogSchema.paths;
+export type components = AuthSchema.components & ContextSchema.components & TenantsSchema.components & StoresSchema.components & MembershipsSchema.components & AuditSchema.components & UnknownItemsSchema.components & SettlementSchema.components & ErpnextReconciliationSchema.components & ShiftClosesSchema.components & ConnectorAdminSchema.components & ConnectorHealthSchema.components & SyncOpsSchema.components & DevicesSchema.components & ConsoleSalesSchema.components & CashVariancePolicySchema.components & ConsoleTelemetrySchema.components & ErpnextItemMapSchema.components & ErpnextWarehouseMapSchema.components & ProductReconciliationSchema.components & TrackingProfileSchema.components & SaleSyncOpsSchema.components & InventorySchema.components & ConsoleCatalogSchema.components;
+export type operations = AuthSchema.operations & ContextSchema.operations & TenantsSchema.operations & StoresSchema.operations & MembershipsSchema.operations & AuditSchema.operations & UnknownItemsSchema.operations & SettlementSchema.operations & ErpnextReconciliationSchema.operations & ShiftClosesSchema.operations & ConnectorAdminSchema.operations & ConnectorHealthSchema.operations & SyncOpsSchema.operations & DevicesSchema.operations & ConsoleSalesSchema.operations & CashVariancePolicySchema.operations & ConsoleTelemetrySchema.operations & ErpnextItemMapSchema.operations & ErpnextWarehouseMapSchema.operations & ProductReconciliationSchema.operations & TrackingProfileSchema.operations & SaleSyncOpsSchema.operations & InventorySchema.operations & ConsoleCatalogSchema.operations;

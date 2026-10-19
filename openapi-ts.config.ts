@@ -167,6 +167,21 @@ export const PIN_FILE_PATH = "contracts/backend-core/PIN" as const;
  * (`TooManyRequests`) on every cookieAuth operation of 15 of them, and RT-685
  * changes only prose in `console-telemetry.openapi.yaml`. `auth.openapi.yaml`
  * is byte-identical. No caller needed a code change.
+ *
+ * NINTH deliberate re-pin (RT-737, 2026-10-19): bumped aa994f4 -> c2a3bb6
+ * (Backend-Core main, through RT-729 #855) and composed the console catalog
+ * read source `catalog/console-catalog.yaml` (RT-729, contract-only upstream;
+ * nothing wraps it yet). Drift across the 23 existing sources is additive and
+ * touches two of them:
+ *   - `inventory/inventory.yaml` 1.5.0-draft (RT-731 #854 / #856):
+ *     `listStockMovements` gains the optional `scope` filter (`adhoc` | `all`)
+ *     and is documented newest first (`occurredAt DESC, id DESC`) with an
+ *     opaque keyset `cursor`. Nothing in the console calls it, so no caller
+ *     relied on the old order.
+ *   - `catalog/product-reconciliation.yaml` 1.2.0-draft (RT-733 #857):
+ *     `BacklogItem.suggestionMappingVersion` and
+ *     `ProductReconciliationResult.mappingId` / `mappingVersion`.
+ * The other 21 sources are byte-identical. No caller needed a code change.
  */
 export const BACKEND_CORE_PIN: ContractsPin = parsePin(
   readFileSync(resolve(repoRoot, PIN_FILE_PATH), "utf8"),
@@ -268,6 +283,10 @@ export const OPENAPI_SOURCE_SPECS: readonly OpenApiSourceSpec[] = [
   { name: "TrackingProfile", path: "packages/contracts/openapi/catalog/tracking-profile.yaml" },
   { name: "SaleSyncOps", path: "packages/contracts/openapi/sale-sync-ops/sale-sync-ops.yaml" },
   { name: "Inventory", path: "packages/contracts/openapi/inventory/inventory.yaml" },
+  // Console catalog read (RT-729 contract #855; RT-737): product list, product
+  // detail and categories. Composed only: nothing wraps it yet, the runtime
+  // is RT-730 and the screens are follow-ups. Consume-only; no YAML authored here.
+  { name: "ConsoleCatalog", path: "packages/contracts/openapi/catalog/console-catalog.yaml" },
 ];
 
 /** Upstream source paths (kept for back-compat / documentation references). */
