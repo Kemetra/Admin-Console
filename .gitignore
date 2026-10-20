@@ -40,3 +40,10 @@ ds-bundle/
 .design-sync/learnings/
 .design-sync/node_modules
 .design-sync/fonts/
+
+# RT-750 cloud-e2e (opt-in BrowserStack run): installs, generated config, reports, SDK logs
+cloud-e2e/node_modules/
+cloud-e2e/browserstack.yml
+cloud-e2e/playwright-browserstack-sdk.config.ts
+cloud-e2e/reports/
+cloud-e2e/log/

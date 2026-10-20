@@ -1,0 +1,191 @@
+# RT-750: BrowserStack cross-browser SMOKE of the existing locale-switch E2E spec: Firefox/Windows and
+# Playwright WebKit/macOS, Arabic and English (about 4 sessions per run). Not a required check; the required
+# Chromium CI (ci.yml) is untouched. Results appear in this run's summary (with links) and in BrowserStack
+# Test Reporting & Analytics, one entry per test. Details: cloud-e2e/README.md.
+#
+# Two ways to run:
+#  - manual (workflow_dispatch, main only): environment `browserstack`, restricted by the owner to `main`.
+#    Also the ONLY run that seeds the verified SDK CLI cache.
+#  - automatic on relevant pull requests: OFF until the owner sets the repository variable
+#    BROWSERSTACK_PR_RUNS to 'true' (do that only after the BrowserStack entitlement has been verified).
+#    Same-repository, non-draft PRs by a human owner/member/collaborator only. Forks never run (and
+#    `pull_request` gives forks no secrets). Environment `browserstack-pr`, which must have NO required
+#    reviewers (a person approving every run would defeat the automation) and allows all branches.
+#    Because a pull request runs ITS OWN copy of this file, the `if:` below is a convenience, not a
+#    security boundary: anyone who can push a branch to this repository can edit it. The real controls
+#    are repository write access, the environment's own rules and keeping this variable off.
+#    In this unmodified workflow, PR runs never execute an unverified SDK CLI: they use only the cache
+#    seeded by a manual run on main. (A PR's own edited copy can change that, like every other control.)
+#    WITH THE VARIABLE ON, ANYONE WHO CAN PUSH A BRANCH HERE CAN READ THE KEY: give `browserstack-pr` its own
+#    dedicated, revocable BrowserStack key, never the one used by `browserstack`.
+name: Cross-browser cloud smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      acknowledge_entitlement:
+        description: "I confirm this run may use the existing BrowserStack Open Source entitlement (no purchase or upgrade)"
+        type: boolean
+        required: true
+        default: false
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [main]
+    paths:
+      - "src/**"
+      - "tests/e2e/**"
+      - "cloud-e2e/**"
+      - "index.html"
+      - "vite.config.ts"
+      - "playwright.config.ts"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/cross-browser-cloud.yml"
+      - ".github/scripts/browserstack-binaries.ps1"
+      - ".github/scripts/run-cloud-locale.ps1"
+      - ".github/browserstack-pins.json"
+      - "tsconfig*.json"
+      - "!**/*.md"
+
+permissions:
+  contents: read
+
+# One run per pull request; a newer push cancels the superseded run (its cleanup steps still run).
+# Manual runs share one group and are never cancelled while running (GitHub keeps at most one pending).
+concurrency:
+  group: cross-browser-cloud-${{ github.event.pull_request.number || 'manual' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  cloud-smoke:
+    if: >-
+      (github.event_name == 'workflow_dispatch'
+        && inputs.acknowledge_entitlement
+        && github.ref == 'refs/heads/main')
+      || (github.event_name == 'pull_request'
+        && vars.BROWSERSTACK_PR_RUNS == 'true'
+        && !github.event.pull_request.draft
+        && github.event.pull_request.head.repo.full_name == github.repository
+        && github.event.pull_request.user.type == 'User'
+        && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association))
+    runs-on: windows-latest
+    environment: ${{ github.event_name == 'pull_request' && 'browserstack-pr' || 'browserstack' }}
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      LOCAL_IDENTIFIER: rt750-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check the BrowserStack secrets exist (values are never printed)
+        env:
+          BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+          BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+        run: |
+          if (-not $env:BROWSERSTACK_USERNAME -or -not $env:BROWSERSTACK_ACCESS_KEY) {
+            throw 'BROWSERSTACK_USERNAME / BROWSERSTACK_ACCESS_KEY are not set in this run''s GitHub environment (browserstack for manual runs, browserstack-pr for pull requests).'
+          }
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+
+      - name: Setup Node 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      # The root install never sees the proprietary SDK: it is isolated in cloud-e2e/.
+      - name: Install root dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Build the SPA
+        run: pnpm build
+
+      - name: Serve the built SPA on 4173
+        run: |
+          $vite = Join-Path $PWD 'node_modules/vite/bin/vite.js'
+          $log = Join-Path $env:RUNNER_TEMP 'preview.log'
+          $proc = Start-Process node -PassThru -WindowStyle Hidden -RedirectStandardOutput $log `
+            -RedirectStandardError (Join-Path $env:RUNNER_TEMP 'preview.err.log') `
+            -ArgumentList @("`"$vite`"", 'preview', '--port', '4173', '--strictPort')
+          "PREVIEW_PID=$($proc.Id)" | Out-File -FilePath $env:GITHUB_ENV -Append
+          for ($i = 0; $i -lt 30; $i++) {
+            try { Invoke-WebRequest -Uri 'http://localhost:4173/' -UseBasicParsing -TimeoutSec 3 | Out-Null; $up = $true; break } catch { Start-Sleep -Seconds 1 }
+          }
+          if (-not $up) { throw 'preview server did not start' }
+
+      # The SDK's version and integrity are pinned by cloud-e2e/pnpm-lock.yaml (frozen install).
+      - name: Install the SDK from cloud-e2e (own lockfile, no scripts)
+        run: pnpm --dir cloud-e2e install --frozen-lockfile --ignore-scripts
+
+      # CLI binary integrity. The SDK downloads and runs its own CLI and cannot verify it first, so:
+      #  - cache hit  -> verify hash/size/signature/signer BEFORE use and lock it against accidental
+      #    replacement (preventive for this run);
+      #  - cache miss -> pull_request runs STOP here (no unverified binary ever runs on a PR). A manual run
+      #    on main may continue: the SDK downloads and RUNS the CLI with the key before it can be checked,
+      #    the CLI is verified right after the run (detective) and only then cached. A mismatch fails the
+      #    job: a bad signature means possible compromise (rotate the key); a valid signature with a new
+      #    hash is most likely a vendor release (review it, then bump the pins).
+      # Only the exe is cached; PR runs never save a cache (they could otherwise poison later runs).
+      - name: Restore the verified SDK CLI binary (if cached)
+        id: cli-cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.browserstack/cli/binary-win-x64.exe
+          key: bs-cli-win-x64-${{ hashFiles('.github/browserstack-pins.json') }}
+
+      - name: Refuse to run an unverified SDK CLI on a pull request
+        if: ${{ github.event_name == 'pull_request' && steps.cli-cache.outputs.cache-hit != 'true' }}
+        run: |
+          throw 'No verified SDK CLI cache for the current pins. Seed it by running "Cross-browser cloud smoke" manually on main (workflow_dispatch); pull request runs never execute an unverified vendor binary.'
+
+      # Without a cached binary the script only writes the "runs unverified" line to the summary.
+      - name: Verify and lock the SDK CLI binary (if cached)
+        run: ./.github/scripts/browserstack-binaries.ps1 -Action cli-verify
+
+      - name: Start BrowserStack Local (hash + signature verified, started once)
+        env:
+          BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+          BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+        run: ./.github/scripts/browserstack-binaries.ps1 -Action local-start -Identifier $env:LOCAL_IDENTIFIER
+
+      - name: Cloud run - Arabic
+        id: run-ar
+        env:
+          BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+          BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+        run: ./.github/scripts/run-cloud-locale.ps1 -Locale ar -LocalIdentifier $env:LOCAL_IDENTIFIER
+
+      - name: Cloud run - English
+        id: run-en
+        if: ${{ !cancelled() && steps.run-ar.conclusion != 'skipped' }}
+        env:
+          BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+          BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+        run: ./.github/scripts/run-cloud-locale.ps1 -Locale en -LocalIdentifier $env:LOCAL_IDENTIFIER
+
+      - name: Re-verify the SDK CLI binary after the run
+        id: cli-recheck
+        if: ${{ always() && steps.run-ar.conclusion != 'skipped' }}
+        run: ./.github/scripts/browserstack-binaries.ps1 -Action cli-recheck
+
+      # Manual runs on main only: the one place an unverified CLI may run, and the only cache writer.
+      - name: Save the verified SDK CLI binary to the cache
+        if: ${{ always() && github.event_name == 'workflow_dispatch' && steps.cli-cache.outputs.cache-hit != 'true' && steps.cli-recheck.outcome == 'success' }}
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.browserstack/cli/binary-win-x64.exe
+          key: bs-cli-win-x64-${{ hashFiles('.github/browserstack-pins.json') }}
+
+      - name: Stop the tunnel and the preview server
+        if: ${{ always() }}
+        run: |
+          ./.github/scripts/browserstack-binaries.ps1 -Action local-stop -Identifier $env:LOCAL_IDENTIFIER
+          if ($env:PREVIEW_PID) { Stop-Process -Id ([int]$env:PREVIEW_PID) -Force -ErrorAction SilentlyContinue }
