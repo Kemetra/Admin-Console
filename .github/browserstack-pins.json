@@ -1,15 +1,13 @@
 {
-  "_comment": "RT-750 integrity pins for the cloud E2E workflow (the SDK itself is pinned by cloud-e2e/pnpm-lock.yaml). Changing any value is a reviewed PR: re-verify the artifact and its signature first. Never copy a hash from a failing run's own log without verifying the signature.",
+  "_comment": "RT-750 integrity pins for the cross-browser cloud workflow (the SDK itself is pinned by cloud-e2e/pnpm-lock.yaml). The SDK downloads and runs both binaries itself, so they are verified after each run (detective). Changing any value is a reviewed PR: re-verify the artifact and its signature first. Never copy a hash from a failing run's own log without verifying the signature.",
   "local": {
-    "url": "https://www.browserstack.com/browserstack-local/BrowserStackLocal-win32.zip",
-    "zipSha256": "1C794DEADC92AD30CFBE64BC00D599B3027BF9BC9666FCC57261A95EE059F28E",
+    "relativePath": ".browserstack\\BrowserStackLocal.exe",
     "exeSha256": "0069D7779457663935253A251F988702575CE9607021C01D83AA5144AF68D5EA",
     "signer": "BrowserStack, Inc."
   },
   "cli": {
     "relativePath": ".browserstack\\cli\\binary-win-x64.exe",
     "sha256": "32AEED47F71696DDF03357A09F250572E5BFA76128271285088EED6B1F08598E",
-    "size": 65984048,
     "signer": "BrowserStack, Inc."
   }
 }

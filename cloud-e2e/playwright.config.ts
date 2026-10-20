@@ -6,7 +6,7 @@ import type { LocaleFixtures } from "../tests/e2e/fixtures";
 //
 // Locale: browserstack-node-sdk replaces project names and drops PROJECT-level `use`, so the
 // locale is set at TOP level from E2E_LOCALE. One SDK run per locale; per-locale build names
-// (see browserstack.template.yml) keep `ar` and `en` in separate TRA builds. The browser's own
+// (set in the workflow) keep `ar` and `en` in separate TRA builds. The browser's own
 // locale is set against the app locale on purpose (UX-12), exactly as in ../playwright.config.ts.
 const BROWSER_LOCALE = { ar: "en-US", en: "ar-EG" } as const;
 
@@ -30,7 +30,7 @@ export default defineConfig<Pick<LocaleFixtures, "appLocale">>({
   // Remote browsers are slower than local Chromium (RT-746). Cloud runs only: the required CI keeps
   // Playwright's default.
   timeout: 120_000,
-  // JSON feeds the run summary and the "no silent green" checks in run-cloud-locale.ps1.
+  // JSON feeds the "no silent green" checks in the workflow (cross-browser-cloud.yml).
   reporter: [["list"], ["json", { outputFile: `reports/${locale}/results.json` }]],
   outputDir: `reports/${locale}/test-output`,
   use: {
