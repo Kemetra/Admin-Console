@@ -20,19 +20,44 @@ without a new owner decision. The licence also covers usage-data collection by B
 
 ## When it runs
 
-Only **manually** (`workflow_dispatch`), **on `main`**, with `acknowledge_entitlement` ticked, in the GitHub
-environment `browserstack`. There is **no `pull_request` trigger**, so the key never meets pull-request code.
+Two ways, both in the GitHub environment `browserstack`, both executing only code from `main`:
+
+* **Manually** (`workflow_dispatch`), on `main`, with `acknowledge_entitlement` ticked. Builds the SPA from `main`.
+* **Automatically for pull requests**, in two workflows:
+  1. `cross-browser-pr-build.yml` (`pull_request`, **no secrets, read-only token, no environment**) builds the PR's
+     merge result with `main` (what `pull_request` checks out) and uploads `dist/` as the artifact `spa-dist`. It starts only when an app build input changes (`src/**`,
+     `index.html`, `vite.config.ts`, `tsconfig.json`, `package.json`, `pnpm-lock.yaml`), never for draft PRs, and a
+     newer push to the same PR cancels the older build.
+  2. `cross-browser-cloud.yml` starts on `workflow_run` of that build. GitHub always reads a `workflow_run` workflow
+     from the default branch, so a PR cannot edit it. It runs only for a **successful** build of a pull request
+     from **this repository** (forks never spend the key), and only while the repository variable
+     `BROWSERSTACK_PR_RUNS` is `true`. It checks out `main`, downloads the artifact to the runner temp directory,
+     checks it is plain static files, serves it with `vite preview --outDir`, and runs `main`'s spec and config
+     against it. It posts the result as a commit status `Cross-browser cloud smoke` on the PR head (pending, then
+     success, failure or error). Never make it a required check.
+
+There is **no `pull_request_target` trigger and no pull-request code runs next to the key**. The PR's package
+scripts and vite config run only in the unprivileged build; the credentialed job runs `main`'s tooling and serves the
+PR's built files (the remote browser executes that JavaScript, and cannot read the key).
 
 **Owner setup (once):** the environment `browserstack` holds `BROWSERSTACK_USERNAME` and `BROWSERSTACK_ACCESS_KEY`
-and its deployment branches are limited to `main` (a repository setting, not part of the workflow file; the
-workflow's own `if:` is not a boundary because a branch can edit it). Required reviewers are recommended.
+and its deployment branches are limited to `main` (a repository setting, not part of the workflow file). A
+`workflow_run` job runs on the default branch, so that policy admits it and no second environment or key is needed.
+Required reviewers are optional. Automatic runs stay **off** until the entitlement is verified and the owner sets the
+repository variable `BROWSERSTACK_PR_RUNS=true`; the variable is a cost switch, the boundary is the trigger model.
+
+**What an automatic run does not cover.** It exercises `main`'s spec, fixtures and `src/i18n` against the PR's build:
+a PR's own test or cloud-config edits do not run before merge (run the workflow manually on `main` after merging
+them), and a PR that changes a string the spec asserts can fail until the spec on `main` is updated.
 
 ## What is bounded
 
 * **Sessions** — set in `playwright.config.ts`: one worker per platform, no retries, `maxFailures: 2`. One session
   per platform per locale when everything passes: **4 expected, 8 at the very most per run**. Raising either number
   raises the bound.
-* **Time** — 20-minute job timeout; one run at a time.
+* **Time** — 20-minute job timeout. **One cloud run at a time across all pull requests** (`concurrency`, never
+  cancelled; GitHub keeps one pending run, so a newer pending run replaces an older pending one). Draft PRs and PRs that
+  touch no app build input start nothing.
 * **No silent green** — the SDK can exit 0 without running a test. The workflow fails a locale when
   `results.json` is missing, nothing executed, a test failed, the SDK exit code is not 0, or a configured platform
   executed no test.
@@ -79,7 +104,9 @@ in `.github/browserstack-pins.json` (SDK: regenerate `cloud-e2e/pnpm-lock.yaml` 
 
 ## Known limits
 
-Windows runner only (both vendor binaries are signed there); WebKit ≠ native Safari; only the locale-switch spec runs
+SDK-managed Local has no `--only localhost,4173` scope, so JavaScript from a PR build, running in the remote browser, can
+reach the runner's network through the tunnel (not the key); scoping it needs its own small proof, as an untested Local
+option broke run #4; Windows runner only (both vendor binaries are signed there); WebKit ≠ native Safari; only the locale-switch spec runs
 in the cloud (the axe specs need a 120 s timeout and many more sessions); the account's desktop/TRA allowance is not
 visible through its API, so usage is bounded by the config above and the plan's own limits, not by a verified quota.
 Proven so far: one test (`locale-switch.spec.ts:38`) on both browsers in Arabic; the other three tests and the English
