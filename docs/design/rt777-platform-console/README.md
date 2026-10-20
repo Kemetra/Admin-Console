@@ -37,7 +37,7 @@ Method: contract files read from Backend-Core at `62f8699`; `x-runtime-status` a
 
 | # | Screen and states | Contract it needs | A / B / C | Stays «تصميم فقط» | Review notes |
 |---|---|---|---|---|---|
-| 20 | Support session start (drawer) | `openSupportSession` {`tenant_id`, `purpose`, `ticket_ref?`}; 404 `TenantNotFound`; 409 `already_member`; 403/429 | A yes / B **no** / C **no** | The free-text «سبب الوصول (إلزامي)» field: the request body is `additionalProperties: false`, so there is nowhere to send it. «مرجع التذكرة» and «الغرض» match the contract (enum and pattern). | RT-414 decision 4 kept free text out of the tenant-visible audit row. See OQ-1. The scope text («للقراءة فقط… 60 دقيقة… حد 8 ساعات») matches the contract. |
+| 20 | Support session start (drawer) | `openSupportSession` {`tenant_id`, `purpose`, `ticket_ref?`}; 404 `TenantNotFound`; 409 `already_member`; 403/429 | A yes / B **no** / C **no** | The free-text «سبب الوصول (إلزامي)» field is dropped (DEC-1): the request body is `additionalProperties: false`. «مرجع التذكرة» and «الغرض» match the contract (enum and pattern). | RT-414 decision 4 kept free text out of the tenant-visible audit row. See DEC-1. The scope text («للقراءة فقط… 60 دقيقة… حد 8 ساعات») matches the contract. |
 | 21 | Support session active (banner + session ledger) | `getActiveContext` (`support_session`, pinned) for the banner; `endSupportSession`; `renewSupportSession`; the ledger reuses tenant reads (`consoleGetSaleSyncStatus`, `consoleListNeedsRepair`) | banner: A/B/C yes for the read, but no session can exist (C **no** for the write ops); ledger: A/B/C yes | «إعادة محاولة ترحيل البيعين الفاشلين» (a write inside a read-only session), «فتح مساحة المؤسسة» | The screens state «بلا مبالغ ولا بيانات عملاء». The existing sale reads return amounts and lines, so that is not enforced server-side today. See OQ-4. |
 | 22 | Expiring | `getActiveContext` `expires_at`, `renewal_cap_at`; `renewSupportSession` | as 21 | none | Countdown is computed client-side from server `expires_at`. |
 | 23 | Renewed | `renewSupportSession` 200 (`renewed_at` set) | A yes / B no / C no | none | |
@@ -130,9 +130,9 @@ For owner review. None is opened. Each slice is one repo unless stated. Common a
 | Slice | Repo | Depends on | Acceptance criteria |
 |---|---|---|---|
 | **S0** Backend-Core runtime for RT-414 | Backend-Core | the `platform_support_sessions` migration GATE; the suspended-tenant wording PR (GATED) | The four operations are served; `x-runtime-status` removed; one `platform.cross_tenant.accessed` row per covered request; a suspended tenant opens a read-only session. This is RT-414, not a new issue. |
-| **S1** Repin and `/platform` gate | Admin-Console | S0 (or its contract PR) for the pin; `contracts-repin.yml` | The PIN includes `platform-support-sessions.openapi.yaml`; generated types compile. `/platform` renders for `is_platform_admin` with no membership and no active tenant; others get a non-disclosing no-access; unit tests for the gate. |
+| **S1** Repin and `/platform` gate (first slice; must land before any `/platform` UI) | Admin-Console | S0 (the RT-414 runtime, in progress in Backend-Core) and a repin of `platform-support-sessions.openapi.yaml`; `contracts-repin.yml` | The PIN includes `platform-support-sessions.openapi.yaml`; generated types compile. A platform-admin entry path exists: `/platform` renders for `is_platform_admin` with no membership and no active tenant; others get a non-disclosing no-access; unit tests for the gate. |
 | **S2** Support session bar and lifecycle | Admin-Console | S1, S0 served | Bar shows purpose, ticket, remaining time (from server `expires_at`), renew, end. States: active, expiring, expired, cap reached. Renew and end call the operations; 409 codes map to the screen states; a 403 `support_session_expired` on any tenant call switches to the expired bar. No write control exists in a session. |
-| **S3** Tenant directory and start flow | Admin-Console | S1, S2, `listTenants`, S0 wording PR | Directory lists `listTenants`; start drawer sends `purpose` and optional `ticket_ref` only (client-validated with the contract pattern); 404 shows the single non-disclosing state; 409 `already_member` links to the normal switch; suspended tenant opens read-only with break-glass absent. |
+| **S3** Tenant directory and start flow | Admin-Console | S1, S2, `listTenants`, S0 wording PR | Directory lists `listTenants`; start drawer sends `purpose` and optional `ticket_ref` only (client-validated with the contract pattern; no free-text reason, DEC-1); 404 shows the single non-disclosing state; 409 `already_member` links to the normal switch; suspended tenant opens read-only with break-glass absent. |
 | **S4** Support-scoped read views | Admin-Console + Backend-Core | S2; a support-scoped projection with no amounts, lines or customer data (OQ-4) | Search by sale ID or device ID inside the session; status, outcome, document reference and IDs only (D4); a test proves the amounts are absent from the server response, not hidden in the browser. |
 | **S5** Owner-visible audit | Admin-Console | S0 | An owner or tenant admin sees `platform.support_session.*` and `platform.cross_tenant.accessed` rows in the existing audit view with recognisable labels (no new filter needed). |
 | **S6** Platform audit read | Backend-Core then Admin-Console | RT-431 contract and owner decisions | Read-only list of null-tenant platform audit rows for platform admins, behind `/platform/audit`. Not pilot. |
@@ -145,7 +145,6 @@ Ordering for a pilot: S0 → S1 → S2 → S3 → S5, with S4 before any tenant 
 
 | # | Question | Recommended answer |
 |---|---|---|
-| OQ-1 | Screen 20 has a mandatory free-text «سبب الوصول» field. The contract has no such field. | **Drop it from the design.** The purpose enum and `ticket_ref` are the stated reason (RT-414 decision 4 excluded free text from the tenant-visible row). If the owner wants a free-text reason, raise it as a GATED contract change with a length bound and a rule on who sees it. |
 | OQ-2 | Suspended tenant: the merged `TenantNotFound` text says «deleted or otherwise unavailable». | Ship the GATED wording PR first (RT-414 comment 11737 already decided it). S3 acceptance depends on it. |
 | OQ-3 | The `/platform` gate: where does a platform admin with no membership land? | `/platform/tenants`. Never ScopeGate. Branch on `user.is_platform_admin`. |
 | OQ-4 | D4 says no amounts or customer data in a support view, but the existing reads return them. | Add a Backend-Core support-scoped projection (P0-b-adjacent) and test it at the API. Until then, S4 stays blocked and the support views show only fields the existing reads already limit; do not hide data in the browser. |
@@ -156,6 +155,12 @@ Ordering for a pilot: S0 → S1 → S2 → S3 → S5, with S4 before any tenant 
 | OQ-9 | `support_session` is shown in the pinned `getActiveContext` but cannot exist yet. Build the bar now? | No. Build it with S2, against a served runtime, so it is tested against real states. |
 | OQ-10 | Does a platform admin who is a tenant member need a support session? | No (contract). The `/platform` bar must not show for a member-entered tenant (`support_session` is null there). |
 | OQ-11 | The repin: who performs it and when? | S1, through `contracts-repin.yml`, as its own reviewed PR; adding `console-sales-summary` for screen 44 goes in a separate repin. |
+
+## 5a. Decisions recorded in this review
+
+| # | Decision | Source |
+|---|---|---|
+| DEC-1 | Screen 20 drops the free-text «سبب الوصول» field. The purpose enum plus the optional `ticket_ref` are the reason, consistent with RT-414 decision 4. A bounded reason field would be a future GATED contract change and is not recommended. | Parent session, under owner delegation, 2026-10-21 |
 
 ## 6. Gaps in this review
 
