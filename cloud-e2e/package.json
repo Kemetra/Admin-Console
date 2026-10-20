@@ -1,0 +1,14 @@
+{
+  "name": "retail-tower-console-cloud-e2e",
+  "version": "0.0.0",
+  "private": true,
+  "description": "RT-750: opt-in BrowserStack cloud E2E runner. Isolated from the root install on purpose: browserstack-node-sdk is proprietary (see README.md).",
+  "license": "Apache-2.0",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": "^22.22.3 || >=24.8.0"
+  },
+  "devDependencies": {
+    "browserstack-node-sdk": "1.73.4"
+  }
+}
