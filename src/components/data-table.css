@@ -88,6 +88,17 @@
   min-inline-size: 44px;
   padding-inline: var(--space-4) 0;
 }
+/* RT-756: with selection on, the row is not a click target (the «Open» button
+ * is), so it no longer shows the pointer. */
+.data-table__row--static {
+  cursor: default;
+}
+.data-table thead th.data-table__open,
+.data-table__row td.data-table__open {
+  inline-size: 1%;
+  white-space: nowrap;
+  padding-inline: var(--space-2);
+}
 .data-table__checkbox {
   inline-size: 18px;
   block-size: 18px;

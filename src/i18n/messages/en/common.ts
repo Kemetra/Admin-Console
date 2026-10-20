@@ -44,6 +44,8 @@ export const common: MessagesOf<typeof ar> = {
   "table.selection.column": "Select",
   "table.selection.selectPage": "Select all rows on this page",
   "table.selection.selectRow": "Select {value}",
+  "table.selection.open": "Open",
+  "table.selection.openRow": "Open {value}",
   "table.selection.pageCount": {
     zero: "No rows selected on this page",
     one: "1 selected on this page",

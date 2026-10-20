@@ -113,3 +113,42 @@ export function SelectCell({
     </td>
   );
 }
+
+/**
+ * RT-756 (UX-10 "Selection ≠ Navigation"): with selection on, the row is no
+ * longer a target, so opening it is an explicit control. The header carries
+ * readable text so the column is not an empty header.
+ */
+export function OpenHeader(): React.JSX.Element {
+  const t = useT();
+  return (
+    <th scope="col" className="data-table__open">
+      <span className="sr-only">{t("table.selection.open")}</span>
+    </th>
+  );
+}
+
+/**
+ * The explicit row-open button. Its visible label is «Open»; the accessible
+ * name adds the row's name ("Open Alpha") so it contains the visible label
+ * (WCAG 2.5.3) and tells rows apart. A native button: Enter and Space work, and
+ * the shared secondary style carries the 36px target floor.
+ */
+export function OpenCell({
+  label,
+  onOpen,
+}: Readonly<{ label: string; onOpen: () => void }>): React.JSX.Element {
+  const t = useT();
+  return (
+    <td className="data-table__open">
+      <button
+        type="button"
+        className="btn-secondary"
+        aria-label={t("table.selection.openRow", { value: label })}
+        onClick={onOpen}
+      >
+        {t("table.selection.open")}
+      </button>
+    </td>
+  );
+}
