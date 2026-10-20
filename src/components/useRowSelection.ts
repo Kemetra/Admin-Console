@@ -55,6 +55,12 @@ export function useRowSelection(scopeKey: string, rowKeys: readonly string[]): R
     return new Set(rowKeys.filter((k) => current.keys.has(k)));
   }, [current.mode, current.keys, rowKeys]);
 
+  // A row that left the list is dropped from the stored selection itself, not
+  // just from the view, so it is not selected again if it comes back.
+  if (current.mode === "page" && selectedKeys.size !== current.keys.size) {
+    setState({ scope: scopeKey, keys: selectedKeys, mode: "page" });
+  }
+
   const setSelectedKeys = useCallback(
     (next: ReadonlySet<string>) => setState({ scope: scopeKey, keys: next, mode: "page" }),
     [scopeKey],

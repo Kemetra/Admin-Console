@@ -146,9 +146,34 @@ describe("DataTable selection column", () => {
 });
 
 describe("SelectionSummary", () => {
-  test("renders nothing when nothing is selected", () => {
-    const { container } = render(<SelectionSummary selectedCount={0} onClear={() => {}} />);
-    expect(container.firstChild).toBeNull();
+  test("with nothing selected it keeps an empty polite status mounted and shows no controls", () => {
+    render(<SelectionSummary selectedCount={0} onClear={() => {}} />);
+    const status = screen.getByRole("status");
+    expect(status.textContent).toBe("");
+    expect(status.getAttribute("aria-live")).toBe("polite");
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  test("the same status element announces the first selection (it is not remounted)", () => {
+    const { rerender } = render(<SelectionSummary selectedCount={0} onClear={() => {}} />);
+    const before = screen.getByRole("status");
+    rerender(<SelectionSummary selectedCount={1} onClear={() => {}} />);
+    expect(screen.getByRole("status")).toBe(before);
+    expect(before.textContent).toBe("1 selected on this page");
+  });
+
+  test("the action buttons sit outside the live region so a count change never re-reads them", () => {
+    render(
+      <SelectionSummary
+        selectedCount={3}
+        onClear={() => {}}
+        allMatching={{ total: 120, onSelect: () => {} }}
+      />,
+    );
+    const status = screen.getByRole("status");
+    expect(status.querySelector("button")).toBeNull();
+    expect(status.textContent).toBe("3 selected on this page");
+    expect(screen.getByRole("button", { name: "Clear selection" })).toBeTruthy();
   });
 
   test("names the scope as this page and is a polite live region", () => {
@@ -177,7 +202,7 @@ describe("SelectionSummary", () => {
         allMatching={{ total: 120, onSelect }}
       />,
     );
-    fireEvent.click(screen.getByRole("button", { name: "Select all 120 matching" }));
+    fireEvent.click(screen.getByRole("button", { name: "Select all 120 matching rows" }));
     expect(onSelect).toHaveBeenCalledTimes(1);
   });
 
@@ -254,6 +279,16 @@ describe("useRowSelection", () => {
     });
     act(() => result.current.setSelectedKeys(new Set(["a", "c"])));
     rerender({ listed: ["a", "b"] });
+    expect([...result.current.selectedKeys]).toEqual(["a"]);
+  });
+
+  test("a row that left the list and comes back is not selected again", () => {
+    const { result, rerender } = renderHook(({ listed }) => useRowSelection("s", listed), {
+      initialProps: { listed: keys },
+    });
+    act(() => result.current.setSelectedKeys(new Set(["a", "c"])));
+    rerender({ listed: ["a", "b"] });
+    rerender({ listed: keys });
     expect([...result.current.selectedKeys]).toEqual(["a"]);
   });
 

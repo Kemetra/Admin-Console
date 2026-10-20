@@ -83,8 +83,12 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
-  padding-block: var(--space-3);
   color: var(--color-text);
+}
+/* The status is always mounted (empty when nothing is selected), so the bar
+ * takes space only while a selection exists. */
+.data-table__selection[data-active="true"] {
+  padding-block: var(--space-3);
 }
 
 .data-table__cell--mono {

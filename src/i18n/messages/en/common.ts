@@ -57,7 +57,7 @@ export const common: MessagesOf<typeof ar> = {
   "table.selection.selectAllMatching": {
     zero: "No matching rows",
     one: "Select the only matching row",
-    other: "Select all {count} matching",
+    other: "Select all {count} matching rows",
   },
   "table.selection.clear": "Clear selection",
 

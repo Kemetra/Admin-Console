@@ -31,27 +31,34 @@ export function SelectionSummary({
   mode = "page",
   allMatching,
   onClear,
-}: Readonly<SelectionSummaryProps>): React.JSX.Element | null {
+}: Readonly<SelectionSummaryProps>): React.JSX.Element {
   const t = useT();
   const inAllMatching = mode === "all-matching" && allMatching !== undefined;
-  if (selectedCount === 0 && !inAllMatching) return null;
-
+  const active = selectedCount > 0 || inAllMatching;
   const offer = !inAllMatching && allMatching !== undefined && allMatching.total > selectedCount;
-  const text = inAllMatching
-    ? t("table.selection.allMatching", { count: allMatching.total })
-    : t("table.selection.pageCount", { count: selectedCount });
 
+  let text = "";
+  if (inAllMatching) text = t("table.selection.allMatching", { count: allMatching.total });
+  else if (active) text = t("table.selection.pageCount", { count: selectedCount });
+
+  // The polite status stays mounted (empty until a selection exists) so the
+  // first 0 -> 1 change is announced, and the buttons sit outside it so a count
+  // change never re-reads their labels.
   return (
-    <output className="data-table__selection" aria-live="polite">
-      <span>{text}</span>
-      {offer ? (
-        <button type="button" className="btn-secondary" onClick={allMatching.onSelect}>
-          {t("table.selection.selectAllMatching", { count: allMatching.total })}
-        </button>
+    <div className="data-table__selection" data-active={active}>
+      <output aria-live="polite">{text}</output>
+      {active ? (
+        <>
+          {offer ? (
+            <button type="button" className="btn-secondary" onClick={allMatching.onSelect}>
+              {t("table.selection.selectAllMatching", { count: allMatching.total })}
+            </button>
+          ) : null}
+          <button type="button" className="btn-secondary" onClick={onClear}>
+            {t("table.selection.clear")}
+          </button>
+        </>
       ) : null}
-      <button type="button" className="btn-secondary" onClick={onClear}>
-        {t("table.selection.clear")}
-      </button>
-    </output>
+    </div>
   );
 }
