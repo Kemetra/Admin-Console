@@ -72,8 +72,8 @@ function storeSortValue(s: StoreRow, key: string): SortValue {
 }
 
 /**
- * The sort belongs to the tenant it was chosen under (UX-10: scope changes
- * reset what no longer applies). `GET /api/v1/stores` returns the tenant's
+ * The sort belongs to the tenant it was chosen under and is dropped when the
+ * active tenant changes (UX-10: scope changes reset what no longer applies). `GET /api/v1/stores` returns the tenant's
  * COMPLETE roster (no cursor, limit or cap), so ordering it here is
  * dataset-level, not a viewport sort of loaded pages.
  */
@@ -113,6 +113,11 @@ export function StoreList(): React.JSX.Element {
   const { result, isLoading, refetch } = useStoreList(activeTenantId);
   const navigate = useNavigate();
   const [chosen, setChosen] = useState<StoreSort>({ tenantId: null, sort: null });
+  // A scope change drops the stored sort itself (not only its view), so coming
+  // back to an earlier tenant cannot resurrect it.
+  if (chosen.tenantId !== activeTenantId && chosen.sort !== null) {
+    setChosen({ tenantId: activeTenantId, sort: null });
+  }
 
   // Pre-gate: no active tenant -> scope prompt, no listStores issued (OQ-4).
   if (!activeTenantId) {

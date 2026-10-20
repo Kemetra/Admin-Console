@@ -37,6 +37,11 @@ export interface RowSelection {
   readonly clear: () => void;
 }
 
+/**
+ * `rowKeys` are the keys of the rows currently listed. Memoise them (or pass a
+ * stable array): `selectedKeys` is recomputed whenever the array identity
+ * changes, so an inline `rows.map(rowKey)` yields a new Set every render.
+ */
 export function useRowSelection(scopeKey: string, rowKeys: readonly string[]): RowSelection {
   const [state, setState] = useState<State>(() => fresh(scopeKey));
   const stale = state.scope !== scopeKey;

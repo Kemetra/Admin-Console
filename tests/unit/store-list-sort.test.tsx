@@ -160,4 +160,23 @@ describe("StoreList sorting (RT-753)", () => {
     await screen.findByText("Zamalek");
     expect(names()).toEqual(["Zamalek", "Mall 10", "Mall 2"]);
   });
+
+  test("returning to the first tenant does not bring its old sort back", async () => {
+    const view = renderList();
+    await screen.findByText("Zamalek");
+    fireEvent.click(screen.getByRole("button", { name: "Store" }));
+    expect(names()[0]).toBe("Mall 2");
+
+    activeContext.mockReturnValue(tenant("t2"));
+    view.rerenderList();
+    await screen.findByText("Zamalek");
+
+    activeContext.mockReturnValue(tenant("t1"));
+    view.rerenderList();
+    await screen.findByText("Zamalek");
+    expect(names()).toEqual(["Zamalek", "Mall 10", "Mall 2"]);
+    expect(screen.getByRole("columnheader", { name: "Store" }).hasAttribute("aria-sort")).toBe(
+      false,
+    );
+  });
 });
