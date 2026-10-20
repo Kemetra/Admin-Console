@@ -30,12 +30,6 @@ on:
 permissions:
   contents: read
 
-# One cloud run at a time (this bounds sessions across all pull requests); a running run is never cancelled and
-# GitHub keeps at most one pending, so a newer pending run replaces an older pending one.
-concurrency:
-  group: cross-browser-cloud
-  cancel-in-progress: false
-
 jobs:
   cloud-smoke:
     # Main only for the manual run (here and in the environment's deployment-branch policy, a repository setting).
@@ -49,6 +43,13 @@ jobs:
           github.event.workflow_run.event == 'pull_request' &&
           github.event.workflow_run.head_repository.full_name == github.repository)
       }}
+    # One cloud run at a time (this bounds sessions across all pull requests); a running run is never cancelled and
+    # GitHub keeps at most one pending, so a newer pending run replaces an older pending one. On the JOB, not the
+    # workflow: a job skipped by the `if:` above (fork PR, failed or cancelled build) never takes a slot, so it cannot
+    # evict a real pending run.
+    concurrency:
+      group: cross-browser-cloud
+      cancel-in-progress: false
     runs-on: windows-latest
     environment: browserstack
     timeout-minutes: 20
