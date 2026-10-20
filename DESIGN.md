@@ -350,6 +350,21 @@ These classes exist on `main` and new work reuses them until a migration slice r
   `--color-focus-ring`. No box-shadow-only focus remains; new work keeps the outline.
 - **Gold:** retired by RT-396 (the scope header, nav marker and icon, `TowerMark`,
   `.badge--gold` and the gold shadow ring). Do not reintroduce it.
+- **DataTable sort and selection (RT-753, UX-10):** the table never reorders or counts
+  anything itself; the caller owns both.
+  - *Sort:* mark a column `sortable` and pass `sort` / `onSortChange`. Use
+    `sortRows` (`src/components/tableSort.ts`) only for a complete in-memory set; a paged
+    or server-backed list sorts at the query layer, never by reordering the visible page.
+  - *Selection:* wire `useRowSelection(scopeKey, rowKeys)` to `DataTable`'s `selection`
+    prop and `SelectionSummary`. Put the tenant, store, filters **and sort** in
+    `scopeKey`, so changing any of them clears the selection. Memoise `rowKeys`.
+  - Only rows currently listed count. The count names its scope ("selected on this
+    page"). Offer "select all matching" only when the caller has an authoritative total
+    and a handler; with no backend contract, leave `allMatching` out.
+  - A checkbox toggles selection only; it never opens the row.
+  - Composed behaviour is pinned in `tests/unit/data-table-selection.test.tsx`. Known
+    gaps: RT-756 (explicit selection-mode open control), RT-757 (36px target-size owner
+    decision), RT-758 (sort glyph and a way back to server order).
 
 ## 10. Migration debts
 
