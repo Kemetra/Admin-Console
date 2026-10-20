@@ -340,7 +340,7 @@ These classes exist on `main` and new work reuses them until a migration slice r
 - **Banner** `.rtc-alert--{danger,warning,success,info}`: persistent operational state, not a
   toast.
 - **Inputs** `.input` and `.field`. Errors use `aria-invalid` plus inline text.
-- **DataTable** (`src/components/DataTable.tsx`), **Drawer** (focus-trapped dialog), and
+- **DataTable** (`src/components/DataTable.tsx`; usage rules in the notes below), **Drawer** (focus-trapped dialog), and
   **ListState** (loading / empty).
 - **Shell** (`src/shell/`): topbar, a recessed (`surface-sunken`) scope header, and a sidebar
   whose active entry takes the teal wash and the teal Signal Line (RT-396).
@@ -350,6 +350,23 @@ These classes exist on `main` and new work reuses them until a migration slice r
   `--color-focus-ring`. No box-shadow-only focus remains; new work keeps the outline.
 - **Gold:** retired by RT-396 (the scope header, nav marker and icon, `TowerMark`,
   `.badge--gold` and the gold shadow ring). Do not reintroduce it.
+- **DataTable sort and selection (RT-753, UX-10):** the table never reorders rows and
+  never owns the sort order, the selection state or the count; the caller owns all three.
+  - *Sort:* mark a column `sortable` and pass `sort` / `onSortChange`. Use
+    `sortRows` (`src/components/tableSort.ts`) only for a complete in-memory set; a paged
+    or server-backed list sorts at the query layer, never by reordering the visible page.
+  - *Selection:* wire `useRowSelection(scopeKey, rowKeys)` to `DataTable`'s `selection`
+    prop and `SelectionSummary`. Put the tenant, store, filters **and sort** in
+    `scopeKey`, so changing any of them clears the selection. Memoise `rowKeys`.
+  - Only rows currently listed count. The count names its scope ("selected on this
+    page"). Offer "select all matching" only when the caller has an authoritative total
+    and a handler; with no backend contract, leave `allMatching` out.
+  - A checkbox toggles selection only; it never opens the row. The row itself is still a
+    click target and tab stop with selection on (RT-756).
+  - Composed behaviour is pinned in `tests/unit/data-table-selection.test.tsx`. Known
+    gaps: RT-756 (an explicit open control in selection mode is not built yet), RT-757
+    (sort button and checkboxes are below the 36px floor, owner decision pending), RT-758
+    (dedicated sort glyph and a way back to server order).
 
 ## 10. Migration debts
 

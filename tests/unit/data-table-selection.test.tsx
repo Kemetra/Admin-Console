@@ -2,6 +2,7 @@ import { DataTable, type DataTableColumn } from "@/components/DataTable";
 import { SelectionSummary } from "@/components/SelectionSummary";
 import { useRowSelection } from "@/components/useRowSelection";
 import { act, fireEvent, render, renderHook, screen, within } from "@testing-library/react";
+import { useMemo } from "react";
 import { describe, expect, test, vi } from "vitest";
 
 /**
@@ -323,5 +324,118 @@ describe("useRowSelection", () => {
     rerender({ scope: "two" });
     expect(result.current.mode).toBe("page");
     expect(result.current.selectedKeys.size).toBe(0);
+  });
+});
+
+/**
+ * RT-759 — the three pieces wired the way a screen will wire them. Each piece
+ * is covered alone above; this is the contract a consumer relies on once they
+ * are composed: the count names its scope, the header checkbox and the
+ * summary agree, and nothing selected outlives the scope or the list.
+ */
+function SelectionHarness(props: { scope: string; rows: Row[]; total?: number }) {
+  const listed = useMemo(() => props.rows.map((r) => r.id), [props.rows]);
+  const sel = useRowSelection(props.scope, listed);
+  return (
+    <>
+      <SelectionSummary
+        selectedCount={sel.selectedKeys.size}
+        mode={sel.mode}
+        onClear={sel.clear}
+        allMatching={
+          props.total === undefined
+            ? undefined
+            : { total: props.total, onSelect: sel.selectAllMatching }
+        }
+      />
+      <DataTable
+        caption="Items"
+        columns={columns}
+        rows={props.rows}
+        rowKey={(r) => r.id}
+        onRowActivate={() => {}}
+        selection={{
+          selectedKeys: sel.selectedKeys,
+          onSelectionChange: sel.setSelectedKeys,
+          rowLabel: (r) => r.name,
+        }}
+      />
+    </>
+  );
+}
+
+const checkbox = (name: string) => screen.getByRole("checkbox", { name }) as HTMLInputElement;
+const pageBox = () => checkbox("Select all rows on this page");
+const status = () => screen.getByRole("status").textContent ?? "";
+
+describe("DataTable + useRowSelection + SelectionSummary, composed", () => {
+  test("nothing selected: an empty status and no bulk buttons", () => {
+    render(<SelectionHarness scope="s" rows={rows} />);
+    expect(status()).toBe("");
+    expect(screen.queryAllByRole("button")).toHaveLength(0);
+  });
+
+  test("one row selected: the count names the page and the header shows mixed", () => {
+    render(<SelectionHarness scope="s" rows={rows} />);
+    fireEvent.click(checkbox("Select Beta"));
+    expect(status()).toContain("1 selected on this page");
+    expect(pageBox().indeterminate).toBe(true);
+    expect(pageBox().checked).toBe(false);
+  });
+
+  test("the header checkbox selects the whole page and a second click clears it", () => {
+    render(<SelectionHarness scope="s" rows={rows} />);
+    fireEvent.click(pageBox());
+    expect(status()).toContain("3 selected on this page");
+    expect(pageBox().checked).toBe(true);
+    expect(pageBox().indeterminate).toBe(false);
+    fireEvent.click(pageBox());
+    expect(status()).toBe("");
+    expect(rows.every((r) => !checkbox(`Select ${r.name}`).checked)).toBe(true);
+  });
+
+  test("the clear button empties the selection and the checkboxes follow", () => {
+    render(<SelectionHarness scope="s" rows={rows} />);
+    fireEvent.click(pageBox());
+    fireEvent.click(screen.getByRole("button", { name: /clear/i }));
+    expect(status()).toBe("");
+    expect(pageBox().checked).toBe(false);
+    expect(checkbox("Select Alpha").checked).toBe(false);
+  });
+
+  test("a change of scope clears what was selected", () => {
+    const { rerender } = render(<SelectionHarness scope="one" rows={rows} />);
+    fireEvent.click(pageBox());
+    rerender(<SelectionHarness scope="two" rows={rows} />);
+    expect(status()).toBe("");
+    expect(checkbox("Select Alpha").checked).toBe(false);
+  });
+
+  test("a row that leaves the list drops out of the count and does not return selected", () => {
+    const { rerender } = render(<SelectionHarness scope="s" rows={rows} />);
+    fireEvent.click(pageBox());
+    const fewer = rows.filter((r) => r.id !== "c");
+    rerender(<SelectionHarness scope="s" rows={fewer} />);
+    expect(status()).toContain("2 selected on this page");
+    rerender(<SelectionHarness scope="s" rows={rows} />);
+    expect(status()).toContain("2 selected on this page");
+    expect(checkbox("Select Gamma").checked).toBe(false);
+  });
+
+  test("no all-matching offer without an authoritative total", () => {
+    render(<SelectionHarness scope="s" rows={rows} />);
+    fireEvent.click(pageBox());
+    expect(screen.queryByRole("button", { name: /matching/i })).toBeNull();
+  });
+
+  test("all matching: offered with a total, named in the count, and left by unchecking one row", () => {
+    render(<SelectionHarness scope="s" rows={rows} total={120} />);
+    fireEvent.click(pageBox());
+    fireEvent.click(screen.getByRole("button", { name: "Select all 120 matching rows" }));
+    expect(status()).toContain("All 120 matching rows are selected");
+    expect(rows.every((r) => checkbox(`Select ${r.name}`).checked)).toBe(true);
+    fireEvent.click(checkbox("Select Beta"));
+    expect(status()).toContain("2 selected on this page");
+    expect(screen.getByRole("button", { name: "Select all 120 matching rows" })).toBeTruthy();
   });
 });
