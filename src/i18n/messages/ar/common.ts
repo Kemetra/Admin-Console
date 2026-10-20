@@ -86,6 +86,8 @@ export const common = {
   "table.selection.column": "تحديد",
   "table.selection.selectPage": "تحديد كل صفوف هذه الصفحة",
   "table.selection.selectRow": "تحديد {value}",
+  "table.selection.open": "فتح",
+  "table.selection.openRow": "فتح {value}",
   "table.selection.pageCount": {
     zero: "لم يُحدَّد أي صف في هذه الصفحة",
     one: "تم تحديد صف واحد في هذه الصفحة",

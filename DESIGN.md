@@ -361,15 +361,19 @@ These classes exist on `main` and new work reuses them until a migration slice r
   - Only rows currently listed count. The count names its scope ("selected on this
     page"). Offer "select all matching" only when the caller has an authoritative total
     and a handler; with no backend contract, leave `allMatching` out.
-  - A checkbox toggles selection only; it never opens the row. The row itself is still a
-    click target and tab stop with selection on (RT-756).
+  - A checkbox toggles selection only; it never opens the row. With selection on the row is
+    neither a click target nor a tab stop (RT-756): an explicit «Open» button in its own
+    cell, right after the checkbox, calls `onRowActivate`. It is named from
+    `selection.rowLabel` ("Open Alpha"), so the visible «Open» is inside the accessible name
+    and the caller needs no extra label prop. Tab order per row: checkbox, then open.
+    Without `selection` the whole row is still the target and nothing changes.
   - Target size (RT-757): the 36px floor applies inside tables. The whole selection cell
     (header and row) is the target and the checkbox keeps its 18px glyph; the sort button
     keeps its text-sized box and gains a 36px hit area (`::after`), so the header does not
     grow. New table controls follow the same pattern: enlarge the hit area, not the row.
-  - Composed behaviour is pinned in `tests/unit/data-table-selection.test.tsx`. Known
-    gaps: RT-756 (an explicit open control in selection mode is not built yet), RT-758
-    (dedicated sort glyph and a way back to server order).
+  - Composed behaviour is pinned in `tests/unit/data-table-selection.test.tsx`, the open
+    control in `tests/unit/data-table-row-open.test.tsx`. Known gap: RT-758 (dedicated sort
+    glyph and a way back to server order).
 
 ## 10. Migration debts
 

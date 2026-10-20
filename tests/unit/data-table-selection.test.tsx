@@ -102,11 +102,14 @@ describe("DataTable selection column", () => {
     expect(onOpen).not.toHaveBeenCalled();
   });
 
-  test("a row still opens from its own keyboard/click activation", () => {
+  test("a row opens from its explicit open control, not from the row itself (RT-756)", () => {
     const onOpen = vi.fn();
     renderTable([], { onOpen });
     const tr = screen.getByRole("checkbox", { name: "Select Alpha" }).closest("tr") as HTMLElement;
     fireEvent.keyDown(tr, { key: "Enter" });
+    fireEvent.click(tr);
+    expect(onOpen).not.toHaveBeenCalled();
+    fireEvent.click(within(tr).getByRole("button", { name: "Open Alpha" }));
     expect(onOpen).toHaveBeenCalledWith(rows[0]);
   });
 
@@ -372,7 +375,12 @@ describe("DataTable + useRowSelection + SelectionSummary, composed", () => {
   test("nothing selected: an empty status and no bulk buttons", () => {
     render(<SelectionHarness scope="s" rows={rows} />);
     expect(status()).toBe("");
-    expect(screen.queryAllByRole("button")).toHaveLength(0);
+    // The only buttons are the per-row «Open» controls (RT-756), no bulk actions.
+    expect(
+      screen
+        .queryAllByRole("button")
+        .filter((b) => !/^Open /.test(b.getAttribute("aria-label") ?? "")),
+    ).toEqual([]);
   });
 
   test("one row selected: the count names the page and the header shows mixed", () => {
