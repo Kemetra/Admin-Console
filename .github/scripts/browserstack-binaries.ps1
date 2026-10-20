@@ -60,86 +60,101 @@ function Redact([string]$Text) {
 }
 $cliPath = Join-Path $CliHome $pins.cli.relativePath
 
+function Wait-LocalReady($Process, [string]$Log) {
+  for ($i = 0; $i -lt 90; $i++) {
+    Start-Sleep -Seconds 1
+    if ((Test-Path $Log) -and (Select-String -LiteralPath $Log -Pattern 'You can now access your local server' -Quiet)) { return $true }
+    if ($Process.HasExited) { return $false }
+  }
+  return $false
+}
+
+function Start-Local {
+  if (-not $Identifier) { throw '-Identifier is required' }
+  if (-not $env:BROWSERSTACK_ACCESS_KEY) { throw 'BROWSERSTACK_ACCESS_KEY is not set' }
+  $dir = Join-Path $WorkDir "bslocal-$Identifier"
+  New-Item -ItemType Directory -Force -Path $dir | Out-Null
+  $zip = Join-Path $dir 'BrowserStackLocal-win32.zip'
+  Invoke-WebRequest -Uri $pins.local.url -OutFile $zip -MaximumRedirection 3
+  Assert-Hash $zip $pins.local.zipSha256
+  Expand-Archive -LiteralPath $zip -DestinationPath $dir -Force
+  $exe = Join-Path $dir 'BrowserStackLocal.exe'
+  Assert-Hash $exe $pins.local.exeSha256
+  Assert-Signed $exe $pins.local.signer
+  $log = Join-Path $dir 'tunnel.log'
+  $err = Join-Path $dir 'tunnel.err.log'
+  # The binary only accepts the key via --key, so it is visible in this runner's process list while it runs.
+  $proc = Start-Process -FilePath $exe -PassThru -WindowStyle Hidden -RedirectStandardOutput $log -RedirectStandardError $err `
+    -ArgumentList @('--key', $env:BROWSERSTACK_ACCESS_KEY, '--local-identifier', $Identifier, '--only', "localhost,$Port,0", '--verbose', '1')
+  if (-not (Wait-LocalReady $proc $log)) {
+    Write-Host (Redact ((Get-Content -LiteralPath $log, $err -ErrorAction SilentlyContinue | Select-Object -Last 20) -join "`n"))
+    throw 'BrowserStack Local did not become ready (or exited early)'
+  }
+  Write-Summary "- BrowserStack Local verified and started once: exe SHA-256 $($pins.local.exeSha256), signer '$($pins.local.signer)', identifier $Identifier"
+}
+
+function Stop-Local {
+  if (-not $Identifier) { throw '-Identifier is required' }
+  Get-CimInstance Win32_Process | Where-Object { $_.Name -eq 'BrowserStackLocal.exe' -and $_.CommandLine -like "*$Identifier*" } |
+    ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+  Write-Host "BrowserStack Local processes for $Identifier stopped"
+}
+
+function Invoke-CliVerify {
+  if (-not (Test-Path -LiteralPath $cliPath)) {
+    Write-Summary '- SDK CLI binary: not present before the run (cache miss); it runs unverified and is checked right after the run'
+    return
+  }
+  if ((Get-Item -LiteralPath $cliPath).Length -ne $pins.cli.size) { throw "Size of $cliPath differs from the pinned $($pins.cli.size) bytes" }
+  Assert-Hash $cliPath $pins.cli.sha256
+  Assert-Signed $cliPath $pins.cli.signer
+  # Lock against accidental replacement by the SDK's update logic (an attempted update then fails and
+  # the run yields no results, which run-cloud-locale.ps1 treats as a failure).
+  # File: no overwrite/append/delete. Directory: no delete-child (a file-level deny alone still lets the
+  # owner delete the file through the directory, which would allow delete-and-recreate).
+  Set-ItemProperty -LiteralPath $cliPath -Name IsReadOnly -Value $true
+  Invoke-Icacls @($cliPath, '/deny', "$($env:USERNAME):(WD,AD,DE)")
+  Invoke-Icacls @((Split-Path -Parent $cliPath), '/deny', "$($env:USERNAME):(DC)")
+  Write-Summary "- SDK CLI binary verified BEFORE use and locked against accidental replacement: SHA-256 $($pins.cli.sha256), signer '$($pins.cli.signer)'"
+}
+
+# Any OTHER executable under ~/.browserstack means the SDK fetched and may have run a second vendor binary
+# (for example its own BrowserStackLocal) with the key. Local is started by local-start with
+# skipBinaryInitialisation, so none is expected. Fail closed and name it.
+function Assert-NoStrayExecutable {
+  $cliFull = (Get-Item -LiteralPath $cliPath).FullName
+  $stray = @(Get-ChildItem -LiteralPath (Join-Path $CliHome '.browserstack') -Recurse -Filter *.exe -File -ErrorAction SilentlyContinue |
+    Where-Object { $_.FullName -ne $cliFull })
+  foreach ($f in $stray) {
+    Write-Summary "- UNEXPECTED executable under .browserstack: $($f.FullName) (SHA-256 $((Get-FileHash -LiteralPath $f.FullName -Algorithm SHA256).Hash)); the SDK may have run a binary that is not pinned"
+  }
+  if ($stray.Count -gt 0) { throw 'An unpinned executable exists under .browserstack after the run' }
+}
+
+function Invoke-CliRecheck {
+  if (-not (Test-Path -LiteralPath $cliPath)) { throw "SDK CLI binary missing at $cliPath after the run" }
+  $signatureError = $null
+  try { Assert-Signed $cliPath $pins.cli.signer } catch { $signatureError = $_.Exception.Message }
+  $sizeOk = (Get-Item -LiteralPath $cliPath).Length -eq $pins.cli.size
+  $actualHash = (Get-FileHash -LiteralPath $cliPath -Algorithm SHA256).Hash
+  $hashOk = $actualHash -eq $pins.cli.sha256.ToUpperInvariant()
+  if ($signatureError) {
+    Write-Summary "- SDK CLI binary FAILED signature verification after the run: $signatureError"
+    Write-Summary '- ACTION REQUIRED: treat as a possible compromise. This binary ran with the BrowserStack access key: rotate the key and do not update the pins until the binary is explained.'
+    throw 'SDK CLI signature check failed'
+  }
+  if (-not ($sizeOk -and $hashOk)) {
+    Write-Summary "- SDK CLI binary no longer matches the pinned hash/size (actual SHA-256 $actualHash) but carries a VALID signature from '$($pins.cli.signer)'."
+    Write-Summary '- This is most likely a legitimate BrowserStack release of a new CLI version. Review it, then update .github/browserstack-pins.json in a reviewed PR; the workflow stays red until then. Rotating the key is the owner''s call if the change cannot be accounted for.'
+    throw 'SDK CLI differs from the pinned version'
+  }
+  Write-Summary "- SDK CLI binary re-verified after the run: SHA-256 $($pins.cli.sha256), signer '$($pins.cli.signer)'"
+  Assert-NoStrayExecutable
+}
+
 switch ($Action) {
-  'local-start' {
-    if (-not $Identifier) { throw '-Identifier is required' }
-    if (-not $env:BROWSERSTACK_ACCESS_KEY) { throw 'BROWSERSTACK_ACCESS_KEY is not set' }
-    $dir = Join-Path $WorkDir "bslocal-$Identifier"
-    New-Item -ItemType Directory -Force -Path $dir | Out-Null
-    $zip = Join-Path $dir 'BrowserStackLocal-win32.zip'
-    Invoke-WebRequest -Uri $pins.local.url -OutFile $zip -MaximumRedirection 3
-    Assert-Hash $zip $pins.local.zipSha256
-    Expand-Archive -LiteralPath $zip -DestinationPath $dir -Force
-    $exe = Join-Path $dir 'BrowserStackLocal.exe'
-    Assert-Hash $exe $pins.local.exeSha256
-    Assert-Signed $exe $pins.local.signer
-    $log = Join-Path $dir 'tunnel.log'
-    $err = Join-Path $dir 'tunnel.err.log'
-    # The binary only accepts the key via --key, so it is visible in this runner's process list while it runs.
-    $proc = Start-Process -FilePath $exe -PassThru -WindowStyle Hidden -RedirectStandardOutput $log -RedirectStandardError $err `
-      -ArgumentList @('--key', $env:BROWSERSTACK_ACCESS_KEY, '--local-identifier', $Identifier, '--only', "localhost,$Port,0", '--verbose', '1')
-    $ready = $false
-    for ($i = 0; $i -lt 90; $i++) {
-      Start-Sleep -Seconds 1
-      if ((Test-Path $log) -and (Select-String -LiteralPath $log -Pattern 'You can now access your local server' -Quiet)) { $ready = $true; break }
-      if ($proc.HasExited) { break }
-    }
-    if (-not $ready) {
-      Write-Host (Redact ((Get-Content -LiteralPath $log, $err -ErrorAction SilentlyContinue | Select-Object -Last 20) -join "`n"))
-      throw 'BrowserStack Local did not become ready (or exited early)'
-    }
-    Write-Summary "- BrowserStack Local verified and started once: exe SHA-256 $($pins.local.exeSha256), signer '$($pins.local.signer)', identifier $Identifier"
-  }
-  'local-stop' {
-    if (-not $Identifier) { throw '-Identifier is required' }
-    Get-CimInstance Win32_Process | Where-Object { $_.Name -eq 'BrowserStackLocal.exe' -and $_.CommandLine -like "*$Identifier*" } |
-      ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
-    Write-Host "BrowserStack Local processes for $Identifier stopped"
-  }
-  'cli-verify' {
-    if (-not (Test-Path -LiteralPath $cliPath)) {
-      Write-Summary '- SDK CLI binary: not present before the run (cache miss); it runs unverified and is checked right after the run'
-      return
-    }
-    if ((Get-Item -LiteralPath $cliPath).Length -ne $pins.cli.size) { throw "Size of $cliPath differs from the pinned $($pins.cli.size) bytes" }
-    Assert-Hash $cliPath $pins.cli.sha256
-    Assert-Signed $cliPath $pins.cli.signer
-    # Lock against accidental replacement by the SDK's update logic (an attempted update then fails and
-    # the run yields no results, which run-cloud-locale.ps1 treats as a failure).
-    # File: no overwrite/append/delete. Directory: no delete-child (a file-level deny alone still lets the
-    # owner delete the file through the directory, which would allow delete-and-recreate).
-    Set-ItemProperty -LiteralPath $cliPath -Name IsReadOnly -Value $true
-    Invoke-Icacls @($cliPath, '/deny', "$($env:USERNAME):(WD,AD,DE)")
-    Invoke-Icacls @((Split-Path -Parent $cliPath), '/deny', "$($env:USERNAME):(DC)")
-    Write-Summary "- SDK CLI binary verified BEFORE use and locked against accidental replacement: SHA-256 $($pins.cli.sha256), signer '$($pins.cli.signer)'"
-  }
-  'cli-recheck' {
-    if (-not (Test-Path -LiteralPath $cliPath)) { throw "SDK CLI binary missing at $cliPath after the run" }
-    $signatureError = $null
-    try { Assert-Signed $cliPath $pins.cli.signer } catch { $signatureError = $_.Exception.Message }
-    $sizeOk = (Get-Item -LiteralPath $cliPath).Length -eq $pins.cli.size
-    $actualHash = (Get-FileHash -LiteralPath $cliPath -Algorithm SHA256).Hash
-    $hashOk = $actualHash -eq $pins.cli.sha256.ToUpperInvariant()
-    if ($signatureError) {
-      Write-Summary "- SDK CLI binary FAILED signature verification after the run: $signatureError"
-      Write-Summary '- ACTION REQUIRED: treat as a possible compromise. This binary ran with the BrowserStack access key: rotate the key and do not update the pins until the binary is explained.'
-      throw 'SDK CLI signature check failed'
-    }
-    if (-not ($sizeOk -and $hashOk)) {
-      Write-Summary "- SDK CLI binary no longer matches the pinned hash/size (actual SHA-256 $actualHash) but carries a VALID signature from '$($pins.cli.signer)'."
-      Write-Summary '- This is most likely a legitimate BrowserStack release of a new CLI version. Review it, then update .github/browserstack-pins.json in a reviewed PR; the workflow stays red until then. Rotating the key is the owner''s call if the change cannot be accounted for.'
-      throw 'SDK CLI differs from the pinned version'
-    }
-    Write-Summary "- SDK CLI binary re-verified after the run: SHA-256 $($pins.cli.sha256), signer '$($pins.cli.signer)'"
-    # Any OTHER executable under ~/.browserstack means the SDK fetched and may have run a second vendor binary
-    # (for example its own BrowserStackLocal) with the key. Local is started by local-start with
-    # skipBinaryInitialisation, so none is expected. Fail closed and name it.
-    $bsHome = Join-Path $CliHome '.browserstack'
-    $stray = @(Get-ChildItem -LiteralPath $bsHome -Recurse -Filter *.exe -File -ErrorAction SilentlyContinue |
-      Where-Object { $_.FullName -ne (Get-Item -LiteralPath $cliPath).FullName })
-    if ($stray.Count -gt 0) {
-      foreach ($f in $stray) { Write-Summary "- UNEXPECTED executable under .browserstack: $($f.FullName) (SHA-256 $((Get-FileHash -LiteralPath $f.FullName -Algorithm SHA256).Hash)); the SDK may have run a binary that is not pinned" }
-      throw 'An unpinned executable exists under .browserstack after the run'
-    }
-  }
+  'local-start' { Start-Local }
+  'local-stop'  { Stop-Local }
+  'cli-verify'  { Invoke-CliVerify }
+  'cli-recheck' { Invoke-CliRecheck }
 }
