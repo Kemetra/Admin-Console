@@ -436,6 +436,6 @@ describe("DataTable + useRowSelection + SelectionSummary, composed", () => {
     expect(rows.every((r) => checkbox(`Select ${r.name}`).checked)).toBe(true);
     fireEvent.click(checkbox("Select Beta"));
     expect(status()).toContain("2 selected on this page");
-    expect(screen.queryByRole("button", { name: /matching/i })).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Select all 120 matching rows" })).toBeTruthy();
   });
 });
