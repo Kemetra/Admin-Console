@@ -1,3 +1,4 @@
+import { expectNoAxeViolations } from "./axe";
 import { type Page, expect, test } from "./fixtures";
 
 /**
@@ -176,4 +177,61 @@ test("RT-549: forced colours keep the skeleton bars visible as outlines", async 
   const bar = page.locator(".skeleton").first();
   await expect(bar).toBeVisible();
   await expect(bar).toHaveCSS("border-top-width", "1px");
+});
+
+/**
+ * RT-753 (UX-10) — the shared DataTable sort on its reference screen: the
+ * keyboard reaches the header button, Enter/Space sorts, `aria-sort` follows,
+ * and the page stays free of WCAG 2.1 A/AA axe violations with a sort active.
+ * Focus outlines for the header buttons are covered by focus-forced-colors.spec.ts.
+ */
+async function openSortableRoster(page: Page): Promise<void> {
+  await mockBase(page, {
+    user,
+    active_tenant: { id: "t1", name: "Northstar Retail" },
+    active_store: null,
+    active_role_code: "tenant_admin",
+    memberships: [{ tenant_id: "t1", tenant_name: "Northstar Retail", role_code: "tenant_admin" }],
+  });
+  const roster = [
+    { id: "s1", code: "ZMK", name: "Zamalek", is_active: false },
+    { id: "s2", code: "ALX", name: "Mall 10", is_active: true },
+    { id: "s3", code: "MAD", name: "Mall 2", is_active: true },
+  ];
+  await page.route("**/api/v1/stores", (r) =>
+    r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(roster) }),
+  );
+  await page.goto("/stores");
+  await expect(page.getByRole("table")).toBeVisible();
+}
+
+const storeNames = (page: Page) => page.locator("tbody tr td:first-child").allTextContents();
+
+test("RT-753: the roster starts in the server's order with no aria-sort", async ({ page }) => {
+  await openSortableRoster(page);
+  expect(await storeNames(page)).toEqual(["Zamalek", "Mall 10", "Mall 2"]);
+  await expect(page.locator("th[aria-sort]")).toHaveCount(0);
+});
+
+test("RT-753: the keyboard sorts a column and aria-sort follows", async ({ page, t }) => {
+  await openSortableRoster(page);
+  const header = page.getByRole("columnheader", { name: t("stores.list.col.store") });
+  await header.getByRole("button").focus();
+  await page.keyboard.press("Enter");
+  await expect(header).toHaveAttribute("aria-sort", "ascending");
+  expect(await storeNames(page)).toEqual(["Mall 2", "Mall 10", "Zamalek"]);
+
+  await page.keyboard.press("Space");
+  await expect(header).toHaveAttribute("aria-sort", "descending");
+  expect(await storeNames(page)).toEqual(["Zamalek", "Mall 10", "Mall 2"]);
+  await expect(page.locator("th[aria-sort]")).toHaveCount(1);
+});
+
+test("RT-753: no axe violations with a sort active", async ({ page, t }) => {
+  await openSortableRoster(page);
+  await page
+    .getByRole("columnheader", { name: t("stores.list.col.store") })
+    .getByRole("button")
+    .click();
+  await expectNoAxeViolations(page, "/stores sorted");
 });
