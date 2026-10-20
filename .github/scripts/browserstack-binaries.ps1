@@ -30,10 +30,11 @@ param(
   [string]$CliHome = $env:USERPROFILE
 )
 $ErrorActionPreference = 'Stop'
+$InformationPreference = 'Continue'
 $pins = Get-Content -LiteralPath $PinsFile -Raw | ConvertFrom-Json
 
 function Write-Summary([string]$Line) {
-  Write-Host $Line
+  Write-Information $Line
   if ($env:GITHUB_STEP_SUMMARY) { Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Value $Line }
 }
 function Invoke-Icacls([string[]]$IcaclsArgs) {
@@ -87,7 +88,7 @@ function Start-Local {
   $proc = Start-Process -FilePath $exe -PassThru -WindowStyle Hidden -RedirectStandardOutput $log -RedirectStandardError $err `
     -ArgumentList @('--key', $env:BROWSERSTACK_ACCESS_KEY, '--local-identifier', $Identifier, '--only', "localhost,$Port,0", '--verbose', '1')
   if (-not (Wait-LocalReady $proc $log)) {
-    Write-Host (Redact ((Get-Content -LiteralPath $log, $err -ErrorAction SilentlyContinue | Select-Object -Last 20) -join "`n"))
+    Write-Information (Redact ((Get-Content -LiteralPath $log, $err -ErrorAction SilentlyContinue | Select-Object -Last 20) -join "`n"))
     throw 'BrowserStack Local did not become ready (or exited early)'
   }
   Write-Summary "- BrowserStack Local verified and started once: exe SHA-256 $($pins.local.exeSha256), signer '$($pins.local.signer)', identifier $Identifier"
@@ -97,7 +98,7 @@ function Stop-Local {
   if (-not $Identifier) { throw '-Identifier is required' }
   Get-CimInstance Win32_Process | Where-Object { $_.Name -eq 'BrowserStackLocal.exe' -and $_.CommandLine -like "*$Identifier*" } |
     ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
-  Write-Host "BrowserStack Local processes for $Identifier stopped"
+  Write-Information "BrowserStack Local processes for $Identifier stopped"
 }
 
 function Invoke-CliVerify {

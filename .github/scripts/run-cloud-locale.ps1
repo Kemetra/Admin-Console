@@ -14,9 +14,10 @@ param(
   [string]$CloudDir = (Join-Path $PSScriptRoot '..' '..' 'cloud-e2e')
 )
 $ErrorActionPreference = 'Stop'
+$InformationPreference = 'Continue'
 
 function Write-Summary([string]$Line) {
-  Write-Host $Line
+  Write-Information $Line
   if ($env:GITHUB_STEP_SUMMARY) { Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Value $Line }
 }
 
