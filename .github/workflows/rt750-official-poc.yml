@@ -1,0 +1,127 @@
+# RT-750 scratch proof (NOT for main): the official BrowserStack route in GitHub Actions, expanded to two browsers.
+# One existing test, Firefox/Windows 11 and Playwright WebKit/macOS Ventura, Arabic, SDK-managed BrowserStack Local,
+# testObservability. Runs once per push to the scratch branch rt750-official-poc-ff-wk. No custom tunnel, no setup-local Action.
+# The existing implementation (cross-browser-cloud.yml) is untouched. Delete this file and the branch afterwards.
+name: RT-750 official PoC
+
+on:
+  push:
+    branches: [rt750-official-poc-ff-wk]
+    paths:
+      - ".github/workflows/rt750-official-poc.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rt750-official-poc
+  cancel-in-progress: false
+
+jobs:
+  poc:
+    runs-on: windows-latest
+    environment: browserstack
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check the BrowserStack secrets exist (values are never printed)
+        env:
+          BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+          BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+        run: |
+          if (-not $env:BROWSERSTACK_USERNAME -or -not $env:BROWSERSTACK_ACCESS_KEY) { throw 'BrowserStack secrets are not set in the browserstack environment.' }
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+
+      - name: Setup Node 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install root dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Build the SPA
+        run: pnpm build
+
+      # The SDK stays isolated in cloud-e2e (proprietary licence, owner decision RT-750 comment 13075).
+      - name: Install the SDK from cloud-e2e (own lockfile, no scripts)
+        run: pnpm --dir cloud-e2e install --frozen-lockfile --ignore-scripts
+
+      # The only config: official keys, SDK-managed Local (no localIdentifier, no skipBinaryInitialisation).
+      - name: Write cloud-e2e/browserstack.yml (gitignored, no credentials)
+        run: |
+          @'
+          framework: playwright
+          projectName: Admin-Console-PoC
+          buildName: official-poc-ci-ff-wk
+          platforms:
+            - os: Windows
+              osVersion: 11
+              browserName: playwright-firefox
+              browserVersion: latest
+            - os: OS X
+              osVersion: Ventura
+              browserName: playwright-webkit
+              browserVersion: latest
+          parallelsPerPlatform: 1
+          browserstackLocal: true
+          testObservability: true
+          selfHeal: false
+          '@ | Set-Content -LiteralPath cloud-e2e/browserstack.yml
+          Get-Content cloud-e2e/browserstack.yml
+
+      # One step: start the preview, run the SDK exactly once, always stop the preview.
+      # Bound: one worker per platform, no retries, at most 2 failures (about 2 sessions expected).
+      - name: Official SDK run (one test, Firefox + WebKit, ar)
+        env:
+          BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+          BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+          E2E_LOCALE: ar
+        run: |
+          $preview = Start-Process node -PassThru -WindowStyle Hidden -ArgumentList @('node_modules/vite/bin/vite.js', 'preview', '--port', '4173', '--strictPort')
+          try {
+            $up = $false
+            for ($i = 0; $i -lt 30; $i++) {
+              try { Invoke-WebRequest -Uri 'http://localhost:4173/signin' -UseBasicParsing -TimeoutSec 3 | Out-Null; $up = $true; break } catch { Start-Sleep -Seconds 1 }
+            }
+            if (-not $up) { throw 'preview did not start' }
+            Set-Location cloud-e2e
+            pnpm exec browserstack-node-sdk playwright test --config playwright.config.ts -g 'renders the project locale' --max-failures=2
+            $code = $LASTEXITCODE
+            Write-Host "SDK exit code: $code"
+          } finally {
+            if ($preview -and -not $preview.HasExited) { Stop-Process -Id $preview.Id -Force -ErrorAction SilentlyContinue }
+          }
+          exit $code
+
+      # Diagnostics (informational): what the SDK downloaded and what Local / the SDK logged.
+      - name: Diagnostics - binaries and logs
+        if: ${{ always() }}
+        run: |
+          $pins = Get-Content -LiteralPath .github/browserstack-pins.json -Raw | ConvertFrom-Json
+          $bs = Join-Path $env:USERPROFILE '.browserstack'
+          if (Test-Path $bs) {
+            Get-ChildItem -LiteralPath $bs -Recurse -Filter *.exe -File | ForEach-Object {
+              $sig = Get-AuthenticodeSignature -LiteralPath $_.FullName
+              $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash
+              $pin = if ($hash -eq $pins.local.exeSha256.ToUpperInvariant()) { 'matches Local pin' } elseif ($hash -eq $pins.cli.sha256.ToUpperInvariant()) { 'matches CLI pin' } else { 'NO PIN MATCH' }
+              Write-Host ("exe {0} size={1} sha256={2} sig={3} signer={4} [{5}]" -f $_.FullName, $_.Length, $hash, $sig.Status, $sig.SignerCertificate.GetNameInfo('SimpleName', $false), $pin)
+            }
+            Get-ChildItem -LiteralPath (Join-Path $bs 'log') -Filter 'local-*.log' -ErrorAction SilentlyContinue | ForEach-Object {
+              Write-Host "---- tail $($_.Name)"; Get-Content -LiteralPath $_.FullName -Tail 40
+            }
+          } else { Write-Host 'no ~/.browserstack directory' }
+          Get-ChildItem -Path cloud-e2e/log -File -ErrorAction SilentlyContinue | Select-Object -First 5 | ForEach-Object {
+            Write-Host "---- tail $($_.Name)"; Get-Content -LiteralPath $_.FullName -Tail 25
+          }
