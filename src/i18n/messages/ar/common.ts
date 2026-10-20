@@ -82,6 +82,36 @@ export const common = {
     other: "{count} ثانية",
   },
 
+  // RT-753 (UX-10): shared table selection. The count always names its scope.
+  "table.selection.column": "تحديد",
+  "table.selection.selectPage": "تحديد كل صفوف هذه الصفحة",
+  "table.selection.selectRow": "تحديد {value}",
+  "table.selection.pageCount": {
+    zero: "لم يُحدَّد أي صف في هذه الصفحة",
+    one: "تم تحديد صف واحد في هذه الصفحة",
+    two: "تم تحديد صفين في هذه الصفحة",
+    few: "تم تحديد {count} صفوف في هذه الصفحة",
+    many: "تم تحديد {count} صفًا في هذه الصفحة",
+    other: "تم تحديد {count} صف في هذه الصفحة",
+  },
+  "table.selection.allMatching": {
+    zero: "لا توجد صفوف مطابقة",
+    one: "تم تحديد الصف المطابق الوحيد",
+    two: "تم تحديد الصفين المطابقين",
+    few: "تم تحديد كل الصفوف المطابقة وعددها {count}",
+    many: "تم تحديد كل الصفوف المطابقة وعددها {count}",
+    other: "تم تحديد كل الصفوف المطابقة وعددها {count}",
+  },
+  "table.selection.selectAllMatching": {
+    zero: "لا توجد صفوف مطابقة",
+    one: "تحديد الصف المطابق الوحيد",
+    two: "تحديد الصفين المطابقين",
+    few: "تحديد كل الصفوف المطابقة وعددها {count}",
+    many: "تحديد كل الصفوف المطابقة وعددها {count}",
+    other: "تحديد كل الصفوف المطابقة وعددها {count}",
+  },
+  "table.selection.clear": "إلغاء التحديد",
+
   // Role labels (see src/i18n/roles.ts). manager / cashier come from the UX-12
   // glossary. owner / tenant_admin / store_manager / platform_admin are
   // PROVISIONAL until the owner approves Arabic terms (RT-266 Q4, RT-399).

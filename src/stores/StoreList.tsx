@@ -2,7 +2,9 @@ import { Banner } from "@/components/Banner";
 import { DataTable } from "@/components/DataTable";
 import { DataTableSkeleton } from "@/components/DataTableSkeleton";
 import { ListState } from "@/components/ListState";
+import { type SortState, type SortValue, sortRows } from "@/components/tableSort";
 import { type T, useT } from "@/i18n";
+import { intlTag } from "@/i18n/locale";
 import type { Rf2ErrorRender } from "@/lib/rf2-queries";
 /**
  * SF-S1 — Store roster (T026; RT-400 screens 01–04). Scoped to the ACTIVE
@@ -17,6 +19,7 @@ import type { Rf2ErrorRender } from "@/lib/rf2-queries";
  * `scope-required` (scope prompt, still never a sign-out). 403 → danger banner;
  * 5xx → warning banner with a reload.
  */
+import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { ScopePrompt } from "./ScopePrompt";
 import { StoreStateBadge } from "./StoreStateBadge";
@@ -35,12 +38,18 @@ type StoreRow = {
 
 function storeColumns(t: T) {
   return [
-    { key: "name", header: t("stores.list.col.store"), cell: (s: StoreRow) => s.name },
+    {
+      key: "name",
+      header: t("stores.list.col.store"),
+      cell: (s: StoreRow) => s.name,
+      sortable: true,
+    },
     {
       key: "code",
       header: t("stores.field.code"),
       cell: (s: StoreRow) => <bdi dir="ltr">{s.code}</bdi>,
       mono: true,
+      sortable: true,
     },
     {
       key: "timezone",
@@ -51,8 +60,26 @@ function storeColumns(t: T) {
       key: "state",
       header: t("stores.field.state"),
       cell: (s: StoreRow) => <StoreStateBadge isActive={s.is_active} />,
+      sortable: true,
     },
   ];
+}
+
+/** Active stores first when ascending; a store with no state is last. */
+function storeSortValue(s: StoreRow, key: string): SortValue {
+  if (key === "state") return s.is_active === undefined ? null : Number(!s.is_active);
+  return key === "code" ? s.code : s.name;
+}
+
+/**
+ * The sort belongs to the tenant it was chosen under and is dropped when the
+ * active tenant changes (UX-10: scope changes reset what no longer applies). `GET /api/v1/stores` returns the tenant's
+ * COMPLETE roster (no cursor, limit or cap), so ordering it here is
+ * dataset-level, not a viewport sort of loaded pages.
+ */
+interface StoreSort {
+  readonly tenantId: string | null;
+  readonly sort: SortState | null;
 }
 
 /** A retryable 5xx gets a warning with a reload; any other failure a danger banner. */
@@ -85,6 +112,12 @@ export function StoreList(): React.JSX.Element {
   const { activeTenantId, activeTenantName } = useStoreScope();
   const { result, isLoading, refetch } = useStoreList(activeTenantId);
   const navigate = useNavigate();
+  const [chosen, setChosen] = useState<StoreSort>({ tenantId: null, sort: null });
+  // A scope change drops the stored sort itself (not only its view), so coming
+  // back to an earlier tenant cannot resurrect it.
+  if (chosen.tenantId !== activeTenantId && chosen.sort !== null) {
+    setChosen({ tenantId: activeTenantId, sort: null });
+  }
 
   // Pre-gate: no active tenant -> scope prompt, no listStores issued (OQ-4).
   if (!activeTenantId) {
@@ -95,7 +128,13 @@ export function StoreList(): React.JSX.Element {
     return <ScopePrompt />;
   }
 
-  const rows = result?.kind === "rows" ? result.rows : [];
+  const sort = chosen.tenantId === activeTenantId ? chosen.sort : null;
+  const rows = sortRows(
+    result?.kind === "rows" ? result.rows : [],
+    sort,
+    storeSortValue,
+    intlTag(t.locale),
+  );
   // Any failure is an error render, never the zero-row empty state.
   const error = result?.kind === "error" ? result.render : undefined;
   const ready = !isLoading && !error;
@@ -139,6 +178,8 @@ export function StoreList(): React.JSX.Element {
           rows={rows}
           rowKey={(s) => s.id}
           onRowActivate={(s) => navigate(`/stores/${s.id}`)}
+          sort={sort}
+          onSortChange={(next) => setChosen({ tenantId: activeTenantId, sort: next })}
         />
       ) : null}
     </div>

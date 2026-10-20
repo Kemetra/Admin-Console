@@ -46,6 +46,51 @@
   outline-offset: -2px;
   background-color: var(--color-surface-sunken);
 }
+/* RT-753 (UX-10): opt-in sortable header. A native button that reads as the
+ * header text; the global :focus-visible outline is left to draw (forced-colors
+ * safe, never a box-shadow). Direction is a chevron shape: up = ascending. */
+.data-table__sort {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.data-table__sort-mark {
+  display: inline-flex;
+}
+.data-table__sort-mark[data-sort-direction="asc"] svg {
+  transform: rotate(180deg);
+}
+
+/* RT-753: the selection column and the bulk-context line above the table. */
+.data-table thead th.data-table__select,
+.data-table__row td.data-table__select {
+  inline-size: 44px;
+  padding-inline: var(--space-4) 0;
+}
+.data-table__checkbox {
+  inline-size: 18px;
+  block-size: 18px;
+  accent-color: var(--color-primary);
+}
+.data-table__selection {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--color-text);
+}
+/* The status is always mounted (empty when nothing is selected), so the bar
+ * takes space only while a selection exists. */
+.data-table__selection[data-active="true"] {
+  padding-block: var(--space-3);
+}
+
 .data-table__cell--mono {
   font-family: var(--font-mono);
   font-size: var(--text-machine);

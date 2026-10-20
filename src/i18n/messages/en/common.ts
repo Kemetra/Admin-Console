@@ -40,6 +40,27 @@ export const common: MessagesOf<typeof ar> = {
   "format.duration.minutes": { one: "{count} minute", other: "{count} minutes" },
   "format.duration.seconds": { one: "{count} second", other: "{count} seconds" },
 
+  // RT-753 (UX-10): shared table selection. The count always names its scope.
+  "table.selection.column": "Select",
+  "table.selection.selectPage": "Select all rows on this page",
+  "table.selection.selectRow": "Select {value}",
+  "table.selection.pageCount": {
+    zero: "No rows selected on this page",
+    one: "1 selected on this page",
+    other: "{count} selected on this page",
+  },
+  "table.selection.allMatching": {
+    zero: "No matching rows",
+    one: "The only matching row is selected",
+    other: "All {count} matching rows are selected",
+  },
+  "table.selection.selectAllMatching": {
+    zero: "No matching rows",
+    one: "Select the only matching row",
+    other: "Select all {count} matching rows",
+  },
+  "table.selection.clear": "Clear selection",
+
   "role.owner": "Owner",
   "role.tenant_admin": "Tenant admin",
   "role.store_manager": "Store manager",
