@@ -15,7 +15,7 @@
  *   navigation, so the checkbox never activates the row.
  */
 import "./data-table.css";
-import { PageCheckbox, SelectCell, SortButton, ariaSortOf } from "./DataTableParts";
+import { PageSelectHeader, SelectCell, SortButton, ariaSortOf } from "./DataTableParts";
 import type { SortState } from "./tableSort";
 
 export interface DataTableColumn<Row> {
@@ -88,15 +88,13 @@ export function DataTable<Row>({
       <thead>
         <tr>
           {selection ? (
-            <th scope="col" className="data-table__select">
-              <PageCheckbox
-                checked={pageKeys.length > 0 && pageSelected === pageKeys.length}
-                mixed={pageSelected > 0 && pageSelected < pageKeys.length}
-                onToggle={() =>
-                  selection.onSelectionChange(pageToggled(selection.selectedKeys, pageKeys))
-                }
-              />
-            </th>
+            <PageSelectHeader
+              checked={pageKeys.length > 0 && pageSelected === pageKeys.length}
+              mixed={pageSelected > 0 && pageSelected < pageKeys.length}
+              onToggle={() =>
+                selection.onSelectionChange(pageToggled(selection.selectedKeys, pageKeys))
+              }
+            />
           ) : null}
           {columns.map((col) => (
             <th

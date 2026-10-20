@@ -50,6 +50,7 @@
  * header text; the global :focus-visible outline is left to draw (forced-colors
  * safe, never a box-shadow). Direction is a chevron shape: up = ascending. */
 .data-table__sort {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
@@ -59,6 +60,18 @@
   color: inherit;
   font: inherit;
   cursor: pointer;
+}
+/* RT-757: the 36px target floor without a taller header. The button keeps its
+ * text-sized box; an invisible ::after widens only the hit area. Centred with
+ * physical left/top + translate so it is symmetric in RTL as well. */
+.data-table__sort::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  inline-size: max(100%, 36px);
+  block-size: max(100%, 36px);
+  transform: translate(-50%, -50%);
 }
 .data-table__sort-mark {
   display: inline-flex;
@@ -71,6 +84,8 @@
 .data-table thead th.data-table__select,
 .data-table__row td.data-table__select {
   inline-size: 44px;
+  /* RT-757: a preferred width alone lets auto layout shrink the column below the 36px floor. */
+  min-inline-size: 44px;
   padding-inline: var(--space-4) 0;
 }
 .data-table__checkbox {

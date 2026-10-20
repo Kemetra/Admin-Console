@@ -363,9 +363,12 @@ These classes exist on `main` and new work reuses them until a migration slice r
     and a handler; with no backend contract, leave `allMatching` out.
   - A checkbox toggles selection only; it never opens the row. The row itself is still a
     click target and tab stop with selection on (RT-756).
+  - Target size (RT-757): the 36px floor applies inside tables. The whole selection cell
+    (header and row) is the target and the checkbox keeps its 18px glyph; the sort button
+    keeps its text-sized box and gains a 36px hit area (`::after`), so the header does not
+    grow. New table controls follow the same pattern: enlarge the hit area, not the row.
   - Composed behaviour is pinned in `tests/unit/data-table-selection.test.tsx`. Known
-    gaps: RT-756 (an explicit open control in selection mode is not built yet), RT-757
-    (sort button and checkboxes are below the 36px floor, owner decision pending), RT-758
+    gaps: RT-756 (an explicit open control in selection mode is not built yet), RT-758
     (dedicated sort glyph and a way back to server order).
 
 ## 10. Migration debts

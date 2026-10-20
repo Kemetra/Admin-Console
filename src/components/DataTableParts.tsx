@@ -51,8 +51,25 @@ export function SortButton({
   );
 }
 
-/** The header checkbox: selects/clears the rows on this page; mixed when partly selected. */
-export function PageCheckbox({
+/**
+ * RT-757: a selection cell is the whole target (the 36px floor applies inside
+ * tables) while the checkbox keeps its 18px glyph. A click on the cell itself
+ * toggles; a click on the checkbox is left to its own `onChange`, so nothing
+ * toggles twice. Click and key events stop here, so selecting never opens the
+ * row (Selection ≠ navigation, UX-10).
+ */
+function cellTarget(onToggle: () => void) {
+  return {
+    onClick: (e: React.MouseEvent<HTMLElement>) => {
+      e.stopPropagation();
+      if (e.target === e.currentTarget) onToggle();
+    },
+    onKeyDown: (e: React.KeyboardEvent<HTMLElement>) => e.stopPropagation(),
+  };
+}
+
+/** The header checkbox cell: selects/clears the rows on this page; mixed when partly selected. */
+export function PageSelectHeader({
   checked,
   mixed,
   onToggle,
@@ -63,7 +80,7 @@ export function PageCheckbox({
     if (ref.current) ref.current.indeterminate = mixed;
   }, [mixed]);
   return (
-    <>
+    <th scope="col" className="data-table__select" {...cellTarget(onToggle)}>
       <span className="sr-only">{t("table.selection.column")}</span>
       <input
         ref={ref}
@@ -73,14 +90,11 @@ export function PageCheckbox({
         aria-label={t("table.selection.selectPage")}
         onChange={onToggle}
       />
-    </>
+    </th>
   );
 }
 
-/**
- * The row checkbox cell. Selection ≠ navigation (UX-10): the cell swallows the
- * click and key events, so toggling never opens the row.
- */
+/** The row checkbox cell; see `cellTarget` for why it never opens the row. */
 export function SelectCell({
   checked,
   label,
@@ -88,11 +102,7 @@ export function SelectCell({
 }: Readonly<{ checked: boolean; label: string; onToggle: () => void }>): React.JSX.Element {
   const t = useT();
   return (
-    <td
-      className="data-table__select"
-      onClick={(e) => e.stopPropagation()}
-      onKeyDown={(e) => e.stopPropagation()}
-    >
+    <td className="data-table__select" {...cellTarget(onToggle)}>
       <input
         type="checkbox"
         className="data-table__checkbox"

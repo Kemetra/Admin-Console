@@ -439,3 +439,38 @@ describe("DataTable + useRowSelection + SelectionSummary, composed", () => {
     expect(screen.getByRole("button", { name: "Select all 120 matching rows" })).toBeTruthy();
   });
 });
+
+/**
+ * RT-757 — the 36px floor applies to controls inside tables. The checkbox keeps
+ * its 18px glyph; the whole selection cell is the target, and it still never
+ * opens the row (Selection ≠ navigation). The measured hit-test for the sort
+ * button is in tests/e2e/store-list.spec.ts (jsdom has no layout).
+ */
+describe("DataTable selection cell is the whole target", () => {
+  const cellOf = (name: string, tag: "td" | "th") =>
+    screen.getByRole("checkbox", { name }).closest(tag) as HTMLElement;
+
+  test("a click on the row's cell, outside the checkbox, toggles it and never opens the row", () => {
+    const onSel = vi.fn();
+    const onOpen = vi.fn();
+    renderTable([], { onSel, onOpen });
+    fireEvent.click(cellOf("Select Beta", "td"));
+    expect([...onSel.mock.calls[0][0]]).toEqual(["b"]);
+    expect(onOpen).not.toHaveBeenCalled();
+  });
+
+  test("a click on the header cell, outside the checkbox, toggles the page", () => {
+    const onSel = vi.fn();
+    renderTable([], { onSel });
+    fireEvent.click(cellOf("Select all rows on this page", "th"));
+    expect([...onSel.mock.calls[0][0]].sort()).toEqual(["a", "b", "c"]);
+  });
+
+  test("a click on the checkbox itself toggles exactly once (no double toggle from the cell)", () => {
+    const onSel = vi.fn();
+    renderTable([], { onSel });
+    fireEvent.click(screen.getByRole("checkbox", { name: "Select Beta" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Select all rows on this page" }));
+    expect(onSel).toHaveBeenCalledTimes(2);
+  });
+});

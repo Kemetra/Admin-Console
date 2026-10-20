@@ -235,3 +235,23 @@ test("RT-753: no axe violations with a sort active", async ({ page, t }) => {
     .click();
   await expectNoAxeViolations(page, "/stores sorted");
 });
+
+/**
+ * RT-757 — the 36px target floor applies to the sort button. Hit-tested, not read
+ * from CSS: a point 17px above and below the button's centre must land on the
+ * button, while the button's own box (and so the header height) stays text-sized.
+ */
+test("RT-757: the sort button is a 36px target without a taller header", async ({ page, t }) => {
+  await openSortableRoster(page);
+  const header = page.getByRole("columnheader", { name: t("stores.list.col.store") });
+  const box = await header.getByRole("button").boundingBox();
+  if (!box) throw new Error("sort button not laid out");
+  expect(box.height).toBeLessThan(36);
+  const hits = await header.getByRole("button").evaluate((el, h) => {
+    const r = el.getBoundingClientRect();
+    const x = r.left + r.width / 2;
+    const y = r.top + r.height / 2;
+    return [y - h, y + h].map((py) => el.contains(document.elementFromPoint(x, py)));
+  }, 17);
+  expect(hits).toEqual([true, true]);
+});
