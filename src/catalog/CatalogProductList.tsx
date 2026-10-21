@@ -46,8 +46,12 @@ interface TenantStamp {
  * component state: the tenant the URL filters belong to is stamped in the
  * history entry. An unstamped entry (a first arrival, a deep link) keeps its
  * filters and is stamped; an entry stamped for another tenant drops them.
+ *
+ * Returns whether the URL filters are this tenant's to read: until the reset
+ * lands, an entry stamped for another tenant reads nothing, so the new tenant is
+ * never asked with the old tenant's category.
  */
-function useTenantStamp(tenantId: string | null): void {
+function useTenantStamp(tenantId: string | null): boolean {
   const location = useLocation();
   const navigate = useNavigate();
   const stamped = (location.state as Partial<TenantStamp> | null)?.tenantId;
@@ -57,6 +61,7 @@ function useTenantStamp(tenantId: string | null): void {
     const search = stamped === undefined ? location.search : "";
     navigate({ pathname: location.pathname, search }, { replace: true, state });
   }, [tenantId, stamped, location.pathname, location.search, navigate]);
+  return stamped === undefined || stamped === tenantId;
 }
 
 function Shell({
@@ -137,18 +142,18 @@ function categoryLabelOf(
   categoryId: string,
   t: ReturnType<typeof useT>,
 ): string {
-  const known = categories.categories.find((c) => c.categoryId === categoryId)?.name;
+  const known = categories.categories.find((c) => c.categoryId.toLowerCase() === categoryId)?.name;
   if (known) return known;
   const unknownYet = categories.isLoading || categories.failed;
   return t(unknownYet ? "catalog.filter.categorySelected" : "catalog.filter.categoryStale");
 }
 
 /** The filters the URL asks for, and the query they make (none when refused or invalid). */
-function useAppliedFilters(scope: CatalogScope, search: URLSearchParams) {
+function useAppliedFilters(scope: CatalogScope, search: URLSearchParams, filtersOwned: boolean) {
   const filters = filtersFromSearch(search);
   const errors = validateFilters(filters);
   // A refused role reads nothing: the server would answer the same 404.
-  const readable = canReadCatalog(scope.role) && Object.keys(errors).length === 0;
+  const readable = canReadCatalog(scope.role) && Object.keys(errors).length === 0 && filtersOwned;
   const query = readable ? buildListQuery(filters, scope.activeStoreId) : null;
   return { filters, errors, query };
 }
@@ -156,11 +161,16 @@ function useAppliedFilters(scope: CatalogScope, search: URLSearchParams) {
 function CatalogContent({
   scope,
   tenantId,
-}: Readonly<{ scope: CatalogScope; tenantId: string }>): React.JSX.Element {
+  filtersOwned,
+}: Readonly<{
+  scope: CatalogScope;
+  tenantId: string;
+  filtersOwned: boolean;
+}>): React.JSX.Element {
   const t = useT();
   const [search, setSearch] = useSearchParams();
   const navigate = useNavigate();
-  const { filters, errors, query } = useAppliedFilters(scope, search);
+  const { filters, errors, query } = useAppliedFilters(scope, search, filtersOwned);
   const list = useCatalogList(scope, query);
   const categories = useCatalogCategories(tenantId, true);
   const stamp = stampFor(tenantId);
@@ -194,7 +204,7 @@ function CatalogContent({
 export function CatalogProductList(): React.JSX.Element {
   const t = useT();
   const scope = useCatalogScope();
-  useTenantStamp(scope.tenantId);
+  const filtersOwned = useTenantStamp(scope.tenantId);
 
   if (!scope.tenantId) {
     return (
@@ -210,5 +220,5 @@ export function CatalogProductList(): React.JSX.Element {
       </Shell>
     );
   }
-  return <CatalogContent scope={scope} tenantId={scope.tenantId} />;
+  return <CatalogContent scope={scope} tenantId={scope.tenantId} filtersOwned={filtersOwned} />;
 }

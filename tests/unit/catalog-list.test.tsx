@@ -333,6 +333,7 @@ describe("CatalogProductList (RT-765, CAT-C1a)", () => {
         tree(`/catalog/products?q=salt&status=inactive&category=${CATEGORY_1}`, client),
       );
       await tableReady();
+      const before = consoleListCatalogProducts.mock.calls.length;
       activeContext.mockReturnValue(ctx("owner", "t2"));
       view.rerender(
         tree(`/catalog/products?q=salt&status=inactive&category=${CATEGORY_1}`, client),
@@ -345,6 +346,11 @@ describe("CatalogProductList (RT-765, CAT-C1a)", () => {
         }),
       );
       expect((screen.getByLabelText("Name or code") as HTMLInputElement).value).toBe("");
+      // The new tenant is never asked with the old tenant's filters, not even once.
+      for (const [query] of consoleListCatalogProducts.mock.calls.slice(before)) {
+        expect(query).not.toHaveProperty("category_id");
+        expect(query).not.toHaveProperty("q");
+      }
     });
 
     test("an uppercase category id in the link is sent lower case and selected in the form", async () => {
@@ -359,6 +365,29 @@ describe("CatalogProductList (RT-765, CAT-C1a)", () => {
       expect(
         (screen.getByLabelText("Category") as HTMLSelectElement).selectedOptions[0].textContent,
       ).toBe("Beverages");
+    });
+
+    test("a server category id in upper case still names and selects the applied category", async () => {
+      consoleListCatalogCategories.mockResolvedValue({
+        status: 200,
+        data: {
+          items: [
+            {
+              categoryId: CATEGORY_1.toUpperCase(),
+              name: "Beverages",
+              description: null,
+              updatedAt: "2026-10-01T08:00:00Z",
+            },
+          ],
+        },
+      });
+      consoleListCatalogProducts.mockResolvedValue(page([], null));
+      renderList(`/catalog/products?category=${CATEGORY_1}`);
+      const notice = await screen.findByText(/no items match/i);
+      await waitFor(() => expect(notice.textContent).toContain("Beverages"));
+      expect(notice.textContent).not.toContain("Unavailable category");
+      const select = screen.getByLabelText("Category") as HTMLSelectElement;
+      expect(select.selectedOptions[0].textContent).toBe("Beverages");
     });
 
     test("an applied category is not called unavailable while the list is unknown", async () => {

@@ -80,13 +80,13 @@ function CategoryOptions({
   failed: boolean;
 }>): React.JSX.Element {
   const t = useT();
-  const known = categories.some((c) => c.categoryId.toLowerCase() === appliedId.toLowerCase());
+  const known = categories.some((c) => c.categoryId.toLowerCase() === appliedId);
   const missing = appliedId !== "" && !known;
   return (
     <>
       <option value="">{t("catalog.filter.categoryAll")}</option>
       {categories.map((c) => (
-        <option key={c.categoryId} value={c.categoryId}>
+        <option key={c.categoryId} value={c.categoryId.toLowerCase()}>
           {c.name}
         </option>
       ))}
