@@ -31,7 +31,7 @@
   .btn-secondary[aria-pressed="true"]:not(:disabled) {
     border-width: 2px;
     border-color: Highlight;
-    padding: 0 13px;
+    padding: 0 calc(var(--space-4) - 1px);
   }
   :is(.btn-primary, .btn-secondary, .btn-ghost, .btn-danger-quiet, .btn-destructive):is(
       :disabled,
