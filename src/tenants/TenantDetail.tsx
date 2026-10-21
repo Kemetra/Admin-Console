@@ -147,7 +147,7 @@ export function TenantDetail(): React.JSX.Element {
           <Link to={`/tenants/${tenant.id}/edit`} className="btn-secondary">
             {t("tenants.detail.edit")}
           </Link>
-          <button type="button" className="btn-destructive" onClick={() => setConfirming(true)}>
+          <button type="button" className="btn-danger-quiet" onClick={() => setConfirming(true)}>
             {t("tenants.detail.softDelete")}
           </button>
         </div>

@@ -332,7 +332,7 @@ export function UnknownItemList(): React.JSX.Element {
             <>
               <button
                 type="button"
-                className="btn-destructive"
+                className="btn-danger-quiet"
                 disabled={selectedIds.length === 0 || overLimit || bulk.isPending}
                 onClick={() => setConfirmingBulk(true)}
               >

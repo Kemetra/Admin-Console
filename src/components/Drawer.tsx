@@ -8,25 +8,75 @@
  * Accessibility: labelled dialog, Escape closes, focus moves in on open, and
  * Tab/Shift+Tab are trapped within the panel so `aria-modal` is honest. No
  * nested cards (rule 5); internal grouping uses ruled sections.
+ *
+ * Closing plays an exit (panel slides out, scrim fades) on `--duration-2`. Whether
+ * a close is allowed is decided when it is requested: a non-dismissible drawer
+ * (a request in flight whose answer must not be lost, e.g. a one-time pairing
+ * code) ignores Escape, the scrim and the close button. The `onClose` in force at
+ * that moment runs when the exit ends; a parent that keeps the drawer mounted gets
+ * it back usable. Under reduced motion the token is 0ms, so `onClose` runs at once.
  */
 import { Icon } from "@/components/icons/Icon";
 import { useT } from "@/i18n";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import "./drawer.css";
 
 export interface DrawerProps {
   title: string;
   onClose: () => void;
+  /** False while closing would lose work (a request in flight). Default true. */
+  dismissible?: boolean;
   children: React.ReactNode;
+}
+
+/** `--duration-2` in ms from the root's computed style; "", NaN or 0 mean no exit. */
+function exitDurationMs(): number {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue("--duration-2").trim();
+  const value = Number.parseFloat(raw);
+  if (Number.isNaN(value) || value <= 0) return 0;
+  return raw.endsWith("ms") || !raw.endsWith("s") ? value : value * 1000;
 }
 
 const FOCUSABLE =
   'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
-export function Drawer({ title, onClose, children }: Readonly<DrawerProps>): React.JSX.Element {
+export function Drawer({
+  title,
+  onClose,
+  dismissible = true,
+  children,
+}: Readonly<DrawerProps>): React.JSX.Element {
   const t = useT();
   const panelRef = useRef<HTMLDialogElement>(null);
   const scrimRef = useRef<HTMLDivElement>(null);
+  const [closing, setClosing] = useState(false);
+  const closingRef = useRef(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  const dismissibleRef = useRef(dismissible);
+  dismissibleRef.current = dismissible;
+
+  const requestClose = useCallback((): void => {
+    if (closingRef.current || !dismissibleRef.current) return;
+    // Decided now, not when the exit ends: the handler in force at the request.
+    const close = onCloseRef.current;
+    const ms = exitDurationMs();
+    if (ms === 0) {
+      close();
+      return;
+    }
+    closingRef.current = true;
+    setClosing(true);
+    timerRef.current = setTimeout(() => {
+      close();
+      // Still mounted means the parent kept the drawer open: give it back.
+      closingRef.current = false;
+      setClosing(false);
+    }, ms);
+  }, []);
+
+  useEffect(() => () => clearTimeout(timerRef.current), []);
 
   useEffect(() => {
     // Move focus in on open; restore it to the trigger (the row/button that
@@ -42,15 +92,15 @@ export function Drawer({ title, onClose, children }: Readonly<DrawerProps>): Rea
     const scrim = scrimRef.current;
     if (!scrim) return;
     const closeOnScrimClick = (e: MouseEvent): void => {
-      if (e.target === scrim) onClose();
+      if (e.target === scrim) requestClose();
     };
     scrim.addEventListener("click", closeOnScrimClick);
     return () => scrim.removeEventListener("click", closeOnScrimClick);
-  }, [onClose]);
+  }, [requestClose]);
 
   function onKeyDown(e: React.KeyboardEvent<HTMLDialogElement>): void {
     if (e.key === "Escape") {
-      onClose();
+      requestClose();
       return;
     }
     if (e.key !== "Tab" || !panelRef.current) return;
@@ -72,14 +122,17 @@ export function Drawer({ title, onClose, children }: Readonly<DrawerProps>): Rea
   }
 
   return (
-    <div ref={scrimRef} className="drawer-scrim">
+    <div ref={scrimRef} className={closing ? "drawer-scrim drawer-scrim--closing" : "drawer-scrim"}>
       {/* Native <dialog open>, positioned by the scrim rather than the top layer
           (the side-drawer needs custom backdrop/placement). Focus is moved in and
           trapped (onKeyDown), so aria-modal is honored. */}
       <dialog
         ref={panelRef}
         open
-        className="drawer"
+        className={closing ? "drawer drawer--closing" : "drawer"}
+        // While the exit plays nothing inside may act: a Save clicked or keyed
+        // during those 150ms would land on a panel that is already leaving.
+        inert={closing}
         aria-modal="true"
         aria-label={title}
         tabIndex={-1}
@@ -90,7 +143,7 @@ export function Drawer({ title, onClose, children }: Readonly<DrawerProps>): Rea
           <button
             type="button"
             className="btn-ghost"
-            onClick={onClose}
+            onClick={requestClose}
             aria-label={t("common.close")}
           >
             <Icon name="close" size="sm" />

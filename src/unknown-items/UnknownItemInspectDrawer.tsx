@@ -172,7 +172,7 @@ export function UnknownItemInspectDrawer({
               <button type="button" className="btn-primary" onClick={() => setStep("create")}>
                 {t("unknownItems.create.action")}
               </button>
-              <button type="button" className="btn-destructive" onClick={() => setStep("dismiss")}>
+              <button type="button" className="btn-danger-quiet" onClick={() => setStep("dismiss")}>
                 {t("unknownItems.dismiss.action")}
               </button>
             </div>

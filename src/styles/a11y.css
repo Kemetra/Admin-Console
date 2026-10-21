@@ -22,6 +22,7 @@
   .btn-primary,
   .btn-secondary,
   .btn-ghost,
+  .btn-danger-quiet,
   .btn-destructive {
     border: 1px solid ButtonText;
   }
@@ -30,12 +31,12 @@
   .btn-secondary[aria-pressed="true"]:not(:disabled) {
     border-width: 2px;
     border-color: Highlight;
-    padding: 0 13px;
+    padding: 0 calc(var(--space-4) - 1px);
   }
-  .btn-primary:disabled,
-  .btn-secondary:disabled,
-  .btn-ghost:disabled,
-  .btn-destructive:disabled {
+  :is(.btn-primary, .btn-secondary, .btn-ghost, .btn-danger-quiet, .btn-destructive):is(
+      :disabled,
+      [aria-disabled="true"]
+    ) {
     border-color: GrayText;
     color: GrayText;
   }

@@ -8,7 +8,7 @@ import { textField } from "@/lib/form-field";
  * SF5-3 — Edit / revoke member drawer (T022/T023). Pre-filled role + store-access
  * (uncontrolled native form); one `.btn-primary` "Save changes" via
  * `updateMembership`. A visually-isolated revoke section (top divider, not a
- * nested card — rule 5) with a `.btn-destructive` + confirm step via
+ * nested card — rule 5) with a `.btn-danger-quiet` opener + confirm step via
  * `revokeMembership`. Both ops document only 200/204 + 404 → uniform banner.
  * On success: close, refresh the list (S4/S5).
  */
@@ -160,7 +160,7 @@ export function EditMember({
         ) : (
           <button
             type="button"
-            className="btn-destructive"
+            className="btn-danger-quiet"
             onClick={() => setConfirming(true)}
             disabled={pending}
           >
