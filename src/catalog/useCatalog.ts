@@ -35,14 +35,26 @@ export interface CatalogScope {
   role: string | null;
 }
 
+type ActiveContext = ReturnType<typeof useActiveContextValue>["context"];
+
+function tenantScope(context: ActiveContext): Pick<CatalogScope, "tenantId" | "tenantName"> {
+  const tenant = context?.active_tenant;
+  return { tenantId: tenant?.id ?? null, tenantName: tenant?.name ?? null };
+}
+
+function storeScope(
+  context: ActiveContext,
+): Pick<CatalogScope, "activeStoreId" | "activeStoreName"> {
+  const store = context?.active_store;
+  return { activeStoreId: store?.id ?? null, activeStoreName: store?.name ?? null };
+}
+
 /** Active tenant and store (the query scope) from RF-1's provider. */
 export function useCatalogScope(): CatalogScope {
   const { context } = useActiveContextValue();
   return {
-    tenantId: context?.active_tenant?.id ?? null,
-    tenantName: context?.active_tenant?.name ?? null,
-    activeStoreId: context?.active_store?.id ?? null,
-    activeStoreName: context?.active_store?.name ?? null,
+    ...tenantScope(context),
+    ...storeScope(context),
     role: context?.active_role_code ?? null,
   };
 }
@@ -154,16 +166,24 @@ export function useCatalogList(
     retry: false,
   });
 
+  const { data, error, hasNextPage, isFetchingNextPage, isFetchNextPageError } = result;
   const loadMore = () => {
-    if (result.hasNextPage && !result.isFetchingNextPage) void result.fetchNextPage();
+    if (hasNextPage && !isFetchingNextPage) void result.fetchNextPage();
   };
+  // A failed continuation retries the page it stopped at; a failed first page re-reads.
+  const retry = () => {
+    if (isFetchNextPageError) loadMore();
+    else void result.refetch();
+  };
+  // A new walk drops every loaded page and asks for the first again.
+  const restart = () => void queryClient.resetQueries({ queryKey, exact: true });
   return {
-    ...pagesState(result.data?.pages ?? [], errorOf(result.error)),
+    ...pagesState(data?.pages ?? [], errorOf(error)),
     isLoading: active && result.isLoading,
-    retry: () => (result.isFetchNextPageError ? loadMore() : void result.refetch()),
-    restart: () => void queryClient.resetQueries({ queryKey, exact: true }),
-    hasMore: result.hasNextPage,
-    isFetchingNextPage: result.isFetchingNextPage,
+    hasMore: hasNextPage,
+    isFetchingNextPage,
+    retry,
+    restart,
     loadMore,
   };
 }

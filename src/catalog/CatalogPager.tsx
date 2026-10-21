@@ -105,40 +105,44 @@ function walkFinished(list: CatalogListState): boolean {
 }
 
 /**
- * Load more unmounts when the last page arrives. If it was used, focus moves to
- * the end-of-list message so keyboard users are not dropped to the page start.
+ * Load more unmounts when the last page arrives. If it was what asked for that
+ * page, focus moves to the end-of-list message so a keyboard user is not
+ * dropped back to the top of the page.
  */
 function useEndFocus(list: CatalogListState) {
   const endRef = useRef<HTMLOutputElement>(null);
-  const pending = useRef(false);
+  const askedForMore = useRef(false);
   const finished = walkFinished(list);
   useEffect(() => {
-    if (!pending.current || !finished) return;
-    pending.current = false;
-    endRef.current?.focus();
+    if (finished && askedForMore.current) {
+      askedForMore.current = false;
+      endRef.current?.focus();
+    }
   }, [finished]);
   const loadMore = () => {
-    pending.current = true;
+    askedForMore.current = true;
     list.loadMore();
   };
   return { endRef, loadMore };
 }
+
+/**
+ * aria-disabled, not disabled, while the next page loads: a disabled button
+ * drops keyboard focus. `loadMore` ignores repeat presses.
+ */
+const BUSY_PROPS = { "aria-disabled": true, "aria-busy": true } as const;
 
 function LoadMore({
   busy,
   onLoad,
 }: Readonly<{ busy: boolean; onLoad: () => void }>): React.JSX.Element {
   const t = useT();
-  // aria-disabled, not disabled: a disabled button drops keyboard focus while
-  // the next page loads. loadMore ignores repeat presses.
-  const flag = busy ? true : undefined;
   return (
     <GatedButton
       type="button"
       className="btn-secondary"
       onClick={onLoad}
-      aria-disabled={flag}
-      aria-busy={flag}
+      {...(busy ? BUSY_PROPS : {})}
     >
       {busy ? <span className="spinner" aria-hidden="true" /> : null}
       {t("catalog.list.loadMore")}

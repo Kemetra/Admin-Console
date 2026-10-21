@@ -11,9 +11,9 @@
  * ever shown.
  *
  * Unreleased: the Backend-Core runtime (RT-664) does not exist yet, so the panel
- * follows the console's gated-nav precedent (`AppShell`'s `showGatedNav`): it is
- * on in development builds and off in a production build until the runtime
- * ships. `enabled` lets a test, or the release that turns it on, force it.
+ * follows the console's earlier gated-nav precedent (the dev-only placeholders
+ * `AppShell` used to list): it is on in development builds and off in a
+ * production build until the runtime ships. `enabled` lets a test, or the release that turns it on, force it.
  */
 import { useActiveContextValue } from "@/context/ActiveContextProvider";
 import { useT } from "@/i18n";

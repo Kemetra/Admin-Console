@@ -174,18 +174,6 @@
   border-end-end-radius: 2px;
   background: var(--color-primary);
 }
-.nav-entry--disabled {
-  opacity: 0.45;
-  cursor: default;
-}
-.nav-gate {
-  margin-inline-start: auto;
-  font: var(--weight-strong) var(--text-kbd) / var(--leading-tight) var(--font-mono);
-  color: var(--color-text-muted);
-  border: 1px solid var(--color-border);
-  padding: 2px 5px;
-  border-radius: var(--radius-sm);
-}
 .nav-signout:hover {
   background: var(--color-surface-sunken);
   color: var(--color-text);
@@ -211,16 +199,11 @@
 
 /* Forced colors (RT-267): the active tint and the marker's fill are forced to
  * Canvas, which would erase "you are here". Keep the marker as a system-colored
- * shape, and grey out gated entries that relied on opacity alone. */
+ * shape. */
 @media (forced-colors: active) {
   .nav-entry--active::before {
     forced-color-adjust: none;
     background: Highlight;
-  }
-  .nav-entry--disabled,
-  .nav-gate {
-    color: GrayText;
-    border-color: GrayText;
   }
 }
 

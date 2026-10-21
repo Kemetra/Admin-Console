@@ -433,64 +433,47 @@ describe("CatalogProductList (RT-765, CAT-C1a)", () => {
   });
 
   describe("errors", () => {
-    test("a 404 without a store is the one non-disclosing state", async () => {
-      consoleListCatalogProducts.mockResolvedValue(failure(404));
-      renderList();
-      expect(await screen.findByText("These items are not available to you.")).toBeDefined();
-      expect(screen.queryByText(/there are no active items/i)).toBeNull();
-    });
-
-    test("a 400 reads as a validation message with no Retry", async () => {
-      consoleListCatalogProducts.mockResolvedValue(failure(400, "req-400"));
-      renderList();
-      expect(await screen.findByText(/the server rejected this search/i)).toBeDefined();
-      expect(screen.getByText("req-400")).toBeDefined();
-      expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
-      expect(screen.queryByText(/there are no active items/i)).toBeNull();
-    });
-
-    test("a 401 says the session expired", async () => {
-      consoleListCatalogProducts.mockResolvedValue(failure(401));
-      renderList();
-      expect(await screen.findByText("Your session has expired. Sign in again.")).toBeDefined();
-    });
-
-    test("a 404 on a continuation says the store is stale and offers no Retry", async () => {
-      activeContext.mockReturnValue(ctx("owner", "t1", CAIRO_STORE));
+    /** The loaded first page has a cursor; Load more asks for the next one. */
+    async function loadMoreFailing(failingPage: unknown, storeId?: string): Promise<void> {
+      if (storeId) activeContext.mockReturnValue(ctx("owner", "t1", storeId));
       consoleListCatalogProducts
         .mockResolvedValueOnce(page([product({ storeView: storeView() })], "c1"))
-        .mockResolvedValueOnce(failure(404));
+        .mockResolvedValueOnce(failingPage);
       renderList();
       await tableReady();
       fireEvent.click(screen.getByRole("button", { name: "Load more" }));
-      expect(await screen.findByText("The selected store is no longer available.")).toBeDefined();
-      expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
-      expect(screen.getByText("Mineral water 1.5L")).toBeDefined();
-    });
+    }
 
-    test("a 404 on a continuation without a store is the unavailable message, no Retry", async () => {
-      consoleListCatalogProducts
-        .mockResolvedValueOnce(page([product()], "c1"))
-        .mockResolvedValueOnce(failure(404));
+    const retry = () => screen.queryByRole("button", { name: "Retry" });
+
+    test.each([
+      [
+        "404 is the one non-disclosing state",
+        failure(404),
+        "These items are not available to you.",
+        false,
+      ],
+      ["400 is a validation message", failure(400), /the server rejected this search/i, false],
+      [
+        "401 says the session expired",
+        failure(401),
+        "Your session has expired. Sign in again.",
+        false,
+      ],
+      ["500 is a retryable banner", failure(500), "Could not load items.", true],
+      // The shell's RateLimitBanner owns the countdown; the surface only offers a Retry.
+      ["429 is the generic retryable error", failure(429), "Could not load items.", true],
+    ] as const)("a first-page %s", async (_name, response, text, retryable) => {
+      consoleListCatalogProducts.mockResolvedValue(response);
       renderList();
-      await tableReady();
-      fireEvent.click(screen.getByRole("button", { name: "Load more" }));
-      expect(await screen.findByText("These items are not available to you.")).toBeDefined();
-      expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+      expect(await screen.findByText(text)).toBeDefined();
+      expect(retry() !== null).toBe(retryable);
+      // A failure is never an empty list.
+      expect(screen.queryByText(/there are no active items/i)).toBeNull();
+      expect(screen.queryByText(/too many requests/i)).toBeNull();
     });
 
-    test("a 401 on a continuation says the session expired and offers no Retry", async () => {
-      consoleListCatalogProducts
-        .mockResolvedValueOnce(page([product()], "c1"))
-        .mockResolvedValueOnce(failure(401));
-      renderList();
-      await tableReady();
-      fireEvent.click(screen.getByRole("button", { name: "Load more" }));
-      expect(await screen.findByText("Your session has expired. Sign in again.")).toBeDefined();
-      expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
-    });
-
-    test("a first-page failure is a banner with the request id and a Retry that re-reads", async () => {
+    test("a first-page failure carries the request id, and Retry re-reads", async () => {
       consoleListCatalogProducts
         .mockResolvedValueOnce(failure(500, "req-500"))
         .mockResolvedValueOnce(page([product()]));
@@ -501,25 +484,40 @@ describe("CatalogProductList (RT-765, CAT-C1a)", () => {
       expect(await screen.findByText("Mineral water 1.5L")).toBeDefined();
     });
 
-    test("a 429 is the generic retryable error; the shell's banner owns the countdown", async () => {
-      consoleListCatalogProducts
-        .mockResolvedValueOnce(failure(429))
-        .mockResolvedValueOnce(page([product()]));
-      renderList();
-      expect(await screen.findByText("Could not load items.")).toBeDefined();
-      expect(screen.queryByText(/too many requests/i)).toBeNull();
-      fireEvent.click(screen.getByRole("button", { name: "Retry" }));
-      expect(await screen.findByText("Mineral water 1.5L")).toBeDefined();
-    });
+    test.each([
+      [
+        "404 with a store: the store is stale",
+        failure(404),
+        CAIRO_STORE,
+        "The selected store is no longer available.",
+      ],
+      [
+        "404 without a store: unavailable",
+        failure(404),
+        undefined,
+        "These items are not available to you.",
+      ],
+      [
+        "401: the session expired",
+        failure(401),
+        undefined,
+        "Your session has expired. Sign in again.",
+      ],
+    ] as const)(
+      "a continuation %s, with no Retry and the rows kept",
+      async (_name, response, storeId, text) => {
+        await loadMoreFailing(response, storeId);
+        expect(await screen.findByText(text)).toBeDefined();
+        expect(retry()).toBeNull();
+        expect(screen.getByText("Mineral water 1.5L")).toBeDefined();
+      },
+    );
 
     test("a failed continuation keeps the loaded rows and retries the next page", async () => {
-      consoleListCatalogProducts
-        .mockResolvedValueOnce(page([product()], "c1"))
-        .mockResolvedValueOnce(failure(500))
-        .mockResolvedValueOnce(page([product({ productId: PRODUCT_2, name: "Loose tea" })], null));
-      renderList();
-      await tableReady();
-      fireEvent.click(screen.getByRole("button", { name: "Load more" }));
+      await loadMoreFailing(failure(500));
+      consoleListCatalogProducts.mockResolvedValueOnce(
+        page([product({ productId: PRODUCT_2, name: "Loose tea" })], null),
+      );
       expect(await screen.findByText(/the rest of the rows could not be loaded/i)).toBeDefined();
       expect(screen.getByText("Mineral water 1.5L")).toBeDefined();
       fireEvent.click(screen.getByRole("button", { name: "Retry" }));
@@ -528,17 +526,14 @@ describe("CatalogProductList (RT-765, CAT-C1a)", () => {
     });
 
     test("a 400 on a continuation restarts the walk from the first page", async () => {
-      consoleListCatalogProducts
-        .mockResolvedValueOnce(page([product()], "c1"))
-        .mockResolvedValueOnce(failure(400))
-        .mockResolvedValueOnce(page([product({ productId: PRODUCT_2, name: "Loose tea" })], null));
-      renderList();
-      await tableReady();
-      fireEvent.click(screen.getByRole("button", { name: "Load more" }));
+      await loadMoreFailing(failure(400));
+      consoleListCatalogProducts.mockResolvedValueOnce(
+        page([product({ productId: PRODUCT_2, name: "Loose tea" })], null),
+      );
       expect(
         await screen.findByText(/did not accept the position of the next page/i),
       ).toBeDefined();
-      expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+      expect(retry()).toBeNull();
       fireEvent.click(screen.getByRole("button", { name: "Start again" }));
       expect(await screen.findByText("Loose tea")).toBeDefined();
       expect(consoleListCatalogProducts.mock.calls[2][0]).toMatchObject({ cursor: undefined });

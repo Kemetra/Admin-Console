@@ -6,9 +6,9 @@ import { Icon, type IconNameFor } from "@/components/icons/Icon";
  * SF-2 authenticated app shell (T027; RF-2 T009/T010). top-bar + persistent
  * scope header + sidebar + content (DESIGN.md layout). The frame every RF-2..RF-7
  * family attaches to. The content area renders `children` — the routed surface
- * (an <Outlet/> from the layout route). Sidebar entries beyond what is built are
- * shown gated to mark scope, not to claim they are built — in dev builds only.
- * RT-270 (UX-09: no dead destinations): a production build never lists them.
+ * (an <Outlet/> from the layout route). RT-270 (UX-09: no dead destinations): a
+ * destination is listed only once it is built. The dev-only gated placeholders
+ * went with the last one, the RF-3 Catalog entry (RT-765).
  *
  * Console v4.0 visual adoption: each nav entry leads with a decorative registry
  * icon (RT-696; aria-hidden, so labels stay the sole accessible name) and the topbar carries
@@ -17,8 +17,7 @@ import { Icon, type IconNameFor } from "@/components/icons/Icon";
  * Operational chrome with no backing yet (search, notifications, system
  * status) is intentionally NOT rendered — a
  * dead control reads as a fake to an operator (PRODUCT.md P4/P5); each arrives as
- * its own slice when wired. Gated nav entries are the one exception, and they
- * announce it explicitly with a gate badge (RF-3).
+ * its own slice when wired.
  */
 import { useActiveContextValue } from "@/context/ActiveContextProvider";
 import { canReadDevices } from "@/devices/deviceLogic";
@@ -159,26 +158,12 @@ const ROLE_NAV: {
   },
 ];
 
-/**
- * Families not yet built — shown gated to mark scope, not to claim built. Dev
- * builds only (RT-270): in production they would be dead destinations. Empty
- * since RT-765 shipped the catalog list (the RF-3 entry); a family still to
- * come is listed here until its first slice lands.
- */
-const GATED_NAV: { label: MessageKey; gate: string; icon: NavIcon }[] = [];
-
 export interface AppShellProps {
   onSignOut: () => void | Promise<void>;
   children?: React.ReactNode;
-  /** Show the gated placeholders. Defaults to Vite's `DEV`: false in a production build. */
-  showGatedNav?: boolean;
 }
 
-export function AppShell({
-  onSignOut,
-  children,
-  showGatedNav = import.meta.env.DEV,
-}: Readonly<AppShellProps>): React.JSX.Element {
+export function AppShell({ onSignOut, children }: Readonly<AppShellProps>): React.JSX.Element {
   const t = useT();
   const { context } = useActiveContextValue();
   const user = context?.user;
@@ -260,15 +245,6 @@ export function AppShell({
             </NavLink>
           </Fragment>
         ))}
-        {showGatedNav
-          ? GATED_NAV.map((item) => (
-              <span key={item.gate} className="nav-entry nav-entry--disabled" aria-disabled="true">
-                <Icon name={item.icon} className="nav-entry__icon" />
-                <span className="nav-entry__label">{t(item.label)}</span>
-                <span className="nav-gate">{item.gate}</span>
-              </span>
-            ))
-          : null}
         <div className="topbar__spacer" />
         <button type="button" className="nav-entry nav-signout" onClick={() => void onSignOut()}>
           <Icon name="signOut" className="nav-entry__icon" />

@@ -31,7 +31,7 @@ function renderShell(userId = "u1"): void {
   });
   render(
     <MemoryRouter>
-      <AppShell onSignOut={() => {}} showGatedNav={false} />
+      <AppShell onSignOut={() => {}} />
     </MemoryRouter>,
   );
 }

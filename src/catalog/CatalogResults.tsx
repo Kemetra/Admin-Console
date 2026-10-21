@@ -116,9 +116,11 @@ function catalogColumns(t: T, storeInScope: boolean): DataTableColumn<CatalogPro
   return columns;
 }
 
-const ERROR_MESSAGES = {
-  session: "catalog.list.sessionExpired",
-  rejected: "catalog.list.filterRejected",
+/** How each error kind is told. Only a generic failure can succeed on a retry. */
+const ERROR_BANNERS = {
+  generic: { variant: "danger", message: "catalog.list.loadFailed", retry: true },
+  session: { variant: "danger", message: "catalog.list.sessionExpired", retry: false },
+  rejected: { variant: "warning", message: "catalog.list.filterRejected", retry: false },
 } as const;
 
 function ErrorView({
@@ -132,26 +134,19 @@ function ErrorView({
 }>): React.JSX.Element {
   const t = useT();
   if (error.kind === "not-found") return storeInScope ? <StoreStale /> : <Unavailable />;
-  if (error.kind === "generic") {
-    return (
-      <Banner
-        variant="danger"
-        message={t("catalog.list.loadFailed")}
-        requestId={error.requestId}
-        action={
+  const banner = ERROR_BANNERS[error.kind];
+  return (
+    <Banner
+      variant={banner.variant}
+      message={t(banner.message)}
+      requestId={error.requestId}
+      action={
+        banner.retry ? (
           <button type="button" className="btn-secondary" onClick={onRetry}>
             {t("catalog.list.retry")}
           </button>
-        }
-      />
-    );
-  }
-  // An expired session or a rejected query: retrying the same request cannot succeed.
-  return (
-    <Banner
-      variant={error.kind === "rejected" ? "warning" : "danger"}
-      message={t(ERROR_MESSAGES[error.kind])}
-      requestId={error.requestId}
+        ) : undefined
+      }
     />
   );
 }

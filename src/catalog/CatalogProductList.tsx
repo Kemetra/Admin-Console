@@ -26,6 +26,7 @@ import {
   validateFilters,
 } from "./catalogLogic";
 import {
+  type CatalogCategoriesState,
   type CatalogScope,
   useCatalogCategories,
   useCatalogList,
@@ -125,47 +126,45 @@ function describeFilters(
   ));
 }
 
-export function CatalogProductList(): React.JSX.Element {
-  const t = useT();
-  const scope = useCatalogScope();
-  const [search, setSearch] = useSearchParams();
-  const navigate = useNavigate();
-  // A refused role reads nothing: the server would answer the same 404.
-  const permitted = canReadCatalog(scope.role);
+/** The navigation state that marks which tenant the URL filters belong to. */
+function stampFor(tenantId: string): { state: TenantStamp } {
+  return { state: { tenantId } };
+}
+
+/** A name that is not known yet (loading, or the list failed) is not "unavailable". */
+function categoryLabelOf(
+  categories: CatalogCategoriesState,
+  categoryId: string,
+  t: ReturnType<typeof useT>,
+): string {
+  const known = categories.categories.find((c) => c.categoryId === categoryId)?.name;
+  if (known) return known;
+  const unknownYet = categories.isLoading || categories.failed;
+  return t(unknownYet ? "catalog.filter.categorySelected" : "catalog.filter.categoryStale");
+}
+
+/** The filters the URL asks for, and the query they make (none when refused or invalid). */
+function useAppliedFilters(scope: CatalogScope, search: URLSearchParams) {
   const filters = filtersFromSearch(search);
   const errors = validateFilters(filters);
-  const valid = Object.keys(errors).length === 0;
-  const query = permitted && valid ? buildListQuery(filters, scope.activeStoreId) : null;
+  // A refused role reads nothing: the server would answer the same 404.
+  const readable = canReadCatalog(scope.role) && Object.keys(errors).length === 0;
+  const query = readable ? buildListQuery(filters, scope.activeStoreId) : null;
+  return { filters, errors, query };
+}
+
+function CatalogContent({
+  scope,
+  tenantId,
+}: Readonly<{ scope: CatalogScope; tenantId: string }>): React.JSX.Element {
+  const t = useT();
+  const [search, setSearch] = useSearchParams();
+  const navigate = useNavigate();
+  const { filters, errors, query } = useAppliedFilters(scope, search);
   const list = useCatalogList(scope, query);
-  const categories = useCatalogCategories(scope.tenantId, permitted);
-
-  const stamp = scope.tenantId ? { state: { tenantId: scope.tenantId } satisfies TenantStamp } : {};
+  const categories = useCatalogCategories(tenantId, true);
+  const stamp = stampFor(tenantId);
   const clearFilters = () => setSearch(new URLSearchParams(), stamp);
-  useTenantStamp(scope.tenantId);
-
-  if (!scope.tenantId) {
-    return (
-      <div className="surface">
-        <p className="content__sub">{t("catalog.list.scopePrompt")}</p>
-      </div>
-    );
-  }
-  if (!permitted) {
-    return (
-      <Shell scope={scope}>
-        <Unavailable />
-      </Shell>
-    );
-  }
-  const categoryName = categories.categories.find((c) => c.categoryId === filters.categoryId)?.name;
-  // A name that is not known yet (loading, or the list failed) is not "unavailable".
-  const categoryLabel =
-    categoryName ??
-    t(
-      categories.isLoading || categories.failed
-        ? "catalog.filter.categorySelected"
-        : "catalog.filter.categoryStale",
-    );
   return (
     <Shell scope={scope}>
       <CatalogFilterBar
@@ -182,7 +181,7 @@ export function CatalogProductList(): React.JSX.Element {
           list={list}
           storeInScope={Boolean(scope.activeStoreId)}
           filtered={!isDefaultFilters(filters)}
-          summary={describeFilters(filters, categoryLabel, t)}
+          summary={describeFilters(filters, categoryLabelOf(categories, filters.categoryId, t), t)}
           searching={filters.q !== ""}
           onOpen={(row: CatalogProduct) => navigate(`/catalog/products/${row.productId}`)}
           onClearFilters={clearFilters}
@@ -190,4 +189,26 @@ export function CatalogProductList(): React.JSX.Element {
       ) : null}
     </Shell>
   );
+}
+
+export function CatalogProductList(): React.JSX.Element {
+  const t = useT();
+  const scope = useCatalogScope();
+  useTenantStamp(scope.tenantId);
+
+  if (!scope.tenantId) {
+    return (
+      <div className="surface">
+        <p className="content__sub">{t("catalog.list.scopePrompt")}</p>
+      </div>
+    );
+  }
+  if (!canReadCatalog(scope.role)) {
+    return (
+      <Shell scope={scope}>
+        <Unavailable />
+      </Shell>
+    );
+  }
+  return <CatalogContent scope={scope} tenantId={scope.tenantId} />;
 }
