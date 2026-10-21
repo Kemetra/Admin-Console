@@ -202,6 +202,26 @@ export const PIN_FILE_PATH = "contracts/backend-core/PIN" as const;
  * Backend-Core also added `console-sales-summary` and `pos-approvers`; neither
  * is composed here. The other 22 sources are byte-identical. No caller needed
  * a code change.
+ *
+ * ELEVENTH deliberate re-pin (RT-779, 2026-10-21): bumped 62f8699 -> 6bd8a53
+ * (Backend-Core main, through RT-639 #878, after the RT-414 support-session
+ * runtime #876) and composed `platform-support-sessions.openapi.yaml`
+ * (1.2.0-draft, RT-777 S1a; its four operations carry no `x-runtime-status`
+ * marker at 6bd8a53). Nothing wraps them yet: the /platform gate is RT-780.
+ * Drift across the 25 existing sources is additive and touches five of them:
+ *   - `inventory/inventory.yaml` 1.6.0-draft (RT-435): `createStatusMove`,
+ *     `createRelocation`, `getReturnLandingPolicy` and `setReturnLandingPolicy`
+ *     (not wrapped here); `StockMovement.integrationState` gains `erp_neutral`,
+ *     which the stock movement table shows as "Unknown" until it gets a label.
+ *   - `auth.openapi.yaml` (RT-623): a documented 429 with `Retry-After` on the
+ *     public auth routes (sign-in and password reset). Only the sign-in countdown
+ *     reads it (`src/lib/client.ts`, `src/auth/signin-flow.ts`); it now always
+ *     gets a value, 1 to 3600 seconds.
+ *   - `cash-variance-policy.openapi.yaml` (RT-639): the device-token rotate
+ *     hint response headers on the POS device read, which is not wrapped here.
+ *   - `ai-entitlements.openapi.yaml` and `erpnext-sync-ops/console-sync-ops.yaml`:
+ *     the `x-runtime-status: contract-only` markers and prose only, no wire change.
+ * The other 20 sources are byte-identical. No caller needed a code change.
  */
 export const BACKEND_CORE_PIN: ContractsPin = parsePin(
   readFileSync(resolve(repoRoot, PIN_FILE_PATH), "utf8"),
@@ -312,6 +332,15 @@ export const OPENAPI_SOURCE_SPECS: readonly OpenApiSourceSpec[] = [
   // write (`consolePutTenantAiFeatureOptOut`) is composed but not called, and the
   // server-internal `check` shapes have no path. Consume-only; no YAML authored here.
   { name: "AiEntitlements", path: "packages/contracts/openapi/ai-entitlements.openapi.yaml" },
+  // Platform support sessions (RT-777 S1a / RT-779; contract #741, runtime #876):
+  // `openSupportSession`, `getCurrentSupportSession`, `renewSupportSession`,
+  // `endSupportSession` for the /platform pilot path. Composed only: the /platform
+  // gate (RT-780) and the screens that call them are follow-ups. Consume-only;
+  // no YAML authored here.
+  {
+    name: "PlatformSupportSessions",
+    path: "packages/contracts/openapi/platform-support-sessions.openapi.yaml",
+  },
 ];
 
 /** Upstream source paths (kept for back-compat / documentation references). */
