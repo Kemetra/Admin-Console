@@ -1,3 +1,4 @@
+import { canReadCatalog } from "@/catalog/catalogLogic";
 import { RateLimitBanner } from "@/components/RateLimitBanner";
 import { TowerMark } from "@/components/TowerMark";
 import { Icon, type IconNameFor } from "@/components/icons/Icon";
@@ -54,7 +55,7 @@ const LIVE_NAV: { label: MessageKey; to: string; icon: NavIcon }[] = [
  * the API lets read the surface (RT-178 stock discrepancies, RT-18 shift
  * closes, RT-560 ERP connection, RT-371 devices, RT-421 payer accounts, RT-587
  * sales, RT-724 unknown items, RT-726 sales needing repair, RT-727 product
- * reconciliation, RT-728 inventory). Consecutive entries of one section share
+ * reconciliation, RT-728 inventory, RT-765 catalog items). Consecutive entries of one section share
  * its heading. The nav mirrors the API; it is not an authorization decision.
  */
 const ROLE_NAV: {
@@ -87,6 +88,15 @@ const ROLE_NAV: {
     to: "/inventory",
     icon: "inventory",
     canRead: canReadInventory,
+  },
+  {
+    // RT-765 (RT-752 AC 2): «الأصناف», first in the Catalog section, for the
+    // roles the catalog read API serves. Its child routes keep it selected.
+    section: "shell.nav.section.catalog",
+    label: "catalog.nav.label",
+    to: "/catalog/products",
+    icon: "product",
+    canRead: canReadCatalog,
   },
   {
     // RT-724: the unknown-items review queue left the RF-4 gate once its
@@ -151,11 +161,11 @@ const ROLE_NAV: {
 
 /**
  * Families not yet built — shown gated to mark scope, not to claim built. Dev
- * builds only (RT-270): in production they would be dead destinations.
+ * builds only (RT-270): in production they would be dead destinations. Empty
+ * since RT-765 shipped the catalog list (the RF-3 entry); a family still to
+ * come is listed here until its first slice lands.
  */
-const GATED_NAV: { label: MessageKey; gate: string; icon: NavIcon }[] = [
-  { label: "shell.nav.catalog", gate: "RF-3", icon: "product" },
-];
+const GATED_NAV: { label: MessageKey; gate: string; icon: NavIcon }[] = [];
 
 export interface AppShellProps {
   onSignOut: () => void | Promise<void>;

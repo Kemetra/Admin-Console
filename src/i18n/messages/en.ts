@@ -8,6 +8,7 @@ import { aiPlan } from "./en/aiPlan";
 import { audit } from "./en/audit";
 import { auth } from "./en/auth";
 import { cashPolicy } from "./en/cashPolicy";
+import { catalog } from "./en/catalog";
 import { common } from "./en/common";
 import { devices } from "./en/devices";
 import { erp } from "./en/erp";
@@ -43,6 +44,7 @@ export const EN_MODULES = {
   cashPolicy,
   inventory,
   aiPlan,
+  catalog,
 };
 
 export const en: MessagesOf<typeof ar> = {
@@ -64,4 +66,5 @@ export const en: MessagesOf<typeof ar> = {
   ...cashPolicy,
   ...inventory,
   ...aiPlan,
+  ...catalog,
 };

@@ -14,7 +14,6 @@ export const shell = {
   "shell.nav.section.catalog": "الكتالوج",
   "shell.nav.section.cash": "النقدية",
   "shell.nav.shiftCloses": "إقفالات الورديات",
-  "shell.nav.catalog": "الكتالوج",
   "shell.nav.unknownItems": "أصناف غير معروفة",
   "shell.signOut": "تسجيل الخروج",
 

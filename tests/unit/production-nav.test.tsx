@@ -50,6 +50,7 @@ describe("production navigation", () => {
       "Sales",
       "Stock discrepancies",
       "Stock movements",
+      "Items",
       "Unknown items",
       "Shift closes",
       "Connection & sync",
@@ -210,12 +211,31 @@ describe("production navigation", () => {
     }
   });
 
-  test("dev builds keep the gated placeholders, marked disabled", () => {
+  // RT-765: the RF-3 Catalog placeholder is gone now that the catalog list is
+  // live, so no gated placeholder is left for a dev build to show.
+  test("dev builds have no gated placeholder left: the catalog entry is live", () => {
     const nav = renderShell("owner", true);
-    expect(entryLabels(nav)).toContain("Catalog");
-    expect(within(nav).getByText("RF-3")).toBeDefined();
-    expect(nav.querySelectorAll("[aria-disabled='true']")).toHaveLength(1);
-    expect(within(nav).queryByText("RF-4")).toBeNull();
+    expect(nav.querySelectorAll("[aria-disabled='true']")).toHaveLength(0);
+    expect(within(nav).queryByText(/^RF-/)).toBeNull();
+    expect(within(nav).getAllByRole("link", { name: "Items" })).toHaveLength(1);
+  });
+
+  // RT-765 (RT-752 AC 2): «الأصناف» leads the Catalog section, for the roles
+  // the catalog read API serves, and stays selected on its child routes.
+  test.each(["owner", "tenant_admin", "store_manager"])(
+    "RT-765: %s sees Items first in the Catalog section",
+    (role) => {
+      const nav = renderShell(role, false);
+      const items = within(nav).getByRole("link", { name: "Items" });
+      expect(items.getAttribute("href")).toBe("/catalog/products");
+      const labels = entryLabels(nav);
+      expect(labels.indexOf("Items")).toBe(labels.indexOf("Unknown items") - 1);
+      expect(within(nav).getByText("Catalog").className).toBe("nav-section");
+    },
+  );
+
+  test.each(["store_staff", "cashier", "auditor"])("RT-765: %s has no Items entry", (role) => {
+    expect(entryLabels(renderShell(role, false))).not.toContain("Items");
   });
 
   // RT-724: the unknown-items queue left the RF-4 gate, in its own "Catalog"

@@ -23,6 +23,7 @@ import { SignInRoute } from "@/shell/SignInRoute";
  * block navigation (useBlocker). The route tree is unchanged; the root layout
  * hosts the providers the routes read.
  */
+import { catalogRoutes } from "@/shell/catalogRoutes";
 import { deviceRoutes } from "@/shell/deviceRoutes";
 import { DirtyGuardProvider } from "@/shell/dirty-guard";
 import { erpStatusRoutes } from "@/shell/erpStatusRoutes";
@@ -80,6 +81,7 @@ const router = createBrowserRouter(
         {rf4aRoutes}
         {rf5Routes}
         {rf6Routes}
+        {catalogRoutes}
         {payerRoutes}
         {stockDiscrepancyRoutes}
         {inventoryRoutes}

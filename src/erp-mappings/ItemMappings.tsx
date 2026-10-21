@@ -6,8 +6,10 @@
  *
  * A suggestion is recorded only for a product id already known from context:
  * the row just retired (a re-point is retire, then a fresh suggestion). There
- * is no free-text product field, because no catalog read contract exists yet.
- * Product ids are shown as received: there is no product name to show.
+ * is no free-text product field: picking a product from the console catalog
+ * read (`consoleListCatalogProducts`, in the pinned contract) is the shared
+ * picker slice (RT-767). Product ids are shown as received: there is no
+ * product name to show.
  */
 import { DataTableSkeleton } from "@/components/DataTableSkeleton";
 import { ListState } from "@/components/ListState";
