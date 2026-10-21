@@ -131,7 +131,7 @@ export function PairDrawer({ onClose }: Readonly<{ onClose: () => void }>): Reac
   // The secret code lives here only, until the drawer closes.
   const [issued, setIssued] = useState<PairingCodeIssued | undefined>();
   // While the server is answering, nothing closes the drawer: an issued code would be lost.
-  const close = issue.isPending ? () => undefined : onClose;
+  const busy = issue.isPending;
 
   async function submit(): Promise<void> {
     const found = validateIssueDraft(draft);
@@ -160,7 +160,7 @@ export function PairDrawer({ onClose }: Readonly<{ onClose: () => void }>): Reac
   }
 
   return (
-    <Drawer title={t("devices.issue.title.pair")} onClose={close}>
+    <Drawer title={t("devices.issue.title.pair")} onClose={onClose} dismissible={!busy}>
       <form
         className="surface__form"
         noValidate

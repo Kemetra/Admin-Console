@@ -1,11 +1,11 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { Drawer } from "@/components/Drawer";
 
-function renderDrawer(onClose: () => void) {
+function renderDrawer(onClose: () => void, dismissible?: boolean) {
   return render(
-    <Drawer title="Details" onClose={onClose}>
+    <Drawer title="Details" onClose={onClose} dismissible={dismissible}>
       <button type="button">Inside</button>
     </Drawer>,
   );
@@ -75,18 +75,74 @@ describe("Drawer exit", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  test("the close button and the scrim use the same exit", () => {
+  test.each([
+    ["the close button", () => fireEvent.click(screen.getByRole("button", { name: "Close" }))],
+    [
+      "a scrim click",
+      () => fireEvent.click(document.querySelector(".drawer-scrim") as Element),
+    ],
+  ])("%s plays the exit before closing", (_label, trigger) => {
     vi.useFakeTimers();
     document.documentElement.style.setProperty("--duration-2", "150ms");
     const onClose = vi.fn();
-    const { container } = renderDrawer(onClose);
-    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    renderDrawer(onClose);
+    trigger();
     expect(
       screen.getByRole("dialog", { name: "Details" }).classList.contains("drawer--closing"),
     ).toBe(true);
-    fireEvent.click(container.querySelector(".drawer-scrim") as Element);
+    expect(onClose).not.toHaveBeenCalled();
     vi.advanceTimersByTime(150);
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  // PairDrawer / LifecycleFlow: while a pairing code is being issued nothing may
+  // close the drawer, or the one-time code is lost.
+  test("a busy (non-dismissible) drawer ignores every close request", () => {
+    vi.useFakeTimers();
+    document.documentElement.style.setProperty("--duration-2", "150ms");
+    const onClose = vi.fn();
+    const { container } = renderDrawer(onClose, false);
+    const dialog = screen.getByRole("dialog", { name: "Details" });
+    fireEvent.keyDown(dialog, { key: "Escape" });
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    fireEvent.click(container.querySelector(".drawer-scrim") as Element);
+    vi.advanceTimersByTime(1000);
+    expect(onClose).not.toHaveBeenCalled();
+    expect(dialog.classList.contains("drawer--closing")).toBe(false);
+    expect(dialog.hasAttribute("inert")).toBe(false);
+  });
+
+  test("a close requested while busy does not fire once the drawer becomes dismissible", () => {
+    vi.useFakeTimers();
+    document.documentElement.style.setProperty("--duration-2", "150ms");
+    const onClose = vi.fn();
+    const { rerender } = renderDrawer(onClose, false);
+    fireEvent.keyDown(screen.getByRole("dialog", { name: "Details" }), { key: "Escape" });
+    rerender(
+      <Drawer title="Details" onClose={onClose} dismissible>
+        <button type="button">Inside</button>
+      </Drawer>,
+    );
+    vi.advanceTimersByTime(1000);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  test("a drawer its parent keeps open comes back usable after the exit", () => {
+    vi.useFakeTimers();
+    document.documentElement.style.setProperty("--duration-2", "150ms");
+    const keepOpen = vi.fn();
+    renderDrawer(keepOpen);
+    const dialog = screen.getByRole("dialog", { name: "Details" });
+    fireEvent.keyDown(dialog, { key: "Escape" });
+    act(() => {
+      vi.advanceTimersByTime(150);
+    });
+    expect(keepOpen).toHaveBeenCalledTimes(1);
+    expect(dialog.classList.contains("drawer--closing")).toBe(false);
+    expect(dialog.hasAttribute("inert")).toBe(false);
+    // And it can be asked to close again.
+    fireEvent.keyDown(dialog, { key: "Escape" });
+    expect(dialog.classList.contains("drawer--closing")).toBe(true);
   });
 
   test("unmounting during the exit cancels the pending onClose", () => {

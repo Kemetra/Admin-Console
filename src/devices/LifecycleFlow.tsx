@@ -236,9 +236,9 @@ export function LifecycleFlow({
   const flow = useLifecycleFlow(action, device);
   // While the server is answering, nothing closes the drawer (Escape, the scrim, the X):
   // an issued pairing code would land on an unmounted component and be lost.
-  const close = flow.pending ? () => undefined : onClose;
+  const busy = flow.pending;
   return (
-    <Drawer title={t(TITLE[action])} onClose={close}>
+    <Drawer title={t(TITLE[action])} onClose={onClose} dismissible={!busy}>
       <form className="surface__form" noValidate onSubmit={flow.onSubmit}>
         {flow.step === "details" ? (
           <Details action={action} flow={flow} device={device} onClose={onClose} />

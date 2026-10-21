@@ -9,9 +9,12 @@
  * Tab/Shift+Tab are trapped within the panel so `aria-modal` is honest. No
  * nested cards (rule 5); internal grouping uses ruled sections.
  *
- * Closing plays an exit (panel slides out, scrim fades) on `--duration-2`; the
- * parent's `onClose` runs when it ends. Under reduced motion the token is 0ms,
- * so `onClose` runs immediately.
+ * Closing plays an exit (panel slides out, scrim fades) on `--duration-2`. Whether
+ * a close is allowed is decided when it is requested: a non-dismissible drawer
+ * (a request in flight whose answer must not be lost, e.g. a one-time pairing
+ * code) ignores Escape, the scrim and the close button. The `onClose` in force at
+ * that moment runs when the exit ends; a parent that keeps the drawer mounted gets
+ * it back usable. Under reduced motion the token is 0ms, so `onClose` runs at once.
  */
 import { Icon } from "@/components/icons/Icon";
 import { useT } from "@/i18n";
@@ -21,6 +24,8 @@ import "./drawer.css";
 export interface DrawerProps {
   title: string;
   onClose: () => void;
+  /** False while closing would lose work (a request in flight). Default true. */
+  dismissible?: boolean;
   children: React.ReactNode;
 }
 
@@ -35,7 +40,12 @@ function exitDurationMs(): number {
 const FOCUSABLE =
   'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
-export function Drawer({ title, onClose, children }: Readonly<DrawerProps>): React.JSX.Element {
+export function Drawer({
+  title,
+  onClose,
+  dismissible = true,
+  children,
+}: Readonly<DrawerProps>): React.JSX.Element {
   const t = useT();
   const panelRef = useRef<HTMLDialogElement>(null);
   const scrimRef = useRef<HTMLDivElement>(null);
@@ -44,17 +54,26 @@ export function Drawer({ title, onClose, children }: Readonly<DrawerProps>): Rea
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+  const dismissibleRef = useRef(dismissible);
+  dismissibleRef.current = dismissible;
 
   const requestClose = useCallback((): void => {
-    if (closingRef.current) return;
+    if (closingRef.current || !dismissibleRef.current) return;
+    // Decided now, not when the exit ends: the handler in force at the request.
+    const close = onCloseRef.current;
     const ms = exitDurationMs();
     if (ms === 0) {
-      onCloseRef.current();
+      close();
       return;
     }
     closingRef.current = true;
     setClosing(true);
-    timerRef.current = setTimeout(() => onCloseRef.current(), ms);
+    timerRef.current = setTimeout(() => {
+      close();
+      // Still mounted means the parent kept the drawer open: give it back.
+      closingRef.current = false;
+      setClosing(false);
+    }, ms);
   }, []);
 
   useEffect(() => () => clearTimeout(timerRef.current), []);
