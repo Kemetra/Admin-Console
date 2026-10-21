@@ -77,10 +77,7 @@ describe("Drawer exit", () => {
 
   test.each([
     ["the close button", () => fireEvent.click(screen.getByRole("button", { name: "Close" }))],
-    [
-      "a scrim click",
-      () => fireEvent.click(document.querySelector(".drawer-scrim") as Element),
-    ],
+    ["a scrim click", () => fireEvent.click(document.querySelector(".drawer-scrim") as Element)],
   ])("%s plays the exit before closing", (_label, trigger) => {
     vi.useFakeTimers();
     document.documentElement.style.setProperty("--duration-2", "150ms");
