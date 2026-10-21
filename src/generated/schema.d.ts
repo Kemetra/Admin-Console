@@ -3,7 +3,7 @@
  * Do not make direct changes to the file.
  */
 
-// Source: Data-Pulse-2 @ 62f8699fb785ddd9fb3fffd1f07e1235da95138c
+// Source: Data-Pulse-2 @ 6bd8a5306458d1eda260a2d6cc40e2067eac22be
 // Sources:
 // - packages/contracts/openapi/auth.openapi.yaml
 // - packages/contracts/openapi/context.openapi.yaml
@@ -198,7 +198,10 @@ export namespace AuthSchema {
         responses: never;
         parameters: never;
         requestBodies: never;
-        headers: never;
+        headers: {
+            /** @description Whole seconds the caller should wait before retrying, sent on every public-auth 429 (RT-623). Rounded up from the bucket's remaining window and clamped to 1 to 3600. */
+            PublicAuthRetryAfter: number;
+        };
         pathItems: never;
     }
     export type $defs = Record<string, never>;
@@ -245,9 +248,10 @@ export namespace AuthSchema {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description Rate-limited. */
+                /** @description Rate-limited (RT-623). `Retry-After` gives the whole seconds until the limiting bucket resets, 1 to 3600. */
                 429: {
                     headers: {
+                        "Retry-After": components["headers"]["PublicAuthRetryAfter"];
                         [name: string]: unknown;
                     };
                     content: {
@@ -351,6 +355,16 @@ export namespace AuthSchema {
                     };
                     content?: never;
                 };
+                /** @description Rate-limited per client IP (RT-623). `Retry-After` gives the whole seconds until the bucket resets, 1 to 3600. */
+                429: {
+                    headers: {
+                        "Retry-After": components["headers"]["PublicAuthRetryAfter"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
             };
         };
         confirmPasswordReset: {
@@ -380,6 +394,16 @@ export namespace AuthSchema {
                 /** @description Invalid or expired token. */
                 400: {
                     headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Rate-limited per client IP (RT-623). `Retry-After` gives the whole seconds until the bucket resets, 1 to 3600. */
+                429: {
+                    headers: {
+                        "Retry-After": components["headers"]["PublicAuthRetryAfter"];
                         [name: string]: unknown;
                     };
                     content: {
@@ -7856,6 +7880,10 @@ export namespace CashVariancePolicySchema {
         };
         requestBodies: never;
         headers: {
+            /** @description RT-639. Present only when this device credential has 15 days or less left: the ISO-8601 instant `expires_at - 15 days` (the same instant as `rotate_after` in the `posRotateTerminalToken` response). The terminal rotates at or after it. Absent while more than 15 days remain. Never carries token material. See `pos-terminal-pairing.openapi.yaml`, "Credential rotation". */
+            DeviceTokenRotateAfter: string;
+            /** @description RT-639. Sent with `X-Device-Token-Rotate-After`: `notice` (15 days or less left), `warning` (10 or less), `urgent` (3 or less, or already past `expires_at`). The server keeps no per-device state, so it sends the stage on every response while it holds; the terminal shows each stage the first time it sees it. */
+            DeviceTokenRotateStage: "notice" | "warning" | "urgent";
             /** @description Strong ETag: the quoted lowercase hex SHA-256 of the canonical JSON (keys sorted, no whitespace) of the resolved `policySource`, `policyRevisionId` and `policyValue`. `serverTime` is not part of it. Because it is computed over the resolved policy, it changes when a store override expires, with no write. */
             ETag: string;
             /** @description Always `no-cache, private`; the POS revalidates every read. */
@@ -7886,6 +7914,8 @@ export namespace CashVariancePolicySchema {
                 /** @description The resolved policy. */
                 200: {
                     headers: {
+                        "X-Device-Token-Rotate-After": components["headers"]["DeviceTokenRotateAfter"];
+                        "X-Device-Token-Rotate-Stage": components["headers"]["DeviceTokenRotateStage"];
                         ETag: components["headers"]["ETag"];
                         "Cache-Control": components["headers"]["CacheControl"];
                         [name: string]: unknown;
@@ -7897,6 +7927,8 @@ export namespace CashVariancePolicySchema {
                 /** @description Unchanged since the `If-None-Match` ETag. No body. */
                 304: {
                     headers: {
+                        "X-Device-Token-Rotate-After": components["headers"]["DeviceTokenRotateAfter"];
+                        "X-Device-Token-Rotate-Stage": components["headers"]["DeviceTokenRotateStage"];
                         ETag: components["headers"]["ETag"];
                         "Cache-Control": components["headers"]["CacheControl"];
                         [name: string]: unknown;
@@ -10368,6 +10400,70 @@ export namespace InventorySchema {
             patch?: never;
             trace?: never;
         };
+        "/api/inventory/v1/stores/{storeId}/status-moves": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            get?: never;
+            put?: never;
+            /**
+             * Move stock between two inventory statuses at one location.
+             * @description RT-435 (RT-290 G4-2, decisions 842–844): one `adjustment` Business Event with exactly two effects at the same location: `-quantity` in `fromStatus` and `+quantity` in `toStatus`. Physical on-hand is unchanged. The `reasonCode` is required and must allow the `(fromStatus, toStatus)` pair (839, D1): `damage` sellable → damaged; `expiry` sellable → expired; `inspection_restock` return_inspection → sellable; `inspection_damage` return_inspection → damaged; `hold_release` quality_hold → sellable; `correction` any pair outside the two hold statuses, with a `note`. `quality_hold` and `recall` are reserved for the tracking-hold workflow and are refused here. The location defaults to the store's primary location; another location must be an active location of the path store. Both effects are `erp_neutral` (V1 mapping profile, M-5); no ERP posting intent is created. Owner, tenant_admin or store_manager (a store_manager only in its store scope); moving stock OUT of `damaged`, `expired`, `quality_hold` or `recall_hold` is sensitive and is owner / tenant_admin only (960, 961, D2). A tracked product is refused until tracked moves exist (G7-4). Idempotent via the `Idempotency-Key` header; a replay of the same command returns the recorded event and writes nothing.
+             */
+            post: operations["createStatusMove"];
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/inventory/v1/stores/{storeId}/relocations": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            get?: never;
+            put?: never;
+            /**
+             * Move stock between two locations of one store, same status.
+             * @description RT-435 (decisions 800, 814): one `adjustment` Business Event with exactly two effects in the same status: `-quantity` at `fromLocationId` and `+quantity` at `toLocationId`. A relocation is an internal move, not a shipment Transfer. Both locations must be active locations of the path store and must differ; a location of another store or tenant is a non-disclosing 404, an inactive one a 400. The status defaults to `sellable`. Physical and Sellable On Hand are unchanged. A `reasonCode` is optional (`correction` needs a `note`; the reserved hold codes are refused). Both effects are `erp_neutral`; no ERP posting intent is created. Owner, tenant_admin or store_manager (a store_manager only in its store scope). Idempotent via the `Idempotency-Key` header.
+             */
+            post: operations["createRelocation"];
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/inventory/v1/settings/return-landing": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * Read the tenant's return landing policy.
+             * @description RT-435 (RT-290 Q6, decision 849): where the tenant's return effects land: `sellable` (the default; `updatedAt` is null while unset) or `return_inspection`, from which stock leaves by a status move. Owner, tenant_admin or store_manager.
+             */
+            get: operations["getReturnLandingPolicy"];
+            /**
+             * Set the tenant's return landing policy.
+             * @description RT-435 (RT-290 Q6): set where the tenant's return effects land. Owner or tenant_admin. Setting the current value again is a no-op change and answers the same body; the change is audited.
+             */
+            put: operations["setReturnLandingPolicy"];
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
         "/api/inventory/v1/admin/sale-linked-backfill": {
             parameters: {
                 query?: never;
@@ -10533,10 +10629,10 @@ export namespace InventorySchema {
                  */
                 origin: "retail" | "erp_external";
                 /**
-                 * @description RT-425 (RT-289 G2-3): the effect's ERP integration state. `not_posted` = no ERP posting intent represents the effect; `pending` / `confirmed` / `rejected` / `reconciliation_required` follow its ERP posting intent; `external` = an ERP-origin effect. A confirmation never adds quantity (decision 771). Null only for a movement with no integration record.
+                 * @description RT-425 (RT-289 G2-3): the effect's ERP integration state. `not_posted` = no ERP posting intent represents the effect; `pending` / `confirmed` / `rejected` / `reconciliation_required` follow its ERP posting intent; `external` = an ERP-origin effect; `erp_neutral` (RT-435, RT-290 Q10) = an effect of a status move or relocation whose event nets to zero in its ERP mapping bucket, so it needs no ERP representation and never gets an intent. A confirmation never adds quantity (decision 771). Null only for a movement with no integration record.
                  * @enum {string|null}
                  */
-                integrationState?: "not_posted" | "pending" | "confirmed" | "rejected" | "reconciliation_required" | "external" | null;
+                integrationState?: "not_posted" | "pending" | "confirmed" | "rejected" | "reconciliation_required" | "external" | "erp_neutral" | null;
                 /**
                  * Format: date-time
                  * @description RT-425 (RT-289 G2-4): when ERPNext confirmed the effect (server time of the `posted` acknowledgement); null unless `integrationState` is `confirmed`.
@@ -10555,6 +10651,98 @@ export namespace InventorySchema {
                  * @description RT-448 (RT-50 G7-2): the tracking identity (batch / serial) of the movement's own product. Null for an untracked product, and for every movement written by this version (tracked selling is not active).
                  */
                 trackingIdentityId: string | null;
+            };
+            /**
+             * @description RT-435 (decision 839, D1): the governed Reason Code of a status move or relocation. Which `(fromStatus, toStatus)` pair each allows is in `createStatusMove`. `quality_hold` and `recall` are reserved for the tracking-hold workflow (RT-449) and are refused by both operations.
+             * @enum {string}
+             */
+            InventoryReasonCode: "damage" | "expiry" | "quality_hold" | "recall" | "inspection_restock" | "inspection_damage" | "hold_release" | "correction";
+            /** @description Strict command. The store is the PATH parameter; tenant and actor are resolved server-side. No tracking field is accepted yet (RT-451). */
+            CreateStatusMoveCommand: {
+                /** Format: uuid */
+                tenantProductRef: string;
+                quantity: components["schemas"]["PositiveDecimalQuantity"];
+                stockingUnit: components["schemas"]["StockingUnit"];
+                /**
+                 * Format: uuid
+                 * @description An active location of the path store; defaults to its primary location.
+                 */
+                stockLocationId?: string;
+                fromStatus: components["schemas"]["InventoryStatus"];
+                toStatus: components["schemas"]["InventoryStatus"];
+                reasonCode: components["schemas"]["InventoryReasonCode"];
+                /** @description Operator note (no PII). Required with `reasonCode` `correction`. */
+                note?: string;
+            };
+            /** @description Strict command. The store is the PATH parameter; both locations must be active locations of it. No tracking field is accepted yet (RT-451). */
+            CreateRelocationCommand: {
+                /** Format: uuid */
+                tenantProductRef: string;
+                quantity: components["schemas"]["PositiveDecimalQuantity"];
+                stockingUnit: components["schemas"]["StockingUnit"];
+                /** Format: uuid */
+                fromLocationId: string;
+                /** Format: uuid */
+                toLocationId: string;
+                /** @description The status of the moved stock; defaults to `sellable`. */
+                inventoryStatus?: components["schemas"]["InventoryStatus"];
+                reasonCode?: components["schemas"]["InventoryReasonCode"];
+                /** @description Operator note (no PII). Required with `reasonCode` `correction`. */
+                note?: string;
+            };
+            /** @description RT-435: the record of a status move or relocation and its two effects. Each effect is a `StockMovement` with `movementType` `adjustment`. A status move has `fromLocationId` = `toLocationId`; a relocation has `fromStatus` = `toStatus`. The effects sum to zero. */
+            InventoryPositionEvent: {
+                /** Format: uuid */
+                id: string;
+                /** @enum {string} */
+                kind: "status_move" | "relocation";
+                /** Format: uuid */
+                storeId: string;
+                /** Format: uuid */
+                tenantProductRef: string;
+                /** @description The moved quantity (positive). */
+                quantity: components["schemas"]["DecimalQuantity"];
+                stockingUnit: string;
+                /** Format: uuid */
+                fromLocationId: string;
+                /** Format: uuid */
+                toLocationId: string;
+                fromStatus: components["schemas"]["InventoryStatus"];
+                toStatus: components["schemas"]["InventoryStatus"];
+                reasonCode: components["schemas"]["InventoryReasonCode"] | null;
+                note: string | null;
+                /**
+                 * Format: uuid
+                 * @description The tracking identity both effects carry (RT-50 G7-2). Null for every event this version records (tracked moves arrive with RT-451).
+                 */
+                trackingIdentityId: string | null;
+                /**
+                 * Format: uuid
+                 * @description The acting principal's user id (an internal actor reference, not PII).
+                 */
+                createdBy: string;
+                /** Format: date-time */
+                occurredAt: string;
+                /** @description The `-quantity` effect at (fromLocationId, fromStatus). */
+                fromEffect: components["schemas"]["StockMovement"];
+                /** @description The `+quantity` effect at (toLocationId, toStatus). */
+                toEffect: components["schemas"]["StockMovement"];
+            };
+            /**
+             * @description RT-435 (RT-290 Q6, decision 849): where a tenant's return effects land.
+             * @enum {string}
+             */
+            ReturnLandingStatus: "sellable" | "return_inspection";
+            ReturnLandingPolicy: {
+                returnLandingStatus: components["schemas"]["ReturnLandingStatus"];
+                /**
+                 * Format: date-time
+                 * @description When the policy was last set; null while the tenant runs on the default.
+                 */
+                updatedAt: string | null;
+            };
+            SetReturnLandingPolicyCommand: {
+                returnLandingStatus: components["schemas"]["ReturnLandingStatus"];
             };
             StockMovementList: {
                 /** @description Bounded by the `limit` query parameter ceiling (max 200), symmetric with the request-side caps. */
@@ -10724,6 +10912,15 @@ export namespace InventorySchema {
             };
             /** @description 409 — an `Idempotency-Key` replay with a DIFFERENT body (FR-030), or a provenance-pair conflict on the backfill path. */
             IdempotencyConflict: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 409 — RT-435. `idempotency_key_conflict`: the `Idempotency-Key` was already used for a different command. `erp_transfer_intent_required`: the move does not net to zero in every ERP mapping bucket, which needs the Gate 8 transfer intent (never under the V1 profile). `tracking_identity_required`: the product is tracked, and tracked moves are not supported yet. Nothing is written. */
+            PositionEventConflict: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -11012,6 +11209,133 @@ export namespace InventorySchema {
                 403: components["responses"]["ForbiddenOrOriginRejected"];
                 404: components["responses"]["NotFoundOrCrossTenant"];
                 409: components["responses"]["IdempotencyConflict"];
+                429: components["responses"]["TooManyRequests"];
+                "5XX": components["responses"]["SystemFailure"];
+            };
+        };
+        createStatusMove: {
+            parameters: {
+                query?: never;
+                header: {
+                    /** @description Replay-safety key for write operations (FR-030). A replay with the same key + same body returns the prior result with no second movement; a replay with the same key + different body is a 409 conflict. Resolved by the reused 001/005 idempotency interceptor (the manual-movement dedup contract; the backfill additionally dedups on its provenance pair). */
+                    "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                };
+                path: {
+                    /** @description Store the request is scoped to; access is authorized server-side. */
+                    storeId: components["parameters"]["StoreIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateStatusMoveCommand"];
+                };
+            };
+            responses: {
+                /** @description Status move recorded as one event with two effects. */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["InventoryPositionEvent"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["ForbiddenOrOriginRejected"];
+                404: components["responses"]["NotFoundOrCrossTenant"];
+                409: components["responses"]["PositionEventConflict"];
+                429: components["responses"]["TooManyRequests"];
+                "5XX": components["responses"]["SystemFailure"];
+            };
+        };
+        createRelocation: {
+            parameters: {
+                query?: never;
+                header: {
+                    /** @description Replay-safety key for write operations (FR-030). A replay with the same key + same body returns the prior result with no second movement; a replay with the same key + different body is a 409 conflict. Resolved by the reused 001/005 idempotency interceptor (the manual-movement dedup contract; the backfill additionally dedups on its provenance pair). */
+                    "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                };
+                path: {
+                    /** @description Store the request is scoped to; access is authorized server-side. */
+                    storeId: components["parameters"]["StoreIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateRelocationCommand"];
+                };
+            };
+            responses: {
+                /** @description Relocation recorded as one event with two effects. */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["InventoryPositionEvent"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["ForbiddenOrOriginRejected"];
+                404: components["responses"]["NotFoundOrCrossTenant"];
+                409: components["responses"]["PositionEventConflict"];
+                429: components["responses"]["TooManyRequests"];
+                "5XX": components["responses"]["SystemFailure"];
+            };
+        };
+        getReturnLandingPolicy: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The tenant's return landing policy. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReturnLandingPolicy"];
+                    };
+                };
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["ForbiddenOrOriginRejected"];
+                429: components["responses"]["TooManyRequests"];
+                "5XX": components["responses"]["SystemFailure"];
+            };
+        };
+        setReturnLandingPolicy: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SetReturnLandingPolicyCommand"];
+                };
+            };
+            responses: {
+                /** @description The updated return landing policy. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReturnLandingPolicy"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["ForbiddenOrOriginRejected"];
                 429: components["responses"]["TooManyRequests"];
                 "5XX": components["responses"]["SystemFailure"];
             };
