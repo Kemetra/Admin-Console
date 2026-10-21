@@ -14,7 +14,6 @@ export const shell: MessagesOf<typeof ar> = {
   "shell.nav.section.catalog": "Catalog",
   "shell.nav.section.cash": "Cash",
   "shell.nav.shiftCloses": "Shift closes",
-  "shell.nav.catalog": "Catalog",
   "shell.nav.unknownItems": "Unknown items",
   "shell.signOut": "Sign out",
 

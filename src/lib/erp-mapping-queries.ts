@@ -7,7 +7,7 @@
  *
  *   - Items: `tenantAdminListErpnextItemMappings`,
  *     `tenantAdminSuggestErpnextItemMapping` (only for a product id already
- *     known from a mapping row: no catalog read contract exists yet),
+ *     known from a mapping row: the catalog picker is the RT-767 slice),
  *     `tenantAdminConfirmErpnextItemMapping`, `tenantAdminRetireErpnextItemMapping`.
  *   - Warehouses: `tenantAdminListErpnextWarehouseMappings`,
  *     `tenantAdminSetErpnextWarehouseMapping`,

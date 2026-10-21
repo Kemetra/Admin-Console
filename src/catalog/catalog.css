@@ -1,0 +1,83 @@
+/* RT-765 catalog product list. Built from existing tokens only; no new colour,
+ * font or dependency. Status carries its meaning in text. Logical properties
+ * throughout (RTL by structure). */
+
+.catalog-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-object);
+}
+.catalog-filters__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-inline-size: 320px;
+}
+.catalog-filters__field label {
+  font: var(--weight-strong) var(--text-meta) / var(--leading-tight) var(--font-sans);
+  color: var(--color-text-muted);
+}
+.catalog-filters__field .input {
+  inline-size: auto;
+  min-inline-size: 180px;
+}
+.catalog-filters__note {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-meta);
+}
+.catalog-filters__actions {
+  display: flex;
+  gap: var(--space-2);
+  align-self: flex-end;
+  margin-inline-start: auto;
+}
+
+/* The item name wraps to two lines, then clips: the number columns keep their
+ * width ("flex identity, anchor numbers", UX-10). */
+.catalog-item {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.catalog-chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.catalog-partial {
+  display: block;
+  margin: 0;
+  padding: var(--space-4);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-object);
+  color: var(--color-text-muted);
+}
+
+.catalog-pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--text-control);
+}
+
+/* Narrow widths drop the metadata first: tax category, tracking and updated-at
+ * are always the last three columns (CatalogResults builds them last). */
+@media (max-width: 1100px) {
+  .catalog-table .data-table :is(th, td):nth-last-child(-n + 3) {
+    display: none;
+  }
+}

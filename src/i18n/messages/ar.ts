@@ -9,6 +9,7 @@ import { aiPlan } from "./ar/aiPlan";
 import { audit } from "./ar/audit";
 import { auth } from "./ar/auth";
 import { cashPolicy } from "./ar/cashPolicy";
+import { catalog } from "./ar/catalog";
 import { common } from "./ar/common";
 import { devices } from "./ar/devices";
 import { erp } from "./ar/erp";
@@ -43,6 +44,7 @@ export const AR_MODULES = {
   cashPolicy,
   inventory,
   aiPlan,
+  catalog,
 };
 
 export const ar = {
@@ -64,4 +66,5 @@ export const ar = {
   ...cashPolicy,
   ...inventory,
   ...aiPlan,
+  ...catalog,
 };
