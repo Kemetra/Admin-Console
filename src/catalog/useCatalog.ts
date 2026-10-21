@@ -98,8 +98,6 @@ const FIRST_PAGE: string | undefined = undefined;
 
 export interface CatalogListState {
   rows: CatalogProductPage["items"];
-  /** At least one page has been read. */
-  hasPages: boolean;
   /** The last loaded page had `nextCursor: null`: the walk is over. */
   ended: boolean;
   isLoading: boolean;
@@ -118,7 +116,7 @@ export interface CatalogListState {
   loadMore: () => void;
 }
 
-type PagesState = Pick<CatalogListState, "rows" | "hasPages" | "ended" | "error" | "inlineError">;
+type PagesState = Pick<CatalogListState, "rows" | "ended" | "error" | "inlineError">;
 
 /**
  * What the loaded pages say. With a page on screen a failure is inline (the
@@ -131,7 +129,6 @@ function pagesState(
   const failureSlot = pages.length > 0 ? { inlineError: failure } : { error: failure };
   return {
     rows: dedupeProducts(pages.flatMap((p) => p.items)),
-    hasPages: pages.length > 0,
     ended: listEnded(pages),
     ...failureSlot,
   };

@@ -36,12 +36,19 @@ function LocationProbe(): React.JSX.Element {
   return <output data-testid="location">{`${location.pathname}${location.search}`}</output>;
 }
 
+/** The shell keys the routed surface by scope (ProtectedArea, RT-268): a scope change remounts it. */
+function ScopeKeyed(): React.JSX.Element {
+  const context = activeContext().context;
+  const key = `${context?.active_tenant?.id}/${context?.active_store?.id ?? "all"}`;
+  return <CatalogProductList key={key} />;
+}
+
 function tree(entry: string, client = createQueryClient()): React.JSX.Element {
   return (
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[entry]}>
         <Routes>
-          <Route path="/catalog/products" element={<CatalogProductList />} />
+          <Route path="/catalog/products" element={<ScopeKeyed />} />
           <Route path="/catalog/products/:productId" element={<p>detail</p>} />
         </Routes>
         <LocationProbe />
@@ -203,6 +210,15 @@ describe("CatalogProductList (RT-765, CAT-C1a)", () => {
       expect(within(second).queryByText("Store-specific")).toBeNull();
     });
 
+    test("a row without its storeView shows no price, never the tenant's", async () => {
+      consoleListCatalogProducts.mockResolvedValue(page([product()]));
+      renderList();
+      const table = await tableReady();
+      const [, row] = within(table).getAllByRole("row");
+      expect(within(row).queryByText("10.50 EGP")).toBeNull();
+      expect(within(row).getAllByRole("cell")[2].textContent).toBe("—");
+    });
+
     test("a store change restarts the walk from the first page", async () => {
       consoleListCatalogProducts
         .mockResolvedValueOnce(page([product({ storeView: storeView() })], "c1"))
@@ -331,6 +347,31 @@ describe("CatalogProductList (RT-765, CAT-C1a)", () => {
       expect((screen.getByLabelText("Name or code") as HTMLInputElement).value).toBe("");
     });
 
+    test("an uppercase category id in the link is sent lower case and selected in the form", async () => {
+      renderList(`/catalog/products?category=${CATEGORY_1.toUpperCase()}`);
+      await tableReady();
+      expect(consoleListCatalogProducts.mock.calls[0][0]).toMatchObject({
+        category_id: CATEGORY_1,
+      });
+      await waitFor(() =>
+        expect((screen.getByLabelText("Category") as HTMLSelectElement).value).toBe(CATEGORY_1),
+      );
+      expect(
+        (screen.getByLabelText("Category") as HTMLSelectElement).selectedOptions[0].textContent,
+      ).toBe("Beverages");
+    });
+
+    test("an applied category is not called unavailable while the list is unknown", async () => {
+      consoleListCatalogCategories.mockResolvedValue(failure(500));
+      consoleListCatalogProducts.mockResolvedValue(page([], null));
+      renderList(`/catalog/products?category=${CATEGORY_1}`);
+      const notice = await screen.findByText(/no items match/i);
+      expect(notice.textContent).toContain("Selected category");
+      expect(notice.textContent).not.toContain("Unavailable category");
+      const select = screen.getByLabelText("Category") as HTMLSelectElement;
+      expect(select.selectedOptions[0].textContent).toBe("Selected category");
+    });
+
     test("the category list failing leaves the list usable, with a note", async () => {
       consoleListCatalogCategories.mockResolvedValue(failure(500));
       renderList();
@@ -412,6 +453,41 @@ describe("CatalogProductList (RT-765, CAT-C1a)", () => {
       consoleListCatalogProducts.mockResolvedValue(failure(401));
       renderList();
       expect(await screen.findByText("Your session has expired. Sign in again.")).toBeDefined();
+    });
+
+    test("a 404 on a continuation says the store is stale and offers no Retry", async () => {
+      activeContext.mockReturnValue(ctx("owner", "t1", CAIRO_STORE));
+      consoleListCatalogProducts
+        .mockResolvedValueOnce(page([product({ storeView: storeView() })], "c1"))
+        .mockResolvedValueOnce(failure(404));
+      renderList();
+      await tableReady();
+      fireEvent.click(screen.getByRole("button", { name: "Load more" }));
+      expect(await screen.findByText("The selected store is no longer available.")).toBeDefined();
+      expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+      expect(screen.getByText("Mineral water 1.5L")).toBeDefined();
+    });
+
+    test("a 404 on a continuation without a store is the unavailable message, no Retry", async () => {
+      consoleListCatalogProducts
+        .mockResolvedValueOnce(page([product()], "c1"))
+        .mockResolvedValueOnce(failure(404));
+      renderList();
+      await tableReady();
+      fireEvent.click(screen.getByRole("button", { name: "Load more" }));
+      expect(await screen.findByText("These items are not available to you.")).toBeDefined();
+      expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+    });
+
+    test("a 401 on a continuation says the session expired and offers no Retry", async () => {
+      consoleListCatalogProducts
+        .mockResolvedValueOnce(page([product()], "c1"))
+        .mockResolvedValueOnce(failure(401));
+      renderList();
+      await tableReady();
+      fireEvent.click(screen.getByRole("button", { name: "Load more" }));
+      expect(await screen.findByText("Your session has expired. Sign in again.")).toBeDefined();
+      expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
     });
 
     test("a first-page failure is a banner with the request id and a Retry that re-reads", async () => {

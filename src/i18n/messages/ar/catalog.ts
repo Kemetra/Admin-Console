@@ -80,6 +80,7 @@ export const catalog = {
   "catalog.filter.categoryAll": "كل الفئات",
   "catalog.filter.categoryLoading": "جارٍ التحميل…",
   "catalog.filter.categoryStale": "فئة غير متاحة",
+  "catalog.filter.categorySelected": "الفئة المحددة",
   "catalog.filter.categoriesFailed": "تعذّر تحميل الفئات.",
   "catalog.filter.apply": "بحث",
   "catalog.filter.clear": "مسح",

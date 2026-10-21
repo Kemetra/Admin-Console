@@ -79,6 +79,7 @@ export const catalog: MessagesOf<typeof ar> = {
   "catalog.filter.categoryAll": "All categories",
   "catalog.filter.categoryLoading": "Loading…",
   "catalog.filter.categoryStale": "Unavailable category",
+  "catalog.filter.categorySelected": "Selected category",
   "catalog.filter.categoriesFailed": "Categories could not be loaded.",
   "catalog.filter.apply": "Search",
   "catalog.filter.clear": "Clear",

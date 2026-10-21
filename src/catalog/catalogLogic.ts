@@ -86,7 +86,8 @@ export function filtersFromSearch(search: URLSearchParams): CatalogFilters {
   return {
     q: search.get("q") ?? "",
     status: statusOf(search.get("status")),
-    categoryId: search.get("category") ?? "",
+    // The contract's id is case-insensitive; the form's options carry it lower case.
+    categoryId: (search.get("category") ?? "").toLowerCase(),
   };
 }
 

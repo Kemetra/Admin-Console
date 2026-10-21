@@ -21,12 +21,8 @@ type Schemas = ConsoleCatalogSchema.components["schemas"];
 
 export type CatalogProduct = Schemas["ConsoleCatalogProductSummary"];
 export type CatalogProductPage = Schemas["ConsoleCatalogProductPage"];
-export type CatalogStoreView = Schemas["StoreView"];
 export type CatalogCategory = Schemas["ConsoleCatalogCategory"];
-export type CatalogMoney = Schemas["Money"];
-export type CatalogProductStatus = Schemas["ProductStatus"];
 export type CatalogStatusFilter = Schemas["ProductStatusFilter"];
-export type CatalogTrackingMode = Schemas["TrackingMode"];
 export type CatalogListQuery =
   ConsoleCatalogSchema.operations["consoleListCatalogProducts"]["parameters"]["query"];
 

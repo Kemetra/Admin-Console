@@ -4,15 +4,14 @@
  * A to Z, exact code matches first with a search). With a store in scope the
  * list is requested with `store_id` and the price and availability columns show
  * the server-resolved store values; with "All stores" they are the tenant's.
- * Filters live in the URL, and a tenant change resets them (a category id of
- * another tenant matches nothing). A role the API refuses gets the
+ * Filters live in the URL, and a tenant change resets them. A role the API refuses gets the
  * non-disclosing not-available state and no form. Opening a row goes to the
  * product detail (CAT-C1b).
  */
 import { useT } from "@/i18n";
 import type { CatalogProduct } from "@/lib/catalog-queries";
-import { Fragment, useCallback, useEffect, useRef } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import { Fragment, useEffect } from "react";
+import { useLocation, useNavigate, useSearchParams } from "react-router";
 import { CatalogFilterBar } from "./CatalogFilterBar";
 import { Unavailable } from "./CatalogPager";
 import { Results } from "./CatalogResults";
@@ -35,14 +34,28 @@ import {
 import "../shell/surface.css";
 import "./catalog.css";
 
-/** A tenant switch is a scope transition: the previous tenant's filters do not carry over. */
-function useResetOnTenantChange(tenantId: string | null, reset: () => void): void {
-  const previous = useRef(tenantId);
+interface TenantStamp {
+  tenantId: string;
+}
+
+/**
+ * A tenant switch is a scope transition: the previous tenant's filters do not
+ * carry over (a category id of another tenant matches nothing). The shell
+ * remounts this surface on a scope change (RT-268), so the reset cannot live in
+ * component state: the tenant the URL filters belong to is stamped in the
+ * history entry. An unstamped entry (a first arrival, a deep link) keeps its
+ * filters and is stamped; an entry stamped for another tenant drops them.
+ */
+function useTenantStamp(tenantId: string | null): void {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const stamped = (location.state as Partial<TenantStamp> | null)?.tenantId;
   useEffect(() => {
-    if (previous.current === tenantId) return;
-    previous.current = tenantId;
-    reset();
-  }, [tenantId, reset]);
+    if (!tenantId || stamped === tenantId) return;
+    const state: TenantStamp = { tenantId };
+    const search = stamped === undefined ? location.search : "";
+    navigate({ pathname: location.pathname, search }, { replace: true, state });
+  }, [tenantId, stamped, location.pathname, location.search, navigate]);
 }
 
 function Shell({
@@ -77,7 +90,7 @@ function Shell({
  */
 function describeFilters(
   filters: CatalogFilters,
-  categoryName: string | undefined,
+  categoryLabel: string,
   t: ReturnType<typeof useT>,
 ): React.ReactNode {
   const parts: { key: string; node: React.ReactNode }[] = [
@@ -99,7 +112,7 @@ function describeFilters(
           {
             key: "category",
             node: t.rich("catalog.summary.category", {
-              category: <bdi dir="auto">{categoryName ?? t("catalog.filter.categoryStale")}</bdi>,
+              category: <bdi dir="auto">{categoryLabel}</bdi>,
             }),
           },
         ]),
@@ -126,12 +139,9 @@ export function CatalogProductList(): React.JSX.Element {
   const list = useCatalogList(scope, query);
   const categories = useCatalogCategories(scope.tenantId, permitted);
 
-  const clearFilters = useCallback(() => setSearch(new URLSearchParams()), [setSearch]);
-  const resetFilters = useCallback(
-    () => setSearch(new URLSearchParams(), { replace: true }),
-    [setSearch],
-  );
-  useResetOnTenantChange(scope.tenantId, resetFilters);
+  const stamp = scope.tenantId ? { state: { tenantId: scope.tenantId } satisfies TenantStamp } : {};
+  const clearFilters = () => setSearch(new URLSearchParams(), stamp);
+  useTenantStamp(scope.tenantId);
 
   if (!scope.tenantId) {
     return (
@@ -147,9 +157,15 @@ export function CatalogProductList(): React.JSX.Element {
       </Shell>
     );
   }
-  const categoryName = categories.categories.find(
-    (c) => c.categoryId.toLowerCase() === filters.categoryId.toLowerCase(),
-  )?.name;
+  const categoryName = categories.categories.find((c) => c.categoryId === filters.categoryId)?.name;
+  // A name that is not known yet (loading, or the list failed) is not "unavailable".
+  const categoryLabel =
+    categoryName ??
+    t(
+      categories.isLoading || categories.failed
+        ? "catalog.filter.categorySelected"
+        : "catalog.filter.categoryStale",
+    );
   return (
     <Shell scope={scope}>
       <CatalogFilterBar
@@ -158,7 +174,7 @@ export function CatalogProductList(): React.JSX.Element {
         categoriesLoading={categories.isLoading}
         categoriesFailed={categories.failed}
         initialErrors={errors}
-        onApply={(next) => setSearch(filtersToSearch(next))}
+        onApply={(next) => setSearch(filtersToSearch(next), stamp)}
         onClear={clearFilters}
       />
       {query ? (
@@ -166,7 +182,7 @@ export function CatalogProductList(): React.JSX.Element {
           list={list}
           storeInScope={Boolean(scope.activeStoreId)}
           filtered={!isDefaultFilters(filters)}
-          summary={describeFilters(filters, categoryName, t)}
+          summary={describeFilters(filters, categoryLabel, t)}
           searching={filters.q !== ""}
           onOpen={(row: CatalogProduct) => navigate(`/catalog/products/${row.productId}`)}
           onClearFilters={clearFilters}

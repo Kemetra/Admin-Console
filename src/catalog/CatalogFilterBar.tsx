@@ -61,15 +61,23 @@ function Field({
   );
 }
 
+/** A category the list does not carry: "Unavailable" only once the list is known. */
+function missingLabelKey(loading: boolean, failed: boolean): MessageKey {
+  if (loading) return "catalog.filter.categoryLoading";
+  return failed ? "catalog.filter.categorySelected" : "catalog.filter.categoryStale";
+}
+
 /** The category options, plus the applied one when the list does not carry it (a retired category). */
 function CategoryOptions({
   categories,
   appliedId,
   loading,
+  failed,
 }: Readonly<{
   categories: readonly CatalogCategory[];
   appliedId: string;
   loading: boolean;
+  failed: boolean;
 }>): React.JSX.Element {
   const t = useT();
   const known = categories.some((c) => c.categoryId.toLowerCase() === appliedId.toLowerCase());
@@ -82,11 +90,7 @@ function CategoryOptions({
           {c.name}
         </option>
       ))}
-      {missing ? (
-        <option value={appliedId}>
-          {t(loading ? "catalog.filter.categoryLoading" : "catalog.filter.categoryStale")}
-        </option>
-      ) : null}
+      {missing ? <option value={appliedId}>{t(missingLabelKey(loading, failed))}</option> : null}
     </>
   );
 }
@@ -195,6 +199,7 @@ export function CatalogFilterBar({
             categories={categories}
             appliedId={draft.categoryId}
             loading={categoriesLoading}
+            failed={categoriesFailed}
           />
         </select>
       </Field>

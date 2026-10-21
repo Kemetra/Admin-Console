@@ -33,8 +33,10 @@ function Price({
   storeInScope,
 }: Readonly<{ product: CatalogProduct; storeInScope: boolean }>): React.JSX.Element {
   const t = useT();
-  const money =
-    storeInScope && product.storeView ? product.storeView.effectivePrice : product.defaultPrice;
+  // With a store in scope the price is the store's. A row without its storeView
+  // (the contract always sends one) shows no price rather than the tenant's.
+  if (storeInScope && !product.storeView) return <>—</>;
+  const money = storeInScope ? product.storeView?.effectivePrice : product.defaultPrice;
   if (!money) return <>{t("catalog.value.noPrice")}</>;
   return <Money value={money.amount} currency={money.currencyCode} />;
 }
@@ -244,7 +246,7 @@ export function Results({
       ) : (
         <output className="catalog-partial">{t("catalog.list.partialPage")}</output>
       )}
-      <Pager list={list} />
+      <Pager list={list} storeInScope={storeInScope} />
     </>
   );
 }

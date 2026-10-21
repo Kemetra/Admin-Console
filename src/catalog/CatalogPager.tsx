@@ -47,12 +47,39 @@ export function StoreStale(): React.JSX.Element {
   return <Notice message={t("catalog.list.storeStale")} hint={t("catalog.list.storeStaleHint")} />;
 }
 
-/** A failed continuation: a refused cursor restarts the walk; anything else retries it. */
+/**
+ * A failed continuation. The rows stay. A refused cursor restarts the walk; a
+ * 404 (the store left scope mid-walk) and a 401 (the session ended) cannot
+ * succeed on retry, so they say so and offer none; anything else retries.
+ */
 function InlineFailure({
   list,
   error,
-}: Readonly<{ list: CatalogListState; error: CatalogError }>): React.JSX.Element {
+  storeInScope,
+}: Readonly<{
+  list: CatalogListState;
+  error: CatalogError;
+  storeInScope: boolean;
+}>): React.JSX.Element {
   const t = useT();
+  if (error.kind === "not-found") {
+    return (
+      <Banner
+        variant="warning"
+        message={t(storeInScope ? "catalog.list.storeStale" : "catalog.list.unavailable")}
+        requestId={error.requestId}
+      />
+    );
+  }
+  if (error.kind === "session") {
+    return (
+      <Banner
+        variant="danger"
+        message={t("catalog.list.sessionExpired")}
+        requestId={error.requestId}
+      />
+    );
+  }
   const restart = error.kind === "rejected";
   return (
     <Banner
@@ -132,12 +159,17 @@ function LoadedCount({ count }: Readonly<{ count: number }>): React.JSX.Element 
 }
 
 /** Loaded count, the inline continuation error, Load more, and the end of the walk. */
-export function Pager({ list }: Readonly<{ list: CatalogListState }>): React.JSX.Element {
+export function Pager({
+  list,
+  storeInScope,
+}: Readonly<{ list: CatalogListState; storeInScope: boolean }>): React.JSX.Element {
   const t = useT();
   const { endRef, loadMore } = useEndFocus(list);
   return (
     <>
-      {list.inlineError ? <InlineFailure list={list} error={list.inlineError} /> : null}
+      {list.inlineError ? (
+        <InlineFailure list={list} error={list.inlineError} storeInScope={storeInScope} />
+      ) : null}
       <div className="catalog-pager">
         <LoadedCount count={list.rows.length} />
         {list.hasMore ? <LoadMore busy={list.isFetchingNextPage} onLoad={loadMore} /> : null}
