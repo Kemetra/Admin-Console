@@ -145,6 +145,12 @@
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-control);
+  animation: rtc-settle var(--duration-2) var(--ease-out);
+}
+@media (prefers-reduced-motion: reduce) {
+  .surface__confirm {
+    animation: none;
+  }
 }
 .surface__confirm-msg {
   margin: 0;

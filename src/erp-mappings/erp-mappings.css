@@ -23,6 +23,15 @@
   border-radius: var(--radius-object);
   background: var(--color-surface-sunken);
 }
+/* An inline confirm settles in like every other new message (Signal, UX-06). */
+.map-confirm {
+  animation: rtc-settle var(--duration-2) var(--ease-out);
+}
+@media (prefers-reduced-motion: reduce) {
+  .map-confirm {
+    animation: none;
+  }
+}
 .map-confirm__msg,
 .map-form__lead {
   margin: 0;

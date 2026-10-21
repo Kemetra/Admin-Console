@@ -7,6 +7,13 @@
   border-radius: var(--radius-control);
   font-size: var(--text-body);
   border: 1px solid transparent;
+  animation: rtc-settle var(--duration-2) var(--ease-out);
+}
+@media (prefers-reduced-motion: reduce) {
+  .rtc-alert {
+    animation: none;
+    transform: none;
+  }
 }
 
 .rtc-alert__msg {

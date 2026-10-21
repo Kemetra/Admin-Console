@@ -5,4 +5,11 @@
   color: var(--color-danger);
   font-size: var(--text-meta);
   font-weight: var(--weight-medium);
+  animation: rtc-settle var(--duration-2) var(--ease-out);
+}
+@media (prefers-reduced-motion: reduce) {
+  .rtc-inline-error {
+    animation: none;
+    transform: none;
+  }
 }

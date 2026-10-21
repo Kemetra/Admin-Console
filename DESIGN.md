@@ -333,8 +333,15 @@ focus, copy, status and border/icon feedback stay intact.
 These classes exist on `main` and new work reuses them until a migration slice replaces them.
 **Bold** items are the deprecated identity each slice must not extend.
 
-- **Buttons:** `.btn-primary` (Tower Teal fill), `.btn-secondary`, `.btn-ghost`,
-  `.btn-destructive`. Keep one primary per context.
+- **Buttons:** five variants: `.btn-primary` (Tower Teal fill), `.btn-secondary`,
+  `.btn-ghost` (cancel, close, back), `.btn-danger-quiet` (red edge and text on surface) and
+  `.btn-destructive` (red fill). `.btn-danger-quiet` starts a destructive action;
+  `.btn-destructive` appears only in its confirm step. One primary per context. Hover is
+  neutral, never the selection wash. Unavailable is recessed, not faded. Press is Contact
+  (80ms).
+- **Motion:** route changes stay instant (UX-06). The drawer has an enter and an exit. New
+  banners, inline confirms and inline errors settle in on Signal (150ms); new table rows fade
+  in. All of it is zero under reduced motion.
 - **Badge** `.badge` (`--active` / `--suspended` / `--pending`). Status badges
   always carry text, so status is never color alone.
 - **Banner** `.rtc-alert--{danger,warning,success,info}`: persistent operational state, not a

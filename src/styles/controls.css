@@ -1,105 +1,145 @@
 /* Shared control primitives (buttons, inputs, fields, spinner, brand lockup).
  * From DESIGN.md component specs; consumed across RF-1 surfaces. */
 
-.btn-primary {
+/* Buttons: one system. A shared base; each variant sets only its role colours
+ * through the --btn-* properties, so states behave the same everywhere.
+ *   .btn-primary       the one main action of a context (teal fill)
+ *   .btn-secondary     a supporting action (surface, control edge)
+ *   .btn-ghost         a quiet action: cancel, close, back
+ *   .btn-danger-quiet  STARTS a destructive action (red edge and text)
+ *   .btn-destructive   CONFIRMS a destructive action (red fill); confirm steps only
+ * Hover is always neutral or one step deeper, never the teal selection wash, so
+ * hovering never reads as "selected". Colour changes run on Signal (150ms), the
+ * press on Contact (80ms) (UX-06). Washes and press steps are color-mix() of the
+ * approved roles: no new colour token, no raw colour. */
+:is(.btn-primary, .btn-secondary, .btn-ghost, .btn-danger-quiet, .btn-destructive) {
+  --btn-bg: transparent;
+  --btn-fg: var(--color-text);
+  --btn-edge: transparent;
+  --btn-bg-hover: var(--color-surface-sunken);
+  --btn-fg-hover: var(--btn-fg);
+  --btn-edge-hover: var(--btn-edge);
+  --btn-bg-press: color-mix(in oklab, var(--color-surface-sunken), var(--color-text) 7%);
+  --btn-weight: var(--weight-medium);
+  /* A filled button presses toward the ink in light and toward the canvas in
+   * dark, so the press always reads as deeper, never as a highlight. */
+  --btn-press-toward: var(--color-text);
+
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  height: 36px;
-  padding: 0 14px;
-  background-color: var(--color-primary);
-  border: 1px solid var(--color-primary);
+  min-height: 36px;
+  padding: 0 var(--space-4);
+  background-color: var(--btn-bg);
+  border: 1px solid var(--btn-edge);
   border-radius: var(--radius-control);
-  color: var(--color-on-primary);
+  color: var(--btn-fg);
+  font: var(--btn-weight) var(--text-body) / var(--leading-tight) var(--font-sans);
   text-decoration: none;
-  font: var(--weight-strong) var(--text-control) / var(--leading-tight) var(--font-sans);
+  white-space: nowrap;
   cursor: pointer;
-  transition: background-color var(--duration-2) var(--ease-out), box-shadow var(--duration-2)
+  transition: background-color var(--duration-2) var(--ease-out), border-color var(--duration-2)
+    var(--ease-out), color var(--duration-2) var(--ease-out), transform var(--duration-1)
     var(--ease-out);
 }
-.btn-primary:hover:not(:disabled) {
-  background-color: var(--color-primary-emphasis);
+[data-theme="dark"] :is(.btn-primary, .btn-destructive) {
+  --btn-press-toward: var(--color-background);
+}
+
+.btn-primary {
+  --btn-bg: var(--color-primary);
+  --btn-fg: var(--color-on-primary);
+  --btn-edge: var(--color-primary);
+  --btn-bg-hover: var(--color-primary-emphasis);
+  --btn-edge-hover: var(--color-primary-emphasis);
+  --btn-bg-press: color-mix(in oklab, var(--color-primary-emphasis), var(--btn-press-toward) 18%);
+  --btn-weight: var(--weight-strong);
 }
 /* Focus: the global outline (a11y.css). Its 2px offset keeps the ring on the
  * page ground, where it holds 3:1, instead of on the teal fill. */
-.btn-primary:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
 
 .btn-secondary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  height: 36px;
-  padding: 0 14px;
+  --btn-bg: var(--color-surface);
+  --btn-edge: var(--color-control-border);
+  --btn-edge-hover: var(--color-text);
+}
+
+.btn-ghost {
+  --btn-fg: var(--color-text-muted);
+  --btn-fg-hover: var(--color-text);
+}
+
+.btn-danger-quiet {
+  --btn-bg: var(--color-surface);
+  --btn-fg: var(--color-danger);
+  --btn-edge: var(--color-danger);
+  --btn-bg-hover: color-mix(in oklab, var(--color-danger) 9%, var(--color-surface));
+  --btn-bg-press: color-mix(in oklab, var(--color-danger) 16%, var(--color-surface));
+}
+
+.btn-destructive {
+  --btn-danger-emphasis: color-mix(in oklab, var(--color-danger) 82%, var(--btn-press-toward));
+  --btn-bg: var(--color-danger);
+  --btn-fg: var(--color-on-primary);
+  --btn-edge: var(--color-danger);
+  --btn-bg-hover: var(--btn-danger-emphasis);
+  --btn-edge-hover: var(--btn-danger-emphasis);
+  --btn-bg-press: color-mix(in oklab, var(--btn-danger-emphasis), var(--btn-press-toward) 15%);
+  --btn-weight: var(--weight-strong);
+}
+
+:is(.btn-primary, .btn-secondary, .btn-ghost, .btn-danger-quiet, .btn-destructive):hover:not(
+    :disabled,
+    [aria-disabled="true"]
+  ) {
+  background-color: var(--btn-bg-hover);
+  border-color: var(--btn-edge-hover);
+  color: var(--btn-fg-hover);
+}
+:is(.btn-primary, .btn-secondary, .btn-ghost, .btn-danger-quiet, .btn-destructive):active:not(
+    :disabled,
+    [aria-disabled="true"]
+  ) {
+  background-color: var(--btn-bg-press);
+  transform: translateY(1px);
+}
+/* Unavailable reads as recessed, not faded: the label stays legible. */
+:is(.btn-primary, .btn-secondary, .btn-ghost, .btn-danger-quiet, .btn-destructive):is(
+    :disabled,
+    [aria-disabled="true"]
+  ) {
+  background-color: var(--color-surface-sunken);
+  border-color: var(--color-border);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+.btn-ghost:is(:disabled, [aria-disabled="true"]) {
   background-color: transparent;
-  border: 1px solid var(--color-control-border);
-  border-radius: var(--radius-control);
-  color: var(--color-text);
-  text-decoration: none;
-  font: var(--weight-strong) var(--text-control) / var(--leading-tight) var(--font-sans);
-  cursor: pointer;
-  transition: border-color var(--duration-2) var(--ease-out), background-color var(--duration-2)
-    var(--ease-out);
+  border-color: transparent;
 }
-.btn-secondary:hover {
-  border-color: var(--color-primary);
-  background-color: var(--color-primary-soft);
+:is(
+    .btn-primary,
+    .btn-secondary,
+    .btn-ghost,
+    .btn-danger-quiet,
+    .btn-destructive
+  )[aria-busy="true"] {
+  cursor: progress;
 }
+@media (prefers-reduced-motion: reduce) {
+  :is(.btn-primary, .btn-secondary, .btn-ghost, .btn-danger-quiet, .btn-destructive):active {
+    transform: none;
+  }
+}
+
 /* Toggle button (aria-pressed, e.g. the dark-mode switch, RT-398). On reads as a
  * selection: teal wash and a 2px teal edge (border + inset), kept on hover. Off
- * hovers neutral, so hovering never looks like "on". Enabled buttons only. */
-.btn-secondary[aria-pressed="false"]:not(:disabled):hover {
-  border-color: var(--color-control-border);
-  background-color: var(--color-surface-sunken);
-}
+ * hovers neutral like every button, so hovering never looks like "on". */
 .btn-secondary[aria-pressed="true"]:not(:disabled) {
   border-color: var(--color-primary);
   background-color: var(--color-primary-soft);
   box-shadow: inset 0 0 0 1px var(--color-primary);
-}
-
-.btn-ghost {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  background: transparent;
-  border: none;
-  color: var(--color-text-muted);
-  height: 32px;
-  padding: 0 var(--space-2);
-  border-radius: var(--radius-control);
-  font: var(--weight-strong) var(--text-control) / var(--leading-tight) var(--font-sans);
-  cursor: pointer;
-  transition: background-color var(--duration-2) var(--ease-out), color var(--duration-2)
-    var(--ease-out);
-}
-.btn-ghost:hover {
-  background-color: var(--color-surface-sunken);
-  color: var(--color-text);
-}
-
-.btn-destructive {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  height: 36px;
-  padding: 0 14px;
-  background-color: var(--color-danger);
-  border: 1px solid var(--color-danger);
-  border-radius: var(--radius-control);
-  color: var(--color-on-primary);
-  font: var(--weight-strong) var(--text-control) / var(--leading-tight) var(--font-sans);
-  cursor: pointer;
-  transition: background-color var(--duration-2) var(--ease-out);
-}
-.btn-destructive:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
 }
 
 /* Status pill (DESIGN.md .badge). Display-only; never a UI gate. */
@@ -197,5 +237,27 @@
 @media (prefers-reduced-motion: reduce) {
   .spinner {
     animation: none;
+  }
+}
+
+/* Arrival motion on Signal (150ms). A new message settles in from just above
+ * its place; new data fades in. Both end at rest and are off under reduced
+ * motion (each consumer sets animation: none). */
+@keyframes rtc-settle {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes rtc-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }

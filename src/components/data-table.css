@@ -38,6 +38,15 @@
   border-bottom: 1px solid var(--color-border);
   color: var(--color-text);
 }
+/* Real data rows fade in (skeleton rows are placeholders and stay still). */
+.data-table__row:not(.data-table__row--skeleton) {
+  animation: rtc-fade var(--duration-2) var(--ease-out);
+}
+@media (prefers-reduced-motion: reduce) {
+  .data-table__row:not(.data-table__row--skeleton) {
+    animation: none;
+  }
+}
 .data-table__row:hover {
   background-color: var(--color-surface-sunken);
 }

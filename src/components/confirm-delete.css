@@ -9,6 +9,13 @@
   background-color: var(--color-surface);
   border: 1px solid var(--color-danger);
   border-radius: var(--radius-object);
+  animation: rtc-settle var(--duration-2) var(--ease-out);
+}
+@media (prefers-reduced-motion: reduce) {
+  .confirm-delete {
+    animation: none;
+    transform: none;
+  }
 }
 .confirm-delete__msg {
   margin: 0;

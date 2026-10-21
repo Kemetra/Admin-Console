@@ -8,6 +8,12 @@
   display: flex;
   justify-content: flex-end;
   z-index: 50;
+  /* Only the dim fades. The panel is a child of the scrim, so fading the
+   * scrim's opacity would make the panel see-through over the page. */
+  animation: drawer-scrim-in var(--duration-2) var(--ease-out);
+}
+.drawer-scrim--closing {
+  animation: drawer-scrim-out var(--duration-2) var(--ease-out) forwards;
 }
 .drawer {
   /* Reset the native <dialog> UA box: the scrim positions the panel. */
@@ -35,8 +41,15 @@
 .drawer:focus-visible {
   outline: none;
 }
+/* Exit: the mirror of drawer-in, toward the edge the panel came from. */
+.drawer--closing {
+  animation: drawer-out var(--duration-2) var(--ease-in-out) forwards;
+}
 @media (prefers-reduced-motion: reduce) {
-  .drawer {
+  .drawer,
+  .drawer--closing,
+  .drawer-scrim,
+  .drawer-scrim--closing {
     animation: none;
   }
 }
@@ -58,6 +71,26 @@
   to {
     transform: translateX(0);
     opacity: 1;
+  }
+}
+@keyframes drawer-out {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(calc(16px * var(--dir-sign)));
+    opacity: 0;
+  }
+}
+@keyframes drawer-scrim-in {
+  from {
+    background-color: transparent;
+  }
+}
+@keyframes drawer-scrim-out {
+  to {
+    background-color: transparent;
   }
 }
 .drawer__head {
@@ -104,6 +137,11 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+}
+/* The opener sizes to its label: a full-width red edge would outweigh the
+ * drawer's own primary action. */
+.drawer__danger-section > .btn-danger-quiet {
+  align-self: flex-start;
 }
 .drawer__danger-title {
   margin: 0;
