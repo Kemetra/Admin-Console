@@ -49,4 +49,13 @@ export const shell: MessagesOf<typeof ar> = {
   "components.list.loadingDefault": "items",
   "components.confirmDelete.label": "Confirm: {action}",
   "components.confirmDelete.prompt": "{action} {name}? It can be restored by an administrator.",
+
+  "platform.label": "Platform",
+  "platform.nav.label": "Platform",
+  "platform.nav.tenants": "Organizations",
+  "platform.tenants.emptyTitle": "No organizations available",
+  "platform.tenants.emptyBody": "There are no organizations to show yet.",
+  "platform.noAccess.title": "Not available",
+  "platform.noAccess.body": "This page isn't available for your account.",
+  "platform.noAccess.home": "Back to home",
 };
