@@ -29,6 +29,28 @@ export interface SupportSessionError {
 
 type Action = "renew" | "end";
 
+/** What each non-failed outcome does next: re-read the context, leave the session, or nothing. */
+type Effect = "refresh" | "leave" | "none";
+type Settled = Exclude<ActionOutcome["kind"], "failed">;
+
+const RENEW_EFFECT: Record<Settled, Effect> = {
+  done: "refresh",
+  gone: "leave",
+  cap: "refresh",
+  expired: "refresh",
+  unauthenticated: "refresh",
+  "rate-limited": "none",
+};
+
+const END_EFFECT: Record<Settled, Effect> = {
+  done: "leave",
+  gone: "leave",
+  cap: "none",
+  expired: "none",
+  unauthenticated: "refresh",
+  "rate-limited": "none",
+};
+
 export function useSessionActions(session: SupportSessionSummary | null) {
   const qc = useContext(QueryClientContext);
   const navigate = useNavigate();
@@ -48,38 +70,23 @@ export function useSessionActions(session: SupportSessionSummary | null) {
   const showFailure = (outcome: Extract<ActionOutcome, { kind: "failed" }>) =>
     setError({ messageKey: outcome.messageKey, requestId: outcome.requestId });
 
+  const apply = async (effect: Effect) => {
+    if (effect === "leave") await leave();
+    else if (effect === "refresh") await refresh();
+  };
+
+  const stampOfSession = session ? sessionStamp(session) : null;
+
   const settleRenew = async (outcome: ActionOutcome, expiresAt: string | undefined) => {
-    switch (outcome.kind) {
-      case "done":
-        setRenewedStamp(expiresAt ?? null);
-        return refresh();
-      case "gone":
-        return leave();
-      case "cap":
-        if (session) setCapStamp(sessionStamp(session));
-        return refresh();
-      case "expired":
-      case "unauthenticated":
-        return refresh();
-      case "rate-limited":
-        return undefined;
-      case "failed":
-        return showFailure(outcome);
-    }
+    if (outcome.kind === "failed") return showFailure(outcome);
+    if (outcome.kind === "done") setRenewedStamp(expiresAt ?? null);
+    if (outcome.kind === "cap") setCapStamp(stampOfSession);
+    return apply(RENEW_EFFECT[outcome.kind]);
   };
 
   const settleEnd = async (outcome: ActionOutcome) => {
-    switch (outcome.kind) {
-      case "done":
-      case "gone":
-        return leave();
-      case "unauthenticated":
-        return refresh();
-      case "failed":
-        return showFailure(outcome);
-      default:
-        return undefined;
-    }
+    if (outcome.kind === "failed") return showFailure(outcome);
+    return apply(END_EFFECT[outcome.kind]);
   };
 
   const run = async (action: Action) => {

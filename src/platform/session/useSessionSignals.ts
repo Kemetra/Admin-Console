@@ -39,8 +39,11 @@ export function useNow(enabled: boolean): number {
   return now;
 }
 
+type SessionRef = { id: string } | null;
+
 /** True when a tenant call was refused with 403 `support_session_expired` under this session. */
-export function useRefusedExpired(sessionId: string | null): boolean {
+export function useRefusedExpired(session: SessionRef): boolean {
+  const sessionId = session?.id ?? null;
   const { refresh } = useActiveContextValue();
   const refreshRef = useRef(refresh);
   refreshRef.current = refresh;
@@ -61,10 +64,22 @@ export function useRefusedExpired(sessionId: string | null): boolean {
     void refreshRef.current();
   }, [expiry.seq]);
 
-  return sessionId !== null && expiry.seq > baseline.current.seq;
+  if (sessionId === null) return false;
+  return expiry.seq > baseline.current.seq;
 }
 
-/** Re-reads the context once when the local countdown, not the server, ended the session. */
+/** The countdown, not the server and not a refusal, ended the session. */
+function endedByCountdown(
+  session: { status: string } | null,
+  state: SupportSessionState | null,
+  refusedExpired: boolean,
+): boolean {
+  if (state !== "expired") return false;
+  if (refusedExpired) return false;
+  return session?.status !== "expired";
+}
+
+/** Re-reads the context once when the local countdown ended the session; once per `expires_at`. */
 export function useReReadAtZero(
   session: { status: string; id: string; expires_at: string } | null,
   state: SupportSessionState | null,
@@ -76,16 +91,16 @@ export function useReReadAtZero(
   const reReadFor = useRef<string | null>(null);
 
   const stamp = session ? `${session.id}|${session.expires_at}` : null;
-  // A refusal already re-reads the context; a server `expired` needs no re-read.
-  const localOnly = state === "expired" && session?.status !== "expired" && !refusedExpired;
+  const ended = endedByCountdown(session, state, refusedExpired);
   useEffect(() => {
-    if (!localOnly || stamp === null || reReadFor.current === stamp) return;
+    if (!ended || reReadFor.current === stamp) return;
     reReadFor.current = stamp;
     void refreshRef.current();
-  }, [localOnly, stamp]);
+  }, [ended, stamp]);
 }
 
-export function useTenantDataDrop(sessionId: string | null, state: SupportSessionState | null) {
+export function useTenantDataDrop(session: SessionRef, state: SupportSessionState | null) {
+  const sessionId = session?.id ?? null;
   const qc = useContext(QueryClientContext);
   const previousId = useRef(sessionId);
   useEffect(() => {

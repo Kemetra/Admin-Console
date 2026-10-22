@@ -37,33 +37,55 @@ export interface SupportSessionController {
   end: () => Promise<void>;
 }
 
+type Context = ReturnType<typeof useActiveContextValue>["context"];
+
+interface View {
+  state: SupportSessionState | null;
+  remainingMs: number;
+}
+
+function describeSession(input: {
+  session: SupportSessionSummary | null;
+  now: number;
+  refusedExpired: boolean;
+  capStamp: string | null;
+}): View {
+  const { session, now, refusedExpired, capStamp } = input;
+  if (!session) return { state: null, remainingMs: 0 };
+  return {
+    state: deriveSupportSessionState({
+      session,
+      now,
+      refusedExpired,
+      capRefused: capStamp === sessionStamp(session),
+    }),
+    remainingMs: remainingMs(session.expires_at, now),
+  };
+}
+
+function tenantNameOf(context: Context, session: SupportSessionSummary): string | undefined {
+  const tenant = context?.active_tenant;
+  if (tenant?.id !== session.tenant_id) return undefined;
+  return tenant.name;
+}
+
 export function useSupportSession(): SupportSessionController | null {
   const { context } = useActiveContextValue();
   const session = context?.support_session ?? null;
-  const sessionId = session?.id ?? null;
 
-  const refusedExpired = useRefusedExpired(sessionId);
+  const refusedExpired = useRefusedExpired(session);
   const now = useNow(session !== null);
   const actions = useSessionActions(session);
+  const view = describeSession({ session, now, refusedExpired, capStamp: actions.capStamp });
+  useReReadAtZero(session, view.state, refusedExpired);
+  useTenantDataDrop(session, view.state);
 
-  const state = session
-    ? deriveSupportSessionState({
-        session,
-        now,
-        refusedExpired,
-        capRefused: actions.capStamp === sessionStamp(session),
-      })
-    : null;
-  useReReadAtZero(session, state, refusedExpired);
-  useTenantDataDrop(sessionId, state);
-
-  if (!session || !state) return null;
+  if (!session || !view.state) return null;
   return {
     session,
-    state,
-    remainingMs: remainingMs(session.expires_at, now),
-    tenantName:
-      context?.active_tenant?.id === session.tenant_id ? context.active_tenant?.name : undefined,
+    state: view.state,
+    remainingMs: view.remainingMs,
+    tenantName: tenantNameOf(context, session),
     refusedExpired,
     renewedTo: actions.renewedStamp === session.expires_at ? actions.renewedStamp : null,
     pending: actions.pending,
