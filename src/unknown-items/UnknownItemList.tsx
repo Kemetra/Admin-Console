@@ -2,7 +2,9 @@ import { Banner } from "@/components/Banner";
 import { ConfirmDelete } from "@/components/ConfirmDelete";
 import { DataTable } from "@/components/DataTable";
 import { ListState } from "@/components/ListState";
+import { SelectionSummary } from "@/components/SelectionSummary";
 import { Icon } from "@/components/icons/Icon";
+import { useRowSelection } from "@/components/useRowSelection";
 import { DateTime, type MessageKey, type T, useT } from "@/i18n";
 import {
   BULK_DISMISS_MAX,
@@ -27,13 +29,19 @@ import {
  * `encountered_at` is an operational instant (`<DateTime>`).
  *
  * RT-724 (RF-4b): a status filter reaches dismissed items (to reopen them) and
- * resolved ones; on the pending queue each row carries a selection checkbox
- * and a bulk bar dismisses the explicit, counted selection (≤ BULK_DISMISS_MAX,
- * never clamped). The selection belongs to the current scope + filters, so any
- * change to them empties it. Write outcomes stay on the queue as persistent
- * banners.
+ * resolved ones; on the pending queue a bulk action dismisses the explicit,
+ * counted selection (≤ BULK_DISMISS_MAX, never clamped). Write outcomes stay on
+ * the queue as persistent banners.
+ *
+ * RT-771 (UX-10, owner decision RT-752 D1): the first adopter of the shared
+ * selection model. The checkbox column, the page toggle and the count are the
+ * shared `DataTable` selection + `useRowSelection` + `SelectionSummary`; in
+ * selection mode a row opens through its explicit «Open» button (RT-756). The
+ * selection scope is tenant + store + filters + sort, so any change to them
+ * empties it. It is the visible page only: there is no "select all matching"
+ * (no authoritative total and no handler exist for this queue).
  */
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { UnknownItemErrorBanner } from "./UnknownItemErrorBanner";
 import { UnknownItemInspectDrawer } from "./UnknownItemInspectDrawer";
 import { useUnknownItemBulkDismiss, useUnknownItemList } from "./useUnknownItemQueries";
@@ -63,26 +71,6 @@ function summarize(outcomes: ReadonlyArray<BulkDismissOutcome>): BulkSummary {
     alreadyReconciled: count("already_reconciled"),
     notFound: count("not_found"),
   };
-}
-
-/** The row checkbox. It toggles selection only; it never opens the drawer. */
-function SelectCell({
-  row,
-  checked,
-  onToggle,
-}: Readonly<{ row: ReviewQueueItem; checked: boolean; onToggle: (id: string) => void }>) {
-  const t = useT();
-  return (
-    <input
-      type="checkbox"
-      className="unknown-item-select"
-      checked={checked}
-      aria-label={t("unknownItems.select.row", { value: row.identifier_value })}
-      onChange={() => onToggle(row.id)}
-      onClick={(e) => e.stopPropagation()}
-      onKeyDown={(e) => e.stopPropagation()}
-    />
-  );
 }
 
 function columns(t: T) {
@@ -153,7 +141,6 @@ export function UnknownItemList(): React.JSX.Element {
   const [inspectId, setInspectId] = useState<string | null>(null);
   const [notice, setNotice] = useState<MessageKey | null>(null);
   const [bulkSummary, setBulkSummary] = useState<BulkSummary | null>(null);
-  const [confirmingBulk, setConfirmingBulk] = useState(false);
 
   // Compose the 007 list params. `status` defaults to `pending` per the
   // contract; an active store narrows the queue (RLS still applies server-side).
@@ -166,35 +153,31 @@ export function UnknownItemList(): React.JSX.Element {
   };
 
   const { result, isLoading, refetch } = useUnknownItemList(activeTenantId, params);
-  const rows = result?.kind === "page" ? result.items : [];
+  const rows = useMemo(() => (result?.kind === "page" ? result.items : []), [result]);
+  const rowKeys = useMemo(() => rows.map((r) => r.id), [rows]);
   const error = result?.kind === "error" ? result.render : undefined;
 
-  // The selection is tied to the scope + filters it was made under: a change
-  // to either yields an empty selection, and only rows still listed count.
-  const selectionScope = JSON.stringify([activeTenantId, params]);
-  const [selection, setSelection] = useState<{ scope: string; ids: ReadonlySet<string> }>({
-    scope: selectionScope,
-    ids: new Set(),
-  });
-  const selectedIds =
-    selection.scope === selectionScope
-      ? rows.filter((r) => selection.ids.has(r.id)).map((r) => r.id)
-      : [];
+  // The selection is tied to the scope it was made under (tenant, store,
+  // filters AND sort): a change to any of them empties it, and only rows still
+  // listed count.
+  const scopeKey = JSON.stringify([activeTenantId, params]);
+  const selection = useRowSelection(scopeKey, rowKeys);
+  const selectedIds = rows.filter((r) => selection.selectedKeys.has(r.id)).map((r) => r.id);
   const selectable = status === "pending" && !error && rows.length > 0;
   const overLimit = selectedIds.length > BULK_DISMISS_MAX;
   const bulk = useUnknownItemBulkDismiss(activeTenantId);
   const bulkError = bulk.data && !bulk.data.ok ? bulk.data.render : undefined;
 
-  function setSelected(ids: Iterable<string>): void {
-    setSelection({ scope: selectionScope, ids: new Set(ids) });
-    setConfirmingBulk(false);
-  }
+  // The confirm step belongs to the scope it was opened in and to the exact
+  // selection it counted: it is keyed by both, so a scope change, a refresh
+  // that drops a row, or a toggle closes it without any explicit reset.
+  const confirmKey = JSON.stringify([scopeKey, selectedIds]);
+  const [confirmedKey, setConfirmedKey] = useState<string | null>(null);
+  const confirmingBulk = confirmedKey === confirmKey;
 
-  function toggle(id: string): void {
-    const next = new Set(selectedIds);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setSelected(next);
+  function setSelected(next: ReadonlySet<string>): void {
+    setConfirmedKey(null);
+    selection.setSelectedKeys(next);
   }
 
   function onBulkConfirm(): void {
@@ -205,23 +188,10 @@ export function UnknownItemList(): React.JSX.Element {
       onSuccess: (res) => {
         if (!res.ok) return; // the error renders above the bar; the selection stays
         setBulkSummary(summarize(res.value));
-        setSelected([]);
+        setSelected(new Set());
       },
     });
   }
-
-  const tableColumns = selectable
-    ? [
-        {
-          key: "select",
-          header: t("unknownItems.select.column"),
-          cell: (r: ReviewQueueItem) => (
-            <SelectCell row={r} checked={selectedIds.includes(r.id)} onToggle={toggle} />
-          ),
-        },
-        ...columns(t),
-      ]
-    : columns(t);
 
   return (
     <div className="surface">
@@ -316,37 +286,20 @@ export function UnknownItemList(): React.JSX.Element {
 
       {!isLoading && selectable ? (
         <section className="unknown-item-bulk" aria-label={t("unknownItems.bulk.action")}>
-          <label className="unknown-item-bulk__page">
-            <input
-              type="checkbox"
-              className="unknown-item-select"
-              checked={selectedIds.length === rows.length}
-              onChange={(e) => setSelected(e.target.checked ? rows.map((r) => r.id) : [])}
-            />
-            <span>{t("unknownItems.select.page")}</span>
-          </label>
-          <output className="unknown-item-bulk__count" aria-live="polite">
-            {t("unknownItems.bulk.selected", { count: selectedIds.length })}
-          </output>
+          <SelectionSummary
+            selectedCount={selectedIds.length}
+            mode={selection.mode}
+            onClear={() => setSelected(new Set())}
+          />
           {!confirmingBulk ? (
-            <>
-              <button
-                type="button"
-                className="btn-danger-quiet"
-                disabled={selectedIds.length === 0 || overLimit || bulk.isPending}
-                onClick={() => setConfirmingBulk(true)}
-              >
-                {t("unknownItems.bulk.action")}
-              </button>
-              <button
-                type="button"
-                className="btn-ghost"
-                disabled={selectedIds.length === 0 || bulk.isPending}
-                onClick={() => setSelected([])}
-              >
-                {t("unknownItems.bulk.clear")}
-              </button>
-            </>
+            <button
+              type="button"
+              className="btn-danger-quiet"
+              disabled={selectedIds.length === 0 || overLimit || bulk.isPending}
+              onClick={() => setConfirmedKey(confirmKey)}
+            >
+              {t("unknownItems.bulk.action")}
+            </button>
           ) : null}
           {overLimit ? (
             <Banner
@@ -360,7 +313,7 @@ export function UnknownItemList(): React.JSX.Element {
               confirmLabel={t("unknownItems.bulk.action")}
               pending={bulk.isPending}
               onConfirm={onBulkConfirm}
-              onCancel={() => setConfirmingBulk(false)}
+              onCancel={() => setConfirmedKey(null)}
             />
           ) : null}
         </section>
@@ -369,10 +322,19 @@ export function UnknownItemList(): React.JSX.Element {
       {!isLoading && !error && rows.length > 0 ? (
         <DataTable
           caption={t("unknownItems.caption")}
-          columns={tableColumns}
+          columns={columns(t)}
           rows={rows}
           rowKey={(r) => r.id}
           onRowActivate={(r) => setInspectId(r.id)}
+          selection={
+            selectable
+              ? {
+                  selectedKeys: selection.selectedKeys,
+                  onSelectionChange: setSelected,
+                  rowLabel: (r) => r.identifier_value,
+                }
+              : undefined
+          }
         />
       ) : null}
 

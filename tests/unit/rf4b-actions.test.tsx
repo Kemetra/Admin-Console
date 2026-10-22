@@ -1,7 +1,4 @@
-import { QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { MemoryRouter } from "react-router";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 // Mock the data layer at the wrapper boundary (no live Backend-Core).
@@ -31,24 +28,8 @@ vi.mock("@/unknown-items/useUnknownItemScope", () => ({
 }));
 
 import { setLocale } from "@/i18n/locale";
-import { createQueryClient } from "@/lib/query";
-import { UnknownItemList } from "@/unknown-items/UnknownItemList";
-
-function renderList(): void {
-  const qc = createQueryClient();
-  function Tree({ children }: { children: ReactNode }) {
-    return (
-      <QueryClientProvider client={qc}>
-        <MemoryRouter>{children}</MemoryRouter>
-      </QueryClientProvider>
-    );
-  }
-  render(
-    <Tree>
-      <UnknownItemList />
-    </Tree>,
-  );
-}
+import { BULK_DISMISS_MAX } from "@/lib/unknown-items-queries";
+import { renderList } from "./renderUnknownItemList";
 
 const PENDING = {
   id: "u1",
@@ -80,8 +61,14 @@ const fail = (status: number, code: string, requestId = `req-${status}`) => ({
   error: { error: { code, message: "backend english", request_id: requestId } },
 });
 
-async function openDrawer(value: string): Promise<HTMLElement> {
-  fireEvent.click(await screen.findByText(value));
+// RT-771: the pending queue is in selection mode, so a row opens through its
+// explicit «Open» control; a status without selection still opens on the row.
+async function openDrawer(value: string, pending = true): Promise<HTMLElement> {
+  fireEvent.click(
+    pending
+      ? await screen.findByRole("button", { name: `Open ${value}` })
+      : await screen.findByText(value),
+  );
   const drawer = await screen.findByRole("dialog", { name: "Unknown item" });
   await waitFor(() => expect(drawer.textContent).toContain("Identifier type"));
   return drawer;
@@ -216,7 +203,7 @@ describe("create product from an unknown item", () => {
     inspectUnknownItem.mockResolvedValue({ status: 200, data: PENDING });
     createProductFromUnknownItem.mockResolvedValue(fail(409, "alias_conflict"));
     renderList();
-    fireEvent.click(await screen.findByText("5012345678900"));
+    fireEvent.click(await screen.findByRole("button", { name: "فتح 5012345678900" }));
     const drawer = await screen.findByRole("dialog", { name: "صنف غير معروف" });
     fireEvent.click(await within(drawer).findByRole("button", { name: "إنشاء صنف" }));
     fireEvent.change(within(drawer).getByLabelText("اسم الصنف"), { target: { value: "مياه" } });
@@ -242,7 +229,7 @@ describe("reopen a dismissed item", () => {
     await waitFor(() =>
       expect(listUnknownItems.mock.calls.at(-1)?.[0]).toMatchObject({ status: "dismissed" }),
     );
-    return openDrawer("6221234567890");
+    return openDrawer("6221234567890", false);
   }
 
   test("a pending item offers no reopen; a dismissed one offers no create/dismiss", async () => {
@@ -301,13 +288,20 @@ describe("reopen a dismissed item", () => {
   });
 });
 
+/** The checked row checkboxes (not the page-level one). */
+function selectedCount(): number {
+  return screen
+    .queryAllByRole("checkbox", { checked: true })
+    .filter((c) => !c.getAttribute("aria-label")?.startsWith("Select all")).length;
+}
+
 describe("bulk dismiss", () => {
   async function selectBoth(): Promise<void> {
     listUnknownItems.mockResolvedValue(page(PENDING, PENDING_2));
     renderList();
     fireEvent.click(await screen.findByLabelText("Select 5012345678900"));
     fireEvent.click(screen.getByLabelText("Select 5012345678917"));
-    expect(screen.getByText("2 items selected")).toBeDefined();
+    expect(screen.getByText("2 selected on this page")).toBeDefined();
   }
 
   function confirm(): void {
@@ -344,7 +338,7 @@ describe("bulk dismiss", () => {
       ["u1", "u2"],
       expect.stringMatching(/^[\x21-\x7E]{16,128}$/),
     );
-    expect(screen.getByText("0 items selected")).toBeDefined();
+    expect(selectedCount()).toBe(0);
     await waitFor(() => expect(listUnknownItems.mock.calls.length).toBeGreaterThan(listCalls));
   });
 
@@ -393,17 +387,98 @@ describe("bulk dismiss", () => {
     await selectBoth();
     confirm();
     expect(await screen.findByText(copy)).toBeDefined();
-    expect(screen.getByText("2 items selected")).toBeDefined();
+    expect(screen.getByText("2 selected on this page")).toBeDefined();
     expect(bulkDismissUnknownItems).toHaveBeenCalledTimes(1);
   });
 
-  test("select-all covers the page; changing a filter empties the selection", async () => {
+  test("select-all covers the page and toggles it back off", async () => {
     listUnknownItems.mockResolvedValue(page(PENDING, PENDING_2));
     renderList();
-    fireEvent.click(await screen.findByLabelText("Select every item on this page"));
-    expect(screen.getByText("2 items selected")).toBeDefined();
+    const all = await screen.findByLabelText("Select all rows on this page");
+    fireEvent.click(all);
+    expect(screen.getByText("2 selected on this page")).toBeDefined();
+    expect(selectedCount()).toBe(2);
+    fireEvent.click(all);
+    expect(selectedCount()).toBe(0);
+  });
+
+  test("a partial selection marks the page checkbox mixed", async () => {
+    listUnknownItems.mockResolvedValue(page(PENDING, PENDING_2));
+    renderList();
+    fireEvent.click(await screen.findByLabelText("Select 5012345678900"));
+    const all = screen.getByLabelText("Select all rows on this page") as HTMLInputElement;
+    expect(all.indeterminate).toBe(true);
+    expect(all.checked).toBe(false);
+  });
+
+  test.each([
+    ["sort", "Sort", "age_asc"],
+    ["group by", "Group by", "store"],
+    ["source system", "Source system", "erp"],
+  ])("changing the %s empties the selection", async (_name, label, value) => {
+    listUnknownItems.mockResolvedValue(page(PENDING, PENDING_2));
+    renderList();
+    fireEvent.click(await screen.findByLabelText("Select all rows on this page"));
+    expect(selectedCount()).toBe(2);
+    fireEvent.change(screen.getByLabelText(label), { target: { value } });
+    await waitFor(() => expect(selectedCount()).toBe(0));
+  });
+
+  test("changing the status empties the selection, and coming back does not restore it", async () => {
+    listUnknownItems.mockResolvedValue(page(PENDING, PENDING_2));
+    renderList();
+    fireEvent.click(await screen.findByLabelText("Select all rows on this page"));
+    fireEvent.change(screen.getByLabelText("Status"), { target: { value: "dismissed" } });
+    await waitFor(() => expect(screen.queryAllByRole("checkbox")).toHaveLength(0));
+    fireEvent.change(screen.getByLabelText("Status"), { target: { value: "pending" } });
+    await screen.findByLabelText("Select 5012345678900");
+    expect(selectedCount()).toBe(0);
+  });
+
+  test("the row never opens on a checkbox or cell click; the open control opens it", async () => {
+    listUnknownItems.mockResolvedValue(page(PENDING));
+    inspectUnknownItem.mockResolvedValue({ status: 200, data: PENDING });
+    renderList();
+    const box = await screen.findByLabelText("Select 5012345678900");
+    fireEvent.click(box);
+    fireEvent.click(box.closest("td") as HTMLElement);
+    fireEvent.click(screen.getByText("5012345678900"));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(inspectUnknownItem).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Open 5012345678900" }));
+    expect(await screen.findByRole("dialog", { name: "Unknown item" })).toBeDefined();
+  });
+
+  test("more than 200 selected blocks the dismiss and says why", async () => {
+    const many = Array.from({ length: BULK_DISMISS_MAX + 1 }, (_, i) => ({
+      ...PENDING,
+      id: `m${i}`,
+      identifier_value: `990${i}`,
+    }));
+    listUnknownItems.mockResolvedValue(page(...many));
+    renderList();
+    fireEvent.click(await screen.findByLabelText("Select all rows on this page"));
+    expect(screen.getByText(/at most 200 items/)).toBeDefined();
+    expect(
+      (screen.getByRole("button", { name: "Dismiss selected" }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+    expect(bulkDismissUnknownItems).not.toHaveBeenCalled();
+  });
+
+  test("the confirm step does not survive a scope change", async () => {
+    listUnknownItems.mockResolvedValue(page(PENDING, PENDING_2));
+    renderList();
+    fireEvent.click(await screen.findByLabelText("Select all rows on this page"));
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss selected" }));
+    expect(screen.getByRole("region", { name: "Confirm: Dismiss selected" })).toBeDefined();
     fireEvent.change(screen.getByLabelText("Sort"), { target: { value: "age_asc" } });
-    await waitFor(() => expect(screen.getByText("0 items selected")).toBeDefined());
+    // Closed by the scope change itself, before any re-selection could reset it.
+    await waitFor(() =>
+      expect(screen.queryByRole("region", { name: "Confirm: Dismiss selected" })).toBeNull(),
+    );
+    fireEvent.click(await screen.findByLabelText("Select all rows on this page"));
+    expect(selectedCount()).toBe(2);
+    expect(screen.queryByRole("region", { name: "Confirm: Dismiss selected" })).toBeNull();
   });
 
   test("the bar is offered on the pending queue only", async () => {

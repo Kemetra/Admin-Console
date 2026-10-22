@@ -1,5 +1,9 @@
+import type { MessageKey, Params } from "../../src/i18n/translate";
 import { expectNoAxeViolations } from "./axe";
 import { type Page, expect, test } from "./fixtures";
+import { mockContext, mockQueue, pendingItem } from "./unknown-items-mocks";
+
+type TFn = (key: MessageKey, params?: Params) => string;
 
 /**
  * RF-4a unknown-items review-queue E2E (VG-2). Scoped queue → rows; inspect
@@ -10,51 +14,15 @@ import { type Page, expect, test } from "./fixtures";
  * mocked data (identifier values, request ids) stays as authored.
  */
 
-const ctx = {
-  user: {
-    id: "u1",
-    email: "amal@northstar.eg",
-    display_name: "Amal Saleh",
-    is_platform_admin: true,
-  },
-  active_tenant: { id: "t1", name: "Northstar Retail" },
-  active_store: null,
-  active_role_code: "tenant_admin",
-  memberships: [{ tenant_id: "t1", tenant_name: "Northstar Retail", role_code: "tenant_admin" }],
-};
+const item = pendingItem();
 
-const item = {
-  id: "u1",
-  tenant_id: "t1",
-  store_id: "s1",
-  identifier_type: "barcode",
-  identifier_value: "5012345678900",
-  source_system: null,
-  resolution_status: "pending",
-  resolution_action: null,
-  resolved_at: null,
-  resolved_by: null,
-  encountered_at: "2026-06-10T10:00:00Z",
-};
-
-async function mockContext(page: Page): Promise<void> {
-  await page.route("**/api/v1/**", (r) =>
-    r.fulfill({ status: 200, contentType: "application/json", body: "{}" }),
-  );
-  await page.route("**/api/v1/context/me", (r) =>
-    r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(ctx) }),
-  );
+async function openRow(page: Page, t: TFn, value: string): Promise<void> {
+  await page.getByRole("button", { name: t("table.selection.openRow", { value }) }).click();
 }
 
 test("S1: scoped queue renders the pending rows", async ({ page, t }) => {
   await mockContext(page);
-  await page.route("**/api/v1/catalog/unknown-items?*", (r) =>
-    r.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ items: [item], next_cursor: null }),
-    }),
-  );
+  await mockQueue(page, [item]);
 
   await page.goto("/unknown-items");
   await expect(page.getByRole("heading", { name: t("unknownItems.title") })).toBeVisible();
@@ -67,19 +35,14 @@ test("S1: scoped queue renders the pending rows", async ({ page, t }) => {
 
 test("S2: inspect drawer renders the ReviewQueueItem detail read-only", async ({ page, t }) => {
   await mockContext(page);
-  await page.route("**/api/v1/catalog/unknown-items?*", (r) =>
-    r.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ items: [item], next_cursor: null }),
-    }),
-  );
+  await mockQueue(page, [item]);
   await page.route("**/api/v1/catalog/unknown-items/u1", (r) =>
     r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(item) }),
   );
 
   await page.goto("/unknown-items");
-  await page.getByText("5012345678900").click();
+  // RT-771: the pending queue is in selection mode; a row opens through its «Open» button.
+  await openRow(page, t, "5012345678900");
   const drawer = page.getByRole("dialog", { name: t("unknownItems.drawer.title") });
   await expect(drawer).toBeVisible();
   await expect(drawer.getByText("5012345678900")).toBeVisible();
@@ -94,13 +57,7 @@ test("S2: inspect drawer renders the ReviewQueueItem detail read-only", async ({
 
 test("S3: dismiss behind a confirm resolves the item", async ({ page, t }) => {
   await mockContext(page);
-  await page.route("**/api/v1/catalog/unknown-items?*", (r) =>
-    r.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ items: [item], next_cursor: null }),
-    }),
-  );
+  await mockQueue(page, [item]);
   await page.route("**/api/v1/catalog/unknown-items/u1", (r) =>
     r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(item) }),
   );
@@ -117,7 +74,8 @@ test("S3: dismiss behind a confirm resolves the item", async ({ page, t }) => {
   );
 
   await page.goto("/unknown-items");
-  await page.getByText("5012345678900").click();
+  // RT-771: the pending queue is in selection mode; a row opens through its «Open» button.
+  await openRow(page, t, "5012345678900");
   const drawer = page.getByRole("dialog", { name: t("unknownItems.drawer.title") });
   const dismiss = t("unknownItems.dismiss.action");
   await drawer.getByRole("button", { name: dismiss, exact: true }).click();
@@ -131,16 +89,6 @@ test("S3: dismiss behind a confirm resolves the item", async ({ page, t }) => {
 });
 
 // --- RT-724 (RF-4b) happy paths ---------------------------------------------
-
-async function mockQueue(page: Page, items: unknown[]): Promise<void> {
-  await page.route("**/api/v1/catalog/unknown-items?*", (r) =>
-    r.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ items, next_cursor: null }),
-    }),
-  );
-}
 
 test("S5: create a product from a pending item", async ({ page, t }) => {
   await mockContext(page);
@@ -163,7 +111,8 @@ test("S5: create a product from a pending item", async ({ page, t }) => {
   });
 
   await page.goto("/unknown-items");
-  await page.getByText("5012345678900").click();
+  // RT-771: the pending queue is in selection mode; a row opens through its «Open» button.
+  await openRow(page, t, "5012345678900");
   const drawer = page.getByRole("dialog", { name: t("unknownItems.drawer.title") });
   await drawer.getByRole("button", { name: t("unknownItems.create.action") }).click();
   await drawer.getByLabel(t("unknownItems.create.name")).fill("Sparkling water 1L");
@@ -230,8 +179,8 @@ test("S7: bulk dismiss an explicit, counted selection", async ({ page, t }) => {
   });
 
   await page.goto("/unknown-items");
-  await page.getByLabel(t("unknownItems.select.page")).check();
-  await expect(page.getByText(t("unknownItems.bulk.selected", { count: 2 }))).toBeVisible();
+  await page.getByLabel(t("table.selection.selectPage")).check();
+  await expect(page.getByText(t("table.selection.pageCount", { count: 2 }))).toBeVisible();
   await expectNoAxeViolations(page, "queue with a bulk selection");
   const action = t("unknownItems.bulk.action");
   await page.getByRole("button", { name: action, exact: true }).click();

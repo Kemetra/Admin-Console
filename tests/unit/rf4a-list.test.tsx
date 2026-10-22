@@ -1,7 +1,4 @@
-import { QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { MemoryRouter } from "react-router";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 // Mock the RF-4a data layer at the wrapper boundary (no live DP2).
@@ -27,24 +24,7 @@ vi.mock("@/unknown-items/useUnknownItemScope", () => ({
 
 import { formatDateTime } from "@/i18n";
 import { setLocale } from "@/i18n/locale";
-import { createQueryClient } from "@/lib/query";
-import { UnknownItemList } from "@/unknown-items/UnknownItemList";
-
-function renderList(): void {
-  const qc = createQueryClient();
-  function Tree({ children }: { children: ReactNode }) {
-    return (
-      <QueryClientProvider client={qc}>
-        <MemoryRouter>{children}</MemoryRouter>
-      </QueryClientProvider>
-    );
-  }
-  render(
-    <Tree>
-      <UnknownItemList />
-    </Tree>,
-  );
-}
+import { renderList } from "./renderUnknownItemList";
 
 const ITEM = {
   id: "u1",
@@ -94,7 +74,8 @@ describe("UnknownItemList state matrix", () => {
     listUnknownItems.mockResolvedValue({ status: 200, data: { items: [ITEM], next_cursor: null } });
     inspectUnknownItem.mockResolvedValue({ status: 200, data: ITEM });
     renderList();
-    fireEvent.click(await screen.findByText("5012345678900"));
+    // RT-771: the pending queue is in selection mode, so a row opens through its explicit control.
+    fireEvent.click(await screen.findByRole("button", { name: "Open 5012345678900" }));
     const drawer = await screen.findByRole("dialog", { name: "Unknown item" });
     await waitFor(() => expect(drawer.textContent).toContain("Identifier type"));
     expect(drawer.textContent).toContain("Barcode");
@@ -116,7 +97,7 @@ describe("UnknownItemList state matrix", () => {
     expect(screen.getByLabelText("الترتيب")).toBeDefined();
     expect(screen.getByText(formatDateTime(ITEM.encountered_at, { locale: "ar" }))).toBeDefined();
 
-    fireEvent.click(screen.getByText("5012345678900"));
+    fireEvent.click(screen.getByRole("button", { name: "فتح 5012345678900" }));
     const drawer = await screen.findByRole("dialog", { name: "صنف غير معروف" });
     await waitFor(() => expect(drawer.textContent).toContain("نوع المعرّف"));
     expect(drawer.textContent).toContain("بانتظار المراجعة");
