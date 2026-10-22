@@ -1,8 +1,9 @@
 /**
  * Tenant-less shell for `/platform` (RT-780, RT-777 §2). Top bar with a
  * platform identity label, a live-destinations-only sidebar (shell rule 7), and
- * a slot for the support-session bar (empty until RT-777 S2). It has no tenant
- * scope bar: nothing here reads or switches the active tenant.
+ * the support-session bar (RT-781, RT-777 S2), which renders only while the
+ * context carries a support session. It has no tenant scope bar: nothing here
+ * switches the active tenant.
  */
 import { RateLimitBanner } from "@/components/RateLimitBanner";
 import { TowerMark } from "@/components/TowerMark";
@@ -12,6 +13,8 @@ import { useT } from "@/i18n";
 import { LocaleSwitch } from "@/i18n/LocaleSwitch";
 import { ThemeToggle } from "@/theme/ThemeToggle";
 import { NavLink } from "react-router";
+import { SupportSessionBarSlot, SupportSessionBoundary } from "./session/SupportSessionBoundary";
+import { useSupportSession } from "./session/useSupportSession";
 import "@/shell/app-shell.css";
 import "./platform.css";
 
@@ -26,6 +29,7 @@ export function PlatformShell({
 }: Readonly<PlatformShellProps>): React.JSX.Element {
   const t = useT();
   const { context } = useActiveContextValue();
+  const supportSession = useSupportSession();
   const user = context?.user;
   const initials = (user?.display_name ?? user?.email ?? "?")
     .split(/[\s@.]+/)
@@ -54,8 +58,9 @@ export function PlatformShell({
         ) : null}
       </header>
 
-      {/* RT-777 S2 mounts the support-session bar here; empty in this slice. */}
-      <div className="platform-session-slot" data-slot="support-session-bar" />
+      <div className="platform-session-slot" data-slot="support-session-bar">
+        <SupportSessionBarSlot controller={supportSession} />
+      </div>
 
       <nav className="sidebar" aria-label={t("platform.nav.label")}>
         <NavLink
@@ -76,7 +81,7 @@ export function PlatformShell({
 
       <main className="content">
         <RateLimitBanner />
-        {children}
+        <SupportSessionBoundary controller={supportSession}>{children}</SupportSessionBoundary>
       </main>
     </div>
   );

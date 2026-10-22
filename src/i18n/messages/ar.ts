@@ -17,6 +17,7 @@ import { inventory } from "./ar/inventory";
 import { money } from "./ar/money";
 import { operators } from "./ar/operators";
 import { overview } from "./ar/overview";
+import { platform } from "./ar/platform";
 import { productRecon } from "./ar/productRecon";
 import { saleSync } from "./ar/saleSync";
 import { sales } from "./ar/sales";
@@ -28,6 +29,7 @@ import { tenants } from "./ar/tenants";
 export const AR_MODULES = {
   common,
   shell,
+  platform,
   auth,
   tenants,
   operators,
@@ -50,6 +52,7 @@ export const AR_MODULES = {
 export const ar = {
   ...common,
   ...shell,
+  ...platform,
   ...auth,
   ...tenants,
   ...operators,

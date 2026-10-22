@@ -23,6 +23,7 @@
 }
 .platform-session-slot {
   grid-area: session;
+  min-width: 0;
 }
 .platform-session-slot:empty {
   display: none;

@@ -1,0 +1,100 @@
+/* Support-session bar (RT-781, RT-777 S2). A recessed bar under the top bar,
+ * like the scope header; the state shows as a leading edge plus text, never as
+ * colour alone. Tokens only, logical properties so it mirrors in Arabic. */
+.support-session-bar {
+  min-width: 0;
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  background-color: var(--color-surface-sunken);
+  border-bottom: 1px solid var(--color-border);
+  border-inline-start: 4px solid var(--color-info);
+  color: var(--color-text);
+  font-size: var(--text-body);
+}
+.support-session-bar--expiring,
+.support-session-bar--cap_reached {
+  border-inline-start-color: var(--color-warning);
+}
+.support-session-bar--expired {
+  border-inline-start-color: var(--color-text-muted);
+}
+
+.support-session-bar__main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  min-width: 0;
+}
+.support-session-bar__badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-3);
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-pill);
+  background-color: var(--color-surface);
+  font-size: var(--text-meta);
+  font-weight: var(--weight-strong);
+}
+.support-session-bar__badge--quiet {
+  font-weight: var(--weight-medium);
+  color: var(--color-text-muted);
+}
+.support-session-bar__mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-machine);
+}
+.support-session-bar__time {
+  font-weight: var(--weight-strong);
+  font-variant-numeric: tabular-nums;
+}
+.support-session-bar__actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-inline-start: auto;
+}
+
+.support-session-bar__notice {
+  overflow-wrap: anywhere;
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+.support-session-bar__notice-title {
+  font-weight: var(--weight-strong);
+}
+.support-session-bar__notice-body {
+  color: var(--color-text);
+}
+.support-session-bar__notice--expiring .support-session-bar__notice-title,
+.support-session-bar__notice--cap_reached .support-session-bar__notice-title {
+  color: var(--color-warning);
+}
+
+.support-session-bar__error {
+  margin: 0;
+  color: var(--color-danger);
+  font-weight: var(--weight-medium);
+}
+
+.support-session-expired {
+  display: grid;
+  gap: var(--space-4);
+  justify-items: start;
+  max-width: 60ch;
+}
+
+@media (max-width: 768px) {
+  .support-session-bar {
+    padding-inline: var(--space-4);
+  }
+  .support-session-bar__actions {
+    margin-inline-start: 0;
+  }
+}

@@ -16,6 +16,7 @@ import { inventory } from "./en/inventory";
 import { money } from "./en/money";
 import { operators } from "./en/operators";
 import { overview } from "./en/overview";
+import { platform } from "./en/platform";
 import { productRecon } from "./en/productRecon";
 import { saleSync } from "./en/saleSync";
 import { sales } from "./en/sales";
@@ -28,6 +29,7 @@ import type { MessagesOf } from "./types";
 export const EN_MODULES = {
   common,
   shell,
+  platform,
   auth,
   tenants,
   operators,
@@ -50,6 +52,7 @@ export const EN_MODULES = {
 export const en: MessagesOf<typeof ar> = {
   ...common,
   ...shell,
+  ...platform,
   ...auth,
   ...tenants,
   ...operators,

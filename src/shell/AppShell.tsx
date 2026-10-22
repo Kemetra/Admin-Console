@@ -26,6 +26,11 @@ import { type MessageKey, roleKey, useT } from "@/i18n";
 import { LocaleSwitch } from "@/i18n/LocaleSwitch";
 import { canReadInventory } from "@/inventory/inventoryLogic";
 import { canReadPayers } from "@/payers/payerAccess";
+import {
+  SupportSessionBarSlot,
+  SupportSessionBoundary,
+} from "@/platform/session/SupportSessionBoundary";
+import { useSupportSession } from "@/platform/session/useSupportSession";
 import { canUseProductReconciliation } from "@/product-reconciliation/productReconLogic";
 import { canUseSaleSyncOps } from "@/sale-sync/saleSyncLogic";
 import { canReadSales } from "@/sales/saleLogic";
@@ -166,6 +171,7 @@ export interface AppShellProps {
 export function AppShell({ onSignOut, children }: Readonly<AppShellProps>): React.JSX.Element {
   const t = useT();
   const { context } = useActiveContextValue();
+  const supportSession = useSupportSession();
   const user = context?.user;
   const roleCode = context?.active_role_code;
   const roleNav = ROLE_NAV.filter((entry) => entry.canRead(roleCode));
@@ -202,6 +208,11 @@ export function AppShell({ onSignOut, children }: Readonly<AppShellProps>): Reac
           </span>
         ) : null}
       </header>
+
+      {/* RT-781: the support-session bar, only for a session-entered tenant. */}
+      <div className="shell-session-slot">
+        <SupportSessionBarSlot controller={supportSession} />
+      </div>
 
       <ScopeHeader />
 
@@ -256,7 +267,9 @@ export function AppShell({ onSignOut, children }: Readonly<AppShellProps>): Reac
       <main className="content" data-dirty-scope>
         {/* RT-621: any 429 shows here, above the surface, without blocking it. */}
         <RateLimitBanner />
-        {children}
+        <SupportSessionBoundary controller={supportSession} swapOnExpiredStatus>
+          {children}
+        </SupportSessionBoundary>
       </main>
     </div>
   );
