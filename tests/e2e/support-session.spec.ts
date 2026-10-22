@@ -278,31 +278,31 @@ test("expired in the tenant shell replaces the surface with the calm state; axe 
   await expectNoAxeViolations(page, "expired body dark");
 });
 
-test("mid-page: a 403 support_session_expired on a tenant call turns the page into the expired state", async ({
+test("mid-page: a 403 support_session_expired on a tenant call after the page rendered turns it into the expired state", async ({
   page,
   t,
 }) => {
   const server = await mock(page, sessionContext(summary()));
+  // The context keeps saying `active`: only the refused tenant call can flip the page.
+  await page.goto("/");
+  // The page rendered with the session still active.
+  await expect(page.getByRole("heading", { name: t("shell.overview.title") })).toBeVisible();
+  const region = page.getByRole("region", { name: t("platform.session.region") });
+  await expect(region).toHaveAttribute("data-state", "active");
+  const readsBefore = server.contextCalls;
+
+  // The session lapses server-side; the next tenant read is refused (403 support_session_expired).
   server.tenantExpired = true;
-  // The next context read reports what the server now says.
-  await page.route("**/api/v1/context/me", (r) => {
-    server.contextCalls += 1;
-    if (server.contextCalls > 1) {
-      server.context = sessionContext(summary({ status: "expired", left: -MIN }));
-    }
-    return r.fulfill(json(200, server.context));
-  });
-  await page.goto("/devices");
+  await page.getByRole("button", { name: t("overview.refresh") }).click();
+
   await expect(
     page.getByRole("heading", { name: t("platform.session.expiredBody.title"), level: 1 }),
   ).toBeVisible();
-  await expect(page.getByRole("region", { name: t("platform.session.region") })).toHaveAttribute(
-    "data-state",
-    "expired",
-  );
+  await expect(page.getByRole("heading", { name: t("shell.overview.title") })).toHaveCount(0);
+  await expect(region).toHaveAttribute("data-state", "expired");
   // The surface's own generic 403 banner never shows.
   await expect(page.getByRole("alert")).toHaveCount(0);
-  expect(server.contextCalls).toBeGreaterThan(1);
+  expect(server.contextCalls).toBeGreaterThan(readsBefore);
 });
 
 test("end: lands on the directory with the session gone and no tenant data left", async ({
