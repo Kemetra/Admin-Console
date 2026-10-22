@@ -48,4 +48,13 @@ export const shell = {
   "components.list.loadingDefault": "العناصر",
   "components.confirmDelete.label": "تأكيد: {action}",
   "components.confirmDelete.prompt": "{action} {name}؟ يمكن لمسؤول التراجع عن ذلك لاحقًا.",
+
+  "platform.label": "المنصة",
+  "platform.nav.label": "المنصة",
+  "platform.nav.tenants": "المؤسسات",
+  "platform.tenants.emptyTitle": "لا توجد وجهات متاحة",
+  "platform.tenants.emptyBody": "لا توجد مؤسسات لعرضها حاليًا.",
+  "platform.noAccess.title": "غير متاح",
+  "platform.noAccess.body": "هذه الصفحة غير متاحة لحسابك.",
+  "platform.noAccess.home": "العودة إلى الرئيسية",
 } satisfies Messages;
