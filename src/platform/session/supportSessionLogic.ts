@@ -44,13 +44,19 @@ export function remainingMs(expiresAt: string, now: number): number {
   return Math.max(0, instant(expiresAt) - now);
 }
 
+function isExpired({ session, now, refusedExpired }: DeriveInput): boolean {
+  if (refusedExpired) return true;
+  return session.status === "expired" || remainingMs(session.expires_at, now) <= 0;
+}
+
+function isCapReached({ session, capRefused }: DeriveInput): boolean {
+  return Boolean(capRefused) || instant(session.expires_at) >= instant(session.renewal_cap_at);
+}
+
 export function deriveSupportSessionState(input: DeriveInput): SupportSessionState {
-  const { session, now, refusedExpired, capRefused } = input;
-  const left = remainingMs(session.expires_at, now);
-  if (session.status === "expired" || refusedExpired || left <= 0) return "expired";
-  if (capRefused || instant(session.expires_at) >= instant(session.renewal_cap_at)) {
-    return "cap_reached";
-  }
+  if (isExpired(input)) return "expired";
+  if (isCapReached(input)) return "cap_reached";
+  const left = remainingMs(input.session.expires_at, input.now);
   return left <= EXPIRING_THRESHOLD_MS ? "expiring" : "active";
 }
 
@@ -84,7 +90,7 @@ export type ActionOutcome =
 
 interface ActionResult {
   status: number;
-  error?: { error?: { code?: string; request_id?: string } } | undefined;
+  error?: { error?: { code?: string; request_id?: string } };
 }
 
 function codeOf(result: ActionResult): string | undefined {

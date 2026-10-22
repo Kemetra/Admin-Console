@@ -190,7 +190,8 @@ test("cap reached: renew stays but is aria-disabled with its reason, and never c
   await expect(renew).toHaveAccessibleDescription(
     new RegExp(t("platform.session.notice.cap.title")),
   );
-  await renew.click({ force: true });
+  // aria-disabled is not actionable for click(); dispatch the click the way a user agent would.
+  await renew.dispatchEvent("click");
   expect(server.renewCalls).toBe(0);
   await expectNoAxeViolations(page, "session bar cap reached");
   await darkTheme(page);

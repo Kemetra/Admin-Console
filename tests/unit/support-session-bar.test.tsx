@@ -341,6 +341,25 @@ describe("renew", () => {
     expect(region.getAttribute("data-state")).toBe("active");
   });
 
+  test("a request that never got an answer shows the generic inline error, for renew and for end", async () => {
+    serve(context(sessionSummary()));
+    renewSupportSession.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    endSupportSession.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    mount("/platform/tenants");
+    const region = await bar();
+
+    fireEvent.click(renewButton());
+    expect((await screen.findByRole("alert")).textContent).toContain("Couldn't complete that");
+    await waitFor(() => expect(renewButton().hasAttribute("disabled")).toBe(false));
+
+    // The operator must not believe the session ended: it is still there, and says so.
+    fireEvent.click(endButton());
+    await waitFor(() => expect(endSupportSession).toHaveBeenCalledTimes(1));
+    expect((await screen.findByRole("alert")).textContent).toContain("Couldn't complete that");
+    expect(region.getAttribute("data-state")).toBe("active");
+    expect(screen.getByTestId("where").textContent).toBe("/platform/tenants");
+  });
+
   test("a second click while one renew is pending is ignored", async () => {
     serve(context(sessionSummary()));
     let release: (v: unknown) => void = () => {};
