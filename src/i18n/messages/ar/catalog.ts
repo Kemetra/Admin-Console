@@ -165,4 +165,74 @@ export const catalog = {
   "catalog.picker.error.rateLimited":
     "طلبات كثيرة جدًا في وقت قصير. انتظر انتهاء العدّ التنازلي ثم حاول مرة أخرى.",
   "catalog.picker.error.generic": "تعذّر تحميل الأصناف.",
+  // --- التعديل والإخراج من الكتالوج (RT-768, CAT-C2a) ----------------------------
+  "catalog.detail.subWriter": "صنف في {tenant}.",
+  "catalog.detail.edit": "تعديل الصنف",
+  "catalog.detail.retiredNotice":
+    "أُخرج هذا الصنف من الكتالوج، لذلك هو للقراءة فقط. تبقى معرّفاته مرتبطة به.",
+
+  "catalog.edit.title": "تعديل {name}",
+  "catalog.edit.sub": "تسري التغييرات في {tenant}. يُحفظ فقط ما غيّرته.",
+  "catalog.edit.scopePrompt": "اختر مؤسسة لتعديل هذا الصنف.",
+  "catalog.edit.back": "العودة إلى الصنف",
+  "catalog.edit.loadingNoun": "الصنف",
+  "catalog.edit.readOnly": "يمكنك عرض هذا الصنف دون تعديله.",
+  "catalog.edit.readOnlyHint": "تعديل الأصناف متاح لمالك المؤسسة ومسؤولها.",
+  "catalog.edit.retired": "أُخرج هذا الصنف من الكتالوج، لذلك هو للقراءة فقط.",
+  "catalog.edit.retiredHint": "تبقى معرّفاته مرتبطة به. لا يمكن التراجع عن إخراج الصنف من هنا.",
+  "catalog.edit.section": "بيانات الصنف",
+  "catalog.edit.save": "حفظ التغييرات",
+  "catalog.edit.noChanges": "لا توجد تغييرات للحفظ.",
+  "catalog.edit.reload": "إعادة التحميل",
+  "catalog.edit.reloaded": "تم تحميل أحدث نسخة. ما كتبته محفوظ في النموذج. راجعه ثم احفظ مرة أخرى.",
+  "catalog.edit.reloadFailed": "تعذّرت إعادة تحميل هذا الصنف. ما كتبته محفوظ في النموذج.",
+
+  "catalog.form.required": "(إلزامي)",
+  "catalog.form.name": "الاسم",
+  "catalog.form.description": "الوصف",
+  "catalog.form.category": "الفئة",
+  "catalog.form.categoryNone": "بدون فئة",
+  "catalog.form.categoryRetired": "{name} (مُخرجة من الكتالوج)",
+  "catalog.form.categoryUnavailableOption": "{name} (غير متاحة)",
+  "catalog.form.categoriesFailed": "تعذّر تحميل الفئات. تبقى الفئة الحالية كما هي.",
+  "catalog.form.taxCategory": "فئة الضريبة",
+  "catalog.form.taxCategoryHint": "رمز قصير حتى 50 حرفًا. يُحفظ كما كُتب، عدا المسافات في طرفيه.",
+  "catalog.form.availability": "متاح للبيع افتراضيًا",
+  "catalog.form.availabilityHint": "يمكن للمتجر أن يحدد توفره بنفسه.",
+  "catalog.form.price": "السعر",
+  "catalog.form.priceHint": "لا يُعدَّل السعر من هنا.",
+  "catalog.form.error.nameRequired": "أدخل اسم الصنف.",
+  "catalog.form.error.nameTooLong": "يجب ألا يتجاوز الاسم 500 حرف. اختصره.",
+  "catalog.form.error.descriptionTooLong": "يجب ألا يتجاوز الوصف 2000 حرف. اختصره.",
+  "catalog.form.error.taxCategoryRequired": "أدخل فئة الضريبة.",
+  "catalog.form.error.taxCategoryTooLong": "يجب ألا تتجاوز فئة الضريبة 50 حرفًا. اختصرها.",
+  "catalog.form.error.categoryUnavailable":
+    "هذه الفئة لم تعد متاحة. اختر فئة أخرى أو اترك الصنف بدون فئة.",
+
+  "catalog.write.error.validation":
+    "رفض الخادم هذه القيم. راجع الاسم والوصف وفئة الضريبة ثم حاول مرة أخرى.",
+  "catalog.write.error.session": "انتهت جلستك. سجّل الدخول مرة أخرى.",
+  "catalog.write.error.origin":
+    "رُفض الطلب لأنه لم يصدر من هذه اللوحة. أعد تحميل الصفحة ثم حاول مرة أخرى.",
+  "catalog.write.error.forbidden": "ليست لديك صلاحية تغيير هذا الصنف.",
+  "catalog.write.error.notFound": "هذا الصنف لم يعد متاحًا لك.",
+  "catalog.write.error.conflict": "حالة الصنف لا تسمح بهذا التغيير. أعد التحميل ثم حاول مرة أخرى.",
+  "catalog.write.error.stale":
+    "تغيّر هذا الصنف منذ فتحته. أعد التحميل للحصول على أحدث نسخة. ما كتبته محفوظ في النموذج.",
+  "catalog.write.error.staleRetire":
+    "تغيّر هذا الصنف منذ فتحته. أعد التحميل للحصول على أحدث نسخة ثم قرّر من جديد.",
+  "catalog.write.error.retired": "أُخرج هذا الصنف من الكتالوج، فلم يعد تغييره ممكنًا.",
+  "catalog.write.error.rateLimited": "طلبات كثيرة. انتظر قليلًا ثم حاول مرة أخرى.",
+  "catalog.write.error.server": "حدث خطأ ولم يُحفظ شيء. حاول مرة أخرى.",
+
+  "catalog.retire.section": "إخراج الصنف من الكتالوج",
+  "catalog.retire.sub": "إخراج الصنف يوقف بيعه. لا يمكن التراجع عنه من لوحة التحكم.",
+  "catalog.retire.start": "إخراج الصنف",
+  "catalog.retire.confirmLabel": "تأكيد: إخراج هذا الصنف من الكتالوج",
+  "catalog.retire.prompt": "إخراج {name} من الكتالوج؟",
+  "catalog.retire.consequence":
+    "لا يمكن التراجع عن هذا الإجراء من هنا. تتوقف نقطة البيع عن عرض هذا الصنف. تبقى الباركودات وبقية معرّفاته مرتبطة به، فلا يمكن استخدامها لصنف آخر.",
+  "catalog.retire.confirm": "نعم، أخرج الصنف",
+  "catalog.retire.done": "أُخرج {name} من الكتالوج. وهو للقراءة فقط الآن.",
+  "catalog.retire.reloaded": "تم تحميل أحدث نسخة. أخرج الصنف مرة أخرى إذا كنت لا تزال تريد ذلك.",
 } satisfies Messages;

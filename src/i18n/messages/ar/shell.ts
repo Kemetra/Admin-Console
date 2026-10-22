@@ -48,6 +48,14 @@ export const shell = {
   "components.list.loadingDefault": "العناصر",
   "components.confirmDelete.label": "تأكيد: {action}",
   "components.confirmDelete.prompt": "{action} {name}؟ يمكن لمسؤول التراجع عن ذلك لاحقًا.",
+  "components.errorSummary.title": {
+    zero: "لا توجد أخطاء",
+    one: "خطأ واحد يحتاج إلى إصلاح",
+    two: "خطآن يحتاجان إلى إصلاح",
+    few: "{count} أخطاء تحتاج إلى إصلاح",
+    many: "{count} خطأً يحتاج إلى إصلاح",
+    other: "{count} خطأ يحتاج إلى إصلاح",
+  },
 
   "platform.label": "المنصة",
   "platform.nav.label": "المنصة",

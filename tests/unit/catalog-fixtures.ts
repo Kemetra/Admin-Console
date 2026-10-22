@@ -76,6 +76,11 @@ export function failure(status: number, requestId = "req-1") {
   return { status, error: { error: { code: "x", message: "y", request_id: requestId } } };
 }
 
+/** A failed write with its envelope `code` (RT-768: `stale_write`, `product_retired`, ...). */
+export function writeFailure(status: number, code: string, requestId = "req-w1") {
+  return { status, error: { error: { code, message: "m", request_id: requestId } } };
+}
+
 // --- RT-766 detail payloads (`consoleGetCatalogProduct`) ----------------------
 
 export function identifier(over: Record<string, unknown> = {}) {

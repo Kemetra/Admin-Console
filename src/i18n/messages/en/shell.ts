@@ -49,6 +49,10 @@ export const shell: MessagesOf<typeof ar> = {
   "components.list.loadingDefault": "items",
   "components.confirmDelete.label": "Confirm: {action}",
   "components.confirmDelete.prompt": "{action} {name}? It can be restored by an administrator.",
+  "components.errorSummary.title": {
+    one: "{count} problem needs fixing",
+    other: "{count} problems need fixing",
+  },
 
   "platform.label": "Platform",
   "platform.nav.label": "Platform",

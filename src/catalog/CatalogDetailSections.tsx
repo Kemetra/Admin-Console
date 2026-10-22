@@ -56,7 +56,9 @@ function Row({
 }
 
 /** The tenant default price as read-only text; no price says the POS will not sell the item. */
-function TenantPrice({ price }: Readonly<{ price: CatalogMoney | null }>): React.JSX.Element {
+export function TenantPrice({
+  price,
+}: Readonly<{ price: CatalogMoney | null }>): React.JSX.Element {
   const t = useT();
   if (!price) return <>{t("catalog.detail.noPriceNotice")}</>;
   return <Money value={price.amount} currency={price.currencyCode} />;

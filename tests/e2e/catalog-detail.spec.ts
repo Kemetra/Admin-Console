@@ -4,8 +4,9 @@ import { type Page, expect, test } from "./fixtures";
 /**
  * RT-766 catalog product detail E2E against mocked Backend-Core (C-5), CAT-C1b.
  * D1: the list row opens the detail; tenant values, identifiers and store
- *     overrides render, and the page only GETs the product (no write, no POS or
- *     ERP call, no price or edit control).
+ *     overrides render, and loading the page only GETs the product (no write,
+ *     no POS or ERP call, no field or form; RT-768 gives an owner an Edit link and
+ *     the Retire starter, which writes nothing until it is confirmed).
  * D2: a store in scope: raw deviations beside the tenant value, store names,
  *     the inventory link and the stores' own on-hand route.
  * D3: a product with no price says the POS will not sell it.
@@ -152,9 +153,10 @@ test("D1: the list row opens the detail; read-only, only the product is read", a
   await expect(identifiers.getByText("0012345678905")).toBeVisible();
   await expect(p.getByRole("region", { name: t("catalog.detail.overrides.title") })).toBeVisible();
 
-  // Read-only: no field, no form, no action button.
+  // No field and no form. For an owner (RT-768) the one button is the Retire starter, which
+  // opens a confirmation and writes nothing until it is confirmed.
   await expect(p.getByRole("main").getByRole("textbox")).toHaveCount(0);
-  await expect(p.getByRole("main").getByRole("button")).toHaveCount(0);
+  await expect(p.getByRole("main").getByRole("button")).toHaveText([t("catalog.retire.start")]);
   await expect(p.locator("main form, main input, main textarea, main select")).toHaveCount(0);
 
   expect(reads).toEqual([`GET /api/v1/catalog/products/${P1}`]);

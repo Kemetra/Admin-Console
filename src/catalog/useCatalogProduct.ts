@@ -39,7 +39,7 @@ function errorOf(error: unknown): CatalogProductError | undefined {
 }
 
 /** A body without the lists is a product with none: the sections say so. */
-function normalize(detail: CatalogProductDetail): CatalogProductDetail {
+export function normalizeProduct(detail: CatalogProductDetail): CatalogProductDetail {
   return {
     ...detail,
     identifiers: detail.identifiers ?? [],
@@ -52,6 +52,12 @@ export interface CatalogProductState {
   isLoading: boolean;
   error?: CatalogProductError;
   retry: () => void;
+  /**
+   * Read the product again and answer with what it found (RT-768: a stale
+   * write or a retired-meanwhile conflict). `undefined` when the read failed;
+   * the product already on screen is kept either way.
+   */
+  reload: () => Promise<CatalogProductDetail | undefined>;
 }
 
 /** `productId: null` (an id the API would refuse) or no tenant reads nothing. */
@@ -72,7 +78,7 @@ export function useCatalogProduct(
           requestId: requestIdOf(res.error),
         });
       }
-      return normalize(res.data);
+      return normalizeProduct(res.data);
     },
   });
   return {
@@ -80,6 +86,10 @@ export function useCatalogProduct(
     isLoading: active && result.isLoading,
     error: errorOf(result.error),
     retry: () => void result.refetch(),
+    reload: async () => {
+      const again = await result.refetch();
+      return again.isError ? undefined : again.data;
+    },
   };
 }
 

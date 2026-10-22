@@ -9,9 +9,17 @@
  *   - `consoleGetCatalogProduct`: one product with its active identifiers and
  *     its raw store overrides (never resolved: RT-752 D8).
  *
- * Boundary: only these THREE reads are wrapped and nothing here writes. The
- * catalog writes (RT-738) belong to the CAT-C2 slices. No POS route and no ERP
- * call. Same `{ status, data?, error? }` shape as `src/lib/sale-queries.ts`;
+ * RT-768 adds exactly TWO writes of the RT-738 contract, on the generated client:
+ *
+ *   - `consoleUpdateCatalogProduct`: PATCH one product (only the fields given,
+ *     with `expectedUpdatedAt`).
+ *   - `consoleRetireCatalogProduct`: POST the product's retire (irreversible on
+ *     this surface).
+ *
+ * Boundary: these five operations are all that is wrapped. Product CREATE is
+ * held by owner decision D9 (RT-768 comment 13487) until pricing lands (RT-484 /
+ * RT-485), and the identifier and store-override writes belong to RT-769 / RT-770.
+ * No POS route and no ERP call. Same `{ status, data?, error? }` shape as `src/lib/sale-queries.ts`;
  * cookie transport is on the generated client. No hand-rolled fetch.
  */
 import { apiClient } from "@/generated/client";
@@ -29,6 +37,7 @@ export type CatalogStoreOverride = Schemas["StoreOverride"];
 export type CatalogMoney = Schemas["Money"];
 export type CatalogCategory = Schemas["ConsoleCatalogCategory"];
 export type CatalogStatusFilter = Schemas["ProductStatusFilter"];
+export type CatalogProductUpdate = Schemas["UpdateCatalogProductRequest"];
 export type CatalogListQuery =
   ConsoleCatalogSchema.operations["consoleListCatalogProducts"]["parameters"]["query"];
 
@@ -53,5 +62,23 @@ export async function consoleGetCatalogProduct(productId: string) {
   const { data, error, response } = await apiClient.GET("/api/v1/catalog/products/{productId}", {
     params: { path: { productId } },
   });
+  return { status: response.status, data, error };
+}
+
+/** PATCH /api/v1/catalog/products/{productId}: 200 returns the detail after the change. */
+export async function consoleUpdateCatalogProduct(productId: string, body: CatalogProductUpdate) {
+  const { data, error, response } = await apiClient.PATCH("/api/v1/catalog/products/{productId}", {
+    params: { path: { productId } },
+    body,
+  });
+  return { status: response.status, data, error };
+}
+
+/** POST /api/v1/catalog/products/{productId}/retire: 200 returns the detail, `status` `retired`. */
+export async function consoleRetireCatalogProduct(productId: string, expectedUpdatedAt: string) {
+  const { data, error, response } = await apiClient.POST(
+    "/api/v1/catalog/products/{productId}/retire",
+    { params: { path: { productId } }, body: { expectedUpdatedAt } },
+  );
   return { status: response.status, data, error };
 }

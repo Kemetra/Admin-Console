@@ -109,7 +109,20 @@ describe("CatalogProductDetail (RT-766, CAT-C1b)", () => {
     const availability = within(tenant).getByText("Tenant availability").nextElementSibling;
     expect(availability?.textContent).toBe("Available");
     expect(within(tenant).getByText("Tracking").nextElementSibling?.textContent).toBe("None");
-    // Tenant values are the first section on the page, then identifiers, then overrides.
+    // Tenant values are the first section on the page, then identifiers, then overrides;
+    // an owner (a writer, RT-768) then gets the Retire section last, away from the data.
+    expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual([
+      "Tenant values",
+      "Identifiers",
+      "Store overrides",
+      "Retire this item",
+    ]);
+  });
+
+  test("a read-only role gets the three data sections and no Retire section", async () => {
+    activeContext.mockReturnValue(ctx("store_manager"));
+    renderDetail();
+    await loaded();
     expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual([
       "Tenant values",
       "Identifiers",
@@ -412,8 +425,11 @@ describe("CatalogProductDetail (RT-766, CAT-C1b)", () => {
     );
   });
 
-  test("read-only: no form, no field and no action button on a loaded page", async () => {
-    activeContext.mockReturnValue(ctx("owner", "t1", CAIRO_STORE));
+  // RT-766 asserted a page with no control at all. RT-768 gives owner and tenant_admin an Edit
+  // link and a Retire action, so the "no control" guarantee now belongs to the roles and states
+  // that stay read-only (store_manager; a retired item, covered in catalog-product-retire).
+  test("read-only role: no form, no field and no action button on a loaded page", async () => {
+    activeContext.mockReturnValue(ctx("store_manager", "t1", CAIRO_STORE));
     consoleGetCatalogProduct.mockResolvedValue(
       one(detail({ storeOverrides: [override({ isActive: false })] })),
     );
