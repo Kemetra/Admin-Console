@@ -196,6 +196,43 @@
   font-size: var(--text-meta);
 }
 
+/* RT-768 product edit form (CAT-C2a). The fieldset only groups the fields so a
+ * locked form can be disabled as one: it draws no frame of its own. */
+.catalog-form__fields {
+  display: grid;
+  gap: var(--space-5);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-inline-size: 0;
+}
+.field > .catalog-form__check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text);
+}
+.catalog-form__price {
+  margin: 0;
+}
+.catalog-form__price-hint {
+  display: block;
+  margin-block-start: var(--space-1);
+}
+
+/* RT-768 retire section: the quiet starter, or the inline confirmation. */
+.catalog-retire {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.catalog-retire .content__sub {
+  margin: 0;
+}
+.catalog-retire__actions {
+  margin-block-start: 0;
+}
+
 @media (forced-colors: active) {
   .product-picker__list {
     border-color: CanvasText;

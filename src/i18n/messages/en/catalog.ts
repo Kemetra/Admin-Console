@@ -165,4 +165,80 @@ export const catalog: MessagesOf<typeof ar> = {
   "catalog.picker.error.rateLimited":
     "Too many requests in a short time. Wait for the countdown, then try again.",
   "catalog.picker.error.generic": "Products could not be loaded.",
+  // --- Edit and retire (RT-768, CAT-C2a) ----------------------------------------
+  "catalog.detail.subWriter": "Item in {tenant}.",
+  "catalog.detail.edit": "Edit item",
+  "catalog.detail.retiredNotice":
+    "This item is retired, so it is read-only. Its identifiers stay bound to it.",
+
+  "catalog.edit.title": "Edit {name}",
+  "catalog.edit.sub": "Changes apply in {tenant}. Only what you change is saved.",
+  "catalog.edit.scopePrompt": "Select a tenant to edit this item.",
+  "catalog.edit.back": "Back to item",
+  "catalog.edit.loadingNoun": "item",
+  "catalog.edit.readOnly": "You can view this item but not edit it.",
+  "catalog.edit.readOnlyHint": "Editing items is for owners and tenant admins.",
+  "catalog.edit.retired": "This item is retired, so it is read-only.",
+  "catalog.edit.retiredHint": "Its identifiers stay bound to it. Retiring cannot be undone here.",
+  "catalog.edit.section": "Item details",
+  "catalog.edit.save": "Save changes",
+  "catalog.edit.noChanges": "There are no changes to save.",
+  "catalog.edit.reload": "Reload",
+  "catalog.edit.reloaded":
+    "The latest version is loaded. What you typed is kept. Check it, then save again.",
+  "catalog.edit.reloadFailed": "Could not reload this item. What you typed is kept.",
+
+  "catalog.form.required": "(required)",
+  "catalog.form.name": "Name",
+  "catalog.form.description": "Description",
+  "catalog.form.category": "Category",
+  "catalog.form.categoryNone": "No category",
+  "catalog.form.categoryRetired": "{name} (retired)",
+  "catalog.form.categoryUnavailableOption": "{name} (unavailable)",
+  "catalog.form.categoriesFailed": "Categories could not be loaded. The current category is kept.",
+  "catalog.form.taxCategory": "Tax category",
+  "catalog.form.taxCategoryHint":
+    "A short code, up to 50 characters, for example standard. It is kept as typed, apart from spaces at the ends.",
+  "catalog.form.availability": "Available for sale by default",
+  "catalog.form.availabilityHint": "A store can still set its own availability.",
+  "catalog.form.price": "Price",
+  "catalog.form.priceHint": "Prices are not edited here.",
+  "catalog.form.error.nameRequired": "Enter the item name.",
+  "catalog.form.error.nameTooLong": "The name can be at most 500 characters. Shorten it.",
+  "catalog.form.error.descriptionTooLong":
+    "The description can be at most 2000 characters. Shorten it.",
+  "catalog.form.error.taxCategoryRequired": "Enter the tax category.",
+  "catalog.form.error.taxCategoryTooLong":
+    "The tax category can be at most 50 characters. Shorten it.",
+  "catalog.form.error.categoryUnavailable":
+    "This category is no longer available. Choose another category, or no category.",
+
+  "catalog.write.error.validation":
+    "The server rejected these values. Check the name, description and tax category, then try again.",
+  "catalog.write.error.session": "Your session has expired. Sign in again.",
+  "catalog.write.error.origin":
+    "The request was refused because it did not come from this console. Reload the page and try again.",
+  "catalog.write.error.forbidden": "You do not have permission to change this item.",
+  "catalog.write.error.notFound": "This item is no longer available to you.",
+  "catalog.write.error.conflict":
+    "The item is in a state that does not allow this change. Reload and try again.",
+  "catalog.write.error.stale":
+    "This item changed since you opened it. Reload to get the latest version. What you typed is kept.",
+  "catalog.write.error.staleRetire":
+    "This item changed since you opened it. Reload to get the latest version, then decide again.",
+  "catalog.write.error.retired": "This item is retired, so it can no longer be changed.",
+  "catalog.write.error.rateLimited": "Too many requests. Wait a moment, then try again.",
+  "catalog.write.error.server": "Something went wrong and nothing was saved. Try again.",
+
+  "catalog.retire.section": "Retire this item",
+  "catalog.retire.sub":
+    "Retiring takes the item out of sale. It cannot be undone from the console.",
+  "catalog.retire.start": "Retire item",
+  "catalog.retire.confirmLabel": "Confirm: retire this item",
+  "catalog.retire.prompt": "Retire {name}?",
+  "catalog.retire.consequence":
+    "Retiring cannot be undone here. The POS stops offering this item. Its barcodes and other identifiers stay bound to it, so they cannot be used for another item.",
+  "catalog.retire.confirm": "Yes, retire item",
+  "catalog.retire.done": "{name} is retired. It is read-only now.",
+  "catalog.retire.reloaded": "The latest version is loaded. Retire again if you still want to.",
 };
