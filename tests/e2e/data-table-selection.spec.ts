@@ -1,6 +1,7 @@
 import { expectNoAxeViolations } from "./axe";
 import { expect, test } from "./fixtures";
 import { type BuiltHarness, HARNESS_BASE, buildHarness } from "./harness/build";
+import { tabOrder } from "./tab-order";
 
 /**
  * RT-756 (UX-10 "Selection ≠ Navigation"): the shared DataTable in selection
@@ -43,14 +44,7 @@ test("RT-756: Tab visits the page checkbox, then each row's checkbox and open bu
       t("table.selection.openRow", { value: name }),
     ]),
   ];
-  await page.getByRole("checkbox", { name: t("table.selection.selectPage") }).focus();
-  const visited: string[] = [];
-  for (let i = 0; i < expected.length; i++) {
-    visited.push(
-      await page.evaluate(() => document.activeElement?.getAttribute("aria-label") ?? "<unnamed>"),
-    );
-    await page.keyboard.press("Tab");
-  }
+  const visited = await tabOrder(page, t("table.selection.selectPage"), expected.length);
   expect(visited).toEqual(expected);
   expect(await page.locator("tbody tr[tabindex]").count()).toBe(0);
 });

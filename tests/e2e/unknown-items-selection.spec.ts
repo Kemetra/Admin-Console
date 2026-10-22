@@ -1,5 +1,6 @@
 import { expectNoAxeViolations } from "./axe";
 import { type Page, expect, test } from "./fixtures";
+import { tabOrder } from "./tab-order";
 import { mockContext, mockQueue, pendingItem } from "./unknown-items-mocks";
 
 /**
@@ -45,14 +46,7 @@ test("RT-771: Tab visits the page checkbox, then each row's checkbox and open bu
       t("table.selection.openRow", { value }),
     ]),
   ];
-  await page.getByRole("checkbox", { name: t("table.selection.selectPage") }).focus();
-  const visited: string[] = [];
-  for (let i = 0; i < expected.length; i++) {
-    visited.push(
-      await page.evaluate(() => document.activeElement?.getAttribute("aria-label") ?? "<unnamed>"),
-    );
-    await page.keyboard.press("Tab");
-  }
+  const visited = await tabOrder(page, t("table.selection.selectPage"), expected.length);
   expect(visited).toEqual(expected);
   expect(await page.locator("tbody tr[tabindex]").count()).toBe(0);
 });

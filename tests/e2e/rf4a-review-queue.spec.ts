@@ -22,13 +22,7 @@ async function openRow(page: Page, t: TFn, value: string): Promise<void> {
 
 test("S1: scoped queue renders the pending rows", async ({ page, t }) => {
   await mockContext(page);
-  await page.route("**/api/v1/catalog/unknown-items?*", (r) =>
-    r.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ items: [item], next_cursor: null }),
-    }),
-  );
+  await mockQueue(page, [item]);
 
   await page.goto("/unknown-items");
   await expect(page.getByRole("heading", { name: t("unknownItems.title") })).toBeVisible();
@@ -41,13 +35,7 @@ test("S1: scoped queue renders the pending rows", async ({ page, t }) => {
 
 test("S2: inspect drawer renders the ReviewQueueItem detail read-only", async ({ page, t }) => {
   await mockContext(page);
-  await page.route("**/api/v1/catalog/unknown-items?*", (r) =>
-    r.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ items: [item], next_cursor: null }),
-    }),
-  );
+  await mockQueue(page, [item]);
   await page.route("**/api/v1/catalog/unknown-items/u1", (r) =>
     r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(item) }),
   );
@@ -69,13 +57,7 @@ test("S2: inspect drawer renders the ReviewQueueItem detail read-only", async ({
 
 test("S3: dismiss behind a confirm resolves the item", async ({ page, t }) => {
   await mockContext(page);
-  await page.route("**/api/v1/catalog/unknown-items?*", (r) =>
-    r.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ items: [item], next_cursor: null }),
-    }),
-  );
+  await mockQueue(page, [item]);
   await page.route("**/api/v1/catalog/unknown-items/u1", (r) =>
     r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(item) }),
   );

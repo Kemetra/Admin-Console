@@ -1,7 +1,4 @@
-import { QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { MemoryRouter } from "react-router";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 // Mock the RF-4a data layer at the wrapper boundary (no live DP2).
@@ -27,24 +24,7 @@ vi.mock("@/unknown-items/useUnknownItemScope", () => ({
 
 import { formatDateTime } from "@/i18n";
 import { setLocale } from "@/i18n/locale";
-import { createQueryClient } from "@/lib/query";
-import { UnknownItemList } from "@/unknown-items/UnknownItemList";
-
-function renderList(): void {
-  const qc = createQueryClient();
-  function Tree({ children }: { children: ReactNode }) {
-    return (
-      <QueryClientProvider client={qc}>
-        <MemoryRouter>{children}</MemoryRouter>
-      </QueryClientProvider>
-    );
-  }
-  render(
-    <Tree>
-      <UnknownItemList />
-    </Tree>,
-  );
-}
+import { renderList } from "./renderUnknownItemList";
 
 const ITEM = {
   id: "u1",
