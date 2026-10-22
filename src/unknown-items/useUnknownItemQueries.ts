@@ -8,6 +8,7 @@ import {
   createProductFromUnknownItem,
   dismissUnknownItem,
   inspectUnknownItem,
+  linkUnknownItem,
   listUnknownItems,
   mapUnknownItemError,
   reopenUnknownItem,
@@ -134,6 +135,33 @@ export function useUnknownItemCreateProduct(activeTenantId: string | null) {
     },
     onSuccess: (result) => {
       if (result.ok) invalidateAfterWrite(qc, activeTenantId);
+    },
+  });
+}
+
+/**
+ * RT-767 — link a pending item to a product chosen in the picker. 200 returns the
+ * item, now `resolved` / `linked`. Not keyed (the contract documents no key). A
+ * refusal changes nothing, except `already_reconciled`: the item was resolved
+ * meanwhile, so the queue and the item are read again.
+ */
+export function useUnknownItemLink(activeTenantId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      id: string;
+      productId: string;
+    }): Promise<UnknownItemWriteResult<ReviewQueueItem>> => {
+      const res = await linkUnknownItem(input.id, input.productId);
+      if (res.status >= 400) {
+        return { ok: false, render: mapUnknownItemError({ ...res, op: "link" }) };
+      }
+      return { ok: true, value: res.data as ReviewQueueItem };
+    },
+    onSuccess: (result) => {
+      if (result.ok || result.render.kind === "already-reconciled") {
+        invalidateAfterWrite(qc, activeTenantId);
+      }
     },
   });
 }

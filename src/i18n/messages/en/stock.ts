@@ -206,4 +206,25 @@ export const stock: MessagesOf<typeof ar> = {
     "Too many requests in a short time, so nothing changed. Wait a moment, then try again.",
   "unknownItems.errors.inProgress":
     "The previous request is still being processed. Wait a moment, then try again.",
+
+  // RT-767: link a pending item to an existing product chosen in the shared picker.
+  "unknownItems.link.action": "Link to a product",
+  "unknownItems.link.legend": "Link this identifier to a product",
+  "unknownItems.link.lead":
+    "Choose the existing product this identifier belongs to. Nothing changes until you confirm.",
+  "unknownItems.link.confirm.label": "Confirm the link",
+  "unknownItems.link.confirm.prompt":
+    "Link identifier {identifier} to product {product}? The item leaves the review queue.",
+  "unknownItems.link.confirm.action": "Link the identifier",
+  "unknownItems.link.change": "Choose another product",
+  "unknownItems.link.success":
+    "Identifier linked to the product. The item has left the review queue.",
+  "unknownItems.link.alreadyResolved":
+    "This item was resolved by someone else while you were choosing, so nothing was linked. The details below are up to date.",
+  "unknownItems.errors.linkValidation":
+    "The identifier could not be linked with this product. Choose the product again, then try again.",
+  "unknownItems.errors.linkAliasConflict":
+    "This identifier is already linked to another product, so it was not linked. Review the catalog before continuing.",
+  "unknownItems.errors.originRejected":
+    "The server refused a change from this page, so nothing changed. Reload the console and try again.",
 };

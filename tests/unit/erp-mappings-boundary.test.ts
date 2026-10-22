@@ -67,9 +67,15 @@ describe("ERPNext mapping boundary (RT-725)", () => {
     }
   });
 
-  test("no catalog product read and no free-text product field", () => {
-    expect(featureSrc).not.toMatch(/tenant-products|listTenantProducts|catalog\/products/);
-    // The product id sent with a suggestion comes from a mapping row, never an input.
-    expect(featureSrc).toContain("tenant_product_id: retired.tenant_product_id");
+  test("no direct catalog read and no free-text product field", () => {
+    expect(featureSrc).not.toMatch(
+      /tenant-products|listTenantProducts|catalog\/products|consoleListCatalogProducts/,
+    );
+    // RT-767: the product id sent with a suggestion is a prop, never an input. It
+    // comes from a mapping row (a retired mapping's product) or from the shared
+    // catalog picker, the only way this feature reads the catalog.
+    expect(featureSrc).toContain("tenant_product_id: productId");
+    expect(featureSrc).toContain("productId={retired.tenant_product_id}");
+    expect(featureSrc).toContain('from "@/catalog/ProductPicker"');
   });
 });

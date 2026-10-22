@@ -142,4 +142,27 @@ export const catalog: MessagesOf<typeof ar> = {
   "catalog.detail.overrides.col.setting": "Setting",
   "catalog.detail.overrides.col.store": "Store value",
   "catalog.detail.overrides.col.tenant": "Tenant value",
+
+  // RT-767: the shared product picker (active products only, no price).
+  "catalog.picker.search": "Search active products",
+  "catalog.picker.searchNote":
+    "Type part of the name, or an exact barcode, SKU or quick-sale code. The text is sent exactly as typed.",
+  "catalog.picker.submit": "Search",
+  "catalog.picker.list": "Active products",
+  "catalog.picker.loading": "Loading products",
+  "catalog.picker.count": "Products shown: {count}",
+  "catalog.picker.more": "Only the first products are shown. Refine the search to narrow the list.",
+  "catalog.picker.empty": "No active product matches this search.",
+  "catalog.picker.emptyAll": "There are no active products.",
+  "catalog.picker.sku": "SKU",
+  "catalog.picker.barcode": "Barcode",
+  "catalog.picker.retry": "Try again",
+  "catalog.picker.qTooLong": "Search text can be at most 100 characters.",
+  "catalog.picker.error.notFound": "Products cannot be searched from this account or scope.",
+  "catalog.picker.error.session": "Your session has ended. Sign in again to search products.",
+  "catalog.picker.error.rejected":
+    "The server rejected this search. Change the text and try again.",
+  "catalog.picker.error.rateLimited":
+    "Too many requests in a short time. Wait for the countdown, then try again.",
+  "catalog.picker.error.generic": "Products could not be loaded.",
 };

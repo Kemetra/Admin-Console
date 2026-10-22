@@ -240,4 +240,12 @@ export const erp: MessagesOf<typeof ar> = {
   "erp.map.wh.retire.action": "Retire",
   "erp.map.wh.notice.set": "Warehouse mapping set.",
   "erp.map.wh.notice.retired": "Warehouse mapping retired.",
+
+  // RT-767: suggest a mapping for a product chosen in the shared catalog picker.
+  "erp.map.items.suggestNew.action": "Suggest a mapping",
+  "erp.map.items.suggestNew.label": "Suggest an item mapping",
+  "erp.map.items.suggestNew.choose":
+    "Choose the product to map to an ERPNext Item. Nothing is recorded until you confirm.",
+  "erp.map.items.suggestNew.lead": "Suggest an ERPNext Item for product {product}.",
+  "erp.map.items.suggestNew.change": "Change product",
 };

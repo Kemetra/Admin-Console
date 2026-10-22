@@ -4,12 +4,11 @@
  * Confirm (suggested only) and Retire, each behind an inline confirm and sent
  * with the version on screen.
  *
- * A suggestion is recorded only for a product id already known from context:
- * the row just retired (a re-point is retire, then a fresh suggestion). There
- * is no free-text product field: picking a product from the console catalog
- * read (`consoleListCatalogProducts`, in the pinned contract) is the shared
- * picker slice (RT-767). Product ids are shown as received: there is no
- * product name to show.
+ * A suggestion is recorded for a product the operator picks from the console
+ * catalog (the shared picker over `consoleListCatalogProducts`, RT-767), or for
+ * the product of the row just retired (a re-point is retire, then a fresh
+ * suggestion). There is no free-text product field. Product ids are shown as
+ * received in the table: resolving a name for every row is out of scope.
  */
 import { DataTableSkeleton } from "@/components/DataTableSkeleton";
 import { ListState } from "@/components/ListState";
@@ -17,16 +16,16 @@ import { StatusPill } from "@/erp-status/parts";
 import { AsOf, Panel } from "@/erp-status/parts";
 import { DateTime, type T, useT } from "@/i18n";
 import type { ErpnextItemMapping, ItemMappingState } from "@/lib/erp-mapping-queries";
-import { useId, useState } from "react";
+import { useState } from "react";
 import { useSearchParams } from "react-router";
 import { FailureBanner, InlineConfirm, Ref, RetryButton } from "./MappingParts";
-import { cleanRef, parseStateFilter, sourceKey, stateView } from "./mappingLogic";
+import { CatalogSuggest, ReplacementSuggest } from "./SuggestMapping";
+import { parseStateFilter, sourceKey, stateView } from "./mappingLogic";
 import {
   type ListView,
   useConfirmItemMapping,
   useItemMappings,
   useRetireItemMapping,
-  useSuggestItemMapping,
 } from "./useErpMappings";
 
 type RowAction = { kind: "confirm" | "retire"; row: ErpnextItemMapping };
@@ -110,96 +109,6 @@ function ConfirmStep({
       }
       onCancel={onCancel}
     />
-  );
-}
-
-/** After a retire: suggest a replacement for the same product (known from the retired row). */
-function ReplacementSuggest({
-  tenantId,
-  retired,
-  onSuggested,
-  onDismiss,
-}: Readonly<{
-  tenantId: string;
-  retired: ErpnextItemMapping;
-  onSuggested: () => void;
-  onDismiss: () => void;
-}>): React.JSX.Element {
-  const t = useT();
-  const inputId = useId();
-  const suggest = useSuggestItemMapping(tenantId);
-  const [ref, setRef] = useState("");
-  const [review, setReview] = useState(false);
-  const [empty, setEmpty] = useState(false);
-  const product = <Ref value={retired.tenant_product_id} />;
-
-  if (review) {
-    return (
-      <InlineConfirm
-        label={t("erp.map.items.suggest.label")}
-        prompt={t.rich("erp.map.items.suggest.prompt", { product, item: <Ref value={ref} /> })}
-        confirmLabel={t("erp.map.items.suggest.action")}
-        op="suggest"
-        pending={suggest.pending}
-        failure={suggest.failure}
-        onConfirm={() =>
-          suggest.run(
-            { tenant_product_id: retired.tenant_product_id, erpnext_item_ref: ref },
-            (o) => {
-              if (o.ok) onSuggested();
-            },
-          )
-        }
-        onCancel={() => {
-          suggest.reset();
-          setReview(false);
-        }}
-      />
-    );
-  }
-
-  return (
-    <form
-      className="map-form"
-      aria-label={t("erp.map.items.suggest.label")}
-      onSubmit={(e) => {
-        e.preventDefault();
-        const clean = cleanRef(ref);
-        setEmpty(clean === "");
-        if (clean === "") return;
-        setRef(clean);
-        setReview(true);
-      }}
-    >
-      <p className="map-form__lead">{t.rich("erp.map.items.suggest.lead", { product })}</p>
-      <div className="field">
-        <label htmlFor={inputId}>{t("erp.map.items.suggest.ref")}</label>
-        <input
-          id={inputId}
-          className="input input--mono"
-          dir="ltr"
-          autoComplete="off"
-          value={ref}
-          aria-invalid={empty}
-          aria-describedby={empty ? `${inputId}-error` : undefined}
-          onChange={(e) => setRef(e.target.value)}
-        />
-        {empty ? (
-          <p className="map-form__error" id={`${inputId}-error`}>
-            {t("erp.map.form.required")}
-          </p>
-        ) : null}
-      </div>
-      <p className="erp-note">{t("erp.map.items.suggest.note")}</p>
-      <div className="map-confirm__actions">
-        <button type="submit" className="btn-primary">
-          {t("erp.map.review")}
-        </button>
-        <button type="button" className="btn-secondary" onClick={onDismiss}>
-          {t("erp.map.items.suggest.dismiss")}
-        </button>
-      </div>
-    </form>
   );
 }
 
@@ -383,6 +292,7 @@ export function ItemMappings({ tenantId }: Readonly<{ tenantId: string }>): Reac
   const state = parseStateFilter(search.get("state"));
   const list = useItemMappings(tenantId, state, true);
   const [retired, setRetired] = useState<ErpnextItemMapping | null>(null);
+  const [suggesting, setSuggesting] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
 
   const onFilter = (next: string) => {
@@ -396,6 +306,33 @@ export function ItemMappings({ tenantId }: Readonly<{ tenantId: string }>): Reac
     <Panel id="map-items-title" title={t("erp.map.items.title")}>
       <p className="erp-note">{t("erp.map.items.note")}</p>
       <output className="map-notice">{notice ? t(NOTICE_KEYS[notice]) : null}</output>
+      {list.failure?.kind === "unavailable" ? null : (
+        <>
+          <div className="map-toolbar">
+            <button
+              type="button"
+              className="btn-secondary"
+              aria-expanded={suggesting}
+              onClick={() => {
+                setRetired(null);
+                setSuggesting(true);
+              }}
+            >
+              {t("erp.map.items.suggestNew.action")}
+            </button>
+          </div>
+          {suggesting ? (
+            <CatalogSuggest
+              tenantId={tenantId}
+              onSuggested={() => {
+                setSuggesting(false);
+                setNotice("suggested");
+              }}
+              onDismiss={() => setSuggesting(false)}
+            />
+          ) : null}
+        </>
+      )}
       {retired && list.failure?.kind !== "unavailable" ? (
         <ReplacementSuggest
           key={retired.id}
@@ -423,6 +360,7 @@ export function ItemMappings({ tenantId }: Readonly<{ tenantId: string }>): Reac
         tenantId={tenantId}
         emptyKey={EMPTY_KEYS[state]}
         onRetired={(row) => {
+          setSuggesting(false);
           setRetired(row);
           setNotice("retired");
         }}

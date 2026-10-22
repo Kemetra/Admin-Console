@@ -46,13 +46,14 @@ test("S2: inspect drawer renders the ReviewQueueItem detail read-only", async ({
   const drawer = page.getByRole("dialog", { name: t("unknownItems.drawer.title") });
   await expect(drawer).toBeVisible();
   await expect(drawer.getByText("5012345678900")).toBeVisible();
-  // a pending item offers Create product and Dismiss; no link affordance (RT-724
-  // defers link): the drawer's only buttons are Close, Create product and Dismiss.
+  // a pending item offers Link to a product (RT-767), Create product and Dismiss: the
+  // drawer's only buttons are Close and those three.
   await expect(
     drawer.getByRole("button", { name: t("unknownItems.dismiss.action") }),
   ).toBeVisible();
   await expect(drawer.getByRole("button", { name: t("unknownItems.create.action") })).toBeVisible();
-  await expect(drawer.getByRole("button")).toHaveCount(3);
+  await expect(drawer.getByRole("button", { name: t("unknownItems.link.action") })).toBeVisible();
+  await expect(drawer.getByRole("button")).toHaveCount(4);
 });
 
 test("S3: dismiss behind a confirm resolves the item", async ({ page, t }) => {
