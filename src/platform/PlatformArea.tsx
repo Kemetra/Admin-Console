@@ -26,7 +26,17 @@ export function PlatformArea(): React.JSX.Element | null {
   const signOut = useSignOut();
   const location = useLocation();
 
-  if (!context && !sessionLost && rateLimited) {
+  const toSignIn = (
+    <Navigate
+      to="/signin"
+      replace
+      state={{ from: returnPathOf(location) } satisfies SignInRedirectState}
+    />
+  );
+  if (sessionLost) {
+    return toSignIn;
+  }
+  if (!context && rateLimited) {
     return (
       <main className="rate-limited-area">
         <RateLimitBanner dismissible={false} />
@@ -36,9 +46,8 @@ export function PlatformArea(): React.JSX.Element | null {
   if (isLoading) {
     return null;
   }
-  if (sessionLost || !context) {
-    const state: SignInRedirectState = { from: returnPathOf(location) };
-    return <Navigate to="/signin" replace state={state} />;
+  if (!context) {
+    return toSignIn;
   }
   if (context.user?.is_platform_admin !== true) {
     return <PlatformNotAvailable />;
