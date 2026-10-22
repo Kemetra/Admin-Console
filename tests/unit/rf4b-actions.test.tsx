@@ -472,6 +472,10 @@ describe("bulk dismiss", () => {
     fireEvent.click(screen.getByRole("button", { name: "Dismiss selected" }));
     expect(screen.getByRole("region", { name: "Confirm: Dismiss selected" })).toBeDefined();
     fireEvent.change(screen.getByLabelText("Sort"), { target: { value: "age_asc" } });
+    // Closed by the scope change itself, before any re-selection could reset it.
+    await waitFor(() =>
+      expect(screen.queryByRole("region", { name: "Confirm: Dismiss selected" })).toBeNull(),
+    );
     fireEvent.click(await screen.findByLabelText("Select all rows on this page"));
     expect(selectedCount()).toBe(2);
     expect(screen.queryByRole("region", { name: "Confirm: Dismiss selected" })).toBeNull();

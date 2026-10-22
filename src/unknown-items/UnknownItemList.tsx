@@ -169,12 +169,14 @@ export function UnknownItemList(): React.JSX.Element {
   const bulkError = bulk.data && !bulk.data.ok ? bulk.data.render : undefined;
 
   // The confirm step belongs to the scope it was opened in and to the exact
-  // selection it counted: either changing closes it.
-  const [confirmScope, setConfirmScope] = useState<string | null>(null);
-  const confirmingBulk = confirmScope === scopeKey;
+  // selection it counted: it is keyed by both, so a scope change, a refresh
+  // that drops a row, or a toggle closes it without any explicit reset.
+  const confirmKey = JSON.stringify([scopeKey, selectedIds]);
+  const [confirmedKey, setConfirmedKey] = useState<string | null>(null);
+  const confirmingBulk = confirmedKey === confirmKey;
 
   function setSelected(next: ReadonlySet<string>): void {
-    setConfirmScope(null);
+    setConfirmedKey(null);
     selection.setSelectedKeys(next);
   }
 
@@ -294,7 +296,7 @@ export function UnknownItemList(): React.JSX.Element {
               type="button"
               className="btn-danger-quiet"
               disabled={selectedIds.length === 0 || overLimit || bulk.isPending}
-              onClick={() => setConfirmScope(scopeKey)}
+              onClick={() => setConfirmedKey(confirmKey)}
             >
               {t("unknownItems.bulk.action")}
             </button>
@@ -311,7 +313,7 @@ export function UnknownItemList(): React.JSX.Element {
               confirmLabel={t("unknownItems.bulk.action")}
               pending={bulk.isPending}
               onConfirm={onBulkConfirm}
-              onCancel={() => setConfirmScope(null)}
+              onCancel={() => setConfirmedKey(null)}
             />
           ) : null}
         </section>
