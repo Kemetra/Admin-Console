@@ -43,4 +43,9 @@ export const platform: MessagesOf<typeof ar> = {
   "platform.session.expiredBody.body":
     "Nothing changed in the organization, and its data is no longer shown. Open a new session from the organizations directory to keep working.",
   "platform.session.expiredBody.action": "Go to organizations",
+
+  "platform.session.readOnlyBody.title": "Read-only support session",
+  "platform.session.readOnlyBody.body":
+    "The session is active, but organization screens are not available inside a support session yet, so no organization data is shown and there is nothing to change here.",
+  "platform.session.readOnlyBody.action": "Go to organizations",
 };

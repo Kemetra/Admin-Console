@@ -47,4 +47,9 @@ export const platform = {
   "platform.session.expiredBody.body":
     "لم يتغير شيء في المؤسسة، ولم تعد بياناتها معروضة. افتح جلسة جديدة من دليل المؤسسات لمتابعة العمل.",
   "platform.session.expiredBody.action": "الانتقال إلى المؤسسات",
+
+  "platform.session.readOnlyBody.title": "جلسة دعم للقراءة فقط",
+  "platform.session.readOnlyBody.body":
+    "الجلسة نشطة، لكن شاشات المؤسسة غير متاحة داخل جلسة الدعم بعد، فلا تُعرض بيانات المؤسسة ولا يوجد ما يمكن تعديله هنا.",
+  "platform.session.readOnlyBody.action": "الانتقال إلى المؤسسات",
 } satisfies Messages;

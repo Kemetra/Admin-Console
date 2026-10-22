@@ -6,10 +6,15 @@ import { useT } from "@/i18n";
  *
  *  - A tenant call refused with 403 `support_session_expired` always swaps the
  *    body: that page is tenant-scoped and its data is gone.
- *  - `swapOnExpiredStatus` also swaps it when the context itself says expired.
- *    The tenant shell passes it (every surface there reads tenant data); the
- *    `/platform` shell does not, because the directory is platform-scoped and
- *    keeps working under an expired session.
+ *  - `tenantShell` (the tenant shell) never renders a tenant surface inside a
+ *    support session: an active or expiring session shows a calm read-only
+ *    state, an expired one the expired state. This makes "no write control in a
+ *    session" true by construction (RT-777 section 1.2 item 6: a UI safeguard,
+ *    not a security control, since the API still admits tenant writes until
+ *    P0-b). S3/S4 replace the read-only placeholder with real session-aware,
+ *    redacted read views before any tenant data is shown.
+ *  - The `/platform` shell keeps its platform-scoped directory under an expired
+ *    status, and swaps only on a refused tenant call.
  *
  * With no session (a member-entered tenant, a plain user) it renders its
  * children untouched.
@@ -39,17 +44,32 @@ export function SupportSessionExpiredBody(): React.JSX.Element {
   );
 }
 
+export function SupportSessionReadOnlyBody(): React.JSX.Element {
+  const t = useT();
+  return (
+    <div className="support-session-expired">
+      <h1 className="content__title">{t("platform.session.readOnlyBody.title")}</h1>
+      <p className="content__sub">{t("platform.session.readOnlyBody.body")}</p>
+      <Link className="btn-secondary" to={PLATFORM_HOME}>
+        {t("platform.session.readOnlyBody.action")}
+      </Link>
+    </div>
+  );
+}
+
 export function SupportSessionBoundary({
   controller,
-  swapOnExpiredStatus = false,
+  tenantShell = false,
   children,
 }: Readonly<{
   controller: SupportSessionController | null;
-  swapOnExpiredStatus?: boolean;
+  tenantShell?: boolean;
   children?: React.ReactNode;
 }>): React.JSX.Element {
-  const expired =
-    controller !== null &&
-    (controller.refusedExpired || (swapOnExpiredStatus && controller.state === "expired"));
-  return <>{expired ? <SupportSessionExpiredBody /> : children}</>;
+  if (controller === null) return <>{children}</>;
+  const expired = controller.refusedExpired || controller.state === "expired";
+  if (tenantShell) {
+    return expired ? <SupportSessionExpiredBody /> : <SupportSessionReadOnlyBody />;
+  }
+  return <>{controller.refusedExpired ? <SupportSessionExpiredBody /> : children}</>;
 }

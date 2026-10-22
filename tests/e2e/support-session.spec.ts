@@ -278,31 +278,64 @@ test("expired in the tenant shell replaces the surface with the calm state; axe 
   await expectNoAxeViolations(page, "expired body dark");
 });
 
-test("mid-page: a 403 support_session_expired on a tenant call after the page rendered turns it into the expired state", async ({
+test("mid-page: a refused tenant call after the page rendered re-reads the context and shows the expired state", async ({
   page,
   t,
 }) => {
-  const server = await mock(page, sessionContext(summary()));
-  // The context keeps saying `active`: only the refused tenant call can flip the page.
+  // The page renders as a member-entered tenant; the session was opened and lapsed elsewhere.
+  const server = await mock(page, sessionContext(null));
   await page.goto("/");
-  // The page rendered with the session still active.
   await expect(page.getByRole("heading", { name: t("shell.overview.title") })).toBeVisible();
-  const region = page.getByRole("region", { name: t("platform.session.region") });
-  await expect(region).toHaveAttribute("data-state", "active");
   const readsBefore = server.contextCalls;
 
-  // The session lapses server-side; the next tenant read is refused (403 support_session_expired).
+  // The next tenant read is refused (403 support_session_expired); the re-read learns why.
   server.tenantExpired = true;
+  server.context = sessionContext(summary({ status: "expired", left: -MIN }));
   await page.getByRole("button", { name: t("overview.refresh") }).click();
 
   await expect(
     page.getByRole("heading", { name: t("platform.session.expiredBody.title"), level: 1 }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: t("shell.overview.title") })).toHaveCount(0);
-  await expect(region).toHaveAttribute("data-state", "expired");
+  await expect(page.getByRole("region", { name: t("platform.session.region") })).toHaveAttribute(
+    "data-state",
+    "expired",
+  );
   // The surface's own generic 403 banner never shows.
   await expect(page.getByRole("alert")).toHaveCount(0);
   expect(server.contextCalls).toBeGreaterThan(readsBefore);
+});
+
+test("tenant shell in a session: read-only state, no tenant request, no write control; axe light and dark", async ({
+  page,
+  t,
+}) => {
+  await mock(page, sessionContext(summary()));
+  const tenantCalls: string[] = [];
+  page.on("request", (r) => {
+    const path = new URL(r.url()).pathname;
+    // The context read and the Console's own telemetry config are not tenant reads.
+    const own = path === "/api/v1/context/me" || path.startsWith("/api/v1/console/telemetry/");
+    if (path.startsWith("/api/v1/") && !own) tenantCalls.push(path);
+  });
+  await page.goto("/");
+  await expect(
+    page.getByRole("heading", { name: t("platform.session.readOnlyBody.title"), level: 1 }),
+  ).toBeVisible();
+  const region = page.getByRole("region", { name: t("platform.session.region") });
+  await expect(region.getByRole("button")).toHaveText([
+    t("platform.session.renew"),
+    t("platform.session.end"),
+  ]);
+  await expect(page.locator("form, input, textarea, select")).toHaveCount(0);
+  await expect(page.locator("main").getByRole("button")).toHaveCount(0);
+  await expect(
+    page.getByRole("navigation", { name: t("shell.nav.label") }).getByRole("link"),
+  ).toHaveCount(1);
+  expect(tenantCalls).toEqual([]);
+  await expectNoAxeViolations(page, "tenant shell read-only session");
+  await darkTheme(page);
+  await expectNoAxeViolations(page, "tenant shell read-only session dark");
 });
 
 test("end: lands on the directory with the session gone and no tenant data left", async ({

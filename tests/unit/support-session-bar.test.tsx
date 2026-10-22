@@ -436,8 +436,9 @@ describe("expired body", () => {
     expect(screen.queryByRole("link", { name: "Go to organizations" })).toBeNull();
   });
 
-  test("mid-page: a 403 support_session_expired on a tenant call flips an active page to expired", async () => {
-    serve(context(sessionSummary()));
+  test("mid-page: a refused tenant call on a page that rendered without a session re-reads the context and shows the expired state", async () => {
+    // The context still says member-entered (the session was opened elsewhere).
+    serve(context(null));
     mount("/");
     expect(await screen.findByRole("heading", { name: "Tenant surface" })).toBeDefined();
     expect(getActiveContext).toHaveBeenCalledTimes(1);
@@ -470,8 +471,10 @@ describe("expired body", () => {
 
   test("a refusal seen under an old session does not expire a new one", async () => {
     serve(context(sessionSummary({ id: "s1" })));
-    mount("/");
-    expect(await screen.findByRole("heading", { name: "Tenant surface" })).toBeDefined();
+    mount("/platform/tenants");
+    expect(
+      await screen.findByRole("heading", { name: "No organizations available" }),
+    ).toBeDefined();
     act(() => reportSupportSessionExpired());
     expect(
       await screen.findByRole("heading", { name: "The support session expired" }),
@@ -482,7 +485,9 @@ describe("expired body", () => {
     await act(async () => {
       await qc.invalidateQueries({ queryKey: ["activeContext"] });
     });
-    expect(await screen.findByRole("heading", { name: "Tenant surface" })).toBeDefined();
+    expect(
+      await screen.findByRole("heading", { name: "No organizations available" }),
+    ).toBeDefined();
     expect(screen.getByRole("region", { name: "Support session" }).getAttribute("data-state")).toBe(
       "active",
     );
@@ -523,6 +528,74 @@ describe("no tenant data across sessions", () => {
     });
     await settle();
     expect(qc.getQueryData(["sales", "t1"])).toBeUndefined();
+  });
+});
+
+describe("tenant shell inside a session: read-only by construction", () => {
+  const writeish = () =>
+    Array.from(document.querySelectorAll("button, input, select, textarea, form, a[href]")).filter(
+      (el) => !el.closest("header, section[aria-label='Support session']"),
+    );
+
+  test("an active session shows the calm read-only state: no tenant surface, scope bar or tenant nav", async () => {
+    serve(context(sessionSummary()));
+    mount("/");
+    expect(await screen.findByRole("heading", { name: "Read-only support session" })).toBeDefined();
+    expect(screen.queryByRole("heading", { name: "Tenant surface" })).toBeNull();
+    // No tenant navigation, no scope bar: only the way back to the directory and sign out.
+    expect(screen.queryByRole("link", { name: "Stores" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Tenants" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Operators" })).toBeNull();
+    expect(document.querySelector(".scope")).toBeNull();
+    const nav = screen.getByRole("navigation", { name: "Primary" });
+    expect(
+      within(nav)
+        .getAllByRole("link")
+        .map((l) => l.getAttribute("href")),
+    ).toEqual(["/platform/tenants"]);
+  });
+
+  test("no form control and no write button renders in an active, expiring or capped session", async () => {
+    for (const s of [
+      sessionSummary(),
+      sessionSummary({ left: 2 * MIN }),
+      sessionSummary({ left: 9 * MIN, capIn: 9 * MIN }),
+    ]) {
+      document.body.innerHTML = "";
+      serve(context(s));
+      mount("/");
+      await screen.findByRole("heading", { name: "Read-only support session" });
+      expect(document.querySelectorAll("form, input, select, textarea")).toHaveLength(0);
+      // Outside the header and the session bar, the only things left are the way back to
+      // the directory and sign out.
+      const left = writeish().map((el) => el.textContent?.trim());
+      expect(left.sort()).toEqual(["Go to organizations", "Organizations", "Sign out"].sort());
+      // Within the bar: exactly the session's own controls.
+      const bar = screen.getByRole("region", { name: "Support session" });
+      const names = within(bar)
+        .getAllByRole("button")
+        .map((b) => b.textContent?.trim());
+      expect(names).toEqual(["Renew session", "End session"]);
+    }
+  });
+
+  test("an expired session in the tenant shell shows the expired state, still without any surface", async () => {
+    serve(context(sessionSummary({ status: "expired", left: -MIN })));
+    mount("/");
+    expect(
+      await screen.findByRole("heading", { name: "The support session expired" }),
+    ).toBeDefined();
+    expect(screen.queryByRole("heading", { name: "Read-only support session" })).toBeNull();
+    expect(document.querySelectorAll("form, input, select, textarea")).toHaveLength(0);
+  });
+
+  test("a member-entered context keeps the normal tenant UI, scope bar and nav", async () => {
+    serve(context(null));
+    mount("/");
+    expect(await screen.findByRole("heading", { name: "Tenant surface" })).toBeDefined();
+    expect(screen.queryByRole("heading", { name: "Read-only support session" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Stores" })).toBeDefined();
+    expect(document.querySelector(".scope")).not.toBeNull();
   });
 });
 
