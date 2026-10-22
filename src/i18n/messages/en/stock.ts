@@ -165,16 +165,7 @@ export const stock: MessagesOf<typeof ar> = {
     "Product created and the identifier linked to it. The item has left the review queue.",
   "unknownItems.reopen.action": "Reopen",
   "unknownItems.reopen.success": "Item reopened. It is back in the review queue.",
-  "unknownItems.select.column": "Select",
-  "unknownItems.select.row": "Select {value}",
-  "unknownItems.select.page": "Select every item on this page",
-  "unknownItems.bulk.selected": {
-    zero: "No items selected",
-    one: "1 item selected",
-    other: "{count} items selected",
-  },
   "unknownItems.bulk.action": "Dismiss selected",
-  "unknownItems.bulk.clear": "Clear selection",
   "unknownItems.bulk.resource": {
     zero: "no items",
     one: "1 item",

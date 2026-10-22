@@ -79,32 +79,18 @@
   gap: var(--space-4);
 }
 
-/* RT-724: the bulk-dismiss bar above the pending queue. The selection is
- * explicit and counted (UX-10 "bulk scope is explicit and countable"). */
+/* RT-724: the bulk-dismiss bar above the pending queue. RT-771: the count and
+ * clear action are the shared SelectionSummary (UX-10 "bulk scope is explicit
+ * and countable"). */
 .unknown-item-bulk {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-3);
   align-items: center;
 }
-.unknown-item-bulk__page {
-  display: inline-flex;
-  gap: var(--space-2);
-  align-items: center;
-  font-size: var(--text-control);
-}
-.unknown-item-bulk__count {
-  color: var(--color-text-muted);
-  font-size: var(--text-control);
-}
 .unknown-item-bulk > .confirm-delete,
 .unknown-item-bulk > .rtc-alert {
   flex-basis: 100%;
-}
-.unknown-item-select {
-  inline-size: 18px;
-  block-size: 18px;
-  accent-color: var(--color-primary);
 }
 
 /* RT-724: the create-product form inside the inspect drawer. */
