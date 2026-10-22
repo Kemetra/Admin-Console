@@ -138,6 +138,8 @@ export function ProductEditForm({
   const [noChanges, setNoChanges] = useState(false);
   const [locked, setLocked] = useState(false);
   const [reloading, setReloading] = useState(false);
+  // A failed re-read is said next to the conflict banner, which keeps its Reload to retry.
+  const [reloadFailed, setReloadFailed] = useState(false);
 
   const errors: ProductFieldErrors = {
     ...validateProductForm(values),
@@ -165,9 +167,10 @@ export function ProductEditForm({
     try {
       const fresh = await reload();
       if (!fresh) {
-        setNotice({ kind: "info", messageKey: "catalog.edit.reloadFailed" });
+        setReloadFailed(true);
         return;
       }
+      setReloadFailed(false);
       const freshBase = baselineOf(fresh);
       setValues((v) => mergeReload(base.values, v, freshBase.values));
       setBase(freshBase);
@@ -219,6 +222,7 @@ export function ProductEditForm({
     e.preventDefault();
     if (update.isPending || locked) return;
     setNotice(undefined);
+    setReloadFailed(false);
     setSubmitted(true);
     // A category the server already refused stands as an error until another is chosen:
     // sending the same id again would only be refused again.
@@ -240,6 +244,7 @@ export function ProductEditForm({
       {notice ? (
         <NoticeBanner notice={notice} onReload={() => void onReload()} reloading={reloading} />
       ) : null}
+      {reloadFailed ? <Banner variant="info" message={t("catalog.edit.reloadFailed")} /> : null}
       {noChanges ? <Banner variant="info" message={t("catalog.edit.noChanges")} /> : null}
       <form className="surface__form" onSubmit={onSubmit} noValidate>
         <FormErrorSummary ref={summaryRef} entries={entries} />

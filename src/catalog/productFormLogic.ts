@@ -108,22 +108,41 @@ function descriptionOf(raw: string): string | null {
  * be refused with 422. An empty patch means nothing is submitted.
  */
 export function buildPatch(base: ProductFormValues, typed: ProductFormValues): ProductPatch {
-  const patch: ProductPatch = {};
-  // Spaces at the ends alone are no edit: sending the trimmed value would rewrite what is
-  // stored for nothing (and send everyone else's open form into `stale_write`).
-  if (typed.name !== base.name && typed.name.trim() !== base.name) patch.name = typed.name.trim();
-  if (typed.description !== base.description) {
-    const next = descriptionOf(typed.description);
-    if (next !== descriptionOf(base.description)) patch.description = next;
-  }
-  if (typed.categoryId !== base.categoryId) {
-    patch.categoryId = typed.categoryId === NO_CATEGORY ? null : typed.categoryId;
-  }
-  if (typed.taxCategory !== base.taxCategory && typed.taxCategory.trim() !== base.taxCategory) {
-    patch.taxCategory = typed.taxCategory.trim();
-  }
-  if (typed.isActive !== base.isActive) patch.isActive = typed.isActive;
-  return patch;
+  return withoutUndefined({
+    name: trimmedChange(base.name, typed.name),
+    description: descriptionChange(base.description, typed.description),
+    categoryId: typed.categoryId === base.categoryId ? undefined : categoryOf(typed.categoryId),
+    taxCategory: trimmedChange(base.taxCategory, typed.taxCategory),
+    isActive: typed.isActive === base.isActive ? undefined : typed.isActive,
+  });
+}
+
+/**
+ * The trimmed value to send for a name or tax category, or undefined when it is no edit.
+ * Spaces at the ends alone are no edit: sending the trimmed value would rewrite what is
+ * stored for nothing (and send everyone else's open form into `stale_write`).
+ */
+function trimmedChange(base: string, typed: string): string | undefined {
+  const next = typed.trim();
+  return typed !== base && next !== base ? next : undefined;
+}
+
+/** `null` clears the description; undefined when the edit leaves it as stored (blank stays blank). */
+function descriptionChange(base: string, typed: string): string | null | undefined {
+  if (typed === base) return undefined;
+  const next = descriptionOf(typed);
+  return next === descriptionOf(base) ? undefined : next;
+}
+
+function categoryOf(categoryId: string): string | null {
+  return categoryId === NO_CATEGORY ? null : categoryId;
+}
+
+/** An absent field is left as is by the API; `null` is a value (clear), so only undefined is dropped. */
+function withoutUndefined(patch: ProductPatch): ProductPatch {
+  return Object.fromEntries(
+    Object.entries(patch).filter(([, value]) => value !== undefined),
+  ) as ProductPatch;
 }
 
 /**

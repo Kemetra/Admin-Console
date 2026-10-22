@@ -95,21 +95,18 @@ function CategoryOptions({
   const missing = current !== null && !listed(current.id) ? current : null;
   const refusedOption =
     refused !== null && !listed(refused.id) && refused.id !== missing?.id ? refused : null;
+  const label = (c: { id: string; name: string | null }) => c.name ?? c.id;
   return (
     <>
       <option value={NO_CATEGORY}>{t("catalog.form.categoryNone")}</option>
       {refusedOption ? (
         <option value={refusedOption.id}>
-          {t("catalog.form.categoryUnavailableOption", {
-            name: refusedOption.name ?? refusedOption.id,
-          })}
+          {t("catalog.form.categoryUnavailableOption", { name: label(refusedOption) })}
         </option>
       ) : null}
       {missing ? (
         <option value={missing.id}>
-          {listKnown
-            ? t("catalog.form.categoryRetired", { name: missing.name ?? missing.id })
-            : (missing.name ?? missing.id)}
+          {listKnown ? t("catalog.form.categoryRetired", { name: label(missing) }) : label(missing)}
         </option>
       ) : null}
       {categories.map((c) => (

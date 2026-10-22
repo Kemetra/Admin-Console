@@ -87,6 +87,8 @@ export function ProductRetire({
   const [confirming, setConfirming] = useState(false);
   const [notice, setNotice] = useState<Notice | undefined>();
   const [reloading, setReloading] = useState(false);
+  // A failed re-read is said next to the conflict banner, which keeps its Reload to retry.
+  const [reloadFailed, setReloadFailed] = useState(false);
   const startRef = useRef<HTMLButtonElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
   const [returnFocus, setReturnFocus] = useState(0);
@@ -109,11 +111,10 @@ export function ProductRetire({
     setReloading(true);
     try {
       const fresh = await reload();
+      setReloadFailed(!fresh);
+      if (!fresh) return;
       setConfirming(false);
-      setNotice({
-        kind: "info",
-        messageKey: fresh ? "catalog.retire.reloaded" : "catalog.detail.loadFailed",
-      });
+      setNotice({ kind: "info", messageKey: "catalog.retire.reloaded" });
     } finally {
       setReloading(false);
     }
@@ -122,6 +123,7 @@ export function ProductRetire({
   async function confirm(): Promise<void> {
     if (retire.isPending) return;
     setNotice(undefined);
+    setReloadFailed(false);
     try {
       const result = await retire.mutateAsync(updatedAt);
       if (result.ok) {
@@ -158,6 +160,7 @@ export function ProductRetire({
           reloading={reloading}
         />
       ) : null}
+      {reloadFailed ? <Banner variant="info" message={t("catalog.detail.loadFailed")} /> : null}
       {notice?.kind === "info" ? <Banner variant="info" message={t(notice.messageKey)} /> : null}
       {confirming ? (
         <section className="confirm-delete" aria-label={t("catalog.retire.confirmLabel")}>

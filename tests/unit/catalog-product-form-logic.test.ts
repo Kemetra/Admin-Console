@@ -84,9 +84,9 @@ describe("validateProductForm (what the client may prevent: D5)", () => {
     expect(validateProductForm({ ...BASE, taxCategory: "  " }).taxCategory).toBe(
       "catalog.form.error.taxCategoryRequired",
     );
-    expect(validateProductForm({ ...BASE, taxCategory: "x".repeat(50) }).taxCategory).toBe(
-      undefined,
-    );
+    expect(
+      validateProductForm({ ...BASE, taxCategory: "x".repeat(50) }).taxCategory,
+    ).toBeUndefined();
     expect(validateProductForm({ ...BASE, taxCategory: "x".repeat(51) }).taxCategory).toBe(
       "catalog.form.error.taxCategoryTooLong",
     );

@@ -187,6 +187,12 @@ describe("product Edit and Retire controls (RT-768, CAT-C2a)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Reload" }));
     expect(await screen.findByText("Could not load this item.")).toBeDefined();
     expect(screen.getByRole("heading", { level: 1, name: "Mineral water 1.5L" })).toBeDefined();
+    // The conflict banner and its Reload stay, so the reload can be retried.
+    expect(screen.getByText(/changed since you opened it/)).toBeDefined();
+    consoleGetCatalogProduct.mockResolvedValue(one(detail()));
+    fireEvent.click(screen.getByRole("button", { name: "Reload" }));
+    expect(await screen.findByText(/The latest version is loaded. Retire again/)).toBeDefined();
+    expect(screen.queryByText("Could not load this item.")).toBeNull();
     expect(start()).toBeDefined();
   });
 

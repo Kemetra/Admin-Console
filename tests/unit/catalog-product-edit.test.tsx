@@ -215,7 +215,7 @@ describe("CatalogProductEdit (RT-768, CAT-C2a edit)", () => {
     );
     renderEdit();
     await loaded();
-    await waitFor(() => expect(within(category()).getAllByRole("option").length).toBe(4));
+    await waitFor(() => expect(within(category()).getAllByRole("option")).toHaveLength(4));
     const labels = within(category())
       .getAllByRole("option")
       .map((o) => o.textContent);
@@ -286,7 +286,7 @@ describe("CatalogProductEdit (RT-768, CAT-C2a edit)", () => {
   test("clearing the description and the category sends null for each", async () => {
     renderEdit();
     await loaded();
-    await waitFor(() => expect(within(category()).getAllByRole("option").length).toBe(3));
+    await waitFor(() => expect(within(category()).getAllByRole("option")).toHaveLength(3));
     type(description(), "");
     type(category(), "");
     fireEvent.click(save());
@@ -389,7 +389,7 @@ describe("CatalogProductEdit (RT-768, CAT-C2a edit)", () => {
       renderEdit();
       await loaded();
       expect(summary()).toBeNull();
-      expect(document.querySelectorAll("[aria-invalid='true']").length).toBe(0);
+      expect(document.querySelectorAll("[aria-invalid='true']")).toHaveLength(0);
       type(name(), ""); // emptied, not left: still quiet
       expect(summary()).toBeNull();
       expect(name().getAttribute("aria-invalid")).toBeNull();
@@ -433,7 +433,7 @@ describe("CatalogProductEdit (RT-768, CAT-C2a edit)", () => {
         );
         expect(errorId).toBeDefined();
       }
-      expect(screen.getAllByText("Enter the item name.").length).toBe(2); // summary + inline
+      expect(screen.getAllByText("Enter the item name.")).toHaveLength(2); // summary + inline
     });
 
     test("a link focuses its field, and raises no leave prompt or navigation", async () => {
@@ -456,7 +456,7 @@ describe("CatalogProductEdit (RT-768, CAT-C2a edit)", () => {
       type(name(), "Water");
       expect(document.activeElement).toBe(name());
       const region = screen.getByRole("region", { name: "1 problem needs fixing" });
-      expect(within(region).getAllByRole("link").length).toBe(1);
+      expect(within(region).getAllByRole("link")).toHaveLength(1);
       expect(name().getAttribute("aria-invalid")).toBeNull();
       expect(tax().getAttribute("aria-invalid")).toBe("true");
     });
@@ -533,7 +533,7 @@ describe("CatalogProductEdit (RT-768, CAT-C2a edit)", () => {
         expect(alert.closest("[role='alert']")?.textContent).toContain("req-xyz");
         expect(tax().value).toBe("zero");
         expect(summary()).toBeNull();
-        expect(document.querySelectorAll("[aria-invalid='true']").length).toBe(0);
+        expect(document.querySelectorAll("[aria-invalid='true']")).toHaveLength(0);
         expect((save() as HTMLButtonElement).disabled).toBe(false);
       },
     );
@@ -583,7 +583,7 @@ describe("CatalogProductEdit (RT-768, CAT-C2a edit)", () => {
       consoleUpdateCatalogProduct.mockResolvedValue(writeFailure(422, "category_unavailable"));
       renderEdit();
       await loaded();
-      await waitFor(() => expect(within(category()).getAllByRole("option").length).toBe(3));
+      await waitFor(() => expect(within(category()).getAllByRole("option")).toHaveLength(3));
       type(category(), CATEGORY_2);
       fireEvent.click(save());
       await screen.findByRole("region", { name: "1 problem needs fixing" });
@@ -656,7 +656,7 @@ describe("CatalogProductEdit (RT-768, CAT-C2a edit)", () => {
       consoleUpdateCatalogProduct.mockResolvedValue(writeFailure(422, "category_unavailable"));
       renderEdit();
       await loaded();
-      await waitFor(() => expect(within(category()).getAllByRole("option").length).toBe(3));
+      await waitFor(() => expect(within(category()).getAllByRole("option")).toHaveLength(3));
       type(category(), CATEGORY_2);
       fireEvent.click(save());
       const region = await screen.findByRole("region", { name: "1 problem needs fixing" });
@@ -674,7 +674,7 @@ describe("CatalogProductEdit (RT-768, CAT-C2a edit)", () => {
       consoleUpdateCatalogProduct.mockResolvedValue(writeFailure(422, "category_unavailable"));
       renderEdit();
       await loaded();
-      await waitFor(() => expect(within(category()).getAllByRole("option").length).toBe(3));
+      await waitFor(() => expect(within(category()).getAllByRole("option")).toHaveLength(3));
       type(category(), CATEGORY_2);
       fireEvent.click(save());
       await screen.findByRole("region", { name: "1 problem needs fixing" });
@@ -706,7 +706,7 @@ describe("CatalogProductEdit (RT-768, CAT-C2a edit)", () => {
       expect(screen.getByRole("button", { name: "Reload" })).toBeDefined();
       expect(description().value).toBe("My own description");
       expect(summary()).toBeNull();
-      expect(document.querySelectorAll("[aria-invalid='true']").length).toBe(0);
+      expect(document.querySelectorAll("[aria-invalid='true']")).toHaveLength(0);
       expect(screen.getByText(/req-st/)).toBeDefined();
     });
 
@@ -743,6 +743,19 @@ describe("CatalogProductEdit (RT-768, CAT-C2a edit)", () => {
       expect(await screen.findByText(/Could not reload this item/)).toBeDefined();
       expect(description().value).toBe("My own description");
       expect(screen.getByRole("heading", { level: 1, name: /Edit/ })).toBeDefined();
+    });
+
+    test("a failed reload keeps the conflict banner and its Reload, so it can be retried", async () => {
+      await stale();
+      consoleGetCatalogProduct.mockResolvedValue(failure(500));
+      fireEvent.click(screen.getByRole("button", { name: "Reload" }));
+      await screen.findByText(/Could not reload this item/);
+      expect(screen.getByText(/changed since you opened it/)).toBeDefined();
+      consoleGetCatalogProduct.mockResolvedValue(one(FRESH));
+      fireEvent.click(screen.getByRole("button", { name: "Reload" }));
+      await screen.findByText(/The latest version is loaded/);
+      expect(screen.queryByText(/Could not reload this item/)).toBeNull();
+      expect(name().value).toBe("Water (renamed)");
     });
 
     test("a reload that finds the item retired locks the form", async () => {
