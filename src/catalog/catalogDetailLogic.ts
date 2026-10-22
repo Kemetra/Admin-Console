@@ -127,3 +127,28 @@ export function inventoryPath(
   if (!activeStoreId || !canReadInventory(role)) return null;
   return `/inventory/stores/${activeStoreId}/products/${productId}`;
 }
+
+// --- Store names ------------------------------------------------------------------------
+
+interface StoreNamed {
+  id?: unknown;
+  name?: unknown;
+}
+
+function nameEntry(row: StoreNamed | null): [string, string][] {
+  return typeof row?.id === "string" && typeof row.name === "string" ? [[row.id, row.name]] : [];
+}
+
+/**
+ * Store id to name, from whatever the stores read answered with: anything but
+ * a list gives no names, and a row without a string id and name is skipped.
+ * The active store's name comes from the scope and wins.
+ */
+export function storeNameMap(
+  rows: unknown,
+  active: { id: string | null; name: string | null },
+): Map<string, string> {
+  const names = new Map<string, string>(Array.isArray(rows) ? rows.flatMap(nameEntry) : []);
+  if (active.id && active.name) names.set(active.id, active.name);
+  return names;
+}

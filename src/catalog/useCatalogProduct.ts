@@ -10,6 +10,7 @@ import { type CatalogProductDetail, consoleGetCatalogProduct } from "@/lib/catal
 import { requestIdOf } from "@/shift-closes/shiftCloseLogic";
 import { useStoreList } from "@/stores/useStoreQueries";
 import { useQuery } from "@tanstack/react-query";
+import { storeNameMap } from "./catalogDetailLogic";
 
 export type CatalogProductError = {
   kind: "not-found" | "session" | "rate-limited" | "generic";
@@ -88,11 +89,6 @@ export interface StoreLabel {
   name: string | null;
 }
 
-interface StoreNamed {
-  id?: unknown;
-  name?: unknown;
-}
-
 /**
  * Store names for the overrides and scoped identifiers. The detail carries only
  * store ids; names come from the stores read the console already has. This is
@@ -106,11 +102,6 @@ export function useStoreLabels(
   needed: boolean,
 ): (id: string) => StoreLabel {
   const { result } = useStoreList(needed ? tenantId : null);
-  const rows: unknown = result?.kind === "rows" ? result.rows : [];
-  const names = new Map<string, string>();
-  for (const row of Array.isArray(rows) ? (rows as StoreNamed[]) : []) {
-    if (typeof row?.id === "string" && typeof row.name === "string") names.set(row.id, row.name);
-  }
-  if (active.id && active.name) names.set(active.id, active.name);
+  const names = storeNameMap(result?.kind === "rows" ? result.rows : [], active);
   return (id) => ({ id, name: names.get(id) ?? null });
 }

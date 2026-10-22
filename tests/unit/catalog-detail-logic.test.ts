@@ -4,6 +4,7 @@ import {
   inventoryPath,
   isProductId,
   storeDeviations,
+  storeNameMap,
   tenantAvailable,
 } from "@/catalog/catalogDetailLogic";
 import { describe, expect, test } from "vitest";
@@ -80,5 +81,16 @@ describe("catalog detail logic (RT-766)", () => {
   test("an unrecognised identifier type is said so", () => {
     expect(identifierTypeKey("barcode")).toBe("catalog.detail.identifierType.barcode");
     expect(identifierTypeKey("hologram")).toBe("catalog.detail.identifierType.unknownCode");
+  });
+
+  test("store names come from a list, skip bad rows, and the active store's scope name wins", () => {
+    const none = { id: null, name: null };
+    expect(storeNameMap({}, none).size).toBe(0);
+    expect(storeNameMap(undefined, none).size).toBe(0);
+    const names = storeNameMap(
+      [{ id: CAIRO_STORE, name: "Old name" }, { id: 7, name: "x" }, null, { id: "s" }],
+      { id: CAIRO_STORE, name: "Cairo Festival" },
+    );
+    expect([...names]).toEqual([[CAIRO_STORE, "Cairo Festival"]]);
   });
 });
