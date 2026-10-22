@@ -1,6 +1,7 @@
 import type { MessageKey, Params } from "../../src/i18n/translate";
 import { expectNoAxeViolations } from "./axe";
 import { type Page, expect, test } from "./fixtures";
+import { mockContext, mockQueue, pendingItem } from "./unknown-items-mocks";
 
 type TFn = (key: MessageKey, params?: Params) => string;
 
@@ -13,41 +14,7 @@ type TFn = (key: MessageKey, params?: Params) => string;
  * mocked data (identifier values, request ids) stays as authored.
  */
 
-const ctx = {
-  user: {
-    id: "u1",
-    email: "amal@northstar.eg",
-    display_name: "Amal Saleh",
-    is_platform_admin: true,
-  },
-  active_tenant: { id: "t1", name: "Northstar Retail" },
-  active_store: null,
-  active_role_code: "tenant_admin",
-  memberships: [{ tenant_id: "t1", tenant_name: "Northstar Retail", role_code: "tenant_admin" }],
-};
-
-const item = {
-  id: "u1",
-  tenant_id: "t1",
-  store_id: "s1",
-  identifier_type: "barcode",
-  identifier_value: "5012345678900",
-  source_system: null,
-  resolution_status: "pending",
-  resolution_action: null,
-  resolved_at: null,
-  resolved_by: null,
-  encountered_at: "2026-06-10T10:00:00Z",
-};
-
-async function mockContext(page: Page): Promise<void> {
-  await page.route("**/api/v1/**", (r) =>
-    r.fulfill({ status: 200, contentType: "application/json", body: "{}" }),
-  );
-  await page.route("**/api/v1/context/me", (r) =>
-    r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(ctx) }),
-  );
-}
+const item = pendingItem();
 
 async function openRow(page: Page, t: TFn, value: string): Promise<void> {
   await page.getByRole("button", { name: t("table.selection.openRow", { value }) }).click();
@@ -140,16 +107,6 @@ test("S3: dismiss behind a confirm resolves the item", async ({ page, t }) => {
 });
 
 // --- RT-724 (RF-4b) happy paths ---------------------------------------------
-
-async function mockQueue(page: Page, items: unknown[]): Promise<void> {
-  await page.route("**/api/v1/catalog/unknown-items?*", (r) =>
-    r.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ items, next_cursor: null }),
-    }),
-  );
-}
 
 test("S5: create a product from a pending item", async ({ page, t }) => {
   await mockContext(page);

@@ -1,5 +1,6 @@
 import { expectNoAxeViolations } from "./axe";
 import { type Page, expect, test } from "./fixtures";
+import { mockContext, mockQueue, pendingItem } from "./unknown-items-mocks";
 
 /**
  * RT-771 (UX-10 "Selection ≠ Navigation"): the Unknown-items pending queue is
@@ -12,54 +13,19 @@ import { type Page, expect, test } from "./fixtures";
  * per locale (RT-399); copy comes from the catalog (`t`). Mocked DP2.
  */
 
-const ctx = {
-  user: {
-    id: "u1",
-    email: "amal@northstar.eg",
-    display_name: "Amal Saleh",
-    is_platform_admin: true,
-  },
-  active_tenant: { id: "t1", name: "Northstar Retail" },
-  active_store: null,
-  active_role_code: "tenant_admin",
-  memberships: [{ tenant_id: "t1", tenant_name: "Northstar Retail", role_code: "tenant_admin" }],
-};
-
-const base = {
-  tenant_id: "t1",
-  store_id: "s1",
-  identifier_type: "barcode",
-  source_system: null,
-  resolution_status: "pending",
-  resolution_action: null,
-  resolved_at: null,
-  resolved_by: null,
-  encountered_at: "2026-06-10T10:00:00Z",
-};
 const ITEMS = [
-  { ...base, id: "u1", identifier_value: "5012345678900" },
-  { ...base, id: "u2", identifier_value: "5012345678917" },
-  { ...base, id: "u3", identifier_value: "5012345678924" },
+  pendingItem(),
+  pendingItem({ id: "u2", identifier_value: "5012345678917" }),
+  pendingItem({ id: "u3", identifier_value: "5012345678924" }),
 ];
-const VALUES = ITEMS.map((i) => i.identifier_value);
+const VALUES = ITEMS.map((i) => i.identifier_value as string);
 
 /** The selection cells must stay a 36px+ target in both dimensions (RT-757). */
 const MIN_CELL = 36;
 
 async function openQueue(page: Page): Promise<void> {
-  await page.route("**/api/v1/**", (r) =>
-    r.fulfill({ status: 200, contentType: "application/json", body: "{}" }),
-  );
-  await page.route("**/api/v1/context/me", (r) =>
-    r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(ctx) }),
-  );
-  await page.route("**/api/v1/catalog/unknown-items?*", (r) =>
-    r.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ items: ITEMS, next_cursor: null }),
-    }),
-  );
+  await mockContext(page);
+  await mockQueue(page, ITEMS);
   await page.route("**/api/v1/catalog/unknown-items/u2", (r) =>
     r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(ITEMS[1]) }),
   );
