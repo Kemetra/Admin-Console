@@ -143,4 +143,26 @@ export const catalog = {
   "catalog.detail.overrides.col.setting": "الإعداد",
   "catalog.detail.overrides.col.store": "قيمة المتجر",
   "catalog.detail.overrides.col.tenant": "قيمة المؤسسة",
+
+  // RT-767: المنتقي المشترك للأصناف (الأصناف النشطة فقط، دون سعر).
+  "catalog.picker.search": "البحث في الأصناف النشطة",
+  "catalog.picker.searchNote":
+    "اكتب جزءًا من الاسم، أو باركودًا أو SKU أو رمز بيع سريع مطابقًا تمامًا. يُرسَل النص كما كُتب.",
+  "catalog.picker.submit": "بحث",
+  "catalog.picker.list": "الأصناف النشطة",
+  "catalog.picker.loading": "جارٍ تحميل الأصناف",
+  "catalog.picker.count": "الأصناف المعروضة: {count}",
+  "catalog.picker.more": "تُعرض الأصناف الأولى فقط. حسِّن البحث لتضييق القائمة.",
+  "catalog.picker.empty": "لا يوجد صنف نشط يطابق هذا البحث.",
+  "catalog.picker.emptyAll": "لا توجد أصناف نشطة.",
+  "catalog.picker.sku": "SKU",
+  "catalog.picker.barcode": "الباركود",
+  "catalog.picker.retry": "إعادة المحاولة",
+  "catalog.picker.qTooLong": "يجب ألا يتجاوز نص البحث 100 حرف.",
+  "catalog.picker.error.notFound": "لا يمكن البحث في الأصناف من هذا الحساب أو هذا النطاق.",
+  "catalog.picker.error.session": "انتهت جلستك. سجّل الدخول مرة أخرى للبحث في الأصناف.",
+  "catalog.picker.error.rejected": "رفض الخادم هذا البحث. غيّر النص ثم حاول مرة أخرى.",
+  "catalog.picker.error.rateLimited":
+    "طلبات كثيرة جدًا في وقت قصير. انتظر انتهاء العدّ التنازلي ثم حاول مرة أخرى.",
+  "catalog.picker.error.generic": "تعذّر تحميل الأصناف.",
 } satisfies Messages;

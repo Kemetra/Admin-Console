@@ -46,12 +46,21 @@ describe("RF-4a boundary gates", () => {
     expect(allCode).not.toMatch(/[Bb]earer\s+/);
   });
 
-  test("VG-4: the queue never calls link (deferred, RT-724) or the POS capture op", () => {
-    // Link needs a product picker and there is no console catalog read
-    // contract to pick from; a free-text product-id field is not an option.
-    for (const op of ["tenantAdminLinkUnknownItem", "posCaptureItem", "/link", "product_id"]) {
-      expect(rf4aCode).not.toContain(op);
-    }
+  test("VG-4: the queue never calls the POS capture op", () => {
+    expect(rf4aCode).not.toContain("posCaptureItem");
+  });
+
+  test("VG-4: RT-767 calls link through the generated client, with a product chosen in the picker", () => {
+    // Link was deferred by RT-724 for want of a product picker; the shared
+    // picker (RT-767) now supplies the product id. The wrapper is the only
+    // place a `product_id` is named: no feature file takes a free-text id.
+    expect(rf4aCode).toContain('"/api/v1/catalog/unknown-items/{id}/link"');
+    const featureOnly = rf4aFiles
+      .filter((f) => /[\\/]unknown-items[\\/]/.test(f))
+      .map((f) => stripComments(readFileSync(f, "utf8")))
+      .join("\n");
+    expect(featureOnly).not.toContain("product_id");
+    expect(featureOnly).toContain("ProductPicker");
   });
 
   test("VG-4: RT-724 calls create-product / reopen / bulk-dismiss through the generated client", () => {

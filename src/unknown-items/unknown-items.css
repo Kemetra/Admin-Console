@@ -109,3 +109,20 @@
   margin-block-end: var(--space-2);
   font: var(--weight-strong) var(--text-body) / var(--leading-title) var(--font-sans);
 }
+
+/* RT-767: the link confirm is a fieldset (a named group); no frame of its own. */
+.unknown-item-link__confirm {
+  display: grid;
+  gap: var(--space-4);
+  margin: var(--space-5) 0 0;
+  padding: 0;
+  border: 0;
+  min-inline-size: 0;
+}
+.unknown-item-link {
+  display: grid;
+  gap: var(--space-4);
+}
+.unknown-item-link > p {
+  margin: 0;
+}

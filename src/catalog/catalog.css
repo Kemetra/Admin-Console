@@ -128,3 +128,83 @@
   color: var(--color-text);
   overflow-wrap: anywhere;
 }
+
+/* RT-767 shared product picker. Tokens only. The active option (keyboard) is an
+ * outline and the selected one a border plus a wash, so neither depends on a
+ * fill: forced colors drop fills (UX-11). */
+.product-picker {
+  display: grid;
+  gap: var(--space-3);
+}
+.product-picker__search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+.product-picker__search .field {
+  flex: 1 1 240px;
+}
+.product-picker__search > button {
+  align-self: flex-start;
+  margin-block-start: calc(var(--space-5) - var(--space-1));
+}
+.product-picker__list {
+  display: grid;
+  max-block-size: 20rem;
+  overflow-y: auto;
+  border: 1px solid var(--color-text-muted);
+  border-radius: var(--radius-control);
+}
+.product-picker__option {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border-inline-start: 3px solid transparent;
+  border-block-end: 1px solid var(--color-border);
+  cursor: pointer;
+}
+.product-picker__option:last-child {
+  border-block-end: 0;
+}
+.product-picker__option[data-active="true"] {
+  background: var(--color-surface-sunken);
+}
+.product-picker__list:focus-visible .product-picker__option[data-active="true"] {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
+}
+.product-picker__option[aria-selected="true"] {
+  background: var(--color-primary-soft);
+  border-inline-start-color: var(--color-primary);
+  font-weight: var(--weight-strong);
+}
+.product-picker__name {
+  overflow-wrap: anywhere;
+}
+.product-picker__codes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--text-meta);
+}
+.product-picker__status,
+.product-picker__more {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-meta);
+}
+
+@media (forced-colors: active) {
+  .product-picker__list {
+    border-color: CanvasText;
+  }
+  .product-picker__option[aria-selected="true"] {
+    border-inline-start: 3px solid Highlight;
+  }
+  .product-picker__option[data-active="true"] {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+}

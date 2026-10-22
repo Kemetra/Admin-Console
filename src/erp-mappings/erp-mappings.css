@@ -67,3 +67,9 @@
   color: var(--color-success);
   font-weight: var(--weight-medium);
 }
+
+/* RT-767: the entry point for a suggestion from the catalog picker. */
+.map-toolbar {
+  display: flex;
+  gap: var(--space-2);
+}

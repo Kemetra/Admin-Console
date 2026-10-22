@@ -2,7 +2,8 @@
  * RF-4a data layer (T003): typed wrappers over the generated `apiClient` for the
  * unknown-items review-queue operations, stable query keys, and the per-op
  * typed-error mapping the surfaces branch on. RF-4a wraps list / inspect /
- * dismiss; RT-724 (RF-4b) adds create-product, reopen and bulk-dismiss.
+ * dismiss; RT-724 (RF-4b) adds create-product, reopen and bulk-dismiss; RT-767
+ * adds link.
  *
  * Reuse posture (research R4a-1): this mirrors `src/lib/rf2-queries.ts` exactly —
  * the same generated client (the ONLY DP2 call surface, Principle 8), the same
@@ -11,10 +12,10 @@
  * store) is read from RF-1's `ActiveContextProvider` at the call sites, not
  * fetched here.
  *
- * Boundary (VG-4): six ops are wrapped. `posCaptureItem` is terminal-side and
- * `tenantAdminLinkUnknownItem` is deferred (RT-724): it needs a product picker
- * and there is no console catalog read contract to pick from, so it is NOT
- * wrapped and NOT called.
+ * Boundary (VG-4): seven ops are wrapped. `posCaptureItem` is terminal-side and
+ * is NOT wrapped and NOT called. `tenantAdminLinkUnknownItem` was deferred by
+ * RT-724 for want of a product picker; RT-767 wraps it, and the product id it
+ * sends always comes from the shared catalog picker, never from typed text.
  *
  * Error mapping (research R4a-3, AS-5 discipline): each op maps EXACTLY the
  * statuses its contract documents, asserting no undocumented status. Unlike RF-2,
@@ -47,6 +48,8 @@ export type ListUnknownItemsParams = NonNullable<
 /** create-product body: `name` + `tax_category` (+ optional `category_id`). */
 export type CreateProductFromUnknownItemRequest =
   components["schemas"]["CreateProductFromUnknownItemRequest"];
+/** link body: the target `product_id` only (scope is the session's). */
+export type LinkUnknownItemRequest = components["schemas"]["LinkUnknownItemRequest"];
 /** One per-id outcome of a bulk dismiss (`dismissed` / `already_reconciled` / `not_found`). */
 export type BulkDismissOutcome = components["schemas"]["BulkDismissOutcome"];
 
@@ -94,6 +97,19 @@ export async function createProductFromUnknownItem(
   const { data, error, response } = await apiClient.POST(
     "/api/v1/catalog/unknown-items/{id}/create-product",
     { params: { path: { id } }, body },
+  );
+  return { status: response.status, data, error };
+}
+
+/**
+ * POST /api/v1/catalog/unknown-items/{id}/link — bind the item's identifier to an
+ * existing active product and resolve it (`resolution_action = linked`). Not
+ * keyed: the contract documents no `Idempotency-Key` and no 425 for link.
+ */
+export async function linkUnknownItem(id: string, productId: string) {
+  const { data, error, response } = await apiClient.POST(
+    "/api/v1/catalog/unknown-items/{id}/link",
+    { params: { path: { id } }, body: { product_id: productId } },
   );
   return { status: response.status, data, error };
 }
@@ -198,6 +214,7 @@ export type UnknownItemOp =
   | "inspect"
   | "dismiss"
   | "createProduct"
+  | "link"
   | "reopen"
   | "bulkDismiss";
 
@@ -235,6 +252,9 @@ const COPY = {
   alreadyReconciled: "unknownItems.errors.alreadyReconciled",
   reopenResolved: "unknownItems.errors.reopenResolved",
   createValidation: "unknownItems.errors.createValidation",
+  linkValidation: "unknownItems.errors.linkValidation",
+  linkAliasConflict: "unknownItems.errors.linkAliasConflict",
+  originRejected: "unknownItems.errors.originRejected",
   bulkRejected: "unknownItems.errors.bulkRejected",
   aliasConflict: "unknownItems.errors.aliasConflict",
   targetUnavailable: "unknownItems.errors.targetUnavailable",
@@ -250,6 +270,7 @@ const NOT_FOUND_OPS: ReadonlySet<UnknownItemOp> = new Set([
   "inspect",
   "dismiss",
   "createProduct",
+  "link",
   "reopen",
 ]);
 
@@ -264,15 +285,43 @@ function codeOf(input: UnknownItemErrorContext): string | undefined {
   return input.error?.error?.code;
 }
 
+/** 403: reopen needs tenant-wide authority; link may be an `origin_rejected`. */
+function forbiddenKey(input: UnknownItemErrorContext): MessageKey {
+  if (input.op === "reopen") return COPY.reopenForbidden;
+  if (input.op === "link" && codeOf(input) === "origin_rejected") return COPY.originRejected;
+  return COPY.forbidden403;
+}
+
 /** 400: a refused body is form-level on the write ops; anything else is generic. */
 function mapBadRequest(input: UnknownItemErrorContext): UnknownItemErrorRender {
   const requestId = requestIdOf(input);
   if (input.op === "createProduct") {
     return { kind: "validation", messageKey: COPY.createValidation, requestId };
   }
+  if (input.op === "link") {
+    return { kind: "validation", messageKey: COPY.linkValidation, requestId };
+  }
   if (input.op === "bulkDismiss") {
     // FR-044: the whole batch is rejected; nothing was dismissed.
     return { kind: "validation", messageKey: COPY.bulkRejected, requestId };
+  }
+  return { kind: "generic", messageKey: COPY.badRequest, requestId };
+}
+
+/** A reconciliation 409 (create-product / link): the code decides, no product is ever named. */
+function mapReconciliationConflict(
+  code: string | undefined,
+  aliasConflictKey: typeof COPY.aliasConflict | typeof COPY.linkAliasConflict,
+  requestId: string | undefined,
+): UnknownItemErrorRender {
+  if (code === "alias_conflict") {
+    return { kind: "alias-conflict", messageKey: aliasConflictKey, requestId };
+  }
+  if (code === "target_unavailable") {
+    return { kind: "target-unavailable", messageKey: COPY.targetUnavailable, requestId };
+  }
+  if (code === "already_reconciled") {
+    return { kind: "already-reconciled", messageKey: COPY.alreadyReconciled };
   }
   return { kind: "generic", messageKey: COPY.badRequest, requestId };
 }
@@ -291,16 +340,9 @@ function mapConflict(input: UnknownItemErrorContext): UnknownItemErrorRender {
       // The only other documented reopen 409: the item is `resolved`, not dismissed.
       return { kind: "already-reconciled", messageKey: COPY.reopenResolved };
     case "createProduct":
-      if (code === "alias_conflict") {
-        return { kind: "alias-conflict", messageKey: COPY.aliasConflict, requestId };
-      }
-      if (code === "target_unavailable") {
-        return { kind: "target-unavailable", messageKey: COPY.targetUnavailable, requestId };
-      }
-      if (code === "already_reconciled") {
-        return { kind: "already-reconciled", messageKey: COPY.alreadyReconciled };
-      }
-      return { kind: "generic", messageKey: COPY.badRequest, requestId };
+      return mapReconciliationConflict(code, COPY.aliasConflict, requestId);
+    case "link":
+      return mapReconciliationConflict(code, COPY.linkAliasConflict, requestId);
     default:
       return { kind: "generic", messageKey: COPY.badRequest, requestId };
   }
@@ -318,6 +360,10 @@ function mapConflict(input: UnknownItemErrorContext): UnknownItemErrorRender {
  *   - dismiss:       400 / 401 / 403 / 404 / 409 (already_reconciled)
  *   - createProduct: 400 (validation_error) / 401 / 403 / 404 /
  *                    409 (alias_conflict | already_reconciled)
+ *   - link:          400 (validation_error) / 401 / 403 (forbidden |
+ *                    origin_rejected) / 404 /
+ *                    409 (alias_conflict | target_unavailable | already_reconciled)
+ *                    (no Idempotency-Key, no 425)
  *   - reopen:        400 / 401 / 403 (tenant-wide only) / 404 /
  *                    409 (already_reconciled | idempotency_key_conflict) / 425
  *   - bulkDismiss:   400 (whole batch rejected) / 401 / 403 /
@@ -325,7 +371,9 @@ function mapConflict(input: UnknownItemErrorContext): UnknownItemErrorRender {
  *   - every op:      429 rate_limited (RT-574) — a persistent banner, never
  *                    retried automatically
  * `target_unavailable` is mapped wherever a reconciliation 409 carries it,
- * though create-product's contract does not list it (only link does).
+ * though create-product's contract does not list it (only link does). The
+ * `target_unavailable` copy says "no longer available", never "retired": since
+ * RT-745 Backend-Core also refuses an inactive target.
  *
  * 401 is intentionally NOT mapped to a scope/sign-out action here: the
  * generated client carries the cookie; a 401 on these dashboard ops is an
@@ -342,9 +390,10 @@ export function mapUnknownItemError(input: UnknownItemErrorContext): UnknownItem
       // 007 8th category: `error.code = "forbidden"` — in-scope but insufficient
       // authority. Distinct from the non-disclosing 404. Rendered as a banner.
       // Reopen's 403 is specifically "tenant-wide authority required" (FR-042).
+      // Link also documents `origin_rejected` (RT-430): the request, not the role, was refused.
       return {
         kind: "banner",
-        messageKey: input.op === "reopen" ? COPY.reopenForbidden : COPY.forbidden403,
+        messageKey: forbiddenKey(input),
         requestId,
         retryable: false,
       };

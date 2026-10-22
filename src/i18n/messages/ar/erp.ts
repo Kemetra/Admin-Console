@@ -239,4 +239,12 @@ export const erp = {
   "erp.map.wh.retire.action": "إيقاف",
   "erp.map.wh.notice.set": "تم تعيين ربط المستودع.",
   "erp.map.wh.notice.retired": "تم إيقاف ربط المستودع.",
+
+  // RT-767: اقتراح ربط لمنتج يُختار من منتقي الكتالوج المشترك.
+  "erp.map.items.suggestNew.action": "اقتراح ربط",
+  "erp.map.items.suggestNew.label": "اقتراح ربط صنف",
+  "erp.map.items.suggestNew.choose":
+    "اختر المنتج الذي سيُربط بصنف ERPNext. لا يُسجَّل شيء قبل التأكيد.",
+  "erp.map.items.suggestNew.lead": "اقتراح صنف ERPNext للمنتج {product}.",
+  "erp.map.items.suggestNew.change": "تغيير المنتج",
 } satisfies Messages;

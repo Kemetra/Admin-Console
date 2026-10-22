@@ -16,8 +16,9 @@ import {
  * `sale_context` (that field lives on `UnknownItem`, not the review projection;
  * FR-007 / FR-4a-004).
  *
- * For a `pending` item it offers Create product (RT-724) and Dismiss, each of
- * which swaps the action area to its own step (form / confirm); a `dismissed`
+ * For a `pending` item it offers Link to a product (RT-767), Create product
+ * (RT-724) and Dismiss, each of which swaps the action area to its own step
+ * (picker + confirm / form / confirm); a `dismissed`
  * item offers Reopen (RT-724). The actions are offered by lifecycle state, not
  * by role (VG-5): a store-scoped actor's reopen gets the backend's 403, shown
  * as the tenant-wide-authority banner. Each action owns its inline error; this
@@ -29,6 +30,7 @@ import { useState } from "react";
 import { UnknownItemCreateProduct } from "./UnknownItemCreateProduct";
 import { UnknownItemDismiss } from "./UnknownItemDismiss";
 import { UnknownItemErrorBanner } from "./UnknownItemErrorBanner";
+import { UnknownItemLinkProduct } from "./UnknownItemLinkProduct";
 import { useUnknownItemInspect, useUnknownItemReopen } from "./useUnknownItemQueries";
 import "./unknown-items.css";
 
@@ -45,7 +47,7 @@ export interface UnknownItemInspectDrawerProps {
 }
 
 /** Which action step the drawer shows under the detail. */
-type Step = "actions" | "dismiss" | "create";
+type Step = "actions" | "dismiss" | "create" | "link";
 
 /** Reopen a dismissed item: one primary action, its error inline. */
 function ReopenAction({
@@ -147,6 +149,8 @@ export function UnknownItemInspectDrawer({
   const t = useT();
   const { result, isLoading } = useUnknownItemInspect(id);
   const [step, setStep] = useState<Step>("actions");
+  // The item was resolved elsewhere while a link was being chosen (RT-767).
+  const [resolvedElsewhere, setResolvedElsewhere] = useState(false);
 
   const item = result?.kind === "item" ? result.item : undefined;
   const error = result?.kind === "error" ? result.render : undefined;
@@ -166,16 +170,35 @@ export function UnknownItemInspectDrawer({
 
       {item ? (
         <>
+          {resolvedElsewhere ? (
+            <Banner variant="warning" message={t("unknownItems.link.alreadyResolved")} />
+          ) : null}
           <DetailBody item={item} />
           {isPending && step === "actions" ? (
             <div className="unknown-item-detail__actions">
               <button type="button" className="btn-primary" onClick={() => setStep("create")}>
                 {t("unknownItems.create.action")}
               </button>
+              <button type="button" className="btn-secondary" onClick={() => setStep("link")}>
+                {t("unknownItems.link.action")}
+              </button>
               <button type="button" className="btn-danger-quiet" onClick={() => setStep("dismiss")}>
                 {t("unknownItems.dismiss.action")}
               </button>
             </div>
+          ) : null}
+          {isPending && step === "link" ? (
+            <UnknownItemLinkProduct
+              key={activeTenantId ?? "none"}
+              item={item}
+              activeTenantId={activeTenantId}
+              onLinked={() => onCompleted("unknownItems.link.success")}
+              onResolvedElsewhere={() => {
+                setResolvedElsewhere(true);
+                setStep("actions");
+              }}
+              onCancel={() => setStep("actions")}
+            />
           ) : null}
           {isPending && step === "create" ? (
             <UnknownItemCreateProduct
