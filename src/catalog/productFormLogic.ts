@@ -145,6 +145,64 @@ function withoutUndefined(patch: ProductPatch): ProductPatch {
   ) as ProductPatch;
 }
 
+// --- Category options the list does not carry ------------------------------------------------
+
+export interface CategoryChoice {
+  id: string;
+  name: string | null;
+}
+
+/**
+ * `refused`: the server refused it (422) and it stays selected until another is chosen.
+ * `retired`: the item's own category, which the list omits because it is retired.
+ * `plain`: the item's own category while the list is loading or failed, so nothing is claimed.
+ */
+export interface ExtraCategoryOption {
+  id: string;
+  name: string;
+  mark: "refused" | "retired" | "plain";
+}
+
+function retiredCurrent(
+  listed: (id: string) => boolean,
+  current: CategoryChoice | null,
+  listKnown: boolean,
+): ExtraCategoryOption | null {
+  if (current === null || listed(current.id)) return null;
+  return {
+    id: current.id,
+    name: current.name ?? current.id,
+    mark: listKnown ? "retired" : "plain",
+  };
+}
+
+function refusedChoice(
+  listed: (id: string) => boolean,
+  current: CategoryChoice | null,
+  refused: CategoryChoice | null,
+): ExtraCategoryOption | null {
+  if (refused === null || listed(refused.id) || refused.id === current?.id) return null;
+  return { id: refused.id, name: refused.name ?? refused.id, mark: "refused" };
+}
+
+/**
+ * The options a category select needs beyond the tenant's list: a refused category (first) and
+ * the item's own category when the list omits it. A controlled select that lacks the option for
+ * its value would silently show another one.
+ */
+export function extraCategoryOptions(
+  categories: readonly { categoryId: string }[],
+  current: CategoryChoice | null,
+  refused: CategoryChoice | null,
+  listKnown: boolean,
+): ExtraCategoryOption[] {
+  const listed = (id: string) => categories.some((c) => c.categoryId === id);
+  return [
+    refusedChoice(listed, current, refused),
+    retiredCurrent(listed, current, listKnown),
+  ].filter((option): option is ExtraCategoryOption => option !== null);
+}
+
 /**
  * After a `stale_write` the product is read again. Typed values are kept only
  * for the fields the person edited; every other field takes the fresh server

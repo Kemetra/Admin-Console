@@ -10,7 +10,12 @@
 import { type MessageKey, useT } from "@/i18n";
 import type { CatalogCategory, CatalogProductDetail } from "@/lib/catalog-queries";
 import { TenantPrice } from "./CatalogDetailSections";
-import { NO_CATEGORY, type ProductFormValues } from "./productFormLogic";
+import {
+  type ExtraCategoryOption,
+  NO_CATEGORY,
+  type ProductFormValues,
+  extraCategoryOptions,
+} from "./productFormLogic";
 import "../components/inline-error.css";
 
 export const FIELD_IDS = {
@@ -19,6 +24,11 @@ export const FIELD_IDS = {
   categoryId: "product-category",
   taxCategory: "product-tax-category",
 } as const;
+
+const MARK_KEY: Record<"refused" | "retired", MessageKey> = {
+  refused: "catalog.form.categoryUnavailableOption",
+  retired: "catalog.form.categoryRetired",
+};
 
 type Errors = Partial<Record<keyof typeof FIELD_IDS, MessageKey>>;
 
@@ -91,24 +101,16 @@ function CategoryOptions({
   refused: { id: string; name: string | null } | null;
 }>): React.JSX.Element {
   const t = useT();
-  const listed = (id: string) => categories.some((c) => c.categoryId === id);
-  const missing = current !== null && !listed(current.id) ? current : null;
-  const refusedOption =
-    refused !== null && !listed(refused.id) && refused.id !== missing?.id ? refused : null;
-  const label = (c: { id: string; name: string | null }) => c.name ?? c.id;
+  const text = (option: ExtraCategoryOption): string =>
+    option.mark === "plain" ? option.name : t(MARK_KEY[option.mark], { name: option.name });
   return (
     <>
       <option value={NO_CATEGORY}>{t("catalog.form.categoryNone")}</option>
-      {refusedOption ? (
-        <option value={refusedOption.id}>
-          {t("catalog.form.categoryUnavailableOption", { name: label(refusedOption) })}
+      {extraCategoryOptions(categories, current, refused, listKnown).map((option) => (
+        <option key={option.id} value={option.id}>
+          {text(option)}
         </option>
-      ) : null}
-      {missing ? (
-        <option value={missing.id}>
-          {listKnown ? t("catalog.form.categoryRetired", { name: label(missing) }) : label(missing)}
-        </option>
-      ) : null}
+      ))}
       {categories.map((c) => (
         <option key={c.categoryId} value={c.categoryId}>
           {c.name}

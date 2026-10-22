@@ -3,6 +3,7 @@ import {
   type ProductFormValues,
   buildPatch,
   canWriteCatalog,
+  extraCategoryOptions,
   formValuesOf,
   mapProductWriteError,
   mergeReload,
@@ -179,6 +180,53 @@ describe("buildPatch: only what changed (RT-752 AC 3)", () => {
   test("an edit that is put back is no change", () => {
     const typed = { ...BASE, name: "x", isActive: false };
     expect(buildPatch(BASE, { ...typed, name: BASE.name })).toEqual({ isActive: false });
+  });
+});
+
+describe("extraCategoryOptions: the category options the list does not carry", () => {
+  const listed = [{ categoryId: CATEGORY_1 }];
+  const gone = { id: CATEGORY_2, name: "Old drinks" };
+
+  test("a current category the list has needs no extra option", () => {
+    expect(extraCategoryOptions(listed, { id: CATEGORY_1, name: "Beverages" }, null, true)).toEqual(
+      [],
+    );
+    expect(extraCategoryOptions(listed, null, null, true)).toEqual([]);
+  });
+
+  test("a current category missing from a known list is marked retired", () => {
+    expect(extraCategoryOptions(listed, gone, null, true)).toEqual([
+      { id: CATEGORY_2, name: "Old drinks", mark: "retired" },
+    ]);
+  });
+
+  test("while the list is loading or failed the current category is shown unmarked", () => {
+    expect(extraCategoryOptions(listed, gone, null, false)).toEqual([
+      { id: CATEGORY_2, name: "Old drinks", mark: "plain" },
+    ]);
+  });
+
+  test("a name-less category shows its id", () => {
+    expect(extraCategoryOptions([], { id: CATEGORY_2, name: null }, null, true)[0].name).toBe(
+      CATEGORY_2,
+    );
+  });
+
+  test("a refused category the list dropped stays, marked refused, before the current one", () => {
+    const refused = { id: "0190f000-0000-7000-8000-0000000007c3", name: "Snacks" };
+    expect(extraCategoryOptions(listed, gone, refused, true).map((o) => [o.id, o.mark])).toEqual([
+      [refused.id, "refused"],
+      [CATEGORY_2, "retired"],
+    ]);
+  });
+
+  test("a refused category the list still has, or that is the current one, adds nothing", () => {
+    expect(extraCategoryOptions(listed, null, { id: CATEGORY_1, name: "Beverages" }, true)).toEqual(
+      [],
+    );
+    expect(extraCategoryOptions(listed, gone, gone, true)).toEqual([
+      { id: CATEGORY_2, name: "Old drinks", mark: "retired" },
+    ]);
   });
 });
 
