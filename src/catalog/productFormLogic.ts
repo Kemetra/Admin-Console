@@ -181,7 +181,9 @@ function refusedChoice(
   current: CategoryChoice | null,
   refused: CategoryChoice | null,
 ): ExtraCategoryOption | null {
-  if (refused === null || listed(refused.id) || refused.id === current?.id) return null;
+  if (refused === null) return null;
+  if (listed(refused.id)) return null;
+  if (refused.id === current?.id) return null;
   return { id: refused.id, name: refused.name ?? refused.id, mark: "refused" };
 }
 
