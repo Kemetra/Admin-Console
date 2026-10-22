@@ -19,12 +19,21 @@ import {
   subscribeSupportSessionExpiry,
 } from "@/lib/support-session-expiry";
 import { type QueryClient, QueryClientContext } from "@tanstack/react-query";
-import { useContext, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { SupportSessionState } from "./supportSessionLogic";
 
 /** Drops every cached read except the active context: no tenant data outlives the session. */
 export function dropTenantData(qc: QueryClient | undefined): void {
   qc?.removeQueries({ predicate: (q) => q.queryKey[0] !== queryKeys.activeContext[0] });
+}
+
+/** A stable function that always calls the latest `fn`; the ref is updated after commit, not in render. */
+function useLatestCallback(fn: () => Promise<void>): () => Promise<void> {
+  const ref = useRef(fn);
+  useEffect(() => {
+    ref.current = fn;
+  });
+  return useCallback(() => ref.current(), []);
 }
 
 export function useNow(enabled: boolean): number {
@@ -45,8 +54,7 @@ type SessionRef = { id: string } | null;
 export function useRefusedExpired(session: SessionRef): boolean {
   const sessionId = session?.id ?? null;
   const { refresh } = useActiveContextValue();
-  const refreshRef = useRef(refresh);
-  refreshRef.current = refresh;
+  const refreshNow = useLatestCallback(refresh);
 
   const expiry = useSyncExternalStore(
     subscribeSupportSessionExpiry,
@@ -54,18 +62,19 @@ export function useRefusedExpired(session: SessionRef): boolean {
     getSupportSessionExpiryState,
   );
   // The baseline moves with the session id, so an old refusal never expires a new session.
-  const baseline = useRef({ id: sessionId, seq: expiry.seq });
-  if (baseline.current.id !== sessionId) baseline.current = { id: sessionId, seq: expiry.seq };
+  // Kept in state and adjusted during render (React's documented pattern), not in a ref.
+  const [baseline, setBaseline] = useState({ id: sessionId, seq: expiry.seq });
+  if (baseline.id !== sessionId) setBaseline({ id: sessionId, seq: expiry.seq });
 
   const handledSeq = useRef(expiry.seq);
   useEffect(() => {
     if (expiry.seq === handledSeq.current) return;
     handledSeq.current = expiry.seq;
-    void refreshRef.current();
-  }, [expiry.seq]);
+    void refreshNow();
+  }, [expiry.seq, refreshNow]);
 
   if (sessionId === null) return false;
-  return expiry.seq > baseline.current.seq;
+  return expiry.seq > baseline.seq;
 }
 
 /** The countdown, not the server and not a refusal, ended the session. */
@@ -86,8 +95,7 @@ export function useReReadAtZero(
   refusedExpired: boolean,
 ): void {
   const { refresh } = useActiveContextValue();
-  const refreshRef = useRef(refresh);
-  refreshRef.current = refresh;
+  const refreshNow = useLatestCallback(refresh);
   const reReadFor = useRef<string | null>(null);
 
   const stamp = session ? `${session.id}|${session.expires_at}` : null;
@@ -95,8 +103,8 @@ export function useReReadAtZero(
   useEffect(() => {
     if (!ended || reReadFor.current === stamp) return;
     reReadFor.current = stamp;
-    void refreshRef.current();
-  }, [ended, stamp]);
+    void refreshNow();
+  }, [ended, stamp, refreshNow]);
 }
 
 export function useTenantDataDrop(session: SessionRef, state: SupportSessionState | null) {

@@ -1,5 +1,5 @@
 import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -580,7 +580,7 @@ describe("tenant shell inside a session: read-only by construction", () => {
       sessionSummary({ left: 2 * MIN }),
       sessionSummary({ left: 9 * MIN, capIn: 9 * MIN }),
     ]) {
-      document.body.innerHTML = "";
+      cleanup();
       serve(context(s));
       mount("/");
       await screen.findByRole("heading", { name: "Read-only support session" });
@@ -651,7 +651,7 @@ describe("no write control inside a session", () => {
       sessionSummary({ left: 9 * MIN, capIn: 9 * MIN }),
       sessionSummary({ status: "expired", left: -MIN }),
     ]) {
-      document.body.innerHTML = "";
+      cleanup();
       serve(context(s));
       mount("/platform/tenants");
       const region = await bar();

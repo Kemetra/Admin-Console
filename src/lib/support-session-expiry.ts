@@ -10,6 +10,7 @@
  * and stay with the surface that made the call. The renew 409
  * `support_session_expired` is classified by the bar's own action, not here.
  */
+import type { components } from "@/generated/schema";
 import type { Client, Middleware } from "openapi-fetch";
 
 export const SUPPORT_SESSION_EXPIRED_CODE = "support_session_expired";
@@ -51,8 +52,8 @@ export function resetSupportSessionExpiry(): void {
 
 async function envelopeCode(response: Response): Promise<unknown> {
   try {
-    const body: unknown = await response.clone().json();
-    return (body as { error?: { code?: unknown } } | null)?.error?.code;
+    const body = (await response.clone().json()) as Partial<components["schemas"]["Error"]> | null;
+    return body?.error?.code;
   } catch {
     return undefined;
   }
