@@ -20,7 +20,7 @@ import { type ReviewQueueItem, identifierTypeKey } from "@/lib/unknown-items-que
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { UnknownItemErrorBanner } from "./UnknownItemErrorBanner";
-import { useUnknownItemLink } from "./useUnknownItemQueries";
+import { type UnknownItemWriteResult, useUnknownItemLink } from "./useUnknownItemQueries";
 
 export interface UnknownItemLinkProductProps {
   item: ReviewQueueItem;
@@ -81,43 +81,73 @@ function ConfirmLink({
   );
 }
 
-export function UnknownItemLinkProduct({
+interface LinkOutcomeHandlers {
+  onLinked: () => void;
+  onResolvedElsewhere: () => void;
+  /** The product the picker showed is gone: choose again from a fresh list. */
+  onTargetGone: () => void;
+}
+
+/** Where each outcome of the link goes; every other refusal stays on the step as its message. */
+function routeLinkOutcome(
+  res: UnknownItemWriteResult<ReviewQueueItem>,
+  handlers: LinkOutcomeHandlers,
+): void {
+  if (res.ok) {
+    handlers.onLinked();
+  } else if (res.render.kind === "already-reconciled") {
+    handlers.onResolvedElsewhere();
+  } else if (res.render.kind === "target-unavailable") {
+    handlers.onTargetGone();
+  }
+}
+
+/** The link step's state: the chosen product, the write, and where its outcome goes. */
+function useLinkFlow({
   item,
   activeTenantId,
   onLinked,
   onResolvedElsewhere,
-  onCancel,
-}: Readonly<UnknownItemLinkProductProps>): React.JSX.Element {
-  const t = useT();
+}: Readonly<Omit<UnknownItemLinkProductProps, "onCancel">>) {
   const qc = useQueryClient();
   const link = useUnknownItemLink(activeTenantId);
   const [chosen, setChosen] = useState<CatalogProduct | null>(null);
-  const result = link.data;
-  const error = result && !result.ok ? result.render : undefined;
-
-  function choose(product: CatalogProduct): void {
-    link.reset();
-    setChosen(product);
-  }
 
   function confirm(): void {
     if (!chosen) return;
+    const onTargetGone = () => {
+      // Drop the cached list so the picker reads fresh when it shows again.
+      setChosen(null);
+      qc.removeQueries({ queryKey: pickerQueryKeys.all(activeTenantId) });
+    };
     link.mutate(
       { id: item.id, productId: chosen.productId },
       {
-        onSuccess: (res) => {
-          if (res.ok) onLinked();
-          else if (res.render.kind === "already-reconciled") onResolvedElsewhere();
-          else if (res.render.kind === "target-unavailable") {
-            // The product the picker showed is gone: drop the cached list so the
-            // picker reads fresh when it shows again, and choose again.
-            setChosen(null);
-            qc.removeQueries({ queryKey: pickerQueryKeys.all(activeTenantId) });
-          }
-        },
+        onSuccess: (res) => routeLinkOutcome(res, { onLinked, onResolvedElsewhere, onTargetGone }),
       },
     );
   }
+
+  return {
+    link,
+    chosen,
+    confirm,
+    choose: (product: CatalogProduct) => {
+      link.reset();
+      setChosen(product);
+    },
+    changeProduct: () => setChosen(null),
+  };
+}
+
+export function UnknownItemLinkProduct(
+  props: Readonly<UnknownItemLinkProductProps>,
+): React.JSX.Element {
+  const { item, activeTenantId, onCancel } = props;
+  const t = useT();
+  const { link, chosen, confirm, choose, changeProduct } = useLinkFlow(props);
+  const result = link.data;
+  const error = result && !result.ok ? result.render : undefined;
 
   return (
     <section className="unknown-item-form unknown-item-link">
@@ -130,7 +160,7 @@ export function UnknownItemLinkProduct({
           product={chosen}
           pending={link.isPending}
           onConfirm={confirm}
-          onChange={() => setChosen(null)}
+          onChange={changeProduct}
           onCancel={onCancel}
         />
       ) : (

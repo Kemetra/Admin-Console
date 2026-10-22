@@ -68,11 +68,14 @@ export function useProductPicker(tenantId: string | null, q: string): ProductPic
     queryFn: () => readPage(q),
     retry: false,
   });
+  // A retry after a failure is a read in flight: TanStack keeps the old error until it
+  // answers, so show it as loading and hide the stale error meanwhile (RT-767 review).
+  const refetchingAfterError = result.isError && result.isFetching;
   return {
     products: result.data?.products ?? [],
     hasMore: result.data?.hasMore ?? false,
-    isLoading: active && result.isLoading,
-    error: errorOf(result.error),
+    isLoading: active && (result.isLoading || refetchingAfterError),
+    error: refetchingAfterError ? undefined : errorOf(result.error),
     retry: () => void result.refetch(),
   };
 }

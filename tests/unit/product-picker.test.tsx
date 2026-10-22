@@ -235,6 +235,16 @@ describe("keyboard", () => {
     expect(onSelect).toHaveBeenCalledWith(WATER);
   });
 
+  test("a clicked option holds focus: its own Enter chooses it once", async () => {
+    consoleListCatalogProducts.mockResolvedValue(page([WATER, COLA]));
+    const { onSelect } = renderPicker();
+    const options = within(await listbox()).getAllByRole("option");
+    options[1].focus();
+    fireEvent.keyDown(options[1], { key: "Enter" });
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onSelect).toHaveBeenCalledWith(COLA);
+  });
+
   test("ArrowDown in the search box moves into the list", async () => {
     consoleListCatalogProducts.mockResolvedValue(page([WATER]));
     renderPicker();
@@ -255,6 +265,23 @@ describe("failures", () => {
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     await listbox();
     expect(consoleListCatalogProducts).toHaveBeenCalledTimes(2);
+  });
+
+  test("a retry after a failure shows loading and hides the stale error until it answers", async () => {
+    consoleListCatalogProducts.mockResolvedValueOnce(failure(500, "req-stale"));
+    let answer: (value: unknown) => void = () => undefined;
+    consoleListCatalogProducts.mockReturnValueOnce(
+      new Promise((resolve) => {
+        answer = resolve;
+      }),
+    );
+    renderPicker();
+    await screen.findByRole("alert");
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(await screen.findByText("Loading products")).toBeDefined();
+    expect(screen.queryByRole("alert")).toBeNull();
+    answer(failure(500, "req-second"));
+    expect((await screen.findByRole("alert")).textContent).toContain("req-second");
   });
 
   test("a 404 is the API's refusal, not an empty catalog", async () => {

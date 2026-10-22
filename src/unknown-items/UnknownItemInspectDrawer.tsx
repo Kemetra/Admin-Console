@@ -189,6 +189,7 @@ export function UnknownItemInspectDrawer({
           ) : null}
           {isPending && step === "link" ? (
             <UnknownItemLinkProduct
+              key={activeTenantId ?? "none"}
               item={item}
               activeTenantId={activeTenantId}
               onLinked={() => onCompleted("unknownItems.link.success")}

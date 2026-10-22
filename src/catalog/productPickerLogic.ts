@@ -48,6 +48,11 @@ export const PICKER_STATUS_KINDS: Readonly<Record<number, PickerErrorKind>> = {
   429: "rate-limited",
 };
 
+/** Enter and Space choose the active option. */
+export function isChooseKey(key: string): boolean {
+  return key === "Enter" || key === " ";
+}
+
 /**
  * The listbox's next active option for a navigation key, or null when the key
  * moves nothing. From no active option (-1) ArrowDown enters at the first and

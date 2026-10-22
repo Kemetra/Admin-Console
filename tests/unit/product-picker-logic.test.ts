@@ -2,6 +2,7 @@ import {
   MAX_PICKER_QUERY_LENGTH,
   PICKER_PAGE_SIZE,
   buildPickerQuery,
+  isChooseKey,
   nextOptionIndex,
   pickerErrorKey,
   validatePickerQuery,
@@ -74,5 +75,14 @@ describe("nextOptionIndex", () => {
     expect(nextOptionIndex(1, "Escape", 3)).toBeNull();
     expect(nextOptionIndex(1, "a", 3)).toBeNull();
     expect(nextOptionIndex(-1, "ArrowDown", 0)).toBeNull();
+  });
+});
+
+describe("isChooseKey", () => {
+  test("Enter and Space choose; nothing else does", () => {
+    expect(isChooseKey("Enter")).toBe(true);
+    expect(isChooseKey(" ")).toBe(true);
+    expect(isChooseKey("Escape")).toBe(false);
+    expect(isChooseKey("ArrowDown")).toBe(false);
   });
 });

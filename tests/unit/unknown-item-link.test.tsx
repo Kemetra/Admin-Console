@@ -197,7 +197,7 @@ describe("linking", () => {
       expect(alert.textContent).toMatch(text);
       expect(alert.textContent).toContain(`req-${response.status}`);
       expect(within(drawer).getByRole("button", { name: "Link the identifier" })).toBeDefined();
-      expect(screen.queryByRole("dialog")).not.toBeNull();
+      expect(screen.getByRole("dialog")).toBeDefined();
     },
   );
 
@@ -246,7 +246,7 @@ describe("linking", () => {
     await waitFor(() =>
       expect(consoleListCatalogProducts.mock.calls.length).toBeGreaterThan(reads),
     );
-    expect(screen.queryByRole("dialog")).not.toBeNull();
+    expect(screen.getByRole("dialog")).toBeDefined();
   });
 
   test("choosing another product after a refusal clears the old message", async () => {

@@ -13,16 +13,17 @@
 import { Banner, type BannerVariant } from "@/components/Banner";
 import { GatedButton } from "@/components/GatedButton";
 import { InlineError } from "@/components/InlineError";
-import { useT } from "@/i18n";
+import { type MessageKey, useT } from "@/i18n";
 import type { CatalogProduct } from "@/lib/catalog-queries";
 import { useEffect, useId, useRef, useState } from "react";
 import {
   MAX_PICKER_QUERY_LENGTH,
+  isChooseKey,
   nextOptionIndex,
   pickerErrorKey,
   validatePickerQuery,
 } from "./productPickerLogic";
-import { type PickerError, useProductPicker } from "./useProductPicker";
+import { type PickerError, type ProductPickerState, useProductPicker } from "./useProductPicker";
 import "./catalog.css";
 
 export interface ProductPickerProps {
@@ -59,7 +60,6 @@ function PickerOption({
 }>): React.JSX.Element {
   const t = useT();
   return (
-    // biome-ignore lint/a11y/useKeyWithClickEvents: the listbox owns the keyboard (aria-activedescendant); a click is the pointer path.
     <div
       id={id}
       // biome-ignore lint/a11y/useSemanticElements: a native <option> cannot hold two bidi-isolated lines, and Enter must choose, not change.
@@ -69,6 +69,14 @@ function PickerOption({
       data-active={active ? "true" : undefined}
       className="product-picker__option"
       onClick={onChoose}
+      onKeyDown={(event) => {
+        // A clicked option holds focus: its own Enter / Space choose it, and every other key
+        // bubbles to the listbox, which moves.
+        if (!isChooseKey(event.key)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        onChoose();
+      }}
       onMouseMove={onHover}
     >
       <span className="product-picker__name" dir="auto">
@@ -117,7 +125,7 @@ function PickerList({
       return;
     }
     const chosen = products[activeIndex];
-    if ((event.key === "Enter" || event.key === " ") && chosen) {
+    if (isChooseKey(event.key) && chosen) {
       event.preventDefault();
       onSelect(chosen);
     }
@@ -134,7 +142,7 @@ function PickerList({
       className="product-picker__list"
       onKeyDown={onKeyDown}
       // Focus lands on an option, never on an empty listbox (the first is active).
-      onFocus={() => setActiveIndex((current) => (current < 0 ? 0 : current))}
+      onFocus={() => setActiveIndex((current) => Math.max(current, 0))}
     >
       {products.map((product, index) => (
         <PickerOption
@@ -173,24 +181,124 @@ function PickerFailure({
   );
 }
 
+/** The search form: an explicit submit, the text exactly as typed, ArrowDown into the list. */
+function PickerSearch({
+  draft,
+  error,
+  searchRef,
+  onDraft,
+  onSubmit,
+  onEnterList,
+}: Readonly<{
+  draft: string;
+  error: MessageKey | undefined;
+  searchRef: React.RefObject<HTMLInputElement | null>;
+  onDraft: (value: string) => void;
+  onSubmit: () => void;
+  onEnterList: () => boolean;
+}>): React.JSX.Element {
+  const t = useT();
+  const inputId = useId();
+  return (
+    <form
+      className="product-picker__search"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSubmit();
+      }}
+      // The search is not unsaved work: no Stay / Discard prompt for it (RT-268).
+      data-dirty-guard="off"
+      noValidate
+    >
+      <div className="field">
+        <label htmlFor={inputId}>{t("catalog.picker.search")}</label>
+        <input
+          ref={searchRef}
+          id={inputId}
+          className="input"
+          dir="auto"
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+          maxLength={MAX_PICKER_QUERY_LENGTH}
+          aria-describedby={`${inputId}-note`}
+          aria-invalid={error ? true : undefined}
+          value={draft}
+          onChange={(e) => onDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowDown" && onEnterList()) e.preventDefault();
+          }}
+        />
+        <span id={`${inputId}-note`} className="field__hint">
+          {t("catalog.picker.searchNote")}
+        </span>
+        <InlineError message={error ? t(error) : undefined} />
+      </div>
+      <GatedButton type="submit" className="btn-secondary">
+        {t("catalog.picker.submit")}
+      </GatedButton>
+    </form>
+  );
+}
+
+/** What the read says: loading, the failure, the list, or the empty answer. */
+function PickerResults({
+  picker,
+  applied,
+  hasTenant,
+  selectedId,
+  onSelect,
+}: Readonly<{
+  picker: ProductPickerState;
+  applied: string;
+  hasTenant: boolean;
+  selectedId: string | null | undefined;
+  onSelect: (product: CatalogProduct) => void;
+}>): React.JSX.Element | null {
+  const t = useT();
+  if (picker.isLoading) {
+    return <output className="product-picker__status">{t("catalog.picker.loading")}</output>;
+  }
+  if (picker.error) return <PickerFailure error={picker.error} onRetry={picker.retry} />;
+  if (picker.products.length === 0) {
+    if (!hasTenant) return null;
+    return (
+      <p className="product-picker__status">
+        {t(applied === "" ? "catalog.picker.emptyAll" : "catalog.picker.empty")}
+      </p>
+    );
+  }
+  return (
+    <>
+      <PickerList
+        key={applied}
+        products={picker.products}
+        selectedId={selectedId}
+        onSelect={onSelect}
+      />
+      <output className="product-picker__status">
+        {t("catalog.picker.count", { count: picker.products.length })}
+      </output>
+      {picker.hasMore ? <p className="product-picker__more">{t("catalog.picker.more")}</p> : null}
+    </>
+  );
+}
+
 export function ProductPicker({
   tenantId,
   onSelect,
   selectedId,
 }: Readonly<ProductPickerProps>): React.JSX.Element {
-  const t = useT();
-  const inputId = useId();
   const [draft, setDraft] = useState("");
   const [applied, setApplied] = useState("");
-  const [inputError, setInputError] = useState<ReturnType<typeof validatePickerQuery>>();
+  const [inputError, setInputError] = useState<MessageKey | undefined>();
   const picker = useProductPicker(tenantId, applied);
   const rootRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   // The step that opened the picker has unmounted its trigger: focus starts at the search.
   useEffect(() => searchRef.current?.focus(), []);
 
-  function submit(event: React.FormEvent): void {
-    event.preventDefault();
+  function submit(): void {
     const found = validatePickerQuery(draft);
     setInputError(found);
     if (found) return;
@@ -199,78 +307,30 @@ export function ProductPicker({
     else setApplied(draft);
   }
 
-  const showList = !picker.isLoading && !picker.error && picker.products.length > 0;
-  const showEmpty = !picker.isLoading && !picker.error && picker.products.length === 0 && tenantId;
+  /** ArrowDown in the search box moves into the list, when there is one. */
+  function enterList(): boolean {
+    const list = rootRef.current?.querySelector<HTMLElement>("[role=listbox]");
+    list?.focus();
+    return Boolean(list);
+  }
 
   return (
     <div className="product-picker" ref={rootRef}>
-      <form
-        className="product-picker__search"
+      <PickerSearch
+        draft={draft}
+        error={inputError}
+        searchRef={searchRef}
+        onDraft={setDraft}
         onSubmit={submit}
-        // The search is not unsaved work: no Stay / Discard prompt for it (RT-268).
-        data-dirty-guard="off"
-        noValidate
-      >
-        <div className="field">
-          <label htmlFor={inputId}>{t("catalog.picker.search")}</label>
-          <input
-            ref={searchRef}
-            id={inputId}
-            className="input"
-            dir="auto"
-            autoComplete="off"
-            autoCorrect="off"
-            spellCheck={false}
-            maxLength={MAX_PICKER_QUERY_LENGTH}
-            aria-describedby={`${inputId}-note`}
-            aria-invalid={inputError ? true : undefined}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "ArrowDown") {
-                const list = rootRef.current?.querySelector<HTMLElement>("[role=listbox]");
-                if (list) {
-                  e.preventDefault();
-                  list.focus();
-                }
-              }
-            }}
-          />
-          <span id={`${inputId}-note`} className="field__hint">
-            {t("catalog.picker.searchNote")}
-          </span>
-          <InlineError message={inputError ? t(inputError) : undefined} />
-        </div>
-        <GatedButton type="submit" className="btn-secondary">
-          {t("catalog.picker.submit")}
-        </GatedButton>
-      </form>
-
-      {picker.isLoading ? (
-        <output className="product-picker__status">{t("catalog.picker.loading")}</output>
-      ) : null}
-      {picker.error ? <PickerFailure error={picker.error} onRetry={picker.retry} /> : null}
-      {showList ? (
-        <>
-          <PickerList
-            key={applied}
-            products={picker.products}
-            selectedId={selectedId}
-            onSelect={onSelect}
-          />
-          <output className="product-picker__status">
-            {t("catalog.picker.count", { count: picker.products.length })}
-          </output>
-          {picker.hasMore ? (
-            <p className="product-picker__more">{t("catalog.picker.more")}</p>
-          ) : null}
-        </>
-      ) : null}
-      {showEmpty ? (
-        <p className="product-picker__status">
-          {t(applied === "" ? "catalog.picker.emptyAll" : "catalog.picker.empty")}
-        </p>
-      ) : null}
+        onEnterList={enterList}
+      />
+      <PickerResults
+        picker={picker}
+        applied={applied}
+        hasTenant={Boolean(tenantId)}
+        selectedId={selectedId}
+        onSelect={onSelect}
+      />
     </div>
   );
 }
