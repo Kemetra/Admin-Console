@@ -81,3 +81,50 @@
     display: none;
   }
 }
+
+/* RT-766 product detail. Same tokens; logical properties; no new colour. */
+.catalog-detail__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-block-start: var(--space-3);
+  border-block-start: 1px solid var(--color-border);
+}
+.catalog-detail__section .surface__section-title {
+  margin: 0;
+}
+.catalog-detail__note,
+.catalog-detail__empty {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+.catalog-detail__store {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.catalog-detail__store-name {
+  margin: 0;
+  font: var(--weight-strong) var(--text-control) / var(--leading-title) var(--font-sans);
+}
+
+/* Identifiers and tax categories are kept exactly as stored: leading zeros and
+ * inner spaces stay visible, and a long code wraps instead of overflowing. */
+.catalog-code {
+  font-family: var(--font-mono);
+  font-size: var(--text-machine);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.catalog-description {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Read-only tables: the shared table look, without a row to activate. */
+.catalog-readonly td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}

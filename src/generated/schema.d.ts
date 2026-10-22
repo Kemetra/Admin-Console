@@ -3,7 +3,7 @@
  * Do not make direct changes to the file.
  */
 
-// Source: Data-Pulse-2 @ 6bd8a5306458d1eda260a2d6cc40e2067eac22be
+// Source: Data-Pulse-2 @ b9acd8c492c8d696987367c3c8b894907fb9b41c
 // Sources:
 // - packages/contracts/openapi/auth.openapi.yaml
 // - packages/contracts/openapi/context.openapi.yaml
@@ -1912,6 +1912,36 @@ export namespace AuditSchema {
             patch?: never;
             trace?: never;
         };
+        "/api/v1/platform/audit/events": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * Query platform-scoped audit events (platform admins only).
+             * @description Platform-scoped audit rows: those stored with `tenant_id` null because they name no tenant. Today these are `auth.signin.ok`, `auth.signin.failed`, and `platform.cross_tenant.accessed` rows for a path tenant that is malformed or does not exist (RT-414), plus any other action written while no tenant is active. Tenant-scoped rows are never returned, by any filter: this is not a cross-tenant view (RT-431 decision 1). It is an operator view, not a compliance export (decision 2).
+             *
+             *     **Who may call it.** Only a platform admin: the session user's `users.is_platform_admin`, server-authenticated (RT-132 D6), over the `dp2_session` cookie. A bearer token, POS device token or operator envelope is 401. Every other signed-in user, including a tenant `owner`, gets 403 `forbidden`; the route exists, so there is no 404. A 401 here never means "no active tenant": a platform admin with no active tenant gets 200.
+             *
+             *     **Support sessions (RT-414).** This operation is not tenant-scoped: it has no path tenant and does not use the active tenant, so support-session enforcement does not cover it. The server MUST NOT require or use a support session for it; an open or expired support session changes nothing about the result. It MUST NOT write a `platform.cross_tenant.accessed` row for the call. This is the platform-scope read RT-414 named as a follow-up. A platform admin reads a tenant's own rows through `listAuditEvents` as before.
+             *
+             *     **Order and paging.** Newest first: `occurred_at` descending, then `id` descending, with the same microsecond-exact keyset as `listAuditEvents` (RT-211). `next_cursor` is stable under concurrent inserts and is valid only for this operation with the same filters (including `kind`). `from` and `to` are inclusive bounds on `occurred_at`.
+             *
+             *     **Filters.** All combine with AND. The set is closed: `action` (literal prefix), `kind` (RT-687), `actor_user_id`, `from`, `to`, `cursor` and `limit`. There is no `tenant_id` and no `store_id`; any other query parameter is a 400 `validation_error`. Every platform-scoped action today is classed `change`, so `kind=read` returns an empty page.
+             *
+             *     **Disclosure (constitution XIV).** Sign-in rows store an email in `actor_label` (the account email on `ok`, the typed address on `failed`, including for an unknown account). The server MUST NOT return it whole: a value containing `@` MUST be returned as the first Unicode code point before the last `@` (none, if that part is empty), `***`, and everything from the last `@` (`a***@example.com`); any other label (for example `platform_support`) is returned as stored. `actor_user_id` is returned as stored. Audit rows store no IP address, password, token or request body, so none is returned. `actor_label` and `metadata` are untrusted text: a client must escape them, never render them as markup. The call is not itself audited (decision 3, as for `listAuditEvents`).
+             */
+            get: operations["listPlatformAuditEvents"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
     }
     export type webhooks = Record<string, never>;
     export interface components {
@@ -1937,6 +1967,41 @@ export namespace AuditSchema {
                 /** Format: uuid */
                 request_id?: string | null;
                 metadata?: {
+                    [key: string]: unknown;
+                };
+            };
+            PlatformAuditEventList: {
+                items: components["schemas"]["PlatformAuditEvent"][];
+                /** @description Null on the last page. */
+                next_cursor: string | null;
+            };
+            /** @description The `AuditEvent` projection for a platform-scoped row. `tenant_id` is always null here, so a row that names a tenant fails this schema. */
+            PlatformAuditEvent: {
+                /** Format: uuid */
+                id: string;
+                /** Format: date-time */
+                occurred_at: string;
+                /** Format: uuid */
+                actor_user_id: string | null;
+                /** @description Masked per the operation's **Disclosure** rule: a value with `@` is its first code point, `***` and the text from the last `@`; any other label is as stored. Untrusted text. */
+                actor_label: null | string;
+                /** @description Always null, because tenant-scoped rows are never returned. */
+                tenant_id: null;
+                /** Format: uuid */
+                store_id: string | null;
+                action: string;
+                /**
+                 * @description Derived by the server from `action`, as on `AuditEvent`; an unclassified action is `change`.
+                 * @enum {string}
+                 */
+                kind: "read" | "change";
+                target_type: string | null;
+                /** Format: uuid */
+                target_id: string | null;
+                /** Format: uuid */
+                request_id: string | null;
+                /** @description Stored as written. Platform-scoped writers store an allowlist only (`{}` for sign-in rows; the route template, method, outcome and reason for `platform.cross_tenant.accessed`, never the concrete path, an email, a token or a body). Untrusted text. */
+                metadata: {
                     [key: string]: unknown;
                 };
             };
@@ -1966,7 +2031,21 @@ export namespace AuditSchema {
                 };
             };
         };
-        parameters: never;
+        parameters: {
+            /** @description Literal action-code prefix (for example `auth.signin.`); `%`, `_` and a backslash match themselves. */
+            PlatformAuditAction: string;
+            /** @description Only events of this action kind, as for `listAuditEvents`. Omitted: all platform-scoped events. */
+            PlatformAuditKind: "read" | "change";
+            /** @description Only events of this actor. An anonymous failed sign-in has no actor and never matches. */
+            PlatformAuditActor: string;
+            /** @description Inclusive lower bound on `occurred_at`. */
+            PlatformAuditFrom: string;
+            /** @description Inclusive upper bound on `occurred_at`. */
+            PlatformAuditTo: string;
+            /** @description Opaque `next_cursor` of a prior page of this operation. Do not construct or decode it; a malformed value is a 400 `validation_error`. */
+            PlatformAuditCursor: string;
+            PlatformAuditLimit: number;
+        };
         requestBodies: never;
         headers: {
             /** @description Whole seconds the caller should wait before retrying, sent on every console 429 (RT-574 D5). Its own bound, 1 to 3600; it is not the POS `RetryAfter` header. */
@@ -2029,6 +2108,68 @@ export namespace AuditSchema {
                         [name: string]: unknown;
                     };
                     content?: never;
+                };
+                429: components["responses"]["TooManyRequests"];
+            };
+        };
+        listPlatformAuditEvents: {
+            parameters: {
+                query?: {
+                    /** @description Literal action-code prefix (for example `auth.signin.`); `%`, `_` and a backslash match themselves. */
+                    action?: components["parameters"]["PlatformAuditAction"];
+                    /** @description Only events of this action kind, as for `listAuditEvents`. Omitted: all platform-scoped events. */
+                    kind?: components["parameters"]["PlatformAuditKind"];
+                    /** @description Only events of this actor. An anonymous failed sign-in has no actor and never matches. */
+                    actor_user_id?: components["parameters"]["PlatformAuditActor"];
+                    /** @description Inclusive lower bound on `occurred_at`. */
+                    from?: components["parameters"]["PlatformAuditFrom"];
+                    /** @description Inclusive upper bound on `occurred_at`. */
+                    to?: components["parameters"]["PlatformAuditTo"];
+                    /** @description Opaque `next_cursor` of a prior page of this operation. Do not construct or decode it; a malformed value is a 400 `validation_error`. */
+                    cursor?: components["parameters"]["PlatformAuditCursor"];
+                    limit?: components["parameters"]["PlatformAuditLimit"];
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PlatformAuditEventList"];
+                    };
+                };
+                /** @description `validation_error`: a query parameter is invalid or unknown (for example `tenant_id` or `store_id`, an unknown `kind`, a malformed `cursor`, an out-of-range `limit`, a non-UUID id, or a malformed date-time). */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Unauthenticated: a missing or invalid session cookie, or a non-cookie credential. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description `forbidden`: the session user is not a platform admin (a tenant `owner` included). */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
                 };
                 429: components["responses"]["TooManyRequests"];
             };
@@ -3386,7 +3527,7 @@ export namespace ErpnextReconciliationSchema {
             };
             /**
              * List the tenant's ERPNext posting dead-letter backlog.
-             * @description A LIVE read-projection over the 015 `erpnext_posting_status` rows with `status = 'permanently_rejected'` for the session tenant (READ, never mirrored). Each item carries its rejection class, originating sale/terminal-event reference, provenance, structured reason, and dead-letter time. Cursor-paginated; filter by store + class. Scoped to the session tenant (RLS); cross-tenant rows are never disclosed.
+             * @description A LIVE read-projection over the 015 `erpnext_posting_status` rows with `status = 'permanently_rejected'` for the session tenant (READ, never mirrored). Each item carries its rejection class, originating sale/terminal-event reference, provenance, rejection message (`reason`, RT-410), and dead-letter time. Cursor-paginated; filter by store + class. Scoped to the session tenant (RLS); cross-tenant rows are never disclosed.
              */
             get: operations["listPostingBacklog"];
             put?: never;
@@ -3570,7 +3711,7 @@ export namespace ErpnextReconciliationSchema {
                 workItemRef: string;
                 /** @enum {string} */
                 kind: "sale_post" | "reversal";
-                /** @description The 015 rejection category (`unmapped_item` / `unmapped_store` / `unmapped_account` / `validation` / `closed_period` / `retry_budget_exhausted` / RT-332 `reconciliation_required`). 015's vocabulary, read in place. */
+                /** @description The 015 rejection category (`unmapped_item` / `unmapped_store` / `unmapped_account` / `validation` / `closed_period` / `retry_budget_exhausted` / RT-332 `reconciliation_required` / `other`, which the ack path already stores for an unclassified Connector rejection). 015's vocabulary, read in place. */
                 rejectionCategory: string;
                 /**
                  * Format: uuid
@@ -3579,7 +3720,19 @@ export namespace ErpnextReconciliationSchema {
                 saleRef?: string | null;
                 sourceSystem: string;
                 externalId: string;
-                /** @description Structured rejection detail (no credentials / sensitive ERPNext internals). */
+                /**
+                 * @description RT-410 (1.3.0-draft, AD-POSTING-001 D-1 to D-5). The Connector's rejection message for this dead-letter: the posting-feed `RejectionReason.message` of the `permanently_rejected` or `reconciliation_required` ack, as plain text, at most 1000 characters. The Connector scrubs it, and Backend-Core sanitises it again before storing it: C0 and C1 control characters (except space) are removed and the result is trimmed, and credential values (`Bearer …`, and keys such as `token`, `password`, `passwd`, `pwd`, `secret`, `api_key` and `authorization`, matched as the end of an identifier, for example `dp2_token`) are replaced with `[redacted]`, and the result is then cut to 1000 characters (a replacement can lengthen the text). A message with nothing left after sanitising is stored as null. Sanitising never causes an ack to be rejected.
+                 *
+                 *     Content and classification: business data, PII-suspect free text from an external system. It may embed sale values (item codes, quantities, rates, totals, tender totals) and ERPNext names. It is NOT a money field and must never be parsed. It is not `rejectionCategory` and never repeats it; use `rejectionCategory` to group or filter.
+                 *
+                 *     Retention: the message exists only while the row is `permanently_rejected`. A repair that re-offers the row clears it, and a later rejection stores a fresh one. A re-ack of the same outcome is an O-3 echo and keeps the first stored message.
+                 *
+                 *     Null when: Backend-Core raised the dead-letter itself (`retry_budget_exhausted`, the worker's `unmapped_item` / `unmapped_store`); the RT-332 `reconciliation_required` was recorded from a `posted` ack echoing a superseded `resolutionVersion` (a `posted` ack carries no reason); the row was dead-lettered before the RT-410 storage migration; or nothing was left after sanitising.
+                 *
+                 *     Handling: readable only through this tenant-scoped, cookieAuth read model. Backend-Core never writes it to a log (length or hash only), audit metadata, a metric label, Sentry or Datadog. A consumer renders it as plain text, never as HTML, shows it only to the roles that can read this backlog, and does not copy it into exports or analytics.
+                 *
+                 *     Runtime transition: until the RT-410 storage and write path ship, the server still returns the category text here. Consumers must not depend on that, or on `reason` equalling `rejectionCategory`.
+                 */
                 reason?: string | null;
                 /**
                  * Format: date-time
@@ -3680,10 +3833,10 @@ export namespace ErpnextReconciliationSchema {
                 /** Format: uuid */
                 runId: string;
                 /**
-                 * @description 014's mismatch-class vocabulary (014 data-model §6.2). 017 owns no class. `negative_balance_flagged` is derived from the 009 `stock_movements` ledger (a negative Retail Tower on-hand balance); it is NOT an ERPNext Bin signal and must not be presented as "negative ERPNext stock". Negative ERPNext Bin quantities are surfaced by `listErpnextNegativeOnHand` / `listErpnextNegativeOnHandStores`.
+                 * @description 014's mismatch-class vocabulary (014 data-model §6.2). 017 owns no class. `negative_balance_flagged` is derived from the 009 `stock_movements` ledger (a negative Retail Tower on-hand balance); it is NOT an ERPNext Bin signal and must not be presented as "negative ERPNext stock". Negative ERPNext Bin quantities are surfaced by `listErpnextNegativeOnHand` / `listErpnextNegativeOnHandStores`. RT-428 (1.4.0-draft, RT-289 DC-7, Reconciliation 926–930): for a tenant with activated sale effects the compared Retail Tower side is the expected ERP book, i.e. the Inventory Anchor plus the effects since it, minus the effects ERPNext has not booked yet. Classes: `match` (926, in sync); `expected_pending_erp` (927, the gap is explained by effects with an ERP intent that ERPNext has not booked as-is: pending, rejected or reconciliation_required); `expected_pending_retail` (928, explained by Retail effects with no ERP intent yet, such as a manual adjustment); `erp_snapshot_stale` (929, the Bin was read before an effect's ERP confirmation); `quantity_divergence` (930, a residual the pending terms do not explain); `uom_mismatch` (the Retail Tower unit differs from the Bin stock UOM, never a quantity divergence). Every other tenant keeps the comparison against the raw 009 SUM and never receives the four RT-428 classes. A class is explanatory: no reconciliation result changes an effect or ERPNext stock. `detail` then also carries `expected_erp_book`, `pending_erp`, `pending_retail` and `legacy_on_hand`.
                  * @enum {string}
                  */
-                mismatchClass: "match" | "quantity_divergence" | "unmapped_store" | "unmapped_item" | "dp2_only" | "erpnext_only" | "negative_balance_flagged";
+                mismatchClass: "match" | "quantity_divergence" | "unmapped_store" | "unmapped_item" | "dp2_only" | "erpnext_only" | "negative_balance_flagged" | "expected_pending_erp" | "expected_pending_retail" | "erp_snapshot_stale" | "uom_mismatch";
                 /**
                  * Format: uuid
                  * @description The originating product ref for a stock line; null for an aggregate line.
@@ -6076,7 +6229,7 @@ export namespace DevicesSchema {
             RevokeReason: "lost" | "stolen" | "suspected_compromise" | "hardware_failure" | "replaced" | "moved" | "retired" | "admin_error" | "other";
             /** @description Operator free text: 1..500 characters and not blank (0040 CHECK `devices_revoke_note_shape`), and no NUL character, because Postgres `text` cannot store U+0000 (a NUL is 400 `validation_error`). For a recovery revoke: what happened and where the drawer cash physically is. No PII, no token, PIN or secret; never logged or audited. */
             RevokeNote: string;
-            /** @description One device, as listed. Every key is always present; a value that is not recorded is `null`. No tenant id, token hash, previous token or rotation window. */
+            /** @description One device, as listed. Every key is always present, except the optional `buildIdentity` (RT-719); a value that is not recorded is `null`. No tenant id, token hash, previous token or rotation window. */
             DeviceSummary: {
                 /** Format: uuid */
                 deviceId: string;
@@ -6137,6 +6290,8 @@ export namespace DevicesSchema {
                  * @description The open custody exception: the id of the open shift still on this revoked device (see "Custody exception" above). `null` when there is none, and always `null` on an active device.
                  */
                 custodyExceptionShiftId: string | null;
+                /** @description RT-719. The POS build the terminal last reported, or `null` when it has never reported one (unknown, never a default build). OPTIONAL: absent until the RT-719 runtime ships, and an absent key means the same as `null`. Self-reported; not a trust signal; not `lastSeenAt`. */
+                buildIdentity?: components["schemas"]["DeviceBuildIdentity"] | null;
             } & (components["schemas"]["TrustStateConsistency"] & components["schemas"]["LastSeenConsistency"]);
             /** @description One device with its revoke note and retire attribution. The summary fields are the `DeviceSummary` fields, with the same rules. A retired device always carries `retireReason`; any other device has `retireReason` and `retiredByUserId` null. */
             DeviceDetail: {
@@ -6166,6 +6321,7 @@ export namespace DevicesSchema {
                 replacedByDeviceId: string | null;
                 /** Format: uuid */
                 custodyExceptionShiftId: string | null;
+                buildIdentity?: components["schemas"]["DeviceBuildIdentity"] | null;
                 /** @description The note recorded with the revoke; `null` when none. Returned to the authorised operator only; never in the list, logs or audit. */
                 revokeNote: components["schemas"]["RevokeNote"] | null;
                 /**
@@ -6180,6 +6336,23 @@ export namespace DevicesSchema {
             TrustStateConsistency: unknown & unknown & unknown;
             /** @description `lastSeenSource` is null exactly when `lastSeenAt` is null. */
             LastSeenConsistency: unknown;
+            /** @description A full git commit SHA-1, 40 lower-case hexadecimal characters. Never abbreviated. */
+            GitCommit: string;
+            /** @description A semantic version without build metadata, at most 32 characters (`1.4.0`, `1.4.0-rc.1`). */
+            AppVersion: string;
+            /** @description The build identity a terminal last reported (RT-719). A value the terminal did not send is `null`, never a default. Self-reported; an inventory signal only. */
+            DeviceBuildIdentity: {
+                buildCommit: components["schemas"]["GitCommit"];
+                /** @description The POS semantic version; `null` while the build has none (POS has no signed release yet) or the terminal did not send one. */
+                appVersion: components["schemas"]["AppVersion"] | null;
+                /** @description The Backend-Core commit in the build's `contracts/backend-core/PIN`; `null` when the terminal did not send it. */
+                contractPinCommit: components["schemas"]["GitCommit"] | null;
+                /**
+                 * Format: date-time
+                 * @description The server clock when Backend-Core last stored this identity. Never a terminal clock; not `lastSeenAt`.
+                 */
+                reportedAt: string;
+            };
             /** @description A keyset page of devices, exception-first. */
             DevicePage: {
                 items: components["schemas"]["DeviceSummary"][];
@@ -7866,6 +8039,12 @@ export namespace CashVariancePolicySchema {
             };
         };
         parameters: {
+            /** @description RT-719. The POS git commit the running build was made from: exactly 40 characters of `[0-9a-f]` (the full SHA-1). Optional. A request that sends no valid commit records the device's build as unknown; it is never refused or slowed for it. Recorded only from a request to this operation that authenticates with the device token. See "Build identity report (RT-719)" in `pos-terminal-pairing.openapi.yaml`. */
+            PosBuildCommit: string;
+            /** @description RT-719. The POS semantic version: at most 32 characters of `[0-9A-Za-z.-]`, without build metadata. Optional: send it only when the build has a release version (POS has no signed release yet). Ignored without a valid `X-POS-Build-Commit`. See "Build identity report (RT-719)" in `pos-terminal-pairing.openapi.yaml`. */
+            PosAppVersion: string;
+            /** @description RT-719. The Backend-Core commit in the build's `contracts/backend-core/PIN` (the `commit` line): exactly 40 characters of `[0-9a-f]`. Optional. Ignored without a valid `X-POS-Build-Commit`. See "Build identity report (RT-719)" in `pos-terminal-pairing.openapi.yaml`. */
+            PosContractPin: string;
             /** @description Must be the session's tenant; another tenant, or a role outside the operation's list, is the non-disclosing 404. */
             TenantId: string;
             /** @description A store of the session's tenant within the caller's store scope; anything else is the non-disclosing 404. */
@@ -7904,6 +8083,12 @@ export namespace CashVariancePolicySchema {
             parameters: {
                 query?: never;
                 header?: {
+                    /** @description RT-719. The POS git commit the running build was made from: exactly 40 characters of `[0-9a-f]` (the full SHA-1). Optional. A request that sends no valid commit records the device's build as unknown; it is never refused or slowed for it. Recorded only from a request to this operation that authenticates with the device token. See "Build identity report (RT-719)" in `pos-terminal-pairing.openapi.yaml`. */
+                    "X-POS-Build-Commit"?: components["parameters"]["PosBuildCommit"];
+                    /** @description RT-719. The POS semantic version: at most 32 characters of `[0-9A-Za-z.-]`, without build metadata. Optional: send it only when the build has a release version (POS has no signed release yet). Ignored without a valid `X-POS-Build-Commit`. See "Build identity report (RT-719)" in `pos-terminal-pairing.openapi.yaml`. */
+                    "X-POS-App-Version"?: components["parameters"]["PosAppVersion"];
+                    /** @description RT-719. The Backend-Core commit in the build's `contracts/backend-core/PIN` (the `commit` line): exactly 40 characters of `[0-9a-f]`. Optional. Ignored without a valid `X-POS-Build-Commit`. See "Build identity report (RT-719)" in `pos-terminal-pairing.openapi.yaml`. */
+                    "X-POS-Contract-Pin"?: components["parameters"]["PosContractPin"];
                     /** @description The last `ETag` received; omit it when the cached policy was lost. */
                     "If-None-Match"?: components["parameters"]["IfNoneMatch"];
                 };
