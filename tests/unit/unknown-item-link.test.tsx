@@ -135,6 +135,8 @@ describe("the link step", () => {
     const group = within(drawer).getByRole("group", { name: "Confirm the link" });
     expect(group.textContent).toContain("5012345678900");
     expect(group.textContent).toContain("Mineral water 1.5L");
+    // The picker that held focus has unmounted: the confirm takes it (Escape and Tab keep working).
+    expect(document.activeElement).toBe(group);
   });
 
   test("Choose another product returns to the picker with nothing sent", async () => {

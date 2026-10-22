@@ -168,16 +168,21 @@ describe("keyboard", () => {
     return id ? document.getElementById(id)?.textContent : null;
   };
 
-  test("the listbox is one tab stop and starts with no active option", async () => {
+  test("the listbox is one tab stop; taking focus activates the first option", async () => {
     const { box } = await ready();
     expect(box.getAttribute("tabindex")).toBe("0");
-    expect(box.getAttribute("aria-activedescendant")).toBeNull();
+    expect(activeName(box)).toContain("Mineral water");
+  });
+
+  test("the search box has focus when the picker opens", async () => {
+    consoleListCatalogProducts.mockResolvedValue(page([WATER]));
+    renderPicker();
+    await listbox();
+    expect(document.activeElement).toBe(screen.getByLabelText("Search active products"));
   });
 
   test("ArrowDown, ArrowUp, End and Home move the active option", async () => {
     const { box } = await ready();
-    fireEvent.keyDown(box, { key: "ArrowDown" });
-    expect(activeName(box)).toContain("Mineral water");
     fireEvent.keyDown(box, { key: "ArrowDown" });
     expect(activeName(box)).toContain("Cola");
     fireEvent.keyDown(box, { key: "End" });
@@ -191,7 +196,6 @@ describe("keyboard", () => {
   test("Enter selects the active option; selecting writes nothing", async () => {
     const { box, onSelect } = await ready();
     fireEvent.keyDown(box, { key: "ArrowDown" });
-    fireEvent.keyDown(box, { key: "ArrowDown" });
     fireEvent.keyDown(box, { key: "Enter" });
     expect(onSelect).toHaveBeenCalledTimes(1);
     expect(onSelect).toHaveBeenCalledWith(COLA);
@@ -204,10 +208,10 @@ describe("keyboard", () => {
     expect(onSelect).toHaveBeenCalledWith(TEA);
   });
 
-  test("Enter with no active option selects nothing", async () => {
+  test("Enter selects the first option the list activated on focus", async () => {
     const { box, onSelect } = await ready();
     fireEvent.keyDown(box, { key: "Enter" });
-    expect(onSelect).not.toHaveBeenCalled();
+    expect(onSelect).toHaveBeenCalledWith(WATER);
   });
 
   test("Escape is left alone so the surrounding drawer can close", async () => {

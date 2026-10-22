@@ -12,7 +12,7 @@ import { ProductPicker } from "@/catalog/ProductPicker";
 import { useT } from "@/i18n";
 import type { CatalogProduct } from "@/lib/catalog-queries";
 import type { ErpnextItemMapping } from "@/lib/erp-mapping-queries";
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { InlineConfirm, Ref } from "./MappingParts";
 import { cleanRef } from "./mappingLogic";
 import { useSuggestItemMapping } from "./useErpMappings";
@@ -26,6 +26,8 @@ interface SuggestFormProps {
   lead: React.ReactNode;
   /** Beside the Review button: a way back a flow offers (choose another product). */
   extraAction?: React.ReactNode;
+  /** The previous step has unmounted under the keyboard: the reference input takes focus. */
+  focusOnMount?: boolean;
   onSuggested: () => void;
   onDismiss: () => void;
 }
@@ -37,11 +39,16 @@ function SuggestForm({
   label,
   lead,
   extraAction,
+  focusOnMount = false,
   onSuggested,
   onDismiss,
 }: Readonly<SuggestFormProps>): React.JSX.Element {
   const t = useT();
   const inputId = useId();
+  const refInput = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (focusOnMount) refInput.current?.focus();
+  }, [focusOnMount]);
   const suggest = useSuggestItemMapping(tenantId);
   const [ref, setRef] = useState("");
   const [review, setReview] = useState(false);
@@ -86,6 +93,7 @@ function SuggestForm({
       <div className="field">
         <label htmlFor={inputId}>{t("erp.map.items.suggest.ref")}</label>
         <input
+          ref={refInput}
           id={inputId}
           className="input input--mono"
           dir="ltr"
@@ -170,6 +178,7 @@ export function CatalogSuggest({
         product={product}
         label={label}
         lead={t.rich("erp.map.items.suggestNew.lead", { product })}
+        focusOnMount
         extraAction={
           <button type="button" className="btn-secondary" onClick={() => setChosen(null)}>
             {t("erp.map.items.suggestNew.change")}

@@ -144,6 +144,7 @@ describe("choosing the product", () => {
     expect(form.textContent).toContain("Mineral water 1.5L");
     expect(form.textContent).toContain(PRODUCT_1);
     expect(within(form).getAllByRole("textbox")).toHaveLength(1);
+    expect(document.activeElement).toBe(within(form).getByLabelText("ERPNext Item reference"));
     expect(api.tenantAdminSuggestErpnextItemMapping).not.toHaveBeenCalled();
   });
 

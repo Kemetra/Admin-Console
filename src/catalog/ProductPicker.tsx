@@ -15,7 +15,7 @@ import { GatedButton } from "@/components/GatedButton";
 import { InlineError } from "@/components/InlineError";
 import { useT } from "@/i18n";
 import type { CatalogProduct } from "@/lib/catalog-queries";
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   MAX_PICKER_QUERY_LENGTH,
   nextOptionIndex,
@@ -133,6 +133,8 @@ function PickerList({
       aria-activedescendant={activeIndex >= 0 ? optionId(activeIndex) : undefined}
       className="product-picker__list"
       onKeyDown={onKeyDown}
+      // Focus lands on an option, never on an empty listbox (the first is active).
+      onFocus={() => setActiveIndex((current) => (current < 0 ? 0 : current))}
     >
       {products.map((product, index) => (
         <PickerOption
@@ -183,6 +185,9 @@ export function ProductPicker({
   const [inputError, setInputError] = useState<ReturnType<typeof validatePickerQuery>>();
   const picker = useProductPicker(tenantId, applied);
   const rootRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  // The step that opened the picker has unmounted its trigger: focus starts at the search.
+  useEffect(() => searchRef.current?.focus(), []);
 
   function submit(event: React.FormEvent): void {
     event.preventDefault();
@@ -209,6 +214,7 @@ export function ProductPicker({
         <div className="field">
           <label htmlFor={inputId}>{t("catalog.picker.search")}</label>
           <input
+            ref={searchRef}
             id={inputId}
             className="input"
             dir="auto"

@@ -224,7 +224,7 @@ test("P4: suggest an ERPNext mapping for a picked product; keyboard walk, confli
   await expect(items.getByRole("listbox", { name: t("catalog.picker.list") })).toBeVisible();
   await expectNoAxeViolations(page, "erp suggest with the picker open");
 
-  await chooseByKeyboard(page, t, 1);
+  await chooseByKeyboard(page, t, 0);
   const form = items.getByRole("form", { name: t("erp.map.items.suggestNew.label") });
   await expect(form).toContainText("Mineral water 1.5L");
   await expect(form).toContainText(WATER);

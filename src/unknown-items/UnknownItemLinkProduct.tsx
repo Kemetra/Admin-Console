@@ -18,7 +18,7 @@ import { type ReviewQueueItem, identifierTypeKey } from "@/lib/unknown-items-que
  * `already_reconciled` hands back to the drawer, which reads the item again.
  */
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { UnknownItemErrorBanner } from "./UnknownItemErrorBanner";
 import { useUnknownItemLink } from "./useUnknownItemQueries";
 
@@ -48,8 +48,11 @@ function ConfirmLink({
 }>): React.JSX.Element {
   const t = useT();
   const typeKey = identifierTypeKey(item.identifier_type);
+  const groupRef = useRef<HTMLFieldSetElement>(null);
+  // The picker that held focus has unmounted: the confirm takes it, so Escape and Tab still work.
+  useEffect(() => groupRef.current?.focus(), []);
   return (
-    <fieldset className="unknown-item-link__confirm">
+    <fieldset ref={groupRef} tabIndex={-1} className="unknown-item-link__confirm">
       <legend className="sr-only">{t("unknownItems.link.confirm.label")}</legend>
       <p>
         {t.rich("unknownItems.link.confirm.prompt", {
@@ -106,9 +109,10 @@ export function UnknownItemLinkProduct({
           if (res.ok) onLinked();
           else if (res.render.kind === "already-reconciled") onResolvedElsewhere();
           else if (res.render.kind === "target-unavailable") {
-            // The product the picker showed is gone: read the list again, choose again.
+            // The product the picker showed is gone: drop the cached list so the
+            // picker reads fresh when it shows again, and choose again.
             setChosen(null);
-            void qc.invalidateQueries({ queryKey: pickerQueryKeys.all(activeTenantId) });
+            qc.removeQueries({ queryKey: pickerQueryKeys.all(activeTenantId) });
           }
         },
       },
