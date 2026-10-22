@@ -1,0 +1,84 @@
+/* /platform shell (RT-780): topbar / support-session slot / sidebar + content.
+ * Reuses the tenant shell's topbar, sidebar and nav-entry rules (app-shell.css);
+ * only the grid differs, because there is no tenant scope bar. Tokens only. */
+.platform-shell {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: var(--shell-topbar-h) auto 1fr;
+  grid-template-columns: var(--shell-sidebar-w) 1fr;
+  grid-template-areas:
+    "topbar topbar"
+    "session session"
+    "sidebar content";
+  background: var(--color-background);
+}
+.platform-shell .topbar {
+  grid-area: topbar;
+}
+.platform-shell .sidebar {
+  grid-area: sidebar;
+}
+.platform-shell .content {
+  grid-area: content;
+}
+.platform-session-slot {
+  grid-area: session;
+}
+.platform-session-slot:empty {
+  display: none;
+}
+
+.platform-standalone {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: var(--shell-topbar-h) 1fr;
+  background: var(--color-background);
+}
+.platform-stage {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  background: var(--color-background);
+  padding: var(--space-6);
+}
+.platform-stage--embedded {
+  padding: 0;
+  place-items: start;
+}
+.platform-unavailable {
+  text-align: center;
+  display: grid;
+  gap: var(--space-4);
+  justify-items: center;
+  max-width: 420px;
+  padding: var(--space-6);
+}
+.platform-unavailable__icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  color: var(--color-text-muted);
+}
+.platform-unavailable__title {
+  margin: 0;
+  font: var(--weight-strong) var(--text-screen-title) / var(--leading-title) var(--font-sans);
+  color: var(--color-text);
+}
+.platform-unavailable__body {
+  margin: 0;
+  color: var(--color-text-muted);
+  max-width: 60ch;
+}
+
+@media (max-width: 768px) {
+  .platform-shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: var(--shell-topbar-h) auto auto 1fr;
+    grid-template-areas:
+      "topbar"
+      "session"
+      "sidebar"
+      "content";
+  }
+}
