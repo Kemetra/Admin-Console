@@ -75,3 +75,46 @@ export function page(items: unknown[], nextCursor: string | null = null) {
 export function failure(status: number, requestId = "req-1") {
   return { status, error: { error: { code: "x", message: "y", request_id: requestId } } };
 }
+
+// --- RT-766 detail payloads (`consoleGetCatalogProduct`) ----------------------
+
+export function identifier(over: Record<string, unknown> = {}) {
+  return {
+    identifierType: "barcode",
+    value: "0012345678905",
+    storeId: null,
+    sourceSystem: null,
+    createdAt: "2026-10-01T08:00:00Z",
+    ...over,
+  };
+}
+
+/** One active store override; a null field is "not overridden by the store". */
+export function override(over: Record<string, unknown> = {}) {
+  return {
+    storeId: CAIRO_STORE,
+    price: null,
+    isActive: null,
+    taxCategory: null,
+    updatedAt: "2026-10-05T09:00:00Z",
+    ...over,
+  };
+}
+
+/** The detail projection: a product summary plus identifiers and raw overrides. */
+export function detail(over: Record<string, unknown> = {}, summary: Record<string, unknown> = {}) {
+  return {
+    summary: product(summary),
+    description: "Still spring water, 1.5 litre bottle.",
+    expiryRequired: false,
+    sourceGlobalProductId: null,
+    createdAt: "2026-09-01T08:00:00Z",
+    identifiers: [identifier()],
+    storeOverrides: [],
+    ...over,
+  };
+}
+
+export function one(body: unknown) {
+  return { status: 200, data: body };
+}

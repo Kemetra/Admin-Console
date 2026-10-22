@@ -3,9 +3,9 @@ import { describe, expect, test } from "vitest";
 import { readSource, sourcesUnder } from "./source-scan";
 
 /**
- * RT-765 boundary (RT-752 AC 5, CAT-C1a). The catalog list reads only the two
- * read operations of `console-catalog.yaml` through the generated client. The
- * writes are the CAT-C2 slices; nothing here reaches POS, ERPNext or the
+ * RT-765 / RT-766 boundary (RT-752 AC 5, CAT-C1a / CAT-C1b). The catalog list
+ * and detail read only the three read operations of `console-catalog.yaml`
+ * through the generated client. The writes are the CAT-C2 slices; nothing here reaches POS, ERPNext or the
  * Connector, hand-rolls a fetch, or sets an Authorization header (cookie
  * transport). Static source scan, comments stripped.
  */
@@ -28,14 +28,19 @@ const FORBIDDEN: readonly [name: string, pattern: RegExp][] = [
   ["an Authorization or Bearer header", /[Aa]uthorization\s*:|[Bb]earer\s+/],
 ];
 
-describe("console catalog list boundary (RT-765)", () => {
-  test("exactly the two read wrappers are exported, on the two read paths", () => {
+describe("console catalog read boundary (RT-765, RT-766)", () => {
+  test("exactly the three read wrappers are exported, on the three read paths", () => {
     const exported = Object.entries(queries)
       .filter(([, value]) => typeof value === "function")
       .map(([name]) => name)
       .sort();
-    expect(exported).toEqual(["consoleListCatalogCategories", "consoleListCatalogProducts"]);
+    expect(exported).toEqual([
+      "consoleGetCatalogProduct",
+      "consoleListCatalogCategories",
+      "consoleListCatalogProducts",
+    ]);
     expect(wrapperSrc).toContain('"/api/v1/catalog/products"');
+    expect(wrapperSrc).toContain('"/api/v1/catalog/products/{productId}"');
     expect(wrapperSrc).toContain('"/api/v1/catalog/categories"');
   });
 
