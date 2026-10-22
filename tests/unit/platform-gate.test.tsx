@@ -94,7 +94,7 @@ describe("/platform entry gate (RT-780)", () => {
     expect(screen.getAllByText("Platform").length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: /Northstar/ })).toBeNull();
     const nav = screen.getByRole("navigation", { name: "Platform" });
-    expect(nav.querySelectorAll("a").length).toBe(1);
+    expect(nav.querySelectorAll("a")).toHaveLength(1);
     expect(nav.querySelector("[aria-disabled]")).toBeNull();
   });
 
