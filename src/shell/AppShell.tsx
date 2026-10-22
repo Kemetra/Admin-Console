@@ -26,6 +26,11 @@ import { type MessageKey, roleKey, useT } from "@/i18n";
 import { LocaleSwitch } from "@/i18n/LocaleSwitch";
 import { canReadInventory } from "@/inventory/inventoryLogic";
 import { canReadPayers } from "@/payers/payerAccess";
+import {
+  SupportSessionBarSlot,
+  SupportSessionBoundary,
+} from "@/platform/session/SupportSessionBoundary";
+import { useSupportSession } from "@/platform/session/useSupportSession";
 import { canUseProductReconciliation } from "@/product-reconciliation/productReconLogic";
 import { canUseSaleSyncOps } from "@/sale-sync/saleSyncLogic";
 import { canReadSales } from "@/sales/saleLogic";
@@ -166,6 +171,10 @@ export interface AppShellProps {
 export function AppShell({ onSignOut, children }: Readonly<AppShellProps>): React.JSX.Element {
   const t = useT();
   const { context } = useActiveContextValue();
+  const supportSession = useSupportSession();
+  // RT-781: inside a support session the shell shows no tenant surface, scope bar or tenant
+  // navigation: no write control by construction (a UI safeguard, not a security control).
+  const inSession = supportSession !== null;
   const user = context?.user;
   const roleCode = context?.active_role_code;
   const roleNav = ROLE_NAV.filter((entry) => entry.canRead(roleCode));
@@ -176,7 +185,7 @@ export function AppShell({ onSignOut, children }: Readonly<AppShellProps>): Reac
     .join("");
 
   return (
-    <div className="shell">
+    <div className={inSession ? "shell shell--session" : "shell"}>
       <header className="topbar">
         <span className="tower-lockup">
           <TowerMark className="tower-mark" />
@@ -203,48 +212,62 @@ export function AppShell({ onSignOut, children }: Readonly<AppShellProps>): Reac
         ) : null}
       </header>
 
-      <ScopeHeader />
+      {/* RT-781: the support-session bar, only for a session-entered tenant. */}
+      <div className="shell-session-slot">
+        <SupportSessionBarSlot controller={supportSession} />
+      </div>
+
+      {inSession ? null : <ScopeHeader />}
 
       <nav className="sidebar" aria-label={t("shell.nav.label")}>
-        <NavLink
-          to="/"
-          end
-          className={({ isActive }) =>
-            isActive ? "nav-entry nav-entry--active" : "nav-entry nav-entry--link"
-          }
-        >
-          <Icon name="dashboard" className="nav-entry__icon" />
-          <span className="nav-entry__label">{t("shell.nav.overview")}</span>
-        </NavLink>
-        <div className="nav-section">{t("shell.nav.section.management")}</div>
-        {LIVE_NAV.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            className={({ isActive }) =>
-              isActive ? "nav-entry nav-entry--active" : "nav-entry nav-entry--link"
-            }
-          >
-            <Icon name={item.icon} className="nav-entry__icon" />
-            <span className="nav-entry__label">{t(item.label)}</span>
+        {inSession ? (
+          <NavLink to="/platform/tenants" className="nav-entry nav-entry--link">
+            <Icon name="tenant" className="nav-entry__icon" />
+            <span className="nav-entry__label">{t("platform.nav.tenants")}</span>
           </NavLink>
-        ))}
-        {roleNav.map((entry, index) => (
-          <Fragment key={entry.to}>
-            {roleNav[index - 1]?.section === entry.section ? null : (
-              <div className="nav-section">{t(entry.section)}</div>
-            )}
+        ) : (
+          <>
             <NavLink
-              to={entry.to}
+              to="/"
+              end
               className={({ isActive }) =>
                 isActive ? "nav-entry nav-entry--active" : "nav-entry nav-entry--link"
               }
             >
-              <Icon name={entry.icon} className="nav-entry__icon" />
-              <span className="nav-entry__label">{t(entry.label)}</span>
+              <Icon name="dashboard" className="nav-entry__icon" />
+              <span className="nav-entry__label">{t("shell.nav.overview")}</span>
             </NavLink>
-          </Fragment>
-        ))}
+            <div className="nav-section">{t("shell.nav.section.management")}</div>
+            {LIVE_NAV.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) =>
+                  isActive ? "nav-entry nav-entry--active" : "nav-entry nav-entry--link"
+                }
+              >
+                <Icon name={item.icon} className="nav-entry__icon" />
+                <span className="nav-entry__label">{t(item.label)}</span>
+              </NavLink>
+            ))}
+            {roleNav.map((entry, index) => (
+              <Fragment key={entry.to}>
+                {roleNav[index - 1]?.section === entry.section ? null : (
+                  <div className="nav-section">{t(entry.section)}</div>
+                )}
+                <NavLink
+                  to={entry.to}
+                  className={({ isActive }) =>
+                    isActive ? "nav-entry nav-entry--active" : "nav-entry nav-entry--link"
+                  }
+                >
+                  <Icon name={entry.icon} className="nav-entry__icon" />
+                  <span className="nav-entry__label">{t(entry.label)}</span>
+                </NavLink>
+              </Fragment>
+            ))}
+          </>
+        )}
         <div className="topbar__spacer" />
         <button type="button" className="nav-entry nav-signout" onClick={() => void onSignOut()}>
           <Icon name="signOut" className="nav-entry__icon" />
@@ -256,7 +279,9 @@ export function AppShell({ onSignOut, children }: Readonly<AppShellProps>): Reac
       <main className="content" data-dirty-scope>
         {/* RT-621: any 429 shows here, above the surface, without blocking it. */}
         <RateLimitBanner />
-        {children}
+        <SupportSessionBoundary controller={supportSession} tenantShell>
+          {children}
+        </SupportSessionBoundary>
       </main>
     </div>
   );
