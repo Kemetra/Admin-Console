@@ -118,9 +118,10 @@ async function darkTheme(page: Page): Promise<void> {
 const directoryTable = (page: Page) => page.locator("table.data-table");
 
 /**
- * Forced colors: axe's contrast maths does not model the system palette (every
- * node of the shell reports), so, as the other forced-colors specs do, check
- * that each control still draws a real focus outline.
+ * Forced colors switched on mid-page over the dark theme: axe's contrast maths
+ * then reports every node of the shell, so these steps check, as the other
+ * forced-colors specs do, that each control still draws a real focus outline.
+ * The axe run under forced colors is its own test, emulated before load.
  */
 async function expectFocusRing(
   locator: ReturnType<Page["locator"]>,
