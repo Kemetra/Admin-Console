@@ -96,7 +96,10 @@ test("RT-821: Sales links to the report; the default range is read once for the 
     to: "2026-10-23",
     store_id: CAIRO,
   });
-  await page.getByRole("main").getByRole("link", { name: t("salesDaily.back") }).click();
+  await page
+    .getByRole("main")
+    .getByRole("link", { name: t("salesDaily.back") })
+    .click();
   await expect(page).toHaveURL(/\/sales$/);
 });
 
@@ -188,3 +191,32 @@ for (const mode of ["light", "dark", "forced"] as const) {
     });
   });
 }
+
+test.describe("compact width", () => {
+  test.use({ viewport: { width: 375, height: 812 } });
+
+  test("RT-821: both tables scroll inside their own region; the page does not (RT-826 D4)", async ({
+    page,
+    t,
+  }) => {
+    await mockBase(page, CAIRO_STORE);
+    await mockSummary(page, STORE_READ);
+    await page.goto("/sales-daily?from=2026-10-16&to=2026-10-23");
+    await expect(page.getByRole("table").first()).toBeVisible();
+    for (const key of [
+      "salesDaily.table.money.caption",
+      "salesDaily.table.status.caption",
+    ] as const) {
+      const region = page.getByRole("region", { name: t(key) });
+      const m = await region.evaluate((el) => {
+        const content = document.querySelector(".content");
+        return {
+          regionScrolls: el.scrollWidth > el.clientWidth,
+          page: document.documentElement.scrollWidth <= window.innerWidth,
+          content: !!content && content.scrollWidth <= content.clientWidth,
+        };
+      });
+      expect(m, key).toEqual({ regionScrolls: true, page: true, content: true });
+    }
+  });
+});
