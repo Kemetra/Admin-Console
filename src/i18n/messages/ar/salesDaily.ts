@@ -40,6 +40,23 @@ export const salesDaily = {
   "salesDaily.row.total": "إجمالي النطاق",
   "salesDaily.row.totalSoFar": "إجمالي النطاق (يشمل أيامًا حتى الآن)",
 
+  // --- Chart (RT-823, VIZ-5) ---------------------------------------------------
+  "salesDaily.chart.title": "المبيعات المستلمة لكل يوم عمل",
+  "salesDaily.chart.summary":
+    "ملخص للجدول أدناه: عمود لكل يوم عمل، بعملة {currency}. اختر عمودًا للانتقال إلى صفه. الأرقام الدقيقة في الجدول.",
+  "salesDaily.chart.legend":
+    "العمود المخطّط يوم لم ينتهِ بعد (حتى الآن). اليوم الذي لم يرجع الخادم رقمه يُوسم «غير معروف» وبلا عمود.",
+  "salesDaily.chart.currency": "العملة",
+  "salesDaily.chart.bar": "{date}: {value} {currency}",
+  "salesDaily.chart.barSoFar": "{date}: {value} {currency}، حتى الآن",
+  "salesDaily.chart.barUnknown": "{date}: غير معروف",
+  "salesDaily.chart.barNotBegun": "{date}: لم يبدأ بعد",
+  "salesDaily.chart.soFar": "حتى الآن",
+  "salesDaily.chart.unknown": "غير معروف",
+  "salesDaily.chart.notBegun": "لم يبدأ",
+  "salesDaily.chart.empty": "لم تُستلم أي مبيعات في هذا النطاق.",
+  "salesDaily.chart.emptyUnknown": "لم يُرجع الخادم أي أرقام لهذه الأيام.",
+
   // --- Definitions -------------------------------------------------------------
   "salesDaily.about": "ما تعنيه هذه الأرقام",
 

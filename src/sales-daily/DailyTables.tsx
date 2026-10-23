@@ -1,7 +1,8 @@
 /**
  * RT-821 (VIZ-3) the daily received-sales report body: the context line, then
- * two exact tables over the same business days. They are also the accessible
- * alternative of the later chart (VIZ-5), which links each bar to its row id.
+ * the chart (VIZ-5, RT-823), then two exact tables over the same business days.
+ * The first table is the accessible alternative of the chart, whose bars link
+ * to its row ids.
  *
  *   1. received sales, voids, returns, legacy refunds (R2): count, then one
  *      line per currency, never added across currencies;
@@ -22,7 +23,9 @@ import {
 } from "@/metrics/metricRegistry";
 import { BusinessDate } from "@/sales/SaleParts";
 import { useId } from "react";
+import { DailyChart } from "./DailyChart";
 import type { DayRow, DayState, ReportModel } from "./dailyLogic";
+import { dayRowId } from "./dayRowId";
 
 type MoneyMetric = "receivedSales" | "voids" | "returns" | "legacyRefunds";
 const MONEY_METRICS: readonly MoneyMetric[] = [
@@ -32,9 +35,6 @@ const MONEY_METRICS: readonly MoneyMetric[] = [
   "legacyRefunds",
 ];
 const STATUS_METRICS: readonly MetricId[] = ["syncStatus", "erpPosting", "shiftCloses"];
-
-/** The id of a day's row, for the chart (VIZ-5) to point at. */
-export const dayRowId = (date: string) => `sales-daily-day-${date}`;
 
 const STATE_MARK: Record<Exclude<DayState, "complete">, MessageKey> = {
   "so-far": "metrics.context.soFar",
@@ -186,6 +186,8 @@ function DailyTable({
               <tr
                 key={row.date}
                 id={withRowIds ? dayRowId(row.date) : undefined}
+                // A chart bar moves focus here; the row is never a tab stop.
+                tabIndex={withRowIds ? -1 : undefined}
                 data-business-date={row.date}
                 className={row.state === "complete" ? undefined : "daily-table__row--partial"}
               >
@@ -340,6 +342,7 @@ export function DailyReport({
   return (
     <div className="daily-report">
       <ReportContext model={model} storeName={storeName} readStores={readStores} id={contextId} />
+      <DailyChart model={model} />
       {TABLES.map((spec, index) => (
         <DailyTable
           key={spec.captionKey}

@@ -137,7 +137,7 @@ test("RT-821: a range over 31 days is refused at the To field and nothing is rea
   expect(queries).toHaveLength(0);
 });
 
-test("RT-821: Tab goes Show → each table's scroll region → the definitions; no row is a stop", async ({
+test("RT-823: Tab goes Show → currency → chart region → each bar → each table's region → the definitions; no row is a stop", async ({
   page,
   t,
 }) => {
@@ -147,11 +147,14 @@ test("RT-821: Tab goes Show → each table's scroll region → the definitions; 
   await expect(page.getByRole("table").first()).toBeVisible();
   await page.getByRole("button", { name: t("salesDaily.range.apply") }).focus();
   const stops: string[] = [];
-  for (let i = 0; i < 3; i++) {
+  // Show, then the currency select, the chart region, 8 bars, 2 table regions, the definitions.
+  for (let i = 0; i < 13; i++) {
     await page.keyboard.press("Tab");
     stops.push(
       await page.evaluate(() => {
         const el = document.activeElement as HTMLElement | null;
+        if (el?.tagName === "SELECT") return "select";
+        if (el?.closest("svg")) return "bar";
         const labelledBy = el?.getAttribute("aria-labelledby");
         if (labelledBy) return document.getElementById(labelledBy)?.textContent ?? "";
         return el?.textContent?.trim() ?? "<none>";
@@ -159,13 +162,80 @@ test("RT-821: Tab goes Show → each table's scroll region → the definitions; 
     );
   }
   expect(stops).toEqual([
+    "select",
+    t("salesDaily.chart.title"),
+    ...Array.from({ length: 8 }, () => "bar"),
     t("salesDaily.table.money.caption"),
     t("salesDaily.table.status.caption"),
     t("salesDaily.about"),
   ]);
-  expect(await page.locator("tr[tabindex]").count()).toBe(0);
+  expect(await page.locator("tr[tabindex]:not([tabindex='-1'])").count()).toBe(0);
   await page.keyboard.press("Enter");
   await expect(page.getByText(t("metrics.erpPosting.unknown"))).toBeVisible();
+});
+
+test("RT-823: a bar by keyboard moves focus to its table row; the time axis follows the direction", async ({
+  page,
+}) => {
+  await mockBase(page, CAIRO_STORE);
+  await mockSummary(page, STORE_READ);
+  await page.goto("/sales-daily?from=2026-10-16&to=2026-10-23");
+  const figure = page.getByRole("figure");
+  await expect(figure).toBeVisible();
+  const bar = figure.locator('a[href="#sales-daily-day-2026-10-20"]');
+  await bar.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#sales-daily-day-2026-10-20")).toBeFocused();
+  const first = await figure.locator("a rect.daily-chart__hit").first().boundingBox();
+  const last = await figure.locator("a rect.daily-chart__hit").last().boundingBox();
+  const rtl = (await page.evaluate(() => document.documentElement.dir)) === "rtl";
+  if (!first || !last) throw new Error("no chart bars");
+  expect(rtl ? first.x > last.x : first.x < last.x).toBe(true);
+});
+
+test("RT-823: the chart does not move under reduced motion, and has no animation at all", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await mockBase(page, CAIRO_STORE);
+  await mockSummary(page, STORE_READ);
+  await page.goto("/sales-daily?from=2026-10-16&to=2026-10-23");
+  const figure = page.getByRole("figure");
+  await expect(figure).toBeVisible();
+  const motion = await figure.evaluate((el) => {
+    const durations = Array.from(el.querySelectorAll("*")).map((n) => {
+      const s = getComputedStyle(n);
+      return `${s.transitionDuration}|${s.animationName}`;
+    });
+    return {
+      moving: durations.filter((d) => d !== "0s|none"),
+      running: document.getAnimations().length,
+    };
+  });
+  expect(motion).toEqual({ moving: [], running: 0 });
+});
+
+test("RT-823: the partial day's bar paints the hatch pattern, not a solid fill (light and forced colors)", async ({
+  page,
+}) => {
+  await mockBase(page, CAIRO_STORE);
+  await mockSummary(page, STORE_READ);
+  await page.goto("/sales-daily?from=2026-10-16&to=2026-10-23");
+  const figure = page.getByRole("figure");
+  await expect(figure).toBeVisible();
+  const fills = async () =>
+    figure.evaluate((el) => ({
+      partial: getComputedStyle(el.querySelector(".daily-chart__bar--so-far") as Element).fill,
+      complete: getComputedStyle(
+        el.querySelector(".daily-chart__bar:not(.daily-chart__bar--so-far)") as Element,
+      ).fill,
+    }));
+  for (const forced of [false, true]) {
+    if (forced) await page.emulateMedia({ forcedColors: "active" });
+    const { partial, complete } = await fills();
+    expect(partial, `partial, forced=${forced}`).toMatch(/^url\(/);
+    expect(complete, `complete, forced=${forced}`).not.toMatch(/^url\(/);
+  }
 });
 
 for (const mode of ["light", "dark", "forced"] as const) {
@@ -185,6 +255,7 @@ for (const mode of ["light", "dark", "forced"] as const) {
       for (const d of document.querySelectorAll("details")) d.open = true;
     });
     await expectNoAxeViolations(page, `daily report, open (${mode})`);
+    await expect(page.getByRole("figure")).toBeVisible();
     await page.screenshot({
       path: test.info().outputPath(`sales-daily-${mode}.png`),
       fullPage: true,

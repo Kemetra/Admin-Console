@@ -278,6 +278,8 @@ describe("one icon grammar in product code", () => {
     const offenders = sourcesUnder("src")
       .filter(({ file }) => !/\/src\/components\/icons\//.test(file))
       .filter(({ file }) => !file.endsWith("/src/components/TowerMark.tsx"))
+      // RT-823: the daily-sales bar chart draws data marks, not icons.
+      .filter(({ file }) => !file.endsWith("/src/sales-daily/DailyChart.tsx"))
       .filter(({ file }) => !file.includes("/src/generated/"))
       .filter(({ src }) => /<svg\b/.test(src))
       .map(({ file }) => file);

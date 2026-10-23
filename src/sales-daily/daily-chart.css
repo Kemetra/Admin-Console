@@ -1,0 +1,120 @@
+/* RT-823 (VIZ-5) daily received-sales bars. Fills come from the ratified
+ * --color-viz-* tokens only (RT-822); never a status colour. One series, so one
+ * categorical slot. No transition or animation of any kind. Logical properties
+ * for layout; SVG geometry is mirrored by position in chartModel.ts. */
+
+.daily-chart {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.daily-chart__caption {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-inline-size: 75ch;
+}
+.daily-chart__title {
+  font: var(--weight-strong) var(--text-section-title) / var(--leading-title) var(--font-sans);
+  color: var(--color-text);
+}
+.daily-chart__summary,
+.daily-chart__legend {
+  color: var(--color-text-muted);
+  font-size: var(--text-control);
+}
+
+.daily-chart__currency {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.daily-chart__empty {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.daily-chart__svg {
+  display: block;
+  max-inline-size: none;
+  font-family: var(--font-sans);
+}
+
+.daily-chart__bar {
+  stroke: var(--color-viz-cat-1);
+  stroke-width: 1.5;
+}
+/* A rule beats the fill attribute, so the solid fill skips the partial bar and
+ * its pattern (fill attribute) shows; the outline keeps the shape. */
+.daily-chart__bar:not(.daily-chart__bar--so-far) {
+  fill: var(--color-viz-cat-1);
+}
+.daily-chart__hatch-ground {
+  fill: var(--color-surface);
+}
+.daily-chart__hatch-line {
+  stroke: var(--color-viz-cat-1);
+}
+
+.daily-chart__hit {
+  fill: transparent;
+}
+.daily-chart__link {
+  outline: none;
+}
+.daily-chart__link:focus-visible .daily-chart__hit {
+  stroke: var(--color-focus-ring);
+  stroke-width: 2;
+}
+
+.daily-chart__grid {
+  stroke: var(--color-border);
+  stroke-width: 1;
+}
+.daily-chart__grid--base {
+  stroke: var(--color-text-muted);
+}
+
+.daily-chart__tick,
+.daily-chart__day,
+.daily-chart__mark,
+.daily-chart__value {
+  fill: var(--color-text-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.daily-chart__value {
+  fill: var(--color-text);
+}
+.daily-chart__mark--missing {
+  font-style: italic;
+}
+
+@media (forced-colors: active) {
+  .daily-chart__bar,
+  .daily-chart__hatch-line {
+    stroke: CanvasText;
+  }
+  .daily-chart__bar:not(.daily-chart__bar--so-far) {
+    fill: CanvasText;
+  }
+  .daily-chart__hatch-ground {
+    fill: Canvas;
+  }
+  .daily-chart__grid,
+  .daily-chart__grid--base {
+    stroke: GrayText;
+  }
+  .daily-chart__tick,
+  .daily-chart__day,
+  .daily-chart__mark,
+  .daily-chart__value {
+    fill: CanvasText;
+  }
+  .daily-chart__link:focus-visible .daily-chart__hit {
+    stroke: Highlight;
+  }
+}

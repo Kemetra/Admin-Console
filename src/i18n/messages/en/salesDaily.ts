@@ -40,6 +40,23 @@ export const salesDaily: MessagesOf<typeof ar> = {
   "salesDaily.row.total": "Range total",
   "salesDaily.row.totalSoFar": "Range total (includes days so far)",
 
+  // --- Chart (RT-823, VIZ-5) ---------------------------------------------------
+  "salesDaily.chart.title": "Received sales per business day",
+  "salesDaily.chart.summary":
+    "A summary of the table below: one bar per business day, in {currency}. Select a bar to go to its row. The exact figures are in the table.",
+  "salesDaily.chart.legend":
+    "A hatched bar is a day still running (so far). A day with no figure from the server is marked Unknown and has no bar.",
+  "salesDaily.chart.currency": "Currency",
+  "salesDaily.chart.bar": "{date}: {value} {currency}",
+  "salesDaily.chart.barSoFar": "{date}: {value} {currency}, so far",
+  "salesDaily.chart.barUnknown": "{date}: unknown",
+  "salesDaily.chart.barNotBegun": "{date}: not yet begun",
+  "salesDaily.chart.soFar": "So far",
+  "salesDaily.chart.unknown": "Unknown",
+  "salesDaily.chart.notBegun": "Not begun",
+  "salesDaily.chart.empty": "No sales were received in this range.",
+  "salesDaily.chart.emptyUnknown": "The server returned no figures for these days.",
+
   // --- Definitions -------------------------------------------------------------
   "salesDaily.about": "What these figures mean",
 
