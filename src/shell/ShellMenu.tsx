@@ -119,5 +119,5 @@ export function ShellMenuDrawer({
 
 /** A stable id for the drawer, shared by the button's aria-controls. */
 export function useShellMenuId(): string {
-  return `shell-menu-${useId().replace(/:/g, "")}`;
+  return `shell-menu-${useId().replaceAll(":", "")}`;
 }
