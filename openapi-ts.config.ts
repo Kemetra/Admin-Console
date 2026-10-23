@@ -56,6 +56,7 @@ export const PIN_FILE_PATH = "contracts/backend-core/PIN" as const;
  *   - devices.openapi.yaml (consoleListDevices, consoleGetDevice; the
  *     lifecycle writes are wrapped from RT-372) — RT-371
  *   - console-sales.openapi.yaml (consoleListSales, consoleGetSale) — RT-587
+ *   - console-sales-summary.openapi.yaml (consoleGetSalesSummary) — RT-818
  *     (spec 012 sales search and sale detail)
  *
  * The pin is UNCHANGED across slices; new slices add their contract source and
@@ -222,6 +223,14 @@ export const PIN_FILE_PATH = "contracts/backend-core/PIN" as const;
  *   - `ai-entitlements.openapi.yaml` and `erpnext-sync-ops/console-sync-ops.yaml`:
  *     the `x-runtime-status: contract-only` markers and prose only, no wire change.
  * The other 20 sources are byte-identical. No caller needed a code change.
+ *
+ * Source added, pin unchanged (RT-818, 2026-10-23): still `b9acd8c`; the
+ * commit did not move.`console-sales-summary.openapi.yaml`
+ * (1.0.0-draft, RT-649 #859, runtime RT-739 #864; `consoleGetSalesSummary`) was
+ * already in Backend-Core at that commit but had never been composed (see the
+ * earlier note that it was not composed). Composing it adds one PIN line and
+ * one `ConsoleSalesSummarySchema` namespace; the other 26 sources are
+ * byte-identical. The wrapper is `src/lib/sales-summary-queries.ts`.
  */
 export const BACKEND_CORE_PIN: ContractsPin = parsePin(
   readFileSync(resolve(repoRoot, PIN_FILE_PATH), "utf8"),
@@ -294,6 +303,13 @@ export const OPENAPI_SOURCE_SPECS: readonly OpenApiSourceSpec[] = [
   // spec 012): `consoleListSales`, `consoleGetSale`. Read-only consumption;
   // no YAML authored here.
   { name: "ConsoleSales", path: "packages/contracts/openapi/console-sales.openapi.yaml" },
+  // Console sales summary (RT-649 contract #859 / RT-739 runtime #864; RT-818,
+  // RT-751 slice 1): `consoleGetSalesSummary`. Read-only consumption; no YAML
+  // authored here.
+  {
+    name: "ConsoleSalesSummary",
+    path: "packages/contracts/openapi/console-sales-summary.openapi.yaml",
+  },
   // Shift variance policy (RT-384 contract #778 / RT-387 runtime #797; RT-389):
   // the tenant default and store override reads, revision lists and publishes.
   // The POS device read in the same document is not wrapped here.
