@@ -1,0 +1,116 @@
+/* RT-821 (VIZ-3) daily received-sales report. Existing tokens only; no new
+ * colour, font or dependency. The partial day carries its meaning in words;
+ * the hatched rule only reinforces it (and forced colours keep the words).
+ * Logical properties throughout (RTL by structure). No motion. */
+
+.daily-report {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.daily-report__context {
+  margin: 0;
+  max-inline-size: 75ch;
+  color: var(--color-text-muted);
+  font-size: var(--text-control);
+}
+
+.daily-report__table {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.daily-report__heading {
+  margin: 0;
+  font: var(--weight-strong) var(--text-section-title) / var(--leading-title) var(--font-sans);
+  color: var(--color-text);
+}
+.daily-report__hint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-control);
+}
+
+.daily-report__state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+/* A report row opens nothing: no pointer, no hover, no fade. */
+.daily-table th,
+.daily-table td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  text-align: start;
+  vertical-align: top;
+}
+.daily-table tbody th,
+.daily-table tfoot th {
+  white-space: nowrap;
+  font-weight: var(--weight-strong);
+  color: var(--color-text);
+}
+.daily-table tfoot th,
+.daily-table tfoot td {
+  border-top: 2px solid var(--color-border);
+  border-bottom: 0;
+}
+
+.daily-table__row--partial th,
+.daily-table__row--partial td {
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent 0 var(--space-2),
+    var(--color-surface-sunken) var(--space-2) var(--space-3)
+  );
+}
+.daily-table__mark {
+  font-weight: var(--weight-regular);
+  color: var(--color-text-muted);
+}
+
+.daily-table__count {
+  display: block;
+  font-weight: var(--weight-strong);
+}
+.daily-table__lines {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  white-space: nowrap;
+}
+.daily-table__unknown {
+  font-style: italic;
+  color: var(--color-text-muted);
+}
+
+.daily-report__about summary {
+  cursor: pointer;
+  color: var(--color-primary-emphasis);
+}
+.daily-report__about dl {
+  display: grid;
+  gap: var(--space-3);
+  margin: var(--space-3) 0 0;
+  max-inline-size: 75ch;
+}
+.daily-report__about dt {
+  font-weight: var(--weight-strong);
+}
+.daily-report__about dd {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+@media (forced-colors: active) {
+  .daily-table th,
+  .daily-table td {
+    border-color: CanvasText;
+  }
+  .daily-report__about summary {
+    color: LinkText;
+  }
+}
