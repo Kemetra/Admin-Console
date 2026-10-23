@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="ar-EG" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KPI claim harness</title>
+    <script>
+      // Same pre-paint locale restore as the app's index.html (RT-399), so the
+      // harness opens in the language the Playwright project seeded.
+      try {
+        if (localStorage.getItem("rt.locale.v1:last") === "en") {
+          document.documentElement.lang = "en";
+          document.documentElement.dir = "ltr";
+        }
+      } catch {
+        // Storage blocked: the harness keeps the Arabic default.
+      }
+    </script>
+  </head>
+  <body>
+    <main id="root"></main>
+    <script type="module" src="./metric-claim.tsx"></script>
+  </body>
+</html>

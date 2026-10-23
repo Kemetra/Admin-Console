@@ -14,6 +14,7 @@ import { common } from "./ar/common";
 import { devices } from "./ar/devices";
 import { erp } from "./ar/erp";
 import { inventory } from "./ar/inventory";
+import { metrics } from "./ar/metrics";
 import { money } from "./ar/money";
 import { operators } from "./ar/operators";
 import { overview } from "./ar/overview";
@@ -47,6 +48,7 @@ export const AR_MODULES = {
   inventory,
   aiPlan,
   catalog,
+  metrics,
 };
 
 export const ar = {
@@ -70,4 +72,5 @@ export const ar = {
   ...inventory,
   ...aiPlan,
   ...catalog,
+  ...metrics,
 };
