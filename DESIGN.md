@@ -155,7 +155,30 @@ focus, copy, status and border/icon feedback stay intact.
   keeps its meaning. No gradients on tables, forms, operational buttons or status surfaces.
 - **Data color ≠ status color (UX-13):** chart categorical, sequential and diverging palettes
   are a separate token family, never reused success/warning/danger/info. Up/down is never
-  automatically green/red. No production data-viz token family exists yet.
+  automatically green/red.
+- **Data-viz tokens (RT-822, pending owner ratification).** `src/styles/tokens.css` ships the
+  `--color-viz-*` family in light and dark (the same values as
+  `design/claude-design-system/colors_and_type.css`). Until the owner ratifies the rendered
+  palette, design-system rule 8 still bars bar, line and sparkline charts.
+  - **Categorical** `--color-viz-cat-1`…`--color-viz-cat-8`: indigo, olive, magenta, orange,
+    cyan, crimson, violet, green. Assign in this order and never cycle; a ninth series folds into
+    "Other". Adjacent slots stay apart under protanopia and deuteranopia (OKLab ΔE ≥ 13.9) and
+    for full colour vision (ΔE ≥ 21.5). For scatter plots and small multiples, where any two
+    marks can sit side by side, use at most the first three slots. The first five slots avoid
+    the status and Tower Teal hue families; every slot sits at least ΔE 10 from every status
+    and intent colour.
+  - **Sequential** `--color-viz-seq-1`…`--color-viz-seq-5`: one indigo hue, where 1 is the
+    least. It runs from the surface outward: light to dark in the light theme and dark to light
+    in the dark theme.
+  - **Diverging** `--color-viz-div-neg-3`…`--color-viz-div-pos-3` around
+    `--color-viz-div-mid`. Orange runs below the baseline and violet above it. The midpoint is
+    the mineral border neutral. Neither side means good or bad.
+  - **Contrast** (`.design-sync/contrast-pairs.mjs`, both themes, all three layers): every
+    mark clears 3:1. The receding ends (`seq-1` and each arm's step 1) clear 2:1. The midpoint
+    has no minimum.
+  - **Forced colours:** marks draw in `CanvasText` and receding steps in `GrayText`. Identity,
+    magnitude and sign then come from direct labels, the legend, texture and the table view,
+    never colour alone. Charts own that work (VIZ-5).
 
 ### Visual signatures (grammar, not wallpaper)
 
