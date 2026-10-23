@@ -57,6 +57,11 @@ export const salesDaily: MessagesOf<typeof ar> = {
   "salesDaily.chart.empty": "No sales were received in this range.",
   "salesDaily.chart.emptyUnknown": "The server returned no figures for these days.",
 
+  // --- Export (RT-824, VIZ-6) --------------------------------------------------
+  "salesDaily.export.button": "Export CSV",
+  "salesDaily.export.hint":
+    "Downloads the figures in the tables below with this context: scope, stores and time zones, range, as-of time and completeness.",
+
   // --- Definitions -------------------------------------------------------------
   "salesDaily.about": "What these figures mean",
 

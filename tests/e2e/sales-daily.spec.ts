@@ -137,7 +137,7 @@ test("RT-821: a range over 31 days is refused at the To field and nothing is rea
   expect(queries).toHaveLength(0);
 });
 
-test("RT-823: Tab goes Show → currency → chart region → each bar → each table's region → the definitions; no row is a stop", async ({
+test("RT-823: Tab goes Show → export → currency → chart region → each bar → each table's region → the definitions; no row is a stop", async ({
   page,
   t,
 }) => {
@@ -147,12 +147,13 @@ test("RT-823: Tab goes Show → currency → chart region → each bar → each 
   await expect(page.getByRole("table").first()).toBeVisible();
   await page.getByRole("button", { name: t("salesDaily.range.apply") }).focus();
   const stops: string[] = [];
-  // Show, then the currency select, the chart region, 8 bars, 2 table regions, the definitions.
-  for (let i = 0; i < 13; i++) {
+  // Show, then the export button, the currency select, the chart region, 8 bars, 2 table regions, the definitions.
+  for (let i = 0; i < 14; i++) {
     await page.keyboard.press("Tab");
     stops.push(
       await page.evaluate(() => {
         const el = document.activeElement as HTMLElement | null;
+        if (el?.closest(".daily-report__export")) return "export";
         if (el?.tagName === "SELECT") return "select";
         if (el?.closest("svg")) return "bar";
         const labelledBy = el?.getAttribute("aria-labelledby");
@@ -162,6 +163,7 @@ test("RT-823: Tab goes Show → currency → chart region → each bar → each 
     );
   }
   expect(stops).toEqual([
+    "export",
     "select",
     t("salesDaily.chart.title"),
     ...Array.from({ length: 8 }, () => "bar"),
@@ -236,6 +238,57 @@ test("RT-823: the partial day's bar paints the hatch pattern, not a solid fill (
     expect(partial, `partial, forced=${forced}`).toMatch(/^url\(/);
     expect(complete, `complete, forced=${forced}`).not.toMatch(/^url\(/);
   }
+});
+
+/**
+ * RT-824 runtime check: a Blob download under the production CSP. The CSP is
+ * `default-src 'self'; connect-src 'self'; object-src 'none'; ...` (Backend-
+ * Core Caddyfile:46, RT-751 AC 2). That file is not in this repo, so the page
+ * is served with those documented directives (plus what the pre-paint inline
+ * script of index.html needs); the header the deployed console really gets is
+ * not read here.
+ */
+const PROD_LIKE_CSP =
+  "default-src 'self'; script-src 'self' 'unsafe-inline'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'";
+
+test("RT-824: the CSV downloads under a production-like CSP: a UTF-8 BOM, the exact figures, no CSP violation", async ({
+  page,
+  t,
+}) => {
+  await mockBase(page, CAIRO_STORE);
+  await mockSummary(page, STORE_READ);
+  await page.route("**/sales-daily?**", async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({
+      response,
+      headers: { ...response.headers(), "content-security-policy": PROD_LIKE_CSP },
+    });
+  });
+  await page.addInitScript(() => {
+    (window as unknown as { __csp: string[] }).__csp = [];
+    document.addEventListener("securitypolicyviolation", (e) => {
+      (window as unknown as { __csp: string[] }).__csp.push(
+        `${e.violatedDirective} ${e.blockedURI}`,
+      );
+    });
+  });
+  const navigation = await page.goto("/sales-daily?from=2026-10-16&to=2026-10-23");
+  expect(navigation?.headers()["content-security-policy"]).toBe(PROD_LIKE_CSP);
+  const button = page.getByRole("button", { name: t("salesDaily.export.button") });
+  await expect(button).toBeVisible();
+  const downloading = page.waitForEvent("download");
+  await button.click();
+  const download = await downloading;
+  expect(download.suggestedFilename()).toBe("sales-daily_2026-10-16_2026-10-23.csv");
+  const path = await download.path();
+  const { readFileSync } = await import("node:fs");
+  const bytes = readFileSync(path);
+  expect(Array.from(bytes.subarray(0, 3))).toEqual([0xef, 0xbb, 0xbf]);
+  const text = bytes.toString("utf8");
+  expect(text).toContain("1250.5000");
+  expect(text).toContain("completeness,received_only");
+  expect(await page.evaluate(() => (window as unknown as { __csp: string[] }).__csp)).toEqual([]);
+  await expect(page.getByRole("figure")).toBeVisible();
 });
 
 for (const mode of ["light", "dark", "forced"] as const) {
