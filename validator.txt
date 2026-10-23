@@ -1,0 +1,24 @@
+  [PASS] Lightness band         all 8 inside L 0.43–0.77
+  [PASS] Chroma floor           all 8 >= 0.1
+  [PASS] CVD separation         worst adjacent #d83462↔#0e94ba ΔE 14.0 (deutan) · tritan 7.7
+  [PASS] Normal-vision floor    worst adjacent #8b44c9↔#d83462 ΔE 21.9 (normal)
+  [PASS] Contrast vs surface    all 8 >= 3:1
+  → ALL CHECKS PASS  (CVD in the 6–8 floor band is legal ONLY with secondary encoding: direct labels, gaps, or texture)
+  [PASS] Lightness band         all 8 inside L 0.48–0.67
+  [PASS] Chroma floor           all 8 >= 0.1
+  [PASS] CVD separation         worst adjacent #ca2356↔#0a8aae ΔE 13.9 (deutan) · tritan 8.9
+  [PASS] Normal-vision floor    worst adjacent #914ad0↔#ca2356 ΔE 21.5 (normal)
+  [PASS] Contrast vs surface    all 8 >= 3:1
+  → ALL CHECKS PASS  (CVD in the 6–8 floor band is legal ONLY with secondary encoding: direct labels, gaps, or texture)
+  [PASS] Lightness band         all 3 inside L 0.43–0.77
+  [PASS] Chroma floor           all 3 >= 0.1
+  [PASS] CVD separation         worst all-pairs #ca4bb5↔#5d7cfd ΔE 11.8 (protan) · tritan 15.6
+  [PASS] Normal-vision floor    worst all-pairs #ca4bb5↔#5d7cfd ΔE 21.2 (normal)
+  [PASS] Contrast vs surface    all 3 >= 3:1
+  → ALL CHECKS PASS  (CVD in the 6–8 floor band is legal ONLY with secondary encoding: direct labels, gaps, or texture)
+  [PASS] Lightness band         all 3 inside L 0.48–0.67
+  [PASS] Chroma floor           all 3 >= 0.1
+  [PASS] CVD separation         worst all-pairs #d858c2↔#4f6bee ΔE 8.2 (protan) · tritan 14.5
+  [PASS] Normal-vision floor    worst all-pairs #d858c2↔#4f6bee ΔE 22.9 (normal)
+  [PASS] Contrast vs surface    all 3 >= 3:1
+  → ALL CHECKS PASS  (CVD in the 6–8 floor band is legal ONLY with secondary encoding: direct labels, gaps, or texture)
