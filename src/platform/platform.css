@@ -72,14 +72,15 @@
   max-width: 60ch;
 }
 
+/* RT-825: the compact shell. The sidebar is hidden (app-shell.css) and the
+ * menu drawer stands in for it, so its grid row goes too. */
 @media (max-width: 768px) {
   .platform-shell {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: var(--shell-topbar-h) auto auto 1fr;
+    grid-template-rows: var(--shell-topbar-h) auto 1fr;
     grid-template-areas:
       "topbar"
       "session"
-      "sidebar"
       "content";
   }
 }

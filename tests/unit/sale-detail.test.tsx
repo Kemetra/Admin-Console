@@ -305,6 +305,34 @@ describe("SaleDetail (RT-587, spec 012 J2)", () => {
     expect(within(returns).getByText("Mineral water 1.5L")).toBeDefined();
   });
 
+  test("each table scrolls inside its own focusable region, named by its caption (RT-825)", async () => {
+    consoleGetSale.mockResolvedValue({
+      status: 200,
+      data: detail({
+        returns: [
+          {
+            returnRef: RETURN_1,
+            recordedAt: "2026-10-08T09:00:00Z",
+            businessDate: "2026-10-08",
+            returnTotal: "10.0000",
+            lines: [{ lineRef: LINE_1, quantity: "1", lineAmount: "10.0000" }],
+          },
+        ],
+      }),
+    });
+    renderDetail();
+    await loaded();
+    const tables = screen.getAllByRole("table");
+    expect(tables).toHaveLength(3); // lines, payments, returns
+    for (const table of tables) {
+      const region = table.parentElement as HTMLElement;
+      const caption = table.querySelector("caption") as HTMLElement;
+      expect(region.classList.contains("data-table__scroll")).toBe(true);
+      expect(region.tabIndex).toBe(0);
+      expect(region.getAttribute("aria-labelledby")).toBe(caption.id);
+    }
+  });
+
   test("ERP unknown reads as unknown; a document id appears only for posted (AC-11)", async () => {
     consoleGetSale.mockResolvedValue({
       status: 200,

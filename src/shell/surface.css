@@ -49,6 +49,18 @@
   gap: var(--space-3);
   margin-top: var(--space-5);
 }
+/* RT-825: on a phone the page's actions wrap, and a field row stacks its label
+ * above its value (the 180px label column left no room for a status badge), so
+ * neither pushes `.content` sideways. */
+@media (max-width: 600px) {
+  .surface__actions {
+    flex-wrap: wrap;
+  }
+  .field-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-1);
+  }
+}
 
 /* Back link above a detail/form title. */
 .surface__back {
