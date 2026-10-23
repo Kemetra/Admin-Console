@@ -22,11 +22,14 @@
  * extra prop is needed. Without `selection` nothing changes.
  */
 import "./data-table.css";
+import { useT } from "@/i18n";
+import { useState } from "react";
 import {
   OpenCell,
   OpenHeader,
   PageSelectHeader,
   SelectCell,
+  SortAnnouncer,
   SortButton,
   ariaSortOf,
 } from "./DataTableParts";
@@ -67,8 +70,11 @@ export interface DataTableProps<Row> {
   onRowActivate: (row: Row) => void;
   /** The active sort, shown on its header (`aria-sort`). */
   sort?: SortState | null;
-  /** Called with the requested sort when a sortable header is pressed. */
-  onSortChange?: (next: SortState) => void;
+  /**
+   * Called with the requested sort when a sortable header is pressed; `null`
+   * (the third press) asks for the server's order (RT-758).
+   */
+  onSortChange?: (next: SortState | null) => void;
   selection?: DataTableSelection<Row>;
 }
 
@@ -113,74 +119,87 @@ export function DataTable<Row>({
   selection,
 }: Readonly<DataTableProps<Row>>): React.JSX.Element {
   const captionId = useCaptionId();
+  const t = useT();
+  // RT-758: announced from the press that cleared the sort, not from the prop.
+  const [restored, setRestored] = useState(false);
+  const sortable = onSortChange !== undefined && columns.some((c) => c.sortable);
+  const changeSort = (next: SortState | null) => {
+    setRestored(next === null);
+    onSortChange?.(next);
+  };
   const pageKeys = rows.map(rowKey);
   const pageSelected = pageKeys.filter((k) => selection?.selectedKeys.has(k)).length;
   return (
-    <DataTableScroll captionId={captionId}>
-      <table className="data-table">
-        <caption id={captionId} className="data-table__caption">
-          {caption}
-        </caption>
-        <thead>
-          <tr>
-            {selection ? (
-              <PageSelectHeader
-                checked={pageKeys.length > 0 && pageSelected === pageKeys.length}
-                mixed={pageSelected > 0 && pageSelected < pageKeys.length}
-                onToggle={() =>
-                  selection.onSelectionChange(pageToggled(selection.selectedKeys, pageKeys))
-                }
-              />
-            ) : null}
-            {selection ? <OpenHeader /> : null}
-            {columns.map((col) => (
-              <th
-                key={col.key}
-                scope="col"
-                aria-sort={col.sortable ? ariaSortOf(sort, col.key) : undefined}
-              >
-                {col.sortable && onSortChange ? (
-                  <SortButton
-                    header={col.header}
-                    columnKey={col.key}
-                    sort={sort}
-                    onSortChange={onSortChange}
-                  />
-                ) : (
-                  col.header
-                )}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr
-              key={rowKey(row)}
-              className={selection ? "data-table__row data-table__row--static" : "data-table__row"}
-              {...(selection ? {} : rowActivation(row, onRowActivate))}
-            >
+    <>
+      <DataTableScroll captionId={captionId}>
+        <table className="data-table">
+          <caption id={captionId} className="data-table__caption">
+            {caption}
+          </caption>
+          <thead>
+            <tr>
               {selection ? (
-                <SelectCell
-                  checked={selection.selectedKeys.has(rowKey(row))}
-                  label={selection.rowLabel(row)}
+                <PageSelectHeader
+                  checked={pageKeys.length > 0 && pageSelected === pageKeys.length}
+                  mixed={pageSelected > 0 && pageSelected < pageKeys.length}
                   onToggle={() =>
-                    selection.onSelectionChange(withToggled(selection.selectedKeys, rowKey(row)))
+                    selection.onSelectionChange(pageToggled(selection.selectedKeys, pageKeys))
                   }
                 />
               ) : null}
-              {selection ? (
-                <OpenCell label={selection.rowLabel(row)} onOpen={() => onRowActivate(row)} />
-              ) : null}
+              {selection ? <OpenHeader /> : null}
               {columns.map((col) => (
-                <td key={col.key} className={col.mono ? "data-table__cell--mono" : undefined}>
-                  {col.cell(row)}
-                </td>
+                <th
+                  key={col.key}
+                  scope="col"
+                  aria-sort={col.sortable ? ariaSortOf(sort, col.key) : undefined}
+                >
+                  {col.sortable && onSortChange ? (
+                    <SortButton
+                      header={col.header}
+                      columnKey={col.key}
+                      sort={sort}
+                      onSortChange={changeSort}
+                    />
+                  ) : (
+                    col.header
+                  )}
+                </th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </DataTableScroll>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr
+                key={rowKey(row)}
+                className={
+                  selection ? "data-table__row data-table__row--static" : "data-table__row"
+                }
+                {...(selection ? {} : rowActivation(row, onRowActivate))}
+              >
+                {selection ? (
+                  <SelectCell
+                    checked={selection.selectedKeys.has(rowKey(row))}
+                    label={selection.rowLabel(row)}
+                    onToggle={() =>
+                      selection.onSelectionChange(withToggled(selection.selectedKeys, rowKey(row)))
+                    }
+                  />
+                ) : null}
+                {selection ? (
+                  <OpenCell label={selection.rowLabel(row)} onOpen={() => onRowActivate(row)} />
+                ) : null}
+                {columns.map((col) => (
+                  <td key={col.key} className={col.mono ? "data-table__cell--mono" : undefined}>
+                    {col.cell(row)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </DataTableScroll>
+      {sortable ? <SortAnnouncer message={restored ? t("table.sort.restored") : ""} /> : null}
+    </>
   );
 }

@@ -55,6 +55,14 @@ const FROM_ADMIN: Readonly<Record<string, IconName | null>> = {
   "ScopeHeader ✓": "confirm",
 };
 
+/** Names added after the IC-3 migration, each by the slice that first renders it. */
+const ADDED_SINCE_IC3: readonly IconName[] = [
+  // RT-758 sort marks (Jira names: sort-ascending, sort-descending, sortable).
+  "sortAscending",
+  "sortDescending",
+  "sortable",
+];
+
 function draw(props: { name: IconName; size?: "sm" | "md" | "lg" }): SVGSVGElement {
   const { container } = render(<Icon {...(props as IconProps<IconName>)} />);
   const svg = container.querySelector("svg");
@@ -69,7 +77,7 @@ function pathsOf(svg: SVGSVGElement): string[] {
 describe("icon registry names", () => {
   test("serves every migrated Admin glyph, and nothing else", () => {
     const used = Object.values(FROM_ADMIN).filter((n): n is IconName => n !== null);
-    expect([...ICON_NAMES].sort()).toEqual([...new Set(used)].sort());
+    expect([...ICON_NAMES].sort()).toEqual([...new Set([...used, ...ADDED_SINCE_IC3])].sort());
   });
 
   test("names meanings, never screens, shapes or the vendor", () => {
@@ -97,6 +105,14 @@ describe("icon registry RTL rules (D-263-4)", () => {
       asset: "clipboard_task_list_ltr",
       rtlAsset: "clipboard_task_list_rtl",
     });
+  });
+
+  test("never mirrors the vertical sort arrows in RTL (RT-758)", () => {
+    for (const name of ["sortAscending", "sortDescending", "sortable"] as const) {
+      expect(ICON_REGISTRY[name].mirror).toBe("never");
+      expect(draw({ name, size: "sm" }).classList.contains("rt-icon--mirror")).toBe(false);
+      cleanup();
+    }
   });
 
   test("never flips search, lock, check or object icons (DESIGN.md §4)", () => {

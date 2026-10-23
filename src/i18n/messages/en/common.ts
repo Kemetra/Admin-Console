@@ -40,6 +40,9 @@ export const common: MessagesOf<typeof ar> = {
   "format.duration.minutes": { one: "{count} minute", other: "{count} minutes" },
   "format.duration.seconds": { one: "{count} second", other: "{count} seconds" },
 
+  // RT-758: announced once when the third press returns a table to the server's order.
+  "table.sort.restored": "Original order restored",
+
   // RT-753 (UX-10): shared table selection. The count always names its scope.
   "table.selection.column": "Select",
   "table.selection.selectPage": "Select all rows on this page",

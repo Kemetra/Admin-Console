@@ -83,6 +83,8 @@ export const common = {
   },
 
   // RT-753 (UX-10): shared table selection. The count always names its scope.
+  // RT-758: unsourced Arabic copy (no UX-12 string exists yet); owner to confirm.
+  "table.sort.restored": "تمت استعادة الترتيب الأصلي",
   "table.selection.column": "تحديد",
   "table.selection.selectPage": "تحديد كل صفوف هذه الصفحة",
   "table.selection.selectRow": "تحديد {value}",

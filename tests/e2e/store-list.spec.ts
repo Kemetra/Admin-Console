@@ -237,6 +237,81 @@ test("RT-753: no axe violations with a sort active", async ({ page, t }) => {
 });
 
 /**
+ * RT-758 — the way back to the server's order: the third press clears the sort
+ * (aria-sort removed, the sortable hint back), the polite live region announces
+ * once, and the keyboard behaves like the mouse.
+ */
+test("RT-758: a third press restores the server's order, announces once, keyboard only", async ({
+  page,
+  t,
+}) => {
+  await openSortableRoster(page);
+  const header = page.getByRole("columnheader", { name: t("stores.list.col.store") });
+  const live = page.locator(".data-table__scroll + output[aria-live=polite]");
+  await expect(live).toHaveText("");
+  await expect(header.locator('svg[data-icon="sortable"]')).toHaveCount(1);
+
+  await header.getByRole("button").focus();
+  await page.keyboard.press("Enter");
+  await expect(header).toHaveAttribute("aria-sort", "ascending");
+  await expect(header.locator('svg[data-icon="sortAscending"]')).toHaveCount(1);
+  await page.keyboard.press("Space");
+  await expect(header).toHaveAttribute("aria-sort", "descending");
+  await expect(header.locator('svg[data-icon="sortDescending"]')).toHaveCount(1);
+  await expect(live).toHaveText("");
+
+  await page.keyboard.press("Enter");
+  await expect(page.locator("th[aria-sort]")).toHaveCount(0);
+  expect(await storeNames(page)).toEqual(["Zamalek", "Mall 10", "Mall 2"]);
+  await expect(header.locator('svg[data-icon="sortable"]')).toHaveCount(1);
+  await expect(live).toHaveText(t("table.sort.restored"));
+
+  await page.keyboard.press("Enter");
+  await expect(header).toHaveAttribute("aria-sort", "ascending");
+  await expect(live).toHaveText("");
+});
+
+// Dark + forced colours is not in the matrix: it fails page-wide color-contrast on
+// shell text (nav, headings, every cell), independent of the sort marks (RT-758
+// reports it as an out-of-scope finding). Light + forced colours covers forced-colors.
+const modes = [
+  { theme: "light", forcedColors: "none" },
+  { theme: "dark", forcedColors: "none" },
+  { theme: "light", forcedColors: "active" },
+] as const;
+
+for (const { theme, forcedColors } of modes) {
+  test(`RT-758: sort marks are shapes and axe-clean (${theme}, forced-colors ${forcedColors})`, async ({
+    page,
+    t,
+  }) => {
+    await page.emulateMedia({ forcedColors });
+    await page.addInitScript((value) => {
+      localStorage.setItem("rt.theme.v1:last", value);
+      localStorage.setItem("rt.theme.v1:user:u1", value);
+    }, theme);
+    await openSortableRoster(page);
+    const header = page.getByRole("columnheader", { name: t("stores.list.col.store") });
+    const shapes: string[] = [];
+    for (let press = 0; press < 3; press++) {
+      const icon = header.locator("svg[data-icon]");
+      shapes.push(
+        `${await icon.getAttribute("data-icon")}:${await icon.locator("path").getAttribute("d")}`,
+      );
+      await expectNoAxeViolations(
+        page,
+        `/stores sort press ${String(press)} ${theme} ${forcedColors}`,
+      );
+      await header.getByRole("button").click();
+    }
+    // Three distinct path shapes: the state never rests on colour alone.
+    expect(new Set(shapes).size).toBe(3);
+    // RTL never mirrors the vertical arrows (the registry marks them `never`).
+    expect(await header.locator("svg.rt-icon--mirror").count()).toBe(0);
+  });
+}
+
+/**
  * RT-757 — the 36px target floor applies to the sort button. Hit-tested, not read
  * from CSS: a point 17px above and below the button's centre must land on the
  * button, while the button's own box (and so the header height) stays text-sized.

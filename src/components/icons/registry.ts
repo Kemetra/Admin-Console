@@ -36,6 +36,10 @@ export const ICON_REGISTRY = {
   // Direction: back follows reading direction.
   back: { asset: "arrow_left", mirror: "mirror", regular: [16] },
   disclosure: { asset: "chevron_down", mirror: "never", regular: [16] },
+  // RT-758: sort marks. Vertical arrows, so they never mirror in RTL.
+  sortAscending: { asset: "arrow_sort_up", mirror: "never", regular: [16] },
+  sortDescending: { asset: "arrow_sort_down", mirror: "never", regular: [16] },
+  sortable: { asset: "arrow_sort", mirror: "never", regular: [16] },
   // Domain
   dashboard: { asset: "grid", mirror: "never", regular: [20] },
   sale: { asset: "receipt", mirror: "never", regular: [20] },
