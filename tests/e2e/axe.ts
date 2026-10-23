@@ -12,8 +12,26 @@ function axeFor(page: Page): AxeBuilder {
   });
 }
 
-/** WCAG 2.1 A/AA over the page as it is now; fails with the rule ids and their targets. */
+/**
+ * Waits for every finite CSS animation and transition to finish. A colour
+ * transition (a theme switch, a hover) or an rtc-settle fade-in caught mid-flight
+ * gives axe a blended colour, and color-contrast then fails on a frame no user
+ * reads. Infinite animations (the spinner) never finish, so they are skipped.
+ */
+async function settleAnimations(page: Page): Promise<void> {
+  await page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter((a) => a.effect?.getComputedTiming().endTime !== Number.POSITIVE_INFINITY)
+        .map((a) => a.finished.catch(() => undefined)),
+    ),
+  );
+}
+
+/** WCAG 2.1 A/AA over the settled page; fails with the rule ids and their targets. */
 export async function expectNoAxeViolations(page: Page, label: string): Promise<void> {
+  await settleAnimations(page);
   const results = await axeFor(page)
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
     .analyze();

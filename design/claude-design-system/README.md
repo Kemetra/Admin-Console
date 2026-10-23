@@ -25,7 +25,8 @@ Read these before designing any Retail Tower Admin screen from this system.
    - Terminology follows `foundations-content.html`: «المؤسسة», «المتجر», «الصنف».
 2. **Tokens only.**
    - Every colour comes from `colors_and_type.css`.
-   - No new hues, no purple/indigo, no gradients, no glass, no glow.
+   - No new hues, no purple/indigo, no gradients, no glass, no glow. The only exception is
+     the ratified `--color-viz-*` chart palette (rule 8), which includes indigo and violet.
    - Most pixels stay neutral. Teal means intent: the primary action, selection and focus.
 3. **Status is text first.**
    - UNKNOWN outcome (payment, posting, any consequence whose result is unconfirmed) is
@@ -71,13 +72,20 @@ Read these before designing any Retail Tower Admin screen from this system.
    - Navigation shows live, role-relevant destinations only.
 8. **Not yet decided: don't invent.**
    - No icon set (RT-263 pending). Use text labels; if an icon is unavoidable, mark it as a placeholder.
-   - Charts (owner decision 2026-10-12, D-AUD-07; UX-13 still has no data palette):
+   - Charts (owner decision 2026-10-12, D-AUD-07; the UX-13 data palette was ratified by the
+     owner on 2026-10-23, RT-822 / D13):
      - Allowed: a summary count band (numbers with labels), and status marks such as a
        24-segment status-history strip or a status distribution bar. Status marks use
        status colours for their status meaning only, and each has a legend, a written
        summary and a dashed «لا توجد إشارة» segment.
-     - Not allowed until UX-13 ratifies a data palette: bar, line and sparkline charts,
-       threshold lines and deploy-marker charts. Show the same numbers in a table or ledger.
+     - Allowed on the ratified `--color-viz-*` tokens only: bar, line and sparkline charts,
+       threshold lines and deploy-marker charts. Never a status colour as a series colour.
+       Each chart also shows the same numbers in a table, and:
+       - assigns categorical slots in order and never cycles them. With more than eight
+         series, the first seven keep slots 1–7 and the rest fold into one "Other" series
+         in slot 8;
+       - uses at most the first three slots in scatter plots and small multiples;
+       - labels series directly, because in forced colours every series draws in one system colour.
      - Not charts: pipeline connectors and dependency maps.
    - An overview leads with attention items and next destinations, not a KPI wall.
 
@@ -204,9 +212,9 @@ pairing before using it.
 - **POS-only parts:** the POS dark rail and the POS dark theme.
 - **Icons:** Fluent System Icons are pending the RT-263 fit/licensing PoC. The
   bundle ships no icon set.
-- **Data charts and data-visualisation palettes:** UX-13 has no ratified palette,
-  and status colours must never be reused as a chart palette. Count bands and status
-  marks are allowed under rule 8.
+- **Chart components:** the bundle ships the ratified `--color-viz-*` palette (RT-822)
+  but no chart component or card. Status colours must never be reused as a chart
+  palette. Rule 8 sets what a chart may show.
 - **Machine-readable sources of the old identity** (DESIGN.md and
   `src/styles/tokens.css` moved to the target with RT-396–RT-398):
   - `.impeccable/design.json`;

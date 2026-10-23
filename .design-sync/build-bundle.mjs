@@ -82,7 +82,7 @@ function paletteOf(css, selector) {
   const start = css.indexOf(`${selector} {`);
   if (start < 0) throw new Error(`palette block ${selector} not found`);
   const block = css.slice(start, css.indexOf('}', start));
-  const raw = Object.fromEntries([...block.matchAll(/--color-([a-z-]+):\s*([^;]+);/g)].map((m) => [m[1], m[2].trim()]));
+  const raw = Object.fromEntries([...block.matchAll(/--color-([a-z0-9-]+):\s*([^;]+);/g)].map((m) => [m[1], m[2].trim()]));
   const resolve = (v) => (v.startsWith('var(--color-') ? resolve(raw[v.slice(12, -1)]) : v);
   return Object.fromEntries(Object.keys(raw).map((k) => [k, resolve(raw[k])]));
 }

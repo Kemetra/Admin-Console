@@ -79,11 +79,16 @@ async function openLinkStep(page: Page, t: TFn): Promise<void> {
   await drawer.getByRole("button", { name: t("unknownItems.link.action") }).click();
 }
 
-/** Keyboard only: ArrowDown from the search box enters the list; Down, then Enter, chooses. */
+/**
+ * Keyboard only: ArrowDown from the search box enters the list; Down, then Enter, chooses.
+ * The list renders only once the products have loaded, and ArrowDown before that stays
+ * in the search box by design, so wait for the options first.
+ */
 async function chooseByKeyboard(page: Page, t: TFn, downs: number): Promise<void> {
+  const list = page.getByRole("listbox", { name: t("catalog.picker.list") });
+  await expect(list.getByRole("option").first()).toBeVisible();
   await page.getByLabel(t("catalog.picker.search")).focus();
   await page.keyboard.press("ArrowDown");
-  const list = page.getByRole("listbox", { name: t("catalog.picker.list") });
   await expect(list).toBeFocused();
   for (let i = 0; i < downs; i++) await page.keyboard.press("ArrowDown");
   await expect(list).toHaveAttribute("aria-activedescendant", /.+/);

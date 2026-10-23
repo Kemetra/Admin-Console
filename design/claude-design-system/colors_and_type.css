@@ -9,7 +9,8 @@
  * Colour values: owner-approved 2026-10-11 (RT-392) — the light set seeded from
  * the POS main@543688f light set, plus the dark set below. Every colour is one of
  * those values or an alias/alpha of one; nothing else may be introduced without a
- * new decision. .design-sync/build-bundle.mjs checks every text and boundary
+ * new decision. The --color-viz-* values (RT-822) are such a decision:
+ * owner-ratified 2026-10-23 (D13). .design-sync/build-bundle.mjs checks every text and boundary
  * pairing in both sets against WCAG AA. Names follow the POS/Admin role
  * vocabulary so a later migration slice can map them one-to-one.
  *
@@ -38,6 +39,32 @@
   --color-warning: #a35a00; /* caution / degraded */
   --color-danger: #b3261e;  /* danger / consequence / UNKNOWN */
   --color-info: #1b6ca8;    /* information / pending */
+
+  /* ── Data visualisation (RT-822, UX-13) ──────────────────────────── */
+  /* A separate family: never a status or intent role. Owner-ratified
+   * 2026-10-23 (D13); rule 8 in README.md sets how charts use it.
+   * Categorical in this order, never cycled; sequential 1 = least; diverging
+   * orange below / violet above a neutral midpoint, neither good nor bad. */
+  --color-viz-cat-1: #5d7cfd; /* indigo */
+  --color-viz-cat-2: #767700; /* olive */
+  --color-viz-cat-3: #ca4bb5; /* magenta */
+  --color-viz-cat-4: #dd5c00; /* orange */
+  --color-viz-cat-5: #0e94ba; /* cyan */
+  --color-viz-cat-6: #d83462; /* crimson */
+  --color-viz-cat-7: #8b44c9; /* violet */
+  --color-viz-cat-8: #03a14a; /* green */
+  --color-viz-seq-1: #8aa6fe;
+  --color-viz-seq-2: #6783ec;
+  --color-viz-seq-3: #4c65ca;
+  --color-viz-seq-4: #3246a9;
+  --color-viz-seq-5: #1c2789;
+  --color-viz-div-neg-3: #8b3f03;
+  --color-viz-div-neg-2: #c85d02;
+  --color-viz-div-neg-1: #f98942;
+  --color-viz-div-mid: var(--color-border);
+  --color-viz-div-pos-1: #a29dfe;
+  --color-viz-div-pos-2: #796eda;
+  --color-viz-div-pos-3: #5343ac;
 
   /* ── Derived roles (aliases or alpha of approved values only) ────── */
   --color-on-primary: var(--color-surface);
@@ -141,10 +168,33 @@
   --color-danger: #ff8b7f;
   --color-info: #6db3ea;
 
+  /* Data visualisation (RT-822): same hues stepped for dark; sequential and
+   * diverging run from the surface outward (least = darkest). */
+  --color-viz-cat-1: #4f6bee;
+  --color-viz-cat-2: #929213;
+  --color-viz-cat-3: #d858c2;
+  --color-viz-cat-4: #c9550a;
+  --color-viz-cat-5: #0a8aae;
+  --color-viz-cat-6: #ca2356;
+  --color-viz-cat-7: #914ad0;
+  --color-viz-cat-8: #05893e;
+  --color-viz-seq-1: #374cb0;
+  --color-viz-seq-2: #516bd1;
+  --color-viz-seq-3: #6d8af3;
+  --color-viz-seq-4: #93adff;
+  --color-viz-seq-5: #bfd0ff;
+  --color-viz-div-neg-3: #fe904d;
+  --color-viz-div-neg-2: #cf630d;
+  --color-viz-div-neg-1: #934302;
+  --color-viz-div-mid: var(--color-border);
+  --color-viz-div-pos-1: #5849b2;
+  --color-viz-div-pos-2: #7e74e1;
+  --color-viz-div-pos-3: #a9a5ff;
+
   --color-on-primary: var(--color-background);
   --color-control-border: var(--color-text-muted);
   --color-focus-ring: var(--color-primary);
-  --color-scrim: rgb(14 22 31 / 0.7);             /* --color-background at 70% */
+  --color-scrim: rgb(14 22 31 / 0.7);            /* --color-background at 70% */
   --shadow-overlay: 0 12px 32px rgb(14 22 31 / 0.7), 0 2px 6px rgb(14 22 31 / 0.5);
 }
 

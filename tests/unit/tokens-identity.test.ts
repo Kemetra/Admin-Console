@@ -1,7 +1,12 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
-import { CONTRAST_PAIRS } from "../../.design-sync/contrast-pairs.mjs";
+import {
+  CONTRAST_PAIRS,
+  VIZ_CATEGORICAL,
+  VIZ_DIVERGING,
+  VIZ_SEQUENTIAL,
+} from "../../.design-sync/contrast-pairs.mjs";
 
 /**
  * RT-396 light-first token migration and RT-397 Dubai type. The shipped colour
@@ -38,12 +43,13 @@ const shippedDark = block(shippedCss, DARK);
 const approvedDark = block(approvedCss, DARK);
 
 const shippedColours = Object.keys(shipped).filter((k) => k.startsWith("--color-"));
+const VIZ_ROLES = [...VIZ_CATEGORICAL, ...VIZ_SEQUENTIAL, ...VIZ_DIVERGING];
 
 /** A role's hex in a palette; an alias resolves within the same palette. */
 function resolve(name: string, palette: Record<string, string> = shipped): string {
   const v = palette[`--color-${name}`];
   if (v === undefined) throw new Error(`--color-${name} is not defined`);
-  const alias = /^var\(--color-([a-z-]+)\)$/.exec(v);
+  const alias = /^var\(--color-([a-z0-9-]+)\)$/.exec(v);
   return alias ? resolve(alias[1], palette) : v;
 }
 
@@ -130,6 +136,7 @@ describe("RT-396 light-first tokens", () => {
       "control-border",
       "focus-ring",
       "scrim",
+      ...VIZ_ROLES,
     ];
     expect(shippedColours.sort()).toEqual(roles.map((r) => `--color-${r}`).sort());
   });
@@ -218,5 +225,64 @@ describe("RT-398 dark theme", () => {
 
   test.each(CONTRAST_PAIRS)("dark: %s on %s passes WCAG AA (>= %s:1)", (fg, bg, min) => {
     expect(ratio(fg, bg, shippedDark)).toBeGreaterThanOrEqual(min);
+  });
+});
+
+describe("RT-822 data-viz tokens", () => {
+  // Status and intent roles a data colour must never reuse (UX-13).
+  const RESERVED = [
+    "primary",
+    "primary-emphasis",
+    "primary-soft",
+    "success",
+    "warning",
+    "danger",
+    "info",
+  ];
+  const themes = [
+    ["light", shipped],
+    ["dark", shippedDark],
+  ] as const;
+
+  test.each(themes)("%s: no data-viz role equals or aliases a status or intent role", (_, p) => {
+    const reservedValues = new Set(RESERVED.map((r) => resolve(r, p)));
+    for (const role of VIZ_ROLES) {
+      const raw = p[`--color-${role}`];
+      expect({ role, aliases: RESERVED.some((r) => raw === `var(--color-${r})`) }).toEqual({
+        role,
+        aliases: false,
+      });
+      expect({ role, reused: reservedValues.has(resolve(role, p)) }).toEqual({
+        role,
+        reused: false,
+      });
+    }
+  });
+
+  test.each(themes)("%s: the eight categorical slots are distinct", (_, p) => {
+    expect(new Set(VIZ_CATEGORICAL.map((r) => resolve(r, p))).size).toBe(VIZ_CATEGORICAL.length);
+  });
+
+  test("sequential runs from the surface outward: lighter to darker in light, darker to lighter in dark", () => {
+    const lum = (p: Record<string, string>) => VIZ_SEQUENTIAL.map((r) => luminance(resolve(r, p)));
+    const light = lum(shipped);
+    const dark = lum(shippedDark);
+    expect(light).toEqual([...light].sort((a, b) => b - a));
+    expect(dark).toEqual([...dark].sort((a, b) => a - b));
+  });
+
+  test("forced colours map every data-viz role to a system colour", () => {
+    const start = shippedCss.indexOf("@media (forced-colors: active)");
+    expect(start).toBeGreaterThan(shippedCss.indexOf(`${DARK} {`));
+    const body = shippedCss.slice(start, shippedCss.indexOf("}", start));
+    const mapped = Object.fromEntries(
+      [...body.matchAll(/(--color-viz-[a-z0-9-]+):\s*([^;]+);/g)].map((m) => [m[1], m[2].trim()]),
+    );
+    for (const role of VIZ_ROLES) {
+      expect({ role, value: mapped[`--color-${role}`] }).toEqual({
+        role,
+        value: expect.stringMatching(/^(CanvasText|GrayText|Canvas)$/),
+      });
+    }
   });
 });
