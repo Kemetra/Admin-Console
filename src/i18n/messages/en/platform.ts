@@ -56,8 +56,7 @@ export const platform: MessagesOf<typeof ar> = {
   "platform.tenants.title": "Organizations",
   "platform.tenants.sub":
     "Every organization on the platform. Open a support session for one organization to look at it, read-only.",
-  "platform.tenants.suspendedNote":
-    "A suspended organization opens read-only, with no writes at all.",
+  "platform.tenants.suspendedNote": "A suspended organization opens in a read-only session.",
   "platform.tenants.search.label": "Search by organization name or slug",
   "platform.tenants.caption": "Organizations list",
   "platform.tenants.col.tenant": "Organization",
@@ -73,6 +72,8 @@ export const platform: MessagesOf<typeof ar> = {
   "platform.tenants.error.rateLimited":
     "Couldn't load the organizations because of too many requests. Try again when the countdown ends.",
   "platform.tenants.retry": "Try again",
+  "platform.tenants.error.switch":
+    "Couldn't open the organization because the request didn't get through. Try again.",
 
   "platform.start.title": "Support session: {name}",
   "platform.start.required": "(required)",
@@ -92,8 +93,7 @@ export const platform: MessagesOf<typeof ar> = {
   "platform.start.duration.body":
     "60 minutes, and it doesn't extend by itself. Each renewal extends it by up to 60 minutes, never past 8 hours from the start.",
   "platform.start.suspended.label": "Suspended organization",
-  "platform.start.suspended.body":
-    "If the organization is suspended, the session is read-only, with no writes at all.",
+  "platform.start.suspended.body": "If the organization is suspended, the session is read-only.",
   "platform.start.replaces": "You have a current support session. Starting this one ends it.",
   "platform.start.submit": "Start support session",
   "platform.start.error.forbidden":

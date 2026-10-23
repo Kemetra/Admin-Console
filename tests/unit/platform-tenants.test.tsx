@@ -158,7 +158,7 @@ describe("directory states", () => {
     expect(within(rows[0]).getByText("delta-markets")).toBeDefined();
     expect(screen.getByText("Showing 3 of 3")).toBeDefined();
     expect(
-      screen.getByText("A suspended organization opens read-only, with no writes at all."),
+      screen.getByText("A suspended organization opens in a read-only session."),
     ).toBeDefined();
     const headers = within(await table())
       .getAllByRole("columnheader")
@@ -223,6 +223,44 @@ describe("row actions are completable (UX Addendum A3)", () => {
     await waitFor(() => expect(switchActiveTenant).toHaveBeenCalledWith(NILE));
     await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/"));
     expect(openSupportSession).not.toHaveBeenCalled();
+  });
+
+  test("a switch that never got an answer is said, keeps the operator here, and allows one switch at a time", async () => {
+    serve(noSession([{ tenant_id: NILE, tenant_name: "Nile Pharma", role_code: "owner" }]));
+    let fail: (e: unknown) => void = () => undefined;
+    switchActiveTenant.mockReturnValueOnce(
+      new Promise((_resolve, reject) => {
+        fail = reject;
+      }),
+    );
+    mount();
+    await table();
+    const open = screen.getByRole("button", { name: "Open organization: Nile Pharma" });
+    fireEvent.click(open);
+    fireEvent.click(open);
+    await act(async () => fail(new TypeError("Failed to fetch")));
+    expect(
+      await screen.findByText(
+        "Couldn't open the organization because the request didn't get through. Try again.",
+      ),
+    ).toBeDefined();
+    expect(switchActiveTenant).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("where").textContent).toBe("/platform/tenants");
+  });
+
+  test("after a 409, a switch that never got an answer is said inside the drawer", async () => {
+    serve(noSession());
+    openSupportSession.mockResolvedValue(res(409, "already_member"));
+    switchActiveTenant.mockRejectedValue(new TypeError("Failed to fetch"));
+    mount();
+    const drawer = await openDrawer();
+    fill(drawer, "incident");
+    submit(drawer);
+    fireEvent.click(
+      await within(drawer).findByRole("button", { name: "Use the normal organization switch" }),
+    );
+    expect(await within(drawer).findByText(/request didn't get through/)).toBeDefined();
+    expect(screen.getByTestId("where").textContent).toBe("/platform/tenants");
   });
 });
 

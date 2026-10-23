@@ -61,7 +61,7 @@ export const platform = {
   "platform.tenants.title": "المؤسسات",
   "platform.tenants.sub":
     "كل المؤسسات على المنصة. افتح جلسة دعم لمؤسسة واحدة لتطّلع عليها للقراءة فقط.",
-  "platform.tenants.suspendedNote": "المؤسسة الموقوفة تُفتح للقراءة فقط، ولا تتاح فيها أي كتابة.",
+  "platform.tenants.suspendedNote": "المؤسسة الموقوفة تُفتح جلستها للقراءة فقط.",
   "platform.tenants.search.label": "ابحث باسم المؤسسة أو معرّفها",
   "platform.tenants.caption": "قائمة المؤسسات",
   "platform.tenants.col.tenant": "المؤسسة",
@@ -77,6 +77,7 @@ export const platform = {
   "platform.tenants.error.rateLimited":
     "تعذّر تحميل المؤسسات لأن الطلبات كثيرة جدًا. أعد المحاولة بعد انتهاء العدّ.",
   "platform.tenants.retry": "إعادة المحاولة",
+  "platform.tenants.error.switch": "تعذّر فتح المؤسسة لأن الطلب لم يصل. حاول مرة أخرى.",
 
   "platform.start.title": "جلسة دعم: {name}",
   "platform.start.required": "(إلزامي)",
@@ -95,8 +96,7 @@ export const platform = {
   "platform.start.duration.body":
     "60 دقيقة، ولا تُمدَّد تلقائيًا. كل تجديد يمدّها حتى 60 دقيقة، دون تجاوز 8 ساعات من بدء الجلسة.",
   "platform.start.suspended.label": "مؤسسة موقوفة",
-  "platform.start.suspended.body":
-    "إن كانت المؤسسة موقوفة فالجلسة للقراءة فقط، ولا تتاح فيها أي كتابة.",
+  "platform.start.suspended.body": "إن كانت المؤسسة موقوفة فالجلسة للقراءة فقط.",
   "platform.start.replaces": "لديك جلسة دعم حالية. بدء هذه الجلسة يُنهي الجلسة الحالية.",
   "platform.start.submit": "بدء جلسة الدعم",
   "platform.start.error.forbidden": "لا يمكن لحسابك فتح جلسة دعم. لم تبدأ أي جلسة.",

@@ -575,12 +575,18 @@ describe("no tenant data across sessions", () => {
     mount("/platform/tenants");
     await bar();
     qc.setQueryData(["sales", "t1"], { rows: 1 });
+    // RT-782: only the exact directory key is kept; a tenant read beside it is not.
+    qc.setQueryData(["platform", "tenants", "t1"], { rows: 1 });
+    qc.setQueryData(["platform", "support", "t1"], { rows: 1 });
     act(() => {
       vi.setSystemTime(NOW + 3 * MIN);
       vi.advanceTimersByTime(1000);
     });
     await waitFor(() => expect(qc.getQueryData(["sales", "t1"])).toBeUndefined());
+    expect(qc.getQueryData(["platform", "tenants", "t1"])).toBeUndefined();
+    expect(qc.getQueryData(["platform", "support", "t1"])).toBeUndefined();
     expect(qc.getQueryData(["activeContext"])).toBeDefined();
+    expect(qc.getQueryData(["platform", "tenants"])).toBeDefined();
   });
 
   test("a replaced session id drops the previous tenant's reads", async () => {

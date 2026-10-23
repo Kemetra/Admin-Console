@@ -18,10 +18,10 @@ import { ListState } from "@/components/ListState";
 import { useActiveContextValue } from "@/context/ActiveContextProvider";
 import { type T, useT } from "@/i18n";
 import { useState } from "react";
-import { useNavigate } from "react-router";
 import { StartSessionDrawer, type StartTenant } from "./start/StartSessionDrawer";
 import { type DirectoryRow, directoryRows, filterTenants } from "./tenants/directoryLogic";
 import { type DirectoryError, useTenantDirectory } from "./tenants/useTenantDirectory";
+import { useTenantSwitch } from "./tenants/useTenantSwitch";
 import "./platform.css";
 
 function errorCopy(t: T, error: DirectoryError): { message: string; requestId?: string } {
@@ -174,17 +174,11 @@ function DirectoryBody({
 
 export function PlatformTenants(): React.JSX.Element {
   const t = useT();
-  const navigate = useNavigate();
-  const { context, switchTenant } = useActiveContextValue();
+  const { context } = useActiveContextValue();
   const directory = useTenantDirectory();
   const [query, setQuery] = useState("");
   const [starting, setStarting] = useState<StartTenant | null>(null);
-
-  const toTenant = async (tenantId: string) => {
-    setStarting(null);
-    await switchTenant(tenantId);
-    navigate("/");
-  };
+  const { toTenant, failed: switchFailed } = useTenantSwitch(() => setStarting(null));
 
   return (
     <section aria-labelledby="platform-tenants-title" className="platform-directory">
@@ -206,6 +200,10 @@ export function PlatformTenants(): React.JSX.Element {
         />
       </div>
 
+      {switchFailed && !starting ? (
+        <Banner variant="danger" message={t("platform.tenants.error.switch")} />
+      ) : null}
+
       <DirectoryBody
         query={query}
         directory={directory}
@@ -224,6 +222,7 @@ export function PlatformTenants(): React.JSX.Element {
             directory.refetch();
           }}
           onSwitch={(id) => void toTenant(id)}
+          switchFailed={switchFailed}
         />
       ) : null}
     </section>

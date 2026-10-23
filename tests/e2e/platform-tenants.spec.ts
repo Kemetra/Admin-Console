@@ -368,6 +368,24 @@ test("429 with Retry-After: the drawer names the cause, gates the button, and ne
   await expect(drawer.locator(".btn-primary")).toBeDisabled();
   await page.waitForTimeout(500);
   expect(server.opens).toHaveLength(1);
+  // The existing shared RateLimitBanner carries the 429 for the page behind the drawer.
+  await drawer.getByRole("button", { name: t("common.cancel") }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.locator(".rate-limit-banner").getByText(t("rateLimit.title"))).toBeVisible();
+  expect(server.opens).toHaveLength(1);
+});
+
+test("forced colors: axe on the directory and the drawer (light, emulated before load)", async ({
+  page,
+  t,
+}) => {
+  await mock(page, noSession());
+  await page.emulateMedia({ forcedColors: "active" });
+  await openDirectory(page, t);
+  await expect(directoryTable(page).locator("tbody tr")).toHaveCount(3);
+  await expectNoAxeViolations(page, "directory forced colors");
+  await openDrawer(page, "Nile Pharma", t);
+  await expectNoAxeViolations(page, "start drawer forced colors");
 });
 
 test("a double click opens one session", async ({ page, t }) => {

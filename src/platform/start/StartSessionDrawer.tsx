@@ -38,6 +38,8 @@ export interface StartSessionDrawerProps {
   onNotAvailable: () => void;
   /** 409 `already_member`: the normal tenant switch. */
   onSwitch: (tenantId: string) => void;
+  /** The last switch got no answer: said in the member view. */
+  switchFailed?: boolean;
 }
 
 function NotAvailable({
@@ -60,7 +62,7 @@ function NotAvailable({
   );
 }
 
-function Member({ onSwitch }: Readonly<{ onSwitch: () => void }>) {
+function Member({ onSwitch, failed }: Readonly<{ onSwitch: () => void; failed: boolean }>) {
   const t = useT();
   return (
     <div className="start-session__state">
@@ -69,6 +71,7 @@ function Member({ onSwitch }: Readonly<{ onSwitch: () => void }>) {
         title={t("platform.start.member.title")}
         message={t("platform.start.member.body")}
       />
+      {failed ? <Banner variant="danger" message={t("platform.tenants.error.switch")} /> : null}
       <GatedButton className="btn-primary" onClick={onSwitch}>
         {t("platform.start.member.switch")}
       </GatedButton>
@@ -104,6 +107,7 @@ export function StartSessionDrawer({
   onClose,
   onNotAvailable,
   onSwitch,
+  switchFailed = false,
 }: Readonly<StartSessionDrawerProps>): React.JSX.Element {
   const t = useT();
   const start = useStartSession(tenant.id, onClose);
@@ -130,7 +134,9 @@ export function StartSessionDrawer({
         </p>
       ) : null}
       {view.kind === "not-found" ? <NotAvailable view={view} onBack={onNotAvailable} /> : null}
-      {view.kind === "member" ? <Member onSwitch={() => onSwitch(tenant.id)} /> : null}
+      {view.kind === "member" ? (
+        <Member onSwitch={() => onSwitch(tenant.id)} failed={switchFailed} />
+      ) : null}
       {view.kind === "form" ? (
         <form className="surface__form" onSubmit={onSubmit} noValidate>
           {notice ? (
