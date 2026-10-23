@@ -114,6 +114,8 @@ export interface ReportModel {
   /** Some row is not complete, so the totals include a day still running. */
   partial: boolean;
   storeCount: number;
+  /** The stores of the page read, each with its zone (the export names them). */
+  stores: { storeRef: string; timeZone: string }[];
   /** Each zone once, first seen first. */
   zones: string[];
   /** False when more stores exist than the page returned: zones may be missing. */
@@ -180,6 +182,7 @@ export function reportModel(
     totals: buckets?.rangeTotals ?? null,
     partial: rows.some((r) => r.state !== "complete"),
     storeCount: summary.scope === "store" ? 1 : summary.scopeTotals.storeCount,
+    stores: summary.stores.map((s) => ({ storeRef: s.storeRef, timeZone: s.storeTimezone })),
     zones: zonesOf(summary),
     zonesComplete: summary.nextCursor === null,
     asOf: summary.asOf,

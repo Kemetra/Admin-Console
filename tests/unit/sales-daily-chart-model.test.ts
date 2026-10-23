@@ -25,6 +25,7 @@ function model(rows: DayRow[]): ReportModel {
     totals: null,
     partial: false,
     storeCount: 1,
+    stores: [],
     zones: ["Africa/Cairo"],
     zonesComplete: true,
     asOf: "2026-10-23T09:15:00Z",

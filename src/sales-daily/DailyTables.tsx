@@ -24,6 +24,7 @@ import {
 import { BusinessDate } from "@/sales/SaleParts";
 import { useId } from "react";
 import { DailyChart } from "./DailyChart";
+import { ExportButton } from "./ExportButton";
 import type { DayRow, DayState, ReportModel } from "./dailyLogic";
 import { dayRowId } from "./dayRowId";
 
@@ -342,6 +343,7 @@ export function DailyReport({
   return (
     <div className="daily-report">
       <ReportContext model={model} storeName={storeName} readStores={readStores} id={contextId} />
+      <ExportButton model={model} storeName={model.scope === "store" ? storeName : null} />
       <DailyChart model={model} />
       {TABLES.map((spec, index) => (
         <DailyTable
