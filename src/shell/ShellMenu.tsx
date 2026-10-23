@@ -58,7 +58,12 @@ export function ShellMenuButton({ menu, drawerId }: Readonly<ShellMenuButtonProp
       aria-expanded={menu.open}
       // Only while open: the drawer is not mounted otherwise.
       aria-controls={menu.open ? drawerId : undefined}
-      onClick={menu.show}
+      // Safari does not focus a tapped button; Drawer returns focus to whatever
+      // held it when it opened, so make that this button on every engine.
+      onClick={(e) => {
+        e.currentTarget.focus();
+        menu.show();
+      }}
     >
       {t("shell.menu")}
     </button>

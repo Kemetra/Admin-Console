@@ -49,8 +49,6 @@ function renderShell(role = "tenant_admin", path = "/stores", onSignOut = vi.fn(
 
 const menuButton = () => screen.getByRole("button", { name: "Menu" });
 const openDrawer = () => {
-  // A real tap focuses the button first; jsdom's click does not.
-  menuButton().focus();
   fireEvent.click(menuButton());
   return screen.getByRole("dialog", { name: "Menu" });
 };

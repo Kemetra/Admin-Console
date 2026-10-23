@@ -1,5 +1,6 @@
 import type { Locator } from "@playwright/test";
 import { expectNoAxeViolations } from "./axe";
+import { TIER1, mockRealisticApi } from "./compact-shell-data";
 import { type Page, expect, test } from "./fixtures";
 
 /**
@@ -60,22 +61,6 @@ async function mockApi(page: Page, ctx: unknown = context): Promise<void> {
   await page.route("**/api/v1/stores", (r) => r.fulfill(json(200, stores)));
 }
 
-/** Tier 1 routes (13206) plus /platform (D5), the shell surfaces of this slice. */
-const TIER1 = [
-  "/",
-  "/stores",
-  "/stores/s1",
-  "/sales",
-  "/sales/R-1",
-  "/sales-needing-repair",
-  "/devices",
-  "/devices/d1",
-  "/shift-closes",
-  "/shift-closes/x1",
-  "/unknown-items",
-  "/audit",
-];
-
 interface Overflow {
   innerWidth: number;
   scrollWidth: number;
@@ -102,6 +87,25 @@ async function expectNoSidewaysScroll(page: Page, width: number, label: string):
   expect(o.contentScroll, `${label}: .content sideways scroll`).toBeLessThanOrEqual(
     o.contentClient,
   );
+}
+
+/** Every match is a 44px touch target (or only 44px tall, for full-width rows). */
+async function expectTouchTargets(
+  locator: Locator,
+  atLeast: number,
+  axes: "both" | "height" = "both",
+): Promise<void> {
+  const boxes = await locator.evaluateAll((els) =>
+    els.map((el) => {
+      const b = el.getBoundingClientRect();
+      return { name: el.textContent ?? "", width: b.width, height: b.height };
+    }),
+  );
+  expect(boxes.length).toBeGreaterThanOrEqual(atLeast);
+  for (const box of boxes) {
+    expect(box.height, `${box.name} height`).toBeGreaterThanOrEqual(44);
+    if (axes === "both") expect(box.width, `${box.name} width`).toBeGreaterThanOrEqual(44);
+  }
 }
 
 /** Fully inside [0, width] on the inline axis. */
@@ -215,29 +219,16 @@ for (const width of [360, 390, 412, 640, 768]) {
       await page.goto("/");
       await menuButton(page, t).tap();
       const dialog = drawer(page, t);
-      const controls = dialog.locator("a, button");
-      const count = await controls.count();
-      expect(count).toBeGreaterThan(5);
-      for (let i = 0; i < count; i++) {
-        const box = await controls.nth(i).boundingBox();
-        const name = await controls.nth(i).textContent();
-        expect(box?.height, `${name ?? ""} height`).toBeGreaterThanOrEqual(44);
-        expect(box?.width, `${name ?? ""} width`).toBeGreaterThanOrEqual(44);
-      }
+      await expectTouchTargets(dialog.locator("a, button"), 6);
       await page.keyboard.press("Escape");
 
       const scope = page.locator(".scope__btn");
-      expect((await scope.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+      await expectTouchTargets(scope, 1);
       await scope.tap();
       const menu = page.getByRole("menu");
       await expect(menu.getByRole("menuitem").first()).toBeVisible();
-      const items = menu.getByRole("menuitem");
-      for (let i = 0; i < (await items.count()); i++) {
-        expect((await items.nth(i).boundingBox())?.height).toBeGreaterThanOrEqual(44);
-      }
-      const m = await menu.boundingBox();
-      expect(m?.x).toBeGreaterThanOrEqual(0);
-      expect((m?.x ?? 0) + (m?.width ?? 0)).toBeLessThanOrEqual(width);
+      await expectTouchTargets(menu.getByRole("menuitem"), 1, "height");
+      await expectInsideViewport(menu, width);
     });
 
     test("theme, language and sign-out work by tap from the drawer", async ({ page, t }) => {
@@ -265,10 +256,11 @@ for (const width of [360, 390, 412, 640, 768]) {
     });
 
     test("no sideways scroll on Tier 1 routes and /platform with long names", async ({ page }) => {
-      await mockApi(page);
+      await mockRealisticApi(page);
       for (const path of TIER1) {
         await page.goto(path);
-        await page.locator(".content").waitFor();
+        // A crash replaces the shell, so the page heading proves it rendered.
+        await page.locator(".content h1").first().waitFor();
         await page.waitForLoadState("networkidle");
         await expectNoSidewaysScroll(page, width, path);
       }
