@@ -127,42 +127,49 @@ export interface CsvOptions {
   storeName: string | null;
 }
 
-function headerBlock(model: ReportModel, { locale, storeName }: CsvOptions): string[] {
-  const t = (key: MessageKey, params?: Record<string, string | number>) =>
-    translate(locale, key, params);
-  const rows: string[][] = [
-    ["report", t("salesDaily.title")],
-    ["scope", model.scope],
-    ...model.stores.map((s) => {
-      const name = model.scope === "store" && s.storeRef === model.storeRef ? storeName : null;
-      return name === null
-        ? ["store", s.storeRef, s.timeZone]
-        : ["store", s.storeRef, s.timeZone, name];
-    }),
-  ];
-  if (!model.zonesComplete) {
-    rows.push([
-      "stores_read",
-      t("salesDaily.context.zonesPartial", { count: model.stores.length }),
-    ]);
-  }
-  rows.push(
+type Translate = (key: MessageKey, params?: Record<string, string | number>) => string;
+
+function storeRows(model: ReportModel, storeName: string | null): string[][] {
+  return model.stores.map((s) => {
+    const named = model.scope === "store" && s.storeRef === model.storeRef && storeName !== null;
+    return named ? ["store", s.storeRef, s.timeZone, storeName] : ["store", s.storeRef, s.timeZone];
+  });
+}
+
+function periodRows(model: ReportModel, t: Translate): string[][] {
+  const rows = [
     ["range_from", model.rows[0]?.date ?? ""],
     ["range_to", model.rows.at(-1)?.date ?? ""],
     ["calendar", t("salesDaily.context.calendar")],
     ["as_of_utc", model.asOf],
     ["completeness", "received_only"],
     ["completeness_note", t("metrics.context.completeness")],
-  );
+  ];
   if (model.partial) rows.push(["includes_days_so_far", t("salesDaily.context.soFar")]);
-  for (const id of METRIC_IDS) {
+  return rows;
+}
+
+function definitionRows(t: Translate): string[][] {
+  return METRIC_IDS.map((id) => {
     const def = metricDefinition(id as MetricId);
-    rows.push([
-      "definition",
-      t(def.labelKey),
-      `${t(def.definitionKey)} ${t(def.zoneRuleKey)} ${t(def.unknown.meaningKey)}`,
-    ]);
-  }
+    const text = [def.definitionKey, def.zoneRuleKey, def.unknown.meaningKey].map((k) => t(k));
+    return ["definition", t(def.labelKey), text.join(" ")];
+  });
+}
+
+function headerBlock(model: ReportModel, { locale, storeName }: CsvOptions): string[] {
+  const t: Translate = (key, params) => translate(locale, key, params);
+  const partialStores = model.zonesComplete
+    ? []
+    : [["stores_read", t("salesDaily.context.zonesPartial", { count: model.stores.length })]];
+  const rows = [
+    ["report", t("salesDaily.title")],
+    ["scope", model.scope],
+    ...storeRows(model, storeName),
+    ...partialStores,
+    ...periodRows(model, t),
+    ...definitionRows(t),
+  ];
   return rows.map((r) => line(r.map(csvValue)));
 }
 

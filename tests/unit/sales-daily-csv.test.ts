@@ -16,36 +16,21 @@ import {
  * cells, UTF-8 with a BOM.
  */
 
+const TOKEN = /("(?:[^"]|"")*"|[^,\r\n]*)(,|\r\n|$)/g;
+const unquote = (cell: string) =>
+  cell.startsWith('"') ? cell.slice(1, -1).replaceAll('""', '"') : cell;
+
 /** A small RFC 4180 reader, to test what a spreadsheet would see. */
 function parse(csv: string): string[][] {
   const rows: string[][] = [];
   let row: string[] = [];
-  let cell = "";
-  let quoted = false;
-  const text = csv.replace(/^﻿/, "");
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (quoted) {
-      if (c === '"' && text[i + 1] === '"') {
-        cell += '"';
-        i++;
-      } else if (c === '"') quoted = false;
-      else cell += c;
-    } else if (c === '"') quoted = true;
-    else if (c === ",") {
-      row.push(cell);
-      cell = "";
-    } else if (c === "\r" && text[i + 1] === "\n") {
-      row.push(cell);
+  for (const [whole, cell, separator] of csv.replace(/^\uFEFF/, "").matchAll(TOKEN)) {
+    if (whole === "") break;
+    row.push(unquote(cell));
+    if (separator !== ",") {
       rows.push(row);
       row = [];
-      cell = "";
-      i++;
-    } else cell += c;
-  }
-  if (cell !== "" || row.length > 0) {
-    row.push(cell);
-    rows.push(row);
+    }
   }
   return rows;
 }
@@ -94,7 +79,7 @@ describe("buildCsv", () => {
       storeName: null,
     });
     expect(csv.startsWith(CSV_BOM)).toBe(true);
-    expect(CSV_BOM).toBe("﻿");
+    expect(CSV_BOM).toBe("\uFEFF");
     expect(csv.includes("\r\n")).toBe(true);
     expect(csv.replace(/\r\n/g, "").includes("\n")).toBe(false);
   });
