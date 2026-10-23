@@ -44,6 +44,10 @@ for (const width of [360, 390, 412, 768]) {
       expect(await page.evaluate(() => window.innerWidth), "viewport not zoomed out").toBe(width);
       // Filter bars on /sales, /devices, /shift-closes and /audit, and the new-store link.
       expect(all.length).toBeGreaterThanOrEqual(5);
+      expect(
+        new Set(all.map((b) => b.route)).size,
+        "routes with a primary action",
+      ).toBeGreaterThanOrEqual(4);
       for (const b of all) {
         expect(b.height, `${b.route} "${b.name}" height`).toBeGreaterThanOrEqual(44);
         expect(b.width, `${b.route} "${b.name}" width`).toBeGreaterThanOrEqual(44);
@@ -54,6 +58,21 @@ for (const width of [360, 390, 412, 768]) {
 
 test.describe("Tier 1 primary actions at 390px", () => {
   test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+
+  test("a drawer's primary action is 44px too", async ({ page }) => {
+    await mockRealisticApi(page);
+    await page.goto("/devices/pairing-codes");
+    await page.locator(".content h1").first().waitFor();
+    await page.locator(".content .btn-primary").first().tap();
+    const submit = page.locator(".drawer .btn-primary");
+    await expect(submit.first()).toBeVisible();
+    for (const box of await submit.evaluateAll((els) =>
+      els.map((el) => el.getBoundingClientRect()),
+    )) {
+      expect(box.height).toBeGreaterThanOrEqual(44);
+      expect(box.width).toBeGreaterThanOrEqual(44);
+    }
+  });
 
   test("axe passes on every Tier 1 route", async ({ page }) => {
     await mockRealisticApi(page);
