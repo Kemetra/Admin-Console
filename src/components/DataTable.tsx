@@ -30,6 +30,7 @@ import {
   SortButton,
   ariaSortOf,
 } from "./DataTableParts";
+import { DataTableScroll, useCaptionId } from "./DataTableScroll";
 import type { SortState } from "./tableSort";
 
 export interface DataTableColumn<Row> {
@@ -111,70 +112,75 @@ export function DataTable<Row>({
   onSortChange,
   selection,
 }: Readonly<DataTableProps<Row>>): React.JSX.Element {
+  const captionId = useCaptionId();
   const pageKeys = rows.map(rowKey);
   const pageSelected = pageKeys.filter((k) => selection?.selectedKeys.has(k)).length;
   return (
-    <table className="data-table">
-      <caption className="data-table__caption">{caption}</caption>
-      <thead>
-        <tr>
-          {selection ? (
-            <PageSelectHeader
-              checked={pageKeys.length > 0 && pageSelected === pageKeys.length}
-              mixed={pageSelected > 0 && pageSelected < pageKeys.length}
-              onToggle={() =>
-                selection.onSelectionChange(pageToggled(selection.selectedKeys, pageKeys))
-              }
-            />
-          ) : null}
-          {selection ? <OpenHeader /> : null}
-          {columns.map((col) => (
-            <th
-              key={col.key}
-              scope="col"
-              aria-sort={col.sortable ? ariaSortOf(sort, col.key) : undefined}
-            >
-              {col.sortable && onSortChange ? (
-                <SortButton
-                  header={col.header}
-                  columnKey={col.key}
-                  sort={sort}
-                  onSortChange={onSortChange}
-                />
-              ) : (
-                col.header
-              )}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((row) => (
-          <tr
-            key={rowKey(row)}
-            className={selection ? "data-table__row data-table__row--static" : "data-table__row"}
-            {...(selection ? {} : rowActivation(row, onRowActivate))}
-          >
+    <DataTableScroll captionId={captionId}>
+      <table className="data-table">
+        <caption id={captionId} className="data-table__caption">
+          {caption}
+        </caption>
+        <thead>
+          <tr>
             {selection ? (
-              <SelectCell
-                checked={selection.selectedKeys.has(rowKey(row))}
-                label={selection.rowLabel(row)}
+              <PageSelectHeader
+                checked={pageKeys.length > 0 && pageSelected === pageKeys.length}
+                mixed={pageSelected > 0 && pageSelected < pageKeys.length}
                 onToggle={() =>
-                  selection.onSelectionChange(withToggled(selection.selectedKeys, rowKey(row)))
+                  selection.onSelectionChange(pageToggled(selection.selectedKeys, pageKeys))
                 }
               />
             ) : null}
-            {selection ? (
-              <OpenCell label={selection.rowLabel(row)} onOpen={() => onRowActivate(row)} />
-            ) : null}
+            {selection ? <OpenHeader /> : null}
             {columns.map((col) => (
-              <td key={col.key} className={col.mono ? "data-table__cell--mono" : undefined}>
-                {col.cell(row)}
-              </td>
+              <th
+                key={col.key}
+                scope="col"
+                aria-sort={col.sortable ? ariaSortOf(sort, col.key) : undefined}
+              >
+                {col.sortable && onSortChange ? (
+                  <SortButton
+                    header={col.header}
+                    columnKey={col.key}
+                    sort={sort}
+                    onSortChange={onSortChange}
+                  />
+                ) : (
+                  col.header
+                )}
+              </th>
             ))}
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr
+              key={rowKey(row)}
+              className={selection ? "data-table__row data-table__row--static" : "data-table__row"}
+              {...(selection ? {} : rowActivation(row, onRowActivate))}
+            >
+              {selection ? (
+                <SelectCell
+                  checked={selection.selectedKeys.has(rowKey(row))}
+                  label={selection.rowLabel(row)}
+                  onToggle={() =>
+                    selection.onSelectionChange(withToggled(selection.selectedKeys, rowKey(row)))
+                  }
+                />
+              ) : null}
+              {selection ? (
+                <OpenCell label={selection.rowLabel(row)} onOpen={() => onRowActivate(row)} />
+              ) : null}
+              {columns.map((col) => (
+                <td key={col.key} className={col.mono ? "data-table__cell--mono" : undefined}>
+                  {col.cell(row)}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </DataTableScroll>
   );
 }

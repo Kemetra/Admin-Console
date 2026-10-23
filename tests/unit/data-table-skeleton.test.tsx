@@ -58,7 +58,7 @@ describe("DataTableSkeleton", () => {
     const { container } = render(
       <DataTableSkeleton caption="Stores" columns={columns} label="stores" />,
     );
-    expect(container.querySelectorAll("[tabindex]")).toHaveLength(0);
+    expect(container.querySelectorAll("tbody [tabindex]")).toHaveLength(0);
     expect(within(container).queryAllByRole("button")).toHaveLength(0);
   });
 

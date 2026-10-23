@@ -119,8 +119,9 @@ function renderPage(entry = "/erp-connection/mappings"): void {
   );
 }
 
-const itemsPanel = () => screen.getByRole("region", { name: "Item mappings" });
-const whPanel = () => screen.getByRole("region", { name: "Warehouse mappings" });
+// RT-826: the table inside is a same-named scroll region; the panel is the outer (first) one.
+const itemsPanel = () => screen.getAllByRole("region", { name: "Item mappings" })[0];
+const whPanel = () => screen.getAllByRole("region", { name: "Warehouse mappings" })[0];
 
 async function itemRowEl(ref = "ITEM-COLA-330"): Promise<HTMLElement> {
   return within(itemsPanel()).findByRole("row", { name: new RegExp(ref) });
