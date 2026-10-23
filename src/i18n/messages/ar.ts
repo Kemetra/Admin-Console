@@ -22,6 +22,7 @@ import { platform } from "./ar/platform";
 import { productRecon } from "./ar/productRecon";
 import { saleSync } from "./ar/saleSync";
 import { sales } from "./ar/sales";
+import { salesDaily } from "./ar/salesDaily";
 import { shell } from "./ar/shell";
 import { shift } from "./ar/shift";
 import { stock } from "./ar/stock";
@@ -49,6 +50,7 @@ export const AR_MODULES = {
   aiPlan,
   catalog,
   metrics,
+  salesDaily,
 };
 
 export const ar = {
@@ -73,4 +75,5 @@ export const ar = {
   ...aiPlan,
   ...catalog,
   ...metrics,
+  ...salesDaily,
 };

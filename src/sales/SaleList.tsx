@@ -9,7 +9,7 @@ import { useStoreDirectory } from "@/shift-closes/useShiftCloses";
  * not-available state and no form (AC-5). The results and paging states are in
  * `SaleResults.tsx` and `SalePager.tsx`.
  */
-import { useLocation, useNavigate, useSearchParams } from "react-router";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router";
 import { SaleFilterBar } from "./SaleFilterBar";
 import { Unavailable } from "./SalePager";
 import { QueryPrompt, Results } from "./SaleResults";
@@ -70,6 +70,12 @@ function Shell({
           <p className="content__sub">
             {t.rich("sales.list.sub", { tenant: <bdi>{scope.tenantName}</bdi> })}
           </p>
+        </div>
+        {/* RT-821: the daily report is reached from here, not from the sidebar (UX-09). */}
+        <div className="surface__actions surface__actions--head">
+          <Link to="/sales-daily" className="btn-secondary">
+            {t("salesDaily.entry")}
+          </Link>
         </div>
       </header>
       {children}
