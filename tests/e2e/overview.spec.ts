@@ -1,3 +1,4 @@
+import { expectNoAxeViolations } from "./axe";
 import { type Page, expect, test } from "./fixtures";
 
 /**
@@ -50,6 +51,59 @@ const ANSWERS = {
   unknown: { all: 5, s2: 1 },
   shift: { all: 2, s2: 0 },
 } as const;
+
+/** RT-820 P-6: two stores on different business days (Cairo is already on the 16th). */
+function salesSummary() {
+  const kpis = (count: number) => ({
+    receivedSales: { count, byCurrency: [{ currencyCode: "EGP", count, total: "1250.5000" }] },
+    voids: { count: 0, byCurrency: [] },
+    returns: { count: 0, byCurrency: [] },
+    legacyRefunds: { count: 0, byCurrency: [] },
+    syncStatus: { captured: 0, synced: count, failedRetryable: 0, failedNeedsRepair: 0 },
+    erpPosting: { posted: 0, pending: 0, failed: 0, unknown: count },
+    shiftCloses: {
+      count: 0,
+      normal: 0,
+      forced: 0,
+      withVariance: 0,
+      approvalMissing: { yes: 0, no: 0, unknown: 0 },
+    },
+  });
+  const day = (businessDate: string, count: number) => ({ businessDate, kpis: kpis(count) });
+  const now = new Date();
+  const iso = (offset: number) =>
+    new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + offset))
+      .toISOString()
+      .slice(0, 10);
+  const days = (counts: number[]) => counts.map((c, i) => day(iso(i - 1), c));
+  return {
+    scope: "all_in_scope",
+    storeRef: null,
+    from: iso(-1),
+    to: iso(1),
+    asOf: now.toISOString(),
+    completeness: "received_only",
+    stores: [
+      {
+        storeRef: "s1",
+        storeTimezone: "Africa/Cairo",
+        currentBusinessDate: iso(0),
+        days: days([3, 14, 0]),
+        rangeTotals: kpis(17),
+      },
+      {
+        // This store's date is not in its days[]: it must read unknown, never zero.
+        storeRef: "s2",
+        storeTimezone: "Pacific/Kiritimati",
+        currentBusinessDate: iso(2),
+        days: days([1, 2, 3]),
+        rangeTotals: kpis(6),
+      },
+    ],
+    nextCursor: null,
+    scopeTotals: { storeCount: 2, days: days([4, 16, 3]), rangeTotals: kpis(23) },
+  };
+}
 
 type Panel = "stock" | "shift" | "unknown" | "receivables" | "audit";
 
@@ -111,6 +165,7 @@ async function mock(page: Page): Promise<Record<Panel, (string | null)[]>> {
       const n = store === "s2" ? ANSWERS[panel].s2 : ANSWERS[panel].all;
       return r.fulfill(json({ items: items(n), [cursorField]: null }));
     };
+  await page.route("**/api/v1/sales-summary**", (r) => r.fulfill(json(salesSummary())));
   await page.route("**/api/v1/shift-closes**", counted("shift", "nextCursor"));
   await page.route("**/api/v1/catalog/unknown-items**", counted("unknown", "next_cursor"));
   // P-4 (flagged receivables) is withdrawn (RT-421): the Overview must not read receivables.
@@ -190,11 +245,18 @@ test("AC-13: light, dark and forced-colors render; every control is keyboard-rea
     await page.screenshot({ path, fullPage: true });
     await testInfo.attach(`overview-${appLocale}-${name}`, { path, contentType: "image/png" });
   };
+  const sales = page.getByRole("region", { name: t("overview.sales.title") });
+  await expect(sales.getByText("Cairo Festival City").first()).toBeVisible();
+  await expect(sales.getByText(t("metrics.claim.unknown"), { exact: true })).toBeVisible();
+  await expect(sales.getByText(t("overview.sales.total"))).toBeHidden();
+  await expectNoAxeViolations(page, `overview ${appLocale} light`);
   await capture("light");
   await page.evaluate(() => document.documentElement.setAttribute("data-theme", "dark"));
+  await expectNoAxeViolations(page, `overview ${appLocale} dark`);
   await capture("dark");
   await page.evaluate(() => document.documentElement.removeAttribute("data-theme"));
   await page.emulateMedia({ forcedColors: "active" });
+  await expectNoAxeViolations(page, `overview ${appLocale} forced-colors`);
   await capture("forced-colors");
   await page.emulateMedia({ forcedColors: "none" });
 
@@ -204,6 +266,7 @@ test("AC-13: light, dark and forced-colors render; every control is keyboard-rea
     t("overview.stock.open"),
     t("overview.shift.open"),
     t("overview.unknown.open"),
+    t("overview.sales.open"),
     t("shell.nav.audit"),
   ];
   const reached = new Set<string>();

@@ -3,7 +3,7 @@
  * Nothing renders and nothing is read without an active tenant (AC-2). Reads
  * happen on load and on scope change (the shell remounts the route per scope,
  * and every key carries the scope), plus one manual refresh (NG-7: no polling).
- * No sales or KPI element exists until BC-009-1 (AC-11). Recent activity (P-5)
+ * P-6 (RT-820, AC-11) shows today's received sales per store, as text. Recent activity (P-5)
  * is deferred until Backend-Core can leave read-only audits out (OD-009-3,
  * RT-567): owner and tenant_admin get a plain link to `/audit` instead (AC-10).
  */
@@ -12,6 +12,7 @@ import { useIsFetching, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { AttentionLedger } from "./AttentionLedger";
+import { SalesToday } from "./SalesToday";
 import { canOpenAudit } from "./overviewLogic";
 import { useOverviewSession } from "./useOverviewPanels";
 import { OVERVIEW_KEY } from "./usePanelQuery";
@@ -71,6 +72,7 @@ export function OverviewPanels(): React.JSX.Element | null {
         <RefreshButton onRefresh={clock.refresh} />
       </div>
       <AttentionLedger session={session} nowMs={clock.value} />
+      <SalesToday session={session} nowMs={clock.value} />
       {canOpenAudit(session.role) ? (
         <p className="overview__related">
           <Link className="ledger__link" to="/audit">

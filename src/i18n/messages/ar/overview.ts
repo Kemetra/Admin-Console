@@ -38,4 +38,14 @@ export const overview = {
   "overview.unknown.label": "أصناف غير معروفة بانتظار المراجعة",
   "overview.unknown.noun": "الأصناف",
   "overview.unknown.open": "مراجعة الأصناف",
+
+  // --- P-6 today's received sales (RT-820, spec 009 OD-009-1) ------------------
+  "overview.sales.title": "المبيعات المستلمة اليوم",
+  "overview.sales.open": "عرض مبيعات المتجر",
+  "overview.sales.total": "كل المتاجر في النطاق",
+  "overview.sales.mixedDays":
+    "المتاجر في أيام عمل مختلفة، لذلك لا يُعرض إجمالي واحد للنطاق. لكل متجر يوم عمله الحالي.",
+  "overview.sales.more": "المعروض أول صفحة من المتاجر فقط. افتح المبيعات لرؤية الباقي.",
+  "overview.sales.openSales": "فتح المبيعات",
+  "overview.sales.none": "لا توجد متاجر في هذا النطاق.",
 } satisfies Messages;
