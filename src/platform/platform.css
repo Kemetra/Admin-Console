@@ -74,7 +74,7 @@
 
 @media (max-width: 768px) {
   .platform-shell {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: var(--shell-topbar-h) auto auto 1fr;
     grid-template-areas:
       "topbar"

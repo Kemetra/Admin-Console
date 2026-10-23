@@ -1,6 +1,16 @@
 /* Shared list-table (T006). DESIGN.md tables-over-cards (rule 7): dense,
  * quiet rows, keyboard-first, AA contrast on the light work surface. */
 
+/* RT-826: the table's inline-axis scroll region. A wide table scrolls here, not
+ * in .content or the page. Inset ring: the region scrolls, so an outset outline
+ * would be clipped by .content. */
+.data-table__scroll {
+  max-inline-size: 100%;
+  overflow-x: auto;
+}
+.data-table__scroll:focus-visible {
+  outline-offset: -2px;
+}
 .data-table {
   width: 100%;
   border-collapse: collapse;

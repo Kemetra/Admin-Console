@@ -9,6 +9,7 @@
  */
 import { useT } from "@/i18n";
 import type { DataTableColumn } from "./DataTable";
+import { DataTableScroll, useCaptionId } from "./DataTableScroll";
 import "./data-table.css";
 
 const SKELETON_ROWS = 6;
@@ -28,32 +29,37 @@ export function DataTableSkeleton<Row = unknown>({
   label,
 }: Readonly<DataTableSkeletonProps<Row>>): React.JSX.Element {
   const t = useT();
+  const captionId = useCaptionId();
   const rowKeys = Array.from({ length: SKELETON_ROWS }, (_, i) => `skeleton-${i}`);
   return (
     <>
-      <table className="data-table" aria-busy="true">
-        <caption className="data-table__caption">{caption}</caption>
-        <thead>
-          <tr>
-            {columns.map((col) => (
-              <th key={col.key} scope="col">
-                {col.header}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rowKeys.map((rowKey) => (
-            <tr key={rowKey} className="data-table__row data-table__row--skeleton">
+      <DataTableScroll captionId={captionId}>
+        <table className="data-table" aria-busy="true">
+          <caption id={captionId} className="data-table__caption">
+            {caption}
+          </caption>
+          <thead>
+            <tr>
               {columns.map((col) => (
-                <td key={col.key}>
-                  <span className="skeleton" aria-hidden="true" />
-                </td>
+                <th key={col.key} scope="col">
+                  {col.header}
+                </th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rowKeys.map((rowKey) => (
+              <tr key={rowKey} className="data-table__row data-table__row--skeleton">
+                {columns.map((col) => (
+                  <td key={col.key}>
+                    <span className="skeleton" aria-hidden="true" />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </DataTableScroll>
       <output className="sr-only">{t("components.list.loading", { label })}</output>
     </>
   );
