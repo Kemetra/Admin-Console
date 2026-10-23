@@ -59,7 +59,15 @@ async function mockApi(page: Page, ctx: unknown = context): Promise<void> {
   );
   await page.route("**/api/v1/context/me", (r) => r.fulfill(json(200, ctx)));
   await page.route("**/api/v1/stores", (r) => r.fulfill(json(200, stores)));
+  // RT-782: the platform directory measured with long names and slugs.
+  await page.route("**/api/v1/tenants", (r) => r.fulfill(json(200, tenants)));
 }
+
+const tenants = Array.from({ length: 3 }, (_, i) => ({
+  id: `0190f000-0000-7000-8000-00000000d0${String(i)}`,
+  slug: `northstar-retail-and-distribution-${String(i)}`,
+  name: `${LONG_TENANT} ${String(i)}`,
+}));
 
 interface Overflow {
   innerWidth: number;

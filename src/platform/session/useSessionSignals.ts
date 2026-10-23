@@ -20,11 +20,28 @@ import {
 } from "@/lib/support-session-expiry";
 import { type QueryClient, QueryClientContext } from "@tanstack/react-query";
 import { useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { tenantDirectoryKey } from "../tenants/useTenantDirectory";
 import type { SupportSessionState } from "./supportSessionLogic";
 
-/** Drops every cached read except the active context: no tenant data outlives the session. */
+/**
+ * The reads that are not tenant data, matched by their whole key: the active
+ * context, and the platform-scope tenant directory (RT-782), which a session's
+ * end must not empty under the operator's feet. Everything else is dropped.
+ */
+const NOT_TENANT_DATA: readonly (readonly unknown[])[] = [
+  queryKeys.activeContext,
+  tenantDirectoryKey,
+];
+
+function isNotTenantData(key: readonly unknown[]): boolean {
+  return NOT_TENANT_DATA.some(
+    (kept) => kept.length === key.length && kept.every((k, i) => k === key[i]),
+  );
+}
+
+/** Drops every cached tenant read: no tenant data outlives the session. */
 export function dropTenantData(qc: QueryClient | undefined): void {
-  qc?.removeQueries({ predicate: (q) => q.queryKey[0] !== queryKeys.activeContext[0] });
+  qc?.removeQueries({ predicate: (q) => !isNotTenantData(q.queryKey) });
 }
 
 /** A stable function that always calls the latest `fn`; the ref is updated after commit, not in render. */

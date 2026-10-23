@@ -84,3 +84,58 @@
       "content";
   }
 }
+
+/* RT-782 (RT-777 S3, screen 30): the tenant directory and its start drawer. */
+.platform-directory {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.platform-directory__note {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+.platform-directory__search {
+  max-width: 480px;
+}
+.platform-directory__name {
+  display: block;
+  font-weight: var(--weight-strong);
+}
+.platform-directory__slug {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--text-machine);
+  color: var(--color-text-muted);
+}
+.platform-directory__member {
+  display: block;
+  color: var(--color-text-muted);
+}
+.platform-directory__count {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+.start-session__slug {
+  margin: 0 0 var(--space-4);
+  font-family: var(--font-mono);
+  font-size: var(--text-machine);
+  color: var(--color-text-muted);
+}
+.start-session__marker {
+  font-weight: var(--weight-regular);
+  color: var(--color-text-muted);
+}
+.start-session__facts {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+}
+.start-session__facts .field-row__value {
+  margin: 0;
+}
+.start-session__state {
+  display: grid;
+  gap: var(--space-4);
+  justify-items: start;
+}

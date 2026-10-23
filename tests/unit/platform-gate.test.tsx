@@ -15,6 +15,11 @@ vi.mock("@/lib/client", () => ({
   signOut: vi.fn(),
   refreshSession: vi.fn(),
 }));
+// RT-782: the landing is the tenant directory; an empty list keeps this about the gate.
+vi.mock("@/lib/rf2-queries", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/rf2-queries")>();
+  return { ...actual, listTenants: async () => ({ status: 200, data: [], error: undefined }) };
+});
 
 import { ActiveContextProvider } from "@/context/ActiveContextProvider";
 import { createQueryClient } from "@/lib/query";
@@ -62,9 +67,7 @@ beforeEach(() => {
 describe("/platform entry gate (RT-780)", () => {
   test("platform admin with no membership and no tenant reaches the platform shell", async () => {
     renderAt("/platform", 200, { user: admin, active_tenant: null, memberships: [] });
-    expect(
-      await screen.findByRole("heading", { name: "No organizations available" }),
-    ).toBeDefined();
+    expect(await screen.findByRole("heading", { name: "Organizations", level: 1 })).toBeDefined();
     expect(screen.getByTestId("where").textContent).toBe("/platform/tenants");
     // Never the tenant picker, never the generic no-access.
     expect(screen.queryByRole("heading", { name: /select your context/i })).toBeNull();
@@ -81,16 +84,14 @@ describe("/platform entry gate (RT-780)", () => {
         { tenant_id: "t2", tenant_name: "Helios Markets" },
       ],
     });
-    expect(
-      await screen.findByRole("heading", { name: "No organizations available" }),
-    ).toBeDefined();
+    expect(await screen.findByRole("heading", { name: "Organizations", level: 1 })).toBeDefined();
     expect(screen.queryByText("Helios Markets")).toBeNull();
     expect(screen.queryByRole("heading", { name: /select your context/i })).toBeNull();
   });
 
   test("the platform shell has a platform label and no tenant scope bar", async () => {
     renderAt("/platform", 200, { user: admin, active_tenant: null, memberships: [] });
-    await screen.findByRole("heading", { name: "No organizations available" });
+    await screen.findByRole("heading", { name: "Organizations", level: 1 });
     expect(screen.getAllByText("Platform").length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: /Northstar/ })).toBeNull();
     const nav = screen.getByRole("navigation", { name: "Platform" });
@@ -105,7 +106,7 @@ describe("/platform entry gate (RT-780)", () => {
       memberships: [{ tenant_id: "t1", tenant_name: "Northstar Retail" }],
     });
     expect(await screen.findByRole("heading", { name: "Not available" })).toBeDefined();
-    expect(screen.queryByRole("heading", { name: "No organizations available" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Organizations", level: 1 })).toBeNull();
   });
 
   test("not-admin and route-does-not-exist render identical copy", async () => {

@@ -23,7 +23,14 @@ vi.mock("@/lib/client", async (importOriginal) => {
 vi.mock("@/lib/support-session-queries", () => ({
   renewSupportSession: (...a: unknown[]) => renewSupportSession(...a),
   endSupportSession: (...a: unknown[]) => endSupportSession(...a),
+  openSupportSession: vi.fn(),
 }));
+// RT-782: /platform/tenants is the directory now; an empty platform list keeps
+// these lifecycle tests about the bar.
+vi.mock("@/lib/rf2-queries", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/rf2-queries")>();
+  return { ...actual, listTenants: async () => ({ status: 200, data: [], error: undefined }) };
+});
 
 import { ActiveContextProvider } from "@/context/ActiveContextProvider";
 import { createQueryClient } from "@/lib/query";
@@ -141,9 +148,7 @@ describe("no bar without a support session", () => {
   test("a platform admin with no session renders no bar in the platform shell", async () => {
     serve({ user: admin, active_tenant: null, memberships: [], support_session: null });
     mount("/platform/tenants");
-    expect(
-      await screen.findByRole("heading", { name: "No organizations available" }),
-    ).toBeDefined();
+    expect(await screen.findByRole("heading", { name: "Organizations", level: 1 })).toBeDefined();
     expect(screen.queryByRole("region", { name: "Support session" })).toBeNull();
   });
 });
@@ -205,6 +210,54 @@ describe("bar states", () => {
     expect(screen.queryByRole("button", { name: "Renew session" })).toBeNull();
     expect(endButton()).toBeDefined();
     expect(within(region).getByText("The support session expired")).toBeDefined();
+  });
+
+  // RT-782 (comment 13591, from the RT-781 lab run): an expired session must not
+  // say the operator is working inside the tenant (UX-12, Addendum A4).
+  test("expired: the tenant line says where the session was, never 'Working in'", async () => {
+    serve(context(sessionSummary({ status: "expired", left: -MIN })));
+    mount("/platform/tenants");
+    const region = await bar();
+    expect(within(region).getByText("The session was in Delta Markets")).toBeDefined();
+    expect(within(region).queryByText(/Working in/)).toBeNull();
+  });
+
+  test("a countdown that reaches zero also drops 'Working in'", async () => {
+    serve(context(sessionSummary({ left: 30_000 })));
+    mount("/platform/tenants");
+    const region = await bar();
+    expect(within(region).getByText("Working in Delta Markets")).toBeDefined();
+    act(() => {
+      vi.setSystemTime(NOW + MIN);
+      vi.advanceTimersByTime(1000);
+    });
+    await settle();
+    expect(region.getAttribute("data-state")).toBe("expired");
+    expect(within(region).queryByText(/Working in/)).toBeNull();
+    expect(within(region).getByText("The session was in Delta Markets")).toBeDefined();
+  });
+
+  test("expired on the directory: the notice points at the list on this page, with no self-link", async () => {
+    serve(context(sessionSummary({ status: "expired", left: -MIN })));
+    mount("/platform/tenants");
+    const region = await bar();
+    expect(
+      within(region).getByText(/open a new session from the organizations list on this page/),
+    ).toBeDefined();
+    expect(within(region).getByText(/it replaces this one/)).toBeDefined();
+    expect(within(region).queryByRole("link")).toBeNull();
+  });
+
+  test("expired elsewhere: the notice links to the directory by its real name", async () => {
+    serve(context(sessionSummary({ status: "expired", left: -MIN })));
+    mount("/");
+    const region = await bar();
+    const link = within(region).getByRole("link", { name: "the Organizations page" });
+    expect(link.getAttribute("href")).toBe("/platform/tenants");
+    expect(within(region).getByText(/it replaces this one/)).toBeDefined();
+    fireEvent.click(link);
+    await settle();
+    expect(screen.getByTestId("where").textContent).toBe("/platform/tenants");
   });
 
   test("one polite live region announces the state, not the countdown", async () => {
@@ -449,9 +502,7 @@ describe("expired body", () => {
   test("platform shell: an expired status keeps the platform-scoped directory", async () => {
     serve(context(sessionSummary({ status: "expired", left: -MIN })));
     mount("/platform/tenants");
-    expect(
-      await screen.findByRole("heading", { name: "No organizations available" }),
-    ).toBeDefined();
+    expect(await screen.findByRole("heading", { name: "Organizations", level: 1 })).toBeDefined();
     expect(screen.queryByRole("link", { name: "Go to organizations" })).toBeNull();
   });
 
@@ -485,15 +536,13 @@ describe("expired body", () => {
     expect(
       await screen.findByRole("heading", { name: "The support session expired" }),
     ).toBeDefined();
-    expect(screen.queryByRole("heading", { name: "No organizations available" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Organizations", level: 1 })).toBeNull();
   });
 
   test("a refusal seen under an old session does not expire a new one", async () => {
     serve(context(sessionSummary({ id: "s1" })));
     mount("/platform/tenants");
-    expect(
-      await screen.findByRole("heading", { name: "No organizations available" }),
-    ).toBeDefined();
+    expect(await screen.findByRole("heading", { name: "Organizations", level: 1 })).toBeDefined();
     act(() => reportSupportSessionExpired());
     expect(
       await screen.findByRole("heading", { name: "The support session expired" }),
@@ -504,9 +553,7 @@ describe("expired body", () => {
     await act(async () => {
       await qc.invalidateQueries({ queryKey: ["activeContext"] });
     });
-    expect(
-      await screen.findByRole("heading", { name: "No organizations available" }),
-    ).toBeDefined();
+    expect(await screen.findByRole("heading", { name: "Organizations", level: 1 })).toBeDefined();
     expect(screen.getByRole("region", { name: "Support session" }).getAttribute("data-state")).toBe(
       "active",
     );
@@ -528,12 +575,18 @@ describe("no tenant data across sessions", () => {
     mount("/platform/tenants");
     await bar();
     qc.setQueryData(["sales", "t1"], { rows: 1 });
+    // RT-782: only the exact directory key is kept; a tenant read beside it is not.
+    qc.setQueryData(["platform", "tenants", "t1"], { rows: 1 });
+    qc.setQueryData(["platform", "support", "t1"], { rows: 1 });
     act(() => {
       vi.setSystemTime(NOW + 3 * MIN);
       vi.advanceTimersByTime(1000);
     });
     await waitFor(() => expect(qc.getQueryData(["sales", "t1"])).toBeUndefined());
+    expect(qc.getQueryData(["platform", "tenants", "t1"])).toBeUndefined();
+    expect(qc.getQueryData(["platform", "support", "t1"])).toBeUndefined();
     expect(qc.getQueryData(["activeContext"])).toBeDefined();
+    expect(qc.getQueryData(["platform", "tenants"])).toBeDefined();
   });
 
   test("a replaced session id drops the previous tenant's reads", async () => {
@@ -630,7 +683,11 @@ describe("no write control inside a session", () => {
     serve(context(sessionSummary()));
     mount("/platform/tenants");
     await bar();
-    expect(document.querySelectorAll("form, input, textarea, select")).toHaveLength(0);
+    // RT-782: the platform-scope directory's search is the only field; no tenant form exists.
+    await screen.findByRole("heading", { name: "Organizations", level: 1 });
+    expect(document.querySelectorAll("form, textarea, select")).toHaveLength(0);
+    const inputs = [...document.querySelectorAll("input")];
+    expect(inputs.map((i) => i.id)).toEqual(["platform-tenant-search"]);
     const main = document.querySelector("main") as HTMLElement;
     expect(within(main).queryAllByRole("button")).toHaveLength(0);
     expect(within(main).queryAllByRole("link")).toHaveLength(0);

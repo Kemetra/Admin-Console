@@ -112,7 +112,9 @@ test("no bar for a member-entered tenant (support_session null)", async ({ page,
 test("no bar on /platform without a session", async ({ page, t }) => {
   await mock(page, noSession);
   await page.goto("/platform/tenants");
-  await expect(page.getByRole("heading", { name: t("platform.tenants.emptyTitle") })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 1, name: t("platform.tenants.title") }),
+  ).toBeVisible();
   await expect(page.getByRole("region", { name: t("platform.session.region") })).toHaveCount(0);
 });
 
@@ -144,7 +146,10 @@ test("no write control inside a session: only renew and end, no form field", asy
   const region = page.getByRole("region", { name: t("platform.session.region") });
   await expect(region).toBeVisible();
   await expect(page.locator("main").getByRole("button")).toHaveCount(0);
-  await expect(page.locator("form, input, textarea, select")).toHaveCount(0);
+  // RT-782: the platform-scope directory search is the only field; no tenant form.
+  await expect(page.locator("form, textarea, select")).toHaveCount(0);
+  await expect(page.locator("input")).toHaveCount(1);
+  await expect(page.locator("input#platform-tenant-search")).toHaveCount(1);
   await expect(region.getByRole("button")).toHaveText([
     t("platform.session.renew"),
     t("platform.session.end"),
@@ -255,7 +260,9 @@ test("expired: only end remains; the platform directory keeps working; axe light
   await expect(region).toHaveAttribute("data-state", "expired");
   await expect(region.getByRole("button", { name: t("platform.session.renew") })).toHaveCount(0);
   await expect(region.getByRole("button", { name: t("platform.session.end") })).toBeVisible();
-  await expect(page.getByRole("heading", { name: t("platform.tenants.emptyTitle") })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 1, name: t("platform.tenants.title") }),
+  ).toBeVisible();
   await expectNoAxeViolations(page, "session bar expired");
   await darkTheme(page);
   await expectNoAxeViolations(page, "session bar expired dark");
@@ -353,7 +360,9 @@ test("end: lands on the directory with the session gone and no tenant data left"
   const region = page.getByRole("region", { name: t("platform.session.region") });
   await region.getByRole("button", { name: t("platform.session.end") }).click();
   await expect(page).toHaveURL(/\/platform\/tenants$/);
-  await expect(page.getByRole("heading", { name: t("platform.tenants.emptyTitle") })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 1, name: t("platform.tenants.title") }),
+  ).toBeVisible();
   await expect(page.getByRole("region", { name: t("platform.session.region") })).toHaveCount(0);
   expect(server.endCalls).toBe(1);
 });
