@@ -138,3 +138,55 @@ test("the tenant console is unchanged: a member still lands on the Overview", as
   await expect(page.getByRole("heading", { name: t("shell.overview.title") })).toBeVisible();
   await expect(page.getByRole("navigation", { name: t("shell.nav.label") })).toBeVisible();
 });
+
+// RT-844: zero memberships at `/` is no-access only for a user with no other way in.
+const supportSession = {
+  id: "s1",
+  tenant_id: "t1",
+  purpose: "incident",
+  ticket_ref: "SUP-2291",
+  status: "active",
+  expires_at: "2099-01-01T00:00:00Z",
+  renewal_cap_at: "2099-01-01T00:00:00Z",
+};
+
+test("platform admin with no membership and no session at / lands on the platform console", async ({
+  page,
+  t,
+}) => {
+  await mockContext(page, 200, { user: admin, active_tenant: null, memberships: [] });
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/platform\/tenants$/);
+  await expect(
+    page.getByRole("heading", { level: 1, name: t("platform.tenants.title") }),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: t("auth.noAccess.title") })).toHaveCount(0);
+  await expectNoAxeViolations(page, "zero-membership admin lands on platform");
+});
+
+test("platform admin with no membership and an active session at / stays in the session view", async ({
+  page,
+  t,
+}) => {
+  await mockContext(page, 200, {
+    user: admin,
+    active_tenant: { id: "t1", name: "Northstar Retail" },
+    active_store: null,
+    memberships: [],
+    support_session: supportSession,
+  });
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/$/);
+  await expect(
+    page.getByRole("heading", { name: t("platform.session.readOnlyBody.title") }),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: t("auth.noAccess.title") })).toHaveCount(0);
+  await expectNoAxeViolations(page, "zero-membership admin in support session");
+});
+
+test("a non-admin with no membership still gets no-access at /", async ({ page, t }) => {
+  await mockContext(page, 200, { user: member, active_tenant: null, memberships: [] });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: t("auth.noAccess.title") })).toBeVisible();
+  await expect(page).toHaveURL(/\/$/);
+});

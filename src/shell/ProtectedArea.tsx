@@ -6,7 +6,8 @@ import { NoAccess } from "@/auth/NoAccess";
  *
  *  - loading                  → nothing yet (context resolving)
  *  - session lost (401, S5)   → redirect to SF-1 /signin
- *  - no memberships (S7)      → NoAccess
+ *  - no memberships (S7)      → NoAccess; a platform admin goes to /platform, or
+ *                               stays in their support session's tenant (RT-844)
  *  - no active tenant (multi) → ScopeGate (S2)
  *  - active tenant resolved   → AppShell
  *
@@ -25,6 +26,22 @@ import { AppShell } from "./AppShell";
 import { ScopeGate } from "./ScopeGate";
 import { type SignInRedirectState, returnPathOf } from "./return-path";
 import { useSignOut } from "./useSignOut";
+
+type Context = NonNullable<ReturnType<typeof useActiveContextValue>["context"]>;
+
+/**
+ * RT-844: a platform admin inside a support session has no membership of their
+ * own, so the session stands in for one. Only the session's own tenant counts,
+ * and only for a platform admin; every read stays authorized server-side.
+ */
+function inSupportSession(context: Context): boolean {
+  const session = context.support_session;
+  return (
+    context.user?.is_platform_admin === true &&
+    session != null &&
+    context.active_tenant?.id === session.tenant_id
+  );
+}
 
 export function ProtectedArea(): React.JSX.Element | null {
   const { context, isLoading, sessionLost, rateLimited, membershipCount } = useActiveContextValue();
@@ -47,8 +64,14 @@ export function ProtectedArea(): React.JSX.Element | null {
     const state: SignInRedirectState = { from: returnPathOf(location) };
     return <Navigate to="/signin" replace state={state} />;
   }
-  if (membershipCount === 0) {
-    return <NoAccess onSignOut={signOut} />;
+  if (membershipCount === 0 && !inSupportSession(context)) {
+    // RT-844: zero memberships is NoAccess only for a user with no other way in.
+    // A platform admin has the console, so the screen never claims "no access".
+    return context.user?.is_platform_admin === true ? (
+      <Navigate to="/platform" replace />
+    ) : (
+      <NoAccess onSignOut={signOut} />
+    );
   }
   if (!context.active_tenant) {
     return <ScopeGate />;
