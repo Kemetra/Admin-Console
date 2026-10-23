@@ -223,6 +223,14 @@ export const PIN_FILE_PATH = "contracts/backend-core/PIN" as const;
  *   - `ai-entitlements.openapi.yaml` and `erpnext-sync-ops/console-sync-ops.yaml`:
  *     the `x-runtime-status: contract-only` markers and prose only, no wire change.
  * The other 20 sources are byte-identical. No caller needed a code change.
+ *
+ * Source added, pin unchanged (RT-818, 2026-10-23): still `b9acd8c`; the
+ * commit did not move.`console-sales-summary.openapi.yaml`
+ * (1.0.0-draft, RT-649 #859, runtime RT-739 #864; `consoleGetSalesSummary`) was
+ * already in Backend-Core at that commit but had never been composed (see the
+ * earlier note that it was not composed). Composing it adds one PIN line and
+ * one `ConsoleSalesSummarySchema` namespace; the other 26 sources are
+ * byte-identical. The wrapper is `src/lib/sales-summary-queries.ts`.
  */
 export const BACKEND_CORE_PIN: ContractsPin = parsePin(
   readFileSync(resolve(repoRoot, PIN_FILE_PATH), "utf8"),
