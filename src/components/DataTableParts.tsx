@@ -16,12 +16,16 @@ export function ariaSortOf(
   return sort.direction === "asc" ? "ascending" : "descending";
 }
 
+const SORT_ICON = { asc: "sortAscending", desc: "sortDescending" } as const;
+
 /**
  * A sortable column header: a native button (Enter/Space, tab stop, the global
- * focus outline) whose label is the header text. The direction is a chevron
- * SHAPE (up = ascending) drawn from the registry's `disclosure` glyph, so it
- * never relies on colour; `aria-sort` on the `<th>` carries it for screen
- * readers. An inactive sortable column shows no mark.
+ * focus outline) whose label is the header text. The active direction is a
+ * vertical arrow SHAPE from the registry (`sortAscending` / `sortDescending`);
+ * an inactive sortable column shows the muted two-arrow `sortable` hint (RT-758,
+ * UX-10: sortability is explicit). Both are shapes, never colour alone, and
+ * decorative: `aria-sort` on the `<th>` carries the state for screen readers.
+ * The third press yields `null`, the server's order.
  */
 export function SortButton({
   header,
@@ -32,7 +36,7 @@ export function SortButton({
   header: string;
   columnKey: string;
   sort: SortState | null | undefined;
-  onSortChange: (next: SortState) => void;
+  onSortChange: (next: SortState | null) => void;
 }>): React.JSX.Element {
   const active = sort?.key === columnKey ? sort.direction : undefined;
   return (
@@ -44,10 +48,28 @@ export function SortButton({
       {header}
       {active ? (
         <span className="data-table__sort-mark" data-sort-direction={active} aria-hidden="true">
-          <Icon name="disclosure" size="sm" />
+          <Icon name={SORT_ICON[active]} size="sm" />
         </span>
-      ) : null}
+      ) : (
+        <span className="data-table__sort-mark data-table__sort-mark--hint" aria-hidden="true">
+          <Icon name="sortable" size="sm" />
+        </span>
+      )}
     </button>
+  );
+}
+
+/**
+ * The table's polite live region for the sort (RT-758). Always mounted while the
+ * table is sortable so assistive tech has registered it before the text lands;
+ * the text is driven by the press, never by the `sort` prop, so a caller reset
+ * (a scope change) or the first render announces nothing stale.
+ */
+export function SortAnnouncer({ message }: Readonly<{ message: string }>): React.JSX.Element {
+  return (
+    <output className="sr-only" aria-live="polite" aria-atomic="true">
+      {message}
+    </output>
   );
 }
 

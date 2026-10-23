@@ -16,10 +16,13 @@ export interface SortState {
   readonly direction: SortDirection;
 }
 
-/** A clicked column sorts ascending first; clicking the ascending column flips it. */
-export function nextSort(current: SortState | null | undefined, key: string): SortState {
-  const flip = current?.key === key && current.direction === "asc";
-  return { key, direction: flip ? "desc" : "asc" };
+/**
+ * RT-758 three-state cycle: a clicked column sorts ascending, then descending,
+ * then clears (`null` = the server's order). A different column starts ascending.
+ */
+export function nextSort(current: SortState | null | undefined, key: string): SortState | null {
+  if (current?.key !== key) return { key, direction: "asc" };
+  return current.direction === "asc" ? { key, direction: "desc" } : null;
 }
 
 export type SortValue = string | number | null | undefined;

@@ -20,11 +20,16 @@ describe("nextSort", () => {
     });
   });
 
-  test("clicking the descending column flips it back to ascending", () => {
-    expect(nextSort({ key: "name", direction: "desc" }, "name")).toEqual({
-      key: "name",
-      direction: "asc",
-    });
+  test("clicking the descending column clears the sort (back to the server's order)", () => {
+    expect(nextSort({ key: "name", direction: "desc" }, "name")).toBeNull();
+  });
+
+  test("the cycle is ascending, descending, server order, then ascending again", () => {
+    const first = nextSort(null, "name");
+    const second = nextSort(first, "name");
+    const third = nextSort(second, "name");
+    expect([first?.direction, second?.direction, third]).toEqual(["asc", "desc", null]);
+    expect(nextSort(third, "name")).toEqual({ key: "name", direction: "asc" });
   });
 
   test("clicking another column starts that column ascending", () => {

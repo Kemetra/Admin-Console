@@ -67,7 +67,7 @@
 }
 /* RT-753 (UX-10): opt-in sortable header. A native button that reads as the
  * header text; the global :focus-visible outline is left to draw (forced-colors
- * safe, never a box-shadow). Direction is a chevron shape: up = ascending. */
+ * safe, never a box-shadow). Direction is a registry arrow shape (RT-758). */
 .data-table__sort {
   position: relative;
   display: inline-flex;
@@ -95,8 +95,10 @@
 .data-table__sort-mark {
   display: inline-flex;
 }
-.data-table__sort-mark[data-sort-direction="asc"] svg {
-  transform: rotate(180deg);
+/* RT-758: the inactive-sortable hint is muted; in forced colours the system
+ * colours apply and it still differs from the active mark by shape (two arrows). */
+.data-table__sort-mark--hint {
+  color: var(--color-text-muted);
 }
 
 /* RT-753: the selection column and the bulk-context line above the table. */
