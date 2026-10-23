@@ -9,8 +9,8 @@
  * Colour values: owner-approved 2026-10-11 (RT-392) — the light set seeded from
  * the POS main@543688f light set, plus the dark set below. Every colour is one of
  * those values or an alias/alpha of one; nothing else may be introduced without a
- * new decision. The --color-viz-* values (RT-822) are proposed and pending
- * that decision (owner ratification, D13). .design-sync/build-bundle.mjs checks every text and boundary
+ * new decision. The --color-viz-* values (RT-822) are such a decision:
+ * owner-ratified 2026-10-23 (D13). .design-sync/build-bundle.mjs checks every text and boundary
  * pairing in both sets against WCAG AA. Names follow the POS/Admin role
  * vocabulary so a later migration slice can map them one-to-one.
  *
@@ -41,8 +41,8 @@
   --color-info: #1b6ca8;    /* information / pending */
 
   /* ── Data visualisation (RT-822, UX-13) ──────────────────────────── */
-  /* A separate family: never a status or intent role. PENDING OWNER
-   * RATIFICATION: rule 8 still bars charts until the palette is ratified.
+  /* A separate family: never a status or intent role. Owner-ratified
+   * 2026-10-23 (D13); rule 8 in README.md sets how charts use it.
    * Categorical in this order, never cycled; sequential 1 = least; diverging
    * orange below / violet above a neutral midpoint, neither good nor bad. */
   --color-viz-cat-1: #5d7cfd; /* indigo */

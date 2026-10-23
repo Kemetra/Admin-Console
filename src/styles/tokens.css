@@ -32,8 +32,8 @@
 
   /* Data visualisation (RT-822, UX-13): a separate family that never reuses a
    * status or intent role. Every mark clears 3:1 on all three layers; the
-   * receding ends (seq-1, each diverging arm's step 1) clear 2:1. Pending owner
-   * ratification: design-system rule 8 still bars charts until it lands. */
+   * receding ends (seq-1, each diverging arm's step 1) clear 2:1. Owner-ratified
+   * 2026-10-23 (D13); design-system rule 8 sets how charts use them. */
   /* Categorical: series identity, assigned in this order, never cycled. */
   --color-viz-cat-1: #5d7cfd; /* indigo */
   --color-viz-cat-2: #767700; /* olive */

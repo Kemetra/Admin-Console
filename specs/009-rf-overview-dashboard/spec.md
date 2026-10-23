@@ -68,8 +68,9 @@ Backend-Core membership roles enforced by each operation's guard (verified on Ba
 - **NG-1. Sales KPIs.** No Backend-Core contract serves console sales figures (§5.4). The sales
   panel waits for BC-009-1; its figures are decided (OD-009-1, §10). No
   placeholder "coming soon" tile is rendered.
-- **NG-2. Charts.** Bar, line and sparkline charts are not allowed until UX-13 ratifies a data
-  palette (design-system rule 8). Counts appear as text in a ledger.
+- **NG-2. Charts.** Bar, line and sparkline charts are not part of v1. The UX-13 data palette
+  was ratified on 2026-10-23 (RT-822, design-system rule 8). Any later Overview chart follows
+  rule 8 on the `--color-viz-*` tokens. Counts appear as text in a ledger.
 - **NG-3. Integration / ERP sync health tile.** `consoleGetSyncOpsSummary` exists, but there is
   no console destination for it yet. It belongs with RT-557 (spec 016); see §5.5.
 - **NG-4. Platform health, telemetry and cross-tenant views.** These belong to RT-391 (§4).

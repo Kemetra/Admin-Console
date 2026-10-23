@@ -156,10 +156,10 @@ focus, copy, status and border/icon feedback stay intact.
 - **Data color ≠ status color (UX-13):** chart categorical, sequential and diverging palettes
   are a separate token family, never reused success/warning/danger/info. Up/down is never
   automatically green/red.
-- **Data-viz tokens (RT-822, pending owner ratification).** `src/styles/tokens.css` ships the
+- **Data-viz tokens (RT-822, owner-ratified 2026-10-23).** `src/styles/tokens.css` ships the
   `--color-viz-*` family in light and dark (the same values as
-  `design/claude-design-system/colors_and_type.css`). Until the owner ratifies the rendered
-  palette, design-system rule 8 still bars bar, line and sparkline charts.
+  `design/claude-design-system/colors_and_type.css`). Design-system rule 8 sets how charts use
+  it.
   - **Categorical** `--color-viz-cat-1`…`--color-viz-cat-8`: indigo, olive, magenta, orange,
     cyan, crimson, violet, green. Assign in this order and never cycle; a ninth series folds into
     "Other". Adjacent slots stay apart under protanopia and deuteranopia (OKLab ΔE ≥ 13.9) and
