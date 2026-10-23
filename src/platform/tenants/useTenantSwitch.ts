@@ -10,7 +10,7 @@
 import { useActiveContextValue } from "@/context/ActiveContextProvider";
 import type { MessageKey } from "@/i18n";
 import { queryKeys } from "@/lib/query";
-import { useQueryClient } from "@tanstack/react-query";
+import { type QueryClient, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router";
 
@@ -21,6 +21,13 @@ const NO_ANSWER: MessageKey = "platform.tenants.error.switch";
 /** The switch may have landed, but the context re-read failed: nothing is claimed either way. */
 const UNCONFIRMED: MessageKey = "platform.tenants.error.switchUnconfirmed";
 
+/** Null when the re-read context shows the tenant active; otherwise why it did not land. */
+function switchOutcome(qc: QueryClient, tenantId: string): MessageKey | null {
+  if (qc.getQueryState(queryKeys.activeContext)?.status === "error") return UNCONFIRMED;
+  const read = qc.getQueryData<ContextRead>(queryKeys.activeContext);
+  return read?.data?.active_tenant?.id === tenantId ? null : REFUSED;
+}
+
 export function useTenantSwitch(onSwitched: () => void) {
   const { switchTenant } = useActiveContextValue();
   const qc = useQueryClient();
@@ -28,20 +35,13 @@ export function useTenantSwitch(onSwitched: () => void) {
   const inFlight = useRef(false);
   const [failure, setFailure] = useState<MessageKey | null>(null);
 
-  /** Null when the re-read shows the tenant active; otherwise why it did not land. */
-  const outcomeFor = (tenantId: string): MessageKey | null => {
-    if (qc.getQueryState(queryKeys.activeContext)?.status === "error") return UNCONFIRMED;
-    const read = qc.getQueryData<ContextRead>(queryKeys.activeContext);
-    return read?.data?.active_tenant?.id === tenantId ? null : REFUSED;
-  };
-
   const toTenant = async (tenantId: string) => {
     if (inFlight.current) return;
     inFlight.current = true;
     setFailure(null);
     try {
       await switchTenant(tenantId);
-      const why = outcomeFor(tenantId);
+      const why = switchOutcome(qc, tenantId);
       if (why) {
         setFailure(why);
         return;
