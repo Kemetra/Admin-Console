@@ -178,7 +178,11 @@ export function PlatformTenants(): React.JSX.Element {
   const directory = useTenantDirectory();
   const [query, setQuery] = useState("");
   const [starting, setStarting] = useState<StartTenant | null>(null);
-  const { toTenant, failure: switchFailure } = useTenantSwitch(() => setStarting(null));
+  const {
+    toTenant,
+    failure: switchFailure,
+    clearFailure,
+  } = useTenantSwitch(() => setStarting(null));
 
   return (
     <section aria-labelledby="platform-tenants-title" className="platform-directory">
@@ -205,7 +209,10 @@ export function PlatformTenants(): React.JSX.Element {
       <DirectoryBody
         query={query}
         directory={directory}
-        onStart={(row) => setStarting({ id: row.id, name: row.name, slug: row.slug })}
+        onStart={(row) => {
+          clearFailure();
+          setStarting({ id: row.id, name: row.name, slug: row.slug });
+        }}
         onSwitch={(id) => void toTenant(id)}
       />
 

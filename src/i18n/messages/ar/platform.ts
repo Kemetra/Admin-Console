@@ -80,6 +80,8 @@ export const platform = {
   "platform.tenants.error.switch": "تعذّر فتح المؤسسة لأن الطلب لم يصل. حاول مرة أخرى.",
   "platform.tenants.error.switchRefused":
     "لم تُفتح المؤسسة: رفض الخادم التبديل إليها، ولم يتغير شيء.",
+  "platform.tenants.error.switchUnconfirmed":
+    "تعذّر التأكد من فتح المؤسسة لأن قراءة الحالة بعد التبديل لم تكتمل. أعد تحميل الصفحة للتحقق.",
 
   "platform.start.title": "جلسة دعم: {name}",
   "platform.start.required": "(إلزامي)",

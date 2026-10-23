@@ -251,6 +251,36 @@ describe("row actions are completable (UX Addendum A3)", () => {
     expect(screen.getByTestId("where").textContent).toBe("/platform/tenants");
   });
 
+  test("an accepted switch whose context re-read fails is not called refused", async () => {
+    serve(noSession([{ tenant_id: NILE, tenant_name: "Nile Pharma", role_code: "owner" }]));
+    switchActiveTenant.mockImplementation(async () => {
+      getActiveContext.mockRejectedValue(new TypeError("Failed to fetch"));
+      return { status: 200, data: {} };
+    });
+    mount();
+    await table();
+    fireEvent.click(screen.getByRole("button", { name: "Open organization: Nile Pharma" }));
+    expect(
+      await screen.findByText(/Couldn't confirm the organization opened/, {}, { timeout: 5000 }),
+    ).toBeDefined();
+    expect(screen.queryByText(/the server refused the switch/)).toBeNull();
+  });
+
+  test("a stale switch failure is cleared when a support-session drawer opens", async () => {
+    serve(noSession([{ tenant_id: NILE, tenant_name: "Nile Pharma", role_code: "owner" }]));
+    switchActiveTenant.mockRejectedValue(new TypeError("Failed to fetch"));
+    openSupportSession.mockResolvedValue(res(409, "already_member"));
+    mount();
+    await table();
+    fireEvent.click(screen.getByRole("button", { name: "Open organization: Nile Pharma" }));
+    await screen.findByText(/request didn't get through/);
+    const drawer = await openDrawer();
+    fill(drawer, "incident");
+    submit(drawer);
+    await within(drawer).findByText("You're a member of this organization");
+    expect(within(drawer).queryByText(/request didn't get through/)).toBeNull();
+  });
+
   test("a switch that never got an answer is said, keeps the operator here, and allows one switch at a time", async () => {
     serve(noSession([{ tenant_id: NILE, tenant_name: "Nile Pharma", role_code: "owner" }]));
     let fail: (e: unknown) => void = () => undefined;

@@ -76,6 +76,8 @@ export const platform: MessagesOf<typeof ar> = {
     "Couldn't open the organization because the request didn't get through. Try again.",
   "platform.tenants.error.switchRefused":
     "The organization wasn't opened: the server refused the switch, and nothing changed.",
+  "platform.tenants.error.switchUnconfirmed":
+    "Couldn't confirm the organization opened, because reading the state after the switch didn't finish. Reload the page to check.",
 
   "platform.start.title": "Support session: {name}",
   "platform.start.required": "(required)",

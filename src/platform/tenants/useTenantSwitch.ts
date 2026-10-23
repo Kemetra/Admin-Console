@@ -18,6 +18,8 @@ type ContextRead = { kind: string; data?: { active_tenant?: { id?: string } | nu
 
 const REFUSED: MessageKey = "platform.tenants.error.switchRefused";
 const NO_ANSWER: MessageKey = "platform.tenants.error.switch";
+/** The switch may have landed, but the context re-read failed: nothing is claimed either way. */
+const UNCONFIRMED: MessageKey = "platform.tenants.error.switchUnconfirmed";
 
 export function useTenantSwitch(onSwitched: () => void) {
   const { switchTenant } = useActiveContextValue();
@@ -26,8 +28,12 @@ export function useTenantSwitch(onSwitched: () => void) {
   const inFlight = useRef(false);
   const [failure, setFailure] = useState<MessageKey | null>(null);
 
-  const activeTenantIs = (tenantId: string) =>
-    qc.getQueryData<ContextRead>(queryKeys.activeContext)?.data?.active_tenant?.id === tenantId;
+  /** Null when the re-read shows the tenant active; otherwise why it did not land. */
+  const outcomeFor = (tenantId: string): MessageKey | null => {
+    if (qc.getQueryState(queryKeys.activeContext)?.status === "error") return UNCONFIRMED;
+    const read = qc.getQueryData<ContextRead>(queryKeys.activeContext);
+    return read?.data?.active_tenant?.id === tenantId ? null : REFUSED;
+  };
 
   const toTenant = async (tenantId: string) => {
     if (inFlight.current) return;
@@ -35,8 +41,9 @@ export function useTenantSwitch(onSwitched: () => void) {
     setFailure(null);
     try {
       await switchTenant(tenantId);
-      if (!activeTenantIs(tenantId)) {
-        setFailure(REFUSED);
+      const why = outcomeFor(tenantId);
+      if (why) {
+        setFailure(why);
         return;
       }
       onSwitched();
@@ -48,5 +55,5 @@ export function useTenantSwitch(onSwitched: () => void) {
     }
   };
 
-  return { toTenant, failure };
+  return { toTenant, failure, clearFailure: () => setFailure(null) };
 }
