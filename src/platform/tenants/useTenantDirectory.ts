@@ -19,27 +19,32 @@ class DirectoryReadError extends Error {
   }
 }
 
+function requestIdOf(error: unknown): string | undefined {
+  return (error as { error?: { request_id?: string } } | undefined)?.error?.request_id;
+}
+
+async function readDirectory(): Promise<TenantSummary[]> {
+  const res = await listTenants();
+  if (res.status === 429) throw new DirectoryReadError({ kind: "rate-limited" });
+  if (res.status >= 400) {
+    throw new DirectoryReadError({ kind: "failed", requestId: requestIdOf(res.error) });
+  }
+  // Never trust the shape: anything but an array is no rows, not a crash.
+  return Array.isArray(res.data) ? res.data : [];
+}
+
+function directoryErrorOf(error: Error | null): DirectoryError | undefined {
+  if (!error) return undefined;
+  return error instanceof DirectoryReadError ? error.detail : { kind: "failed" };
+}
+
 export function useTenantDirectory() {
   const query = useQuery<TenantSummary[]>({
     queryKey: tenantDirectoryKey,
-    queryFn: async () => {
-      const res = await listTenants();
-      if (res.status === 429) throw new DirectoryReadError({ kind: "rate-limited" });
-      if (res.status >= 400) {
-        const requestId = (res.error as { error?: { request_id?: string } } | undefined)?.error
-          ?.request_id;
-        throw new DirectoryReadError({ kind: "failed", requestId });
-      }
-      // Never trust the shape: anything but an array is no rows, not a crash.
-      return Array.isArray(res.data) ? res.data : [];
-    },
+    queryFn: readDirectory,
     retry: false,
   });
-  const error = query.error
-    ? query.error instanceof DirectoryReadError
-      ? query.error.detail
-      : ({ kind: "failed" } as const)
-    : undefined;
+  const error = directoryErrorOf(query.error);
   return {
     tenants: query.data,
     isLoading: query.isLoading,

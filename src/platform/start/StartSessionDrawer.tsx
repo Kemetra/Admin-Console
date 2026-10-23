@@ -101,18 +101,79 @@ function ScopeFacts({ replacesSession }: Readonly<{ replacesSession: boolean }>)
   );
 }
 
-export function StartSessionDrawer({
-  tenant,
-  replacesSession,
-  onClose,
-  onNotAvailable,
-  onSwitch,
-  switchFailed = false,
-}: Readonly<StartSessionDrawerProps>): React.JSX.Element {
+function PurposeField({ error }: Readonly<{ error?: MessageKey }>) {
   const t = useT();
-  const start = useStartSession(tenant.id, onClose);
-  const { errors, notice, pending, view } = start;
+  return (
+    <div className="field">
+      <label htmlFor="start-purpose">
+        {t("platform.start.purpose.label")}{" "}
+        <span className="start-session__marker">{t("platform.start.required")}</span>
+      </label>
+      <select
+        id="start-purpose"
+        name="purpose"
+        className="input"
+        defaultValue=""
+        aria-required="true"
+        aria-invalid={error ? "true" : undefined}
+        aria-describedby={error ? "start-purpose-error" : undefined}
+      >
+        <option value="" disabled>
+          {t("platform.start.purpose.placeholder")}
+        </option>
+        {SUPPORT_PURPOSES.map((p) => (
+          <option key={p} value={p}>
+            {t(`platform.session.purpose.${p}` as MessageKey)}
+          </option>
+        ))}
+      </select>
+      <span id="start-purpose-error">
+        <InlineError message={error ? t(error) : undefined} />
+      </span>
+    </div>
+  );
+}
 
+function TicketField({ error }: Readonly<{ error?: MessageKey }>) {
+  const t = useT();
+  return (
+    <div className="field">
+      <label htmlFor="start-ticket">
+        {t("platform.start.ticket.label")}{" "}
+        <span className="start-session__marker">{t("platform.start.optional")}</span>
+      </label>
+      <input
+        id="start-ticket"
+        name="ticketRef"
+        className="input input--mono"
+        dir="ltr"
+        maxLength={64}
+        autoComplete="off"
+        spellCheck={false}
+        aria-invalid={error ? "true" : undefined}
+        aria-describedby={error ? "start-ticket-error start-ticket-hint" : "start-ticket-hint"}
+      />
+      <span id="start-ticket-hint" className="field__hint">
+        {t("platform.start.ticket.hint")}
+      </span>
+      <span id="start-ticket-error">
+        <InlineError message={error ? t(error) : undefined} />
+      </span>
+    </div>
+  );
+}
+
+function StartForm({
+  start,
+  replacesSession,
+  onCancel,
+}: Readonly<{
+  start: ReturnType<typeof useStartSession>;
+  replacesSession: boolean;
+  onCancel: () => void;
+}>) {
+  const t = useT();
+  const { errors, notice, pending } = start;
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
@@ -121,104 +182,72 @@ export function StartSessionDrawer({
       ticketRef: textField(form, "ticketRef"),
     });
   };
+  return (
+    <form className="surface__form" onSubmit={onSubmit} noValidate>
+      {notice ? (
+        <Banner
+          variant={notice.variant}
+          message={t(notice.messageKey)}
+          requestId={notice.requestId}
+        />
+      ) : null}
+      <PurposeField error={errors.purpose} />
+      <TicketField error={errors.ticketRef} />
+      <ScopeFacts replacesSession={replacesSession} />
+      <div className="surface__actions">
+        <GatedButton
+          type="submit"
+          className="btn-primary"
+          disabled={pending}
+          aria-busy={pending || undefined}
+        >
+          {pending ? <span className="spinner" aria-hidden="true" /> : null}
+          {t("platform.start.submit")}
+        </GatedButton>
+        <button type="button" className="btn-secondary" onClick={onCancel} disabled={pending}>
+          {t("common.cancel")}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function DrawerView({
+  start,
+  props,
+}: Readonly<{ start: ReturnType<typeof useStartSession>; props: StartSessionDrawerProps }>) {
+  const { view } = start;
+  if (view.kind === "not-found") return <NotAvailable view={view} onBack={props.onNotAvailable} />;
+  if (view.kind === "member") {
+    return (
+      <Member
+        onSwitch={() => props.onSwitch(props.tenant.id)}
+        failed={props.switchFailed ?? false}
+      />
+    );
+  }
+  return (
+    <StartForm start={start} replacesSession={props.replacesSession} onCancel={props.onClose} />
+  );
+}
+
+export function StartSessionDrawer(props: Readonly<StartSessionDrawerProps>): React.JSX.Element {
+  const t = useT();
+  const { tenant, onClose } = props;
+  const start = useStartSession(tenant.id, onClose);
 
   return (
     <Drawer
       title={t("platform.start.title", { name: tenant.name })}
       onClose={onClose}
-      dismissible={!pending}
+      dismissible={!start.pending}
     >
       {tenant.slug ? (
         <p className="start-session__slug">
           <bdi dir="ltr">{tenant.slug}</bdi>
         </p>
       ) : null}
-      {view.kind === "not-found" ? <NotAvailable view={view} onBack={onNotAvailable} /> : null}
-      {view.kind === "member" ? (
-        <Member onSwitch={() => onSwitch(tenant.id)} failed={switchFailed} />
-      ) : null}
-      {view.kind === "form" ? (
-        <form className="surface__form" onSubmit={onSubmit} noValidate>
-          {notice ? (
-            <Banner
-              variant={notice.variant}
-              message={t(notice.messageKey)}
-              requestId={notice.requestId}
-            />
-          ) : null}
-
-          <div className="field">
-            <label htmlFor="start-purpose">
-              {t("platform.start.purpose.label")}{" "}
-              <span className="start-session__marker">{t("platform.start.required")}</span>
-            </label>
-            <select
-              id="start-purpose"
-              name="purpose"
-              className="input"
-              defaultValue=""
-              aria-required="true"
-              aria-invalid={errors.purpose ? "true" : undefined}
-              aria-describedby={errors.purpose ? "start-purpose-error" : undefined}
-            >
-              <option value="" disabled>
-                {t("platform.start.purpose.placeholder")}
-              </option>
-              {SUPPORT_PURPOSES.map((p) => (
-                <option key={p} value={p}>
-                  {t(`platform.session.purpose.${p}` as MessageKey)}
-                </option>
-              ))}
-            </select>
-            <span id="start-purpose-error">
-              <InlineError message={errors.purpose ? t(errors.purpose) : undefined} />
-            </span>
-          </div>
-
-          <div className="field">
-            <label htmlFor="start-ticket">
-              {t("platform.start.ticket.label")}{" "}
-              <span className="start-session__marker">{t("platform.start.optional")}</span>
-            </label>
-            <input
-              id="start-ticket"
-              name="ticketRef"
-              className="input input--mono"
-              dir="ltr"
-              maxLength={64}
-              autoComplete="off"
-              spellCheck={false}
-              aria-invalid={errors.ticketRef ? "true" : undefined}
-              aria-describedby={
-                errors.ticketRef ? "start-ticket-error start-ticket-hint" : "start-ticket-hint"
-              }
-            />
-            <span id="start-ticket-hint" className="field__hint">
-              {t("platform.start.ticket.hint")}
-            </span>
-            <span id="start-ticket-error">
-              <InlineError message={errors.ticketRef ? t(errors.ticketRef) : undefined} />
-            </span>
-          </div>
-
-          <ScopeFacts replacesSession={replacesSession} />
-
-          <div className="surface__actions">
-            <GatedButton
-              type="submit"
-              className="btn-primary"
-              disabled={pending}
-              aria-busy={pending || undefined}
-            >
-              {pending ? <span className="spinner" aria-hidden="true" /> : null}
-              {t("platform.start.submit")}
-            </GatedButton>
-            <button type="button" className="btn-secondary" onClick={onClose} disabled={pending}>
-              {t("common.cancel")}
-            </button>
-          </div>
-        </form>
-      ) : null}
+      <DrawerView start={start} props={props} />
     </Drawer>
   );
 }

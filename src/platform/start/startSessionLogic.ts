@@ -49,16 +49,22 @@ function isPurpose(value: string): value is SupportPurpose {
 }
 
 /** The request body, or the field errors that keep it from being sent. */
+function isTicketValid(ticket: string): boolean {
+  return ticket === "" || TICKET_REF_PATTERN.test(ticket);
+}
+
+function draftErrors(purpose: string, ticket: string): StartDraftErrors {
+  const errors: StartDraftErrors = {};
+  if (!isPurpose(purpose)) errors.purpose = "platform.start.purpose.required";
+  if (!isTicketValid(ticket)) errors.ticketRef = "platform.start.ticket.invalid";
+  return errors;
+}
+
 export function buildOpenRequest(tenantId: string, draft: Readonly<StartDraft>): BuiltRequest {
   const ticket = draft.ticketRef.trim();
-  const errors: StartDraftErrors = {};
-  if (!isPurpose(draft.purpose)) errors.purpose = "platform.start.purpose.required";
-  if (ticket !== "" && !TICKET_REF_PATTERN.test(ticket)) {
-    errors.ticketRef = "platform.start.ticket.invalid";
-  }
-  if (errors.purpose || errors.ticketRef || !isPurpose(draft.purpose)) {
-    return { ok: false, errors };
-  }
+  const errors = draftErrors(draft.purpose, ticket);
+  if (!isPurpose(draft.purpose)) return { ok: false, errors };
+  if (errors.ticketRef) return { ok: false, errors };
   const body: OpenSupportSessionRequest = { tenant_id: tenantId, purpose: draft.purpose };
   if (ticket !== "") body.ticket_ref = ticket;
   return { ok: true, body };
@@ -90,13 +96,24 @@ function failureKey(status: number, code: string | undefined): MessageKey {
     : "platform.start.error.forbidden";
 }
 
+/** The outcomes decided by the status alone. */
+const BY_STATUS: Readonly<Record<number, (requestId?: string) => OpenOutcome>> = {
+  201: () => ({ kind: "opened" }),
+  401: () => ({ kind: "unauthenticated" }),
+  404: (requestId) => ({ kind: "not-found", requestId }),
+  429: () => ({ kind: "rate-limited" }),
+};
+
 export function classifyOpen(result: OpenResult): OpenOutcome {
-  const code = result.error?.error?.code;
-  const requestId = result.error?.error?.request_id;
-  if (result.status === 201) return { kind: "opened" };
-  if (result.status === 404) return { kind: "not-found", requestId };
-  if (result.status === 409 && code === "already_member") return { kind: "already-member" };
-  if (result.status === 429) return { kind: "rate-limited" };
-  if (result.status === 401) return { kind: "unauthenticated" };
-  return { kind: "failed", messageKey: failureKey(result.status, code), requestId };
+  const envelope = result.error?.error ?? {};
+  if (result.status === 409 && envelope.code === "already_member") {
+    return { kind: "already-member" };
+  }
+  const byStatus = BY_STATUS[result.status];
+  if (byStatus) return byStatus(envelope.request_id);
+  return {
+    kind: "failed",
+    messageKey: failureKey(result.status, envelope.code),
+    requestId: envelope.request_id,
+  };
 }
