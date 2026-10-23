@@ -3,7 +3,7 @@
  * Do not make direct changes to the file.
  */
 
-// Source: Data-Pulse-2 @ b9acd8c492c8d696987367c3c8b894907fb9b41c
+// Source: Data-Pulse-2 @ 24196757a490f0d188927c11da23c809d285799e
 // Sources:
 // - packages/contracts/openapi/auth.openapi.yaml
 // - packages/contracts/openapi/context.openapi.yaml
@@ -3732,7 +3732,7 @@ export namespace ErpnextReconciliationSchema {
                  *
                  *     Handling: readable only through this tenant-scoped, cookieAuth read model. Backend-Core never writes it to a log (length or hash only), audit metadata, a metric label, Sentry or Datadog. A consumer renders it as plain text, never as HTML, shows it only to the roles that can read this backlog, and does not copy it into exports or analytics.
                  *
-                 *     Runtime transition: until the RT-410 storage and write path ship, the server still returns the category text here. Consumers must not depend on that, or on `reason` equalling `rejectionCategory`.
+                 *     Runtime: the RT-410 storage (migration 0071) and write path have shipped, so the server returns the stored message here, or null in the cases above, and never the category text. Consumers must not depend on `reason` equalling `rejectionCategory`.
                  */
                 reason?: string | null;
                 /**
@@ -6291,7 +6291,7 @@ export namespace DevicesSchema {
                  * @description The open custody exception: the id of the open shift still on this revoked device (see "Custody exception" above). `null` when there is none, and always `null` on an active device.
                  */
                 custodyExceptionShiftId: string | null;
-                /** @description RT-719. The POS build the terminal last reported, or `null` when it has never reported one (unknown, never a default build). OPTIONAL: absent until the RT-719 runtime ships, and an absent key means the same as `null`. Self-reported; not a trust signal; not `lastSeenAt`. */
+                /** @description RT-719. The POS build the terminal last reported, or `null` when it has never reported one (unknown, never a default build). OPTIONAL: sent since the RT-719 runtime, and an absent key means the same as `null`. Self-reported; not a trust signal; not `lastSeenAt`. */
                 buildIdentity?: components["schemas"]["DeviceBuildIdentity"] | null;
             } & (components["schemas"]["TrustStateConsistency"] & components["schemas"]["LastSeenConsistency"]);
             /** @description One device with its revoke note and retire attribution. The summary fields are the `DeviceSummary` fields, with the same rules. A retired device always carries `retireReason`; any other device has `retireReason` and `retiredByUserId` null. */
@@ -10918,6 +10918,126 @@ export namespace InventorySchema {
             patch?: never;
             trace?: never;
         };
+        "/api/inventory/v1/tracking-holds": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            get?: never;
+            put?: never;
+            /**
+             * Place a quality hold on a tracking identity.
+             * @description RT-449 (RT-50 G7-6, decisions 739, 740, 965): a `quality_hold` record on a tracking identity of the tenant. The identity's positive `sellable` and `return_inspection` positions, at every location of every store, move into `quality_hold` as RT-435 status moves (reason `quality_hold`, `erp_neutral` effect pairs carrying the identity); negative and zero positions are not moved. Steps the tenant's Inventory Safety Revision once. At most one active quality hold per identity (409 `hold_already_active`). An identity of another tenant is a non-disclosing 404. Owner or tenant_admin (H1, H2). Idempotent via the `Idempotency-Key` header; nothing is written on a refusal.
+             */
+            post: operations["placeQualityHold"];
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/inventory/v1/tracking-holds/{holdId}": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * Read one tracking hold.
+             * @description RT-449: a quality or recall hold of the tenant. Another tenant's hold is a non-disclosing 404. Owner or tenant_admin.
+             */
+            get: operations["getTrackingHold"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/inventory/v1/tracking-holds/{holdId}/release": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            get?: never;
+            put?: never;
+            /**
+             * Release a tracking hold.
+             * @description RT-449 (RT-50 G7-6; rulings H3, H4): ends a hold. A released quality hold returns the identity's positive `quality_hold` positions to `sellable` (reason `hold_release`), or to `recall_hold` (reason `recall`) when the identity has ever been under a recall hold, active or released, so a recalled lot's stock leaves only through Gate 8. Releasing a recall hold moves nothing: that stock leaves only through the Gate 8 disposition (RT-293). Steps the Inventory Safety Revision once. A released hold is final: releasing it again answers the recorded release and writes nothing. Another tenant's hold is a non-disclosing 404. Owner only (965, H1).
+             */
+            post: operations["releaseTrackingHold"];
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/inventory/v1/recalls": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            get?: never;
+            put?: never;
+            /**
+             * Recall listed tracking identities of one product.
+             * @description RT-449 (RT-50 G7-6, decisions 860–863): a Recall, an Inventory safety Business Event (reason code, external reference such as an authority notice, product, listed identities, `effectiveAt`). It creates one `recall_hold` per listed identity and moves each identity's positive `sellable` and `return_inspection` positions into `recall_hold` (reason `recall`, `erp_neutral` effect pairs) — all under ONE Inventory Safety Revision step. The product is never retired (861). Duplicate identities and a future `effectiveAt` are a 400; a product or identity that is not of this tenant and product is a non-disclosing 404; an identity already under an active recall hold is a 409 `hold_already_active`. Owner or tenant_admin (H1, H2). Idempotent via the `Idempotency-Key` header; nothing is written on a refusal.
+             */
+            post: operations["createInventoryRecall"];
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/inventory/v1/recalls/{recallId}": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * Read one recall with its holds.
+             * @description RT-449: a recall of the tenant and its holds (released or not). Another tenant's recall is a non-disclosing 404. Owner or tenant_admin.
+             */
+            get: operations["getInventoryRecall"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+        "/api/inventory/v1/tracking-identities/{identityId}/expiry-corrections": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            get?: never;
+            put?: never;
+            /**
+             * Correct a tracking identity's expiry date, with history.
+             * @description RT-449 (RT-50 G7-2, ruling H7): the governed correction of an identity's `expiryDate`. Null clears an optional expiry; when the product's tracking profile requires an expiry, clearing it is a 400. Every correction is kept as history (old date, new date, reason, actor) and steps the Inventory Safety Revision once; the expiry never changes without it. The current date again is a 409 `expiry_unchanged`; a date before the identity's manufacture date is a 400. Another tenant's identity is a non-disclosing 404. Owner or tenant_admin. Idempotent via the `Idempotency-Key` header; nothing is written on a refusal.
+             */
+            post: operations["correctTrackingIdentityExpiry"];
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
         "/api/inventory/v1/admin/sale-linked-backfill": {
             parameters: {
                 query?: never;
@@ -11198,6 +11318,137 @@ export namespace InventorySchema {
             SetReturnLandingPolicyCommand: {
                 returnLandingStatus: components["schemas"]["ReturnLandingStatus"];
             };
+            /** @description RT-449: a machine reason code of a hold, recall or expiry correction, lower snake case (e.g. `supplier_notice`, `authority_notice`, `label_misprint`). */
+            SafetyReasonCode: string;
+            /** @description Operator note (no PII). */
+            SafetyNote: string;
+            /**
+             * Format: int64
+             * @description RT-449 (G7-7): the tenant's monotonic Inventory Safety Revision this command produced (a replay answers the recorded one).
+             */
+            SafetyRevision: number;
+            /** @description Strict command. Tenant and actor are resolved server-side. */
+            PlaceQualityHoldCommand: {
+                /** Format: uuid */
+                trackingIdentityId: string;
+                reasonCode: components["schemas"]["SafetyReasonCode"];
+                note?: components["schemas"]["SafetyNote"];
+            };
+            ReleaseTrackingHoldCommand: {
+                note?: components["schemas"]["SafetyNote"];
+            };
+            /** @description RT-449 (G7-6): a quality or recall hold on a tracking identity. An active hold blocks selling the identity. */
+            TrackingHold: {
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                trackingIdentityId: string;
+                /** Format: uuid */
+                tenantProductRef: string;
+                /** @enum {string} */
+                kind: "quality_hold" | "recall_hold";
+                reasonCode: components["schemas"]["SafetyReasonCode"];
+                note: string | null;
+                /**
+                 * Format: uuid
+                 * @description The recall that placed a recall hold; null for a quality hold.
+                 */
+                recallId: string | null;
+                /**
+                 * Format: uuid
+                 * @description The placing principal's user id (an internal actor reference, not PII).
+                 */
+                placedBy: string;
+                /** Format: date-time */
+                placedAt: string;
+                /** Format: uuid */
+                releasedBy: string | null;
+                /** Format: date-time */
+                releasedAt: string | null;
+                releaseNote: string | null;
+                /** @description True until the hold is released. */
+                active: boolean;
+            };
+            TrackingHoldResult: {
+                hold: components["schemas"]["TrackingHold"];
+                safetyRevision: components["schemas"]["SafetyRevision"];
+            };
+            /** @description Strict command. Tenant and actor are resolved server-side. */
+            CreateInventoryRecallCommand: {
+                /** Format: uuid */
+                tenantProductRef: string;
+                /** @description Identities of `tenantProductRef` to recall. */
+                trackingIdentityIds: string[];
+                reasonCode: components["schemas"]["SafetyReasonCode"];
+                /** @description The external reference, e.g. an authority notice number. */
+                reference: string;
+                note?: components["schemas"]["SafetyNote"];
+                /**
+                 * Format: date-time
+                 * @description When the recall takes effect; defaults to now and is never in the future.
+                 */
+                effectiveAt?: string;
+            };
+            /** @description RT-449 (G7-6, 860): a Recall and the recall hold it placed on each listed identity. */
+            InventoryRecall: {
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                tenantProductRef: string;
+                reasonCode: components["schemas"]["SafetyReasonCode"];
+                reference: string;
+                note: string | null;
+                /** Format: date-time */
+                effectiveAt: string;
+                /**
+                 * Format: uuid
+                 * @description The acting principal's user id (an internal actor reference, not PII).
+                 */
+                createdBy: string;
+                /** Format: date-time */
+                createdAt: string;
+                holds: components["schemas"]["TrackingHold"][];
+            };
+            InventoryRecallResult: {
+                recall: components["schemas"]["InventoryRecall"];
+                safetyRevision: components["schemas"]["SafetyRevision"];
+            };
+            /** @description Strict command. Tenant and actor are resolved server-side. */
+            CorrectTrackingIdentityExpiryCommand: {
+                /**
+                 * Format: date
+                 * @description The corrected expiry date. Null clears it, unless the product's tracking profile requires an expiry (then a 400).
+                 */
+                expiryDate: string | null;
+                reasonCode: components["schemas"]["SafetyReasonCode"];
+                note?: components["schemas"]["SafetyNote"];
+            };
+            /** @description RT-449 (G7-2): one entry of an identity's expiry history. */
+            TrackingIdentityExpiryCorrection: {
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                trackingIdentityId: string;
+                /** Format: uuid */
+                tenantProductRef: string;
+                /** Format: date */
+                oldExpiryDate: string | null;
+                /** Format: date */
+                newExpiryDate: string | null;
+                reasonCode: components["schemas"]["SafetyReasonCode"];
+                note: string | null;
+                /**
+                 * Format: uuid
+                 * @description The acting principal's user id (an internal actor reference, not PII).
+                 */
+                createdBy: string;
+                /** Format: date-time */
+                createdAt: string;
+            };
+            TrackingIdentityExpiryCorrectionResult: {
+                correction: components["schemas"]["TrackingIdentityExpiryCorrection"];
+                safetyRevision: components["schemas"]["SafetyRevision"];
+            };
             StockMovementList: {
                 /** @description Bounded by the `limit` query parameter ceiling (max 200), symmetric with the request-side caps. */
                 items: components["schemas"]["StockMovement"][];
@@ -11382,6 +11633,15 @@ export namespace InventorySchema {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description 409 — RT-449. `hold_already_active`: the identity (or a listed one) already has an active hold of that kind. `expiry_unchanged`: the identity already has that expiry date. `idempotency_key_conflict`: the `Idempotency-Key` was already used for a different command. Nothing is written. */
+            SafetyConflict: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description 429 — backfill request exceeded the per-request ceiling (default 500 items). */
             RateLimited: {
                 headers: {
@@ -11422,6 +11682,12 @@ export namespace InventorySchema {
             StoreIdPath: string;
             /** @description Tenant Catalog product; resolved inside the caller's tenant only. */
             ProductIdPath: string;
+            /** @description A tracking hold; resolved inside the caller's tenant only. */
+            HoldIdPath: string;
+            /** @description A recall; resolved inside the caller's tenant only. */
+            RecallIdPath: string;
+            /** @description A tracking identity; resolved inside the caller's tenant only. */
+            IdentityIdPath: string;
         };
         requestBodies: never;
         headers: {
@@ -11790,6 +12056,202 @@ export namespace InventorySchema {
                 400: components["responses"]["ValidationFailure"];
                 401: components["responses"]["Unauthorized"];
                 403: components["responses"]["ForbiddenOrOriginRejected"];
+                429: components["responses"]["TooManyRequests"];
+                "5XX": components["responses"]["SystemFailure"];
+            };
+        };
+        placeQualityHold: {
+            parameters: {
+                query?: never;
+                header: {
+                    /** @description Replay-safety key for write operations (FR-030). A replay with the same key + same body returns the prior result with no second movement; a replay with the same key + different body is a 409 conflict. Resolved by the reused 001/005 idempotency interceptor (the manual-movement dedup contract; the backfill additionally dedups on its provenance pair). */
+                    "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["PlaceQualityHoldCommand"];
+                };
+            };
+            responses: {
+                /** @description Quality hold placed. */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TrackingHoldResult"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["ForbiddenOrOriginRejected"];
+                404: components["responses"]["NotFoundOrCrossTenant"];
+                409: components["responses"]["SafetyConflict"];
+                429: components["responses"]["TooManyRequests"];
+                "5XX": components["responses"]["SystemFailure"];
+            };
+        };
+        getTrackingHold: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description A tracking hold; resolved inside the caller's tenant only. */
+                    holdId: components["parameters"]["HoldIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The hold. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TrackingHold"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["ForbiddenOrOriginRejected"];
+                404: components["responses"]["NotFoundOrCrossTenant"];
+                429: components["responses"]["TooManyRequests"];
+                "5XX": components["responses"]["SystemFailure"];
+            };
+        };
+        releaseTrackingHold: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description A tracking hold; resolved inside the caller's tenant only. */
+                    holdId: components["parameters"]["HoldIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["ReleaseTrackingHoldCommand"];
+                };
+            };
+            responses: {
+                /** @description The released hold. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TrackingHoldResult"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["ForbiddenOrOriginRejected"];
+                404: components["responses"]["NotFoundOrCrossTenant"];
+                429: components["responses"]["TooManyRequests"];
+                "5XX": components["responses"]["SystemFailure"];
+            };
+        };
+        createInventoryRecall: {
+            parameters: {
+                query?: never;
+                header: {
+                    /** @description Replay-safety key for write operations (FR-030). A replay with the same key + same body returns the prior result with no second movement; a replay with the same key + different body is a 409 conflict. Resolved by the reused 001/005 idempotency interceptor (the manual-movement dedup contract; the backfill additionally dedups on its provenance pair). */
+                    "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateInventoryRecallCommand"];
+                };
+            };
+            responses: {
+                /** @description Recall recorded with its holds. */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["InventoryRecallResult"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["ForbiddenOrOriginRejected"];
+                404: components["responses"]["NotFoundOrCrossTenant"];
+                409: components["responses"]["SafetyConflict"];
+                429: components["responses"]["TooManyRequests"];
+                "5XX": components["responses"]["SystemFailure"];
+            };
+        };
+        getInventoryRecall: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description A recall; resolved inside the caller's tenant only. */
+                    recallId: components["parameters"]["RecallIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The recall. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["InventoryRecall"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["ForbiddenOrOriginRejected"];
+                404: components["responses"]["NotFoundOrCrossTenant"];
+                429: components["responses"]["TooManyRequests"];
+                "5XX": components["responses"]["SystemFailure"];
+            };
+        };
+        correctTrackingIdentityExpiry: {
+            parameters: {
+                query?: never;
+                header: {
+                    /** @description Replay-safety key for write operations (FR-030). A replay with the same key + same body returns the prior result with no second movement; a replay with the same key + different body is a 409 conflict. Resolved by the reused 001/005 idempotency interceptor (the manual-movement dedup contract; the backfill additionally dedups on its provenance pair). */
+                    "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                };
+                path: {
+                    /** @description A tracking identity; resolved inside the caller's tenant only. */
+                    identityId: components["parameters"]["IdentityIdPath"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CorrectTrackingIdentityExpiryCommand"];
+                };
+            };
+            responses: {
+                /** @description Expiry corrected. */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TrackingIdentityExpiryCorrectionResult"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                403: components["responses"]["ForbiddenOrOriginRejected"];
+                404: components["responses"]["NotFoundOrCrossTenant"];
+                409: components["responses"]["SafetyConflict"];
                 429: components["responses"]["TooManyRequests"];
                 "5XX": components["responses"]["SystemFailure"];
             };
