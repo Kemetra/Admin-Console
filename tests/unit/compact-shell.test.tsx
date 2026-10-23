@@ -71,6 +71,15 @@ describe("compact shell menu button", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
+  test("shows the registry menu glyph beside its label (RT-829)", () => {
+    renderShell();
+    const button = menuButton();
+    const glyph = button.querySelector("svg");
+    expect(glyph).not.toBeNull();
+    expect(glyph?.getAttribute("aria-hidden")).toBe("true");
+    expect(button.textContent).toBe("Menu");
+  });
+
   test("opens a modal drawer at the inline start and controls it", () => {
     renderShell();
     const dialog = openDrawer();
