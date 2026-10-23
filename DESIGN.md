@@ -164,9 +164,10 @@ focus, copy, status and border/icon feedback stay intact.
     cyan, crimson, violet, green. Assign in this order and never cycle; a ninth series folds into
     "Other". Adjacent slots stay apart under protanopia and deuteranopia (OKLab ΔE ≥ 13.9) and
     for full colour vision (ΔE ≥ 21.5). For scatter plots and small multiples, where any two
-    marks can sit side by side, use at most the first three slots. The first five slots avoid
-    the status and Tower Teal hue families; every slot sits at least ΔE 10 from every status
-    and intent colour.
+    marks can sit side by side, use at most the first three slots. Every slot sits at least
+    ΔE 10.5 from every status and intent colour. The nearest are olive, orange, cyan and
+    crimson, which sit ΔE 10.5–11.4 from success/warning, warning, info and danger in light.
+    Status keeps its icon and label.
   - **Sequential** `--color-viz-seq-1`…`--color-viz-seq-5`: one indigo hue, where 1 is the
     least. It runs from the surface outward: light to dark in the light theme and dark to light
     in the dark theme.

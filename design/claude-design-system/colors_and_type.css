@@ -9,7 +9,8 @@
  * Colour values: owner-approved 2026-10-11 (RT-392) — the light set seeded from
  * the POS main@543688f light set, plus the dark set below. Every colour is one of
  * those values or an alias/alpha of one; nothing else may be introduced without a
- * new decision. .design-sync/build-bundle.mjs checks every text and boundary
+ * new decision. The --color-viz-* values (RT-822) are proposed and pending
+ * that decision (owner ratification, D13). .design-sync/build-bundle.mjs checks every text and boundary
  * pairing in both sets against WCAG AA. Names follow the POS/Admin role
  * vocabulary so a later migration slice can map them one-to-one.
  *
