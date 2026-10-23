@@ -103,7 +103,8 @@ function renderPage(): void {
   );
 }
 
-const itemsPanel = () => screen.getByRole("region", { name: "Item mappings" });
+// RT-826: the table inside is a same-named scroll region; the panel is the outer (first) one.
+const itemsPanel = () => screen.getAllByRole("region", { name: "Item mappings" })[0];
 
 async function openPicker(): Promise<HTMLElement> {
   renderPage();

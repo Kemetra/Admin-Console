@@ -295,10 +295,10 @@ for (const forced of [false, true]) {
     await p.goto("/catalog/products");
     await expect(p.getByRole("table")).toBeVisible();
 
-    // Filter form (3 fields, Search, Clear), both rows, then Load more.
+    // Filter form (3 fields, Search, Clear), the table scroll region (RT-826), both rows, then Load more.
     await p.getByLabel(t("catalog.filter.q")).focus();
     const stops: { label: string; outlineStyle: string; outlineWidth: number }[] = [];
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 9; i++) {
       stops.push(
         await p.evaluate(() => {
           const el = document.activeElement as HTMLElement;

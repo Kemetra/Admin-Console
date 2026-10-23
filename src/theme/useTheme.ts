@@ -19,6 +19,14 @@ export function useTheme(userId: string | undefined): {
     setTheme(mine);
   }, [userId]);
 
+  // RT-825: the compact shell renders a second switch in its drawer. Follow the
+  // painted theme, so a toggle in one keeps the other's aria-pressed true.
+  useEffect(() => {
+    const observer = new MutationObserver(() => setTheme(currentTheme()));
+    observer.observe(document.documentElement, { attributeFilter: ["data-theme"] });
+    return () => observer.disconnect();
+  }, []);
+
   const toggle = useCallback(() => {
     const next: Theme = currentTheme() === "dark" ? "light" : "dark";
     saveTheme(userId, next);

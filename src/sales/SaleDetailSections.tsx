@@ -4,10 +4,32 @@
  * the void and returns summaries and the ERP posting state. A block the sale
  * never recorded says so; nothing is computed, filled or re-sorted here.
  */
+import { DataTableScroll, useCaptionId } from "@/components/DataTableScroll";
 import { DateTime, type MessageKey, Money, roleKey, useT } from "@/i18n";
 import type { SaleDetail, SaleLine, SaleReturn } from "@/lib/sale-queries";
 import { BusinessDate, ErpChip } from "./SaleParts";
 import { tenderMethodKey } from "./saleLogic";
+
+/**
+ * A detail table in RT-826's inline-axis scroll region, named by its caption:
+ * a wide table scrolls inside it, never `.content` (RT-825, RT-785 D4).
+ */
+function ScrollTable({
+  caption,
+  children,
+}: Readonly<{ caption: string; children: React.ReactNode }>): React.JSX.Element {
+  const captionId = useCaptionId();
+  return (
+    <DataTableScroll captionId={captionId}>
+      <table className="data-table">
+        <caption id={captionId} className="data-table__caption">
+          {caption}
+        </caption>
+        {children}
+      </table>
+    </DataTableScroll>
+  );
+}
 
 export function Section({
   id,
@@ -113,15 +135,14 @@ export function LinesSection({ detail }: Readonly<{ detail: SaleDetail }>): Reac
       {detail.lines.length === 0 ? (
         <p className="content__sub">{t("sales.lines.empty")}</p>
       ) : (
-        <table className="data-table">
-          <caption className="data-table__caption">{t("sales.lines.caption")}</caption>
+        <ScrollTable caption={t("sales.lines.caption")}>
           <HeadRow columns={LINE_COLUMNS} />
           <tbody>
             {detail.lines.map((line) => (
               <LineRow key={line.lineRef} line={line} />
             ))}
           </tbody>
-        </table>
+        </ScrollTable>
       )}
     </Section>
   );
@@ -145,8 +166,7 @@ export function PaymentsSection({ detail }: Readonly<{ detail: SaleDetail }>): R
   }
   return (
     <Section id="sale-payments" titleKey="sales.section.payments">
-      <table className="data-table">
-        <caption className="data-table__caption">{t("sales.payments.caption")}</caption>
+      <ScrollTable caption={t("sales.payments.caption")}>
         <HeadRow columns={TENDER_COLUMNS} />
         <tbody>
           {detail.tenders.map((tender, index) => (
@@ -162,7 +182,7 @@ export function PaymentsSection({ detail }: Readonly<{ detail: SaleDetail }>): R
             </tr>
           ))}
         </tbody>
-      </table>
+      </ScrollTable>
       <p className="content__sub">{t("sales.payments.netNote")}</p>
       {detail.changeGiven === null ? null : (
         <dl className="surface__detail">
@@ -239,8 +259,7 @@ function ReturnBlock({
           <Money value={entry.returnTotal} currency={currency} />
         </Field>
       </dl>
-      <table className="data-table">
-        <caption className="data-table__caption">{t("sales.returns.caption")}</caption>
+      <ScrollTable caption={t("sales.returns.caption")}>
         <HeadRow
           columns={[
             "sales.returns.col.item",
@@ -265,7 +284,7 @@ function ReturnBlock({
             </tr>
           ))}
         </tbody>
-      </table>
+      </ScrollTable>
     </div>
   );
 }
