@@ -33,4 +33,14 @@ export const overview: MessagesOf<typeof ar> = {
   "overview.unknown.label": "Unknown items pending review",
   "overview.unknown.noun": "Items",
   "overview.unknown.open": "Review items",
+
+  // --- P-6 today's received sales (RT-820, spec 009 OD-009-1) ------------------
+  "overview.sales.title": "Today's received sales",
+  "overview.sales.open": "View store sales",
+  "overview.sales.total": "All stores in scope",
+  "overview.sales.mixedDays":
+    "Stores are on different business days, so no single scope total is shown. Each store shows its own current day.",
+  "overview.sales.more": "Only the first page of stores is shown. Open Sales to see the rest.",
+  "overview.sales.openSales": "Open sales",
+  "overview.sales.none": "No stores in scope.",
 };

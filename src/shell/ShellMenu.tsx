@@ -65,6 +65,7 @@ export function ShellMenuButton({ menu, drawerId }: Readonly<ShellMenuButtonProp
         menu.show();
       }}
     >
+      <Icon name="menu" />
       {t("shell.menu")}
     </button>
   );

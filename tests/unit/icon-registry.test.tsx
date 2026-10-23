@@ -61,6 +61,8 @@ const ADDED_SINCE_IC3: readonly IconName[] = [
   "sortAscending",
   "sortDescending",
   "sortable",
+  // RT-829: the compact shell's menu button (Jira name: menu).
+  "menu",
 ];
 
 function draw(props: { name: IconName; size?: "sm" | "md" | "lg" }): SVGSVGElement {

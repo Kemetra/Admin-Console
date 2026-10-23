@@ -40,7 +40,8 @@ export type ClaimState =
   | { status: "ready"; data: SalesKpis };
 
 export type ClaimScope =
-  | { kind: "store"; storeName: string; timeZone: string }
+  /** `machine`: the name is an unresolved machine ref (a UUID), shown left-to-right. */
+  | { kind: "store"; storeName: string; timeZone: string; machine?: boolean }
   | { kind: "all_in_scope"; storeCount: number; timeZones: readonly string[] };
 
 export interface ClaimContext {
@@ -279,7 +280,9 @@ function ContextLine({
     <p id={id} className="metric-claims__context" data-testid="metric-claims-context">
       <span>
         {single
-          ? t.rich("metrics.context.store", { store: <bdi>{scope.storeName}</bdi> })
+          ? t.rich("metrics.context.store", {
+              store: <bdi dir={scope.machine ? "ltr" : undefined}>{scope.storeName}</bdi>,
+            })
           : t("metrics.context.allInScope", { count: scope.storeCount })}
       </span>
       {SEP}

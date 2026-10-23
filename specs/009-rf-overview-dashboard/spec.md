@@ -65,8 +65,10 @@ Backend-Core membership roles enforced by each operation's guard (verified on Ba
 
 ### Non-goals (v1)
 
-- **NG-1. Sales KPIs.** No Backend-Core contract serves console sales figures (§5.4). The sales
-  panel waits for BC-009-1; its figures are decided (OD-009-1, §10). No
+- **NG-1. Sales KPIs beyond P-6.** P-6 (RT-820) shows today's received-sale count and gross
+  per currency per store, as text, from `consoleGetSalesSummary` (BC-009-1 is satisfied by
+  RT-649 / RT-739). Nothing else from that read belongs on the Overview: no voids, returns,
+  sync or ERP counts, no average order value, no trend. No
   placeholder "coming soon" tile is rendered.
 - **NG-2. Charts.** Bar, line and sparkline charts are not part of v1. The UX-13 data palette
   was ratified on 2026-10-23 (RT-822, design-system rule 8). Any later Overview chart follows
@@ -116,7 +118,7 @@ in the console's generated client at pin `2b03ad2d` except `consoleGetSyncOpsSum
 | P-3 | Unknown items | Catalog (RF-4a) | `tenantAdminListUnknownItems` `GET /api/v1/catalog/unknown-items` | `catalog/unknown-items.yaml` | any tenant member; RLS scopes to stores | `/unknown-items` | **Yes** |
 | ~~P-4~~ | ~~Flagged receivables~~ — **WITHDRAWN by RT-421 (2026-10-17):** `consoleListReceivables` and the `/receivables` screen were retired with the 035 A/R ledger (RT-413 Option B; settlement.yaml 2.0.0). The Overview ships P-0…P-3 (P-5 deferred, OD-009-3); the row, hook, copy and tests are removed. | Settlement (035 / 018) | `consoleListReceivables` `GET /api/v1/settlement/receivables` | `settlement/settlement.yaml` | owner, tenant_admin | `/receivables` | **Yes** |
 | P-5 | Recent activity | Audit (RF-6) | `listAuditEvents` `GET /api/v1/audit/events` | `audit.openapi.yaml` | owner, tenant_admin (403 otherwise) | `/audit` | **Deferred** (OD-009-3, RT-567). v1: a plain `/audit` link for owner/tenant_admin, no list, no counts |
-| P-6 | Sales KPIs | Sales | **None.** Backend-Core dependency (proposed) **BC-009-1** | — | — | Sales screen (RT-556, spec 012) | **No** |
+| P-6 | Today's received sales | Sales | `consoleGetSalesSummary` `GET /api/v1/sales-summary` (RT-649 / RT-739; BC-009-1 satisfied) | `console-sales-summary.openapi.yaml` | owner, tenant_admin, store_manager | Sales screen (`/sales`, per store row) | **Yes** (RT-820) |
 | P-7 | ERP sync status | ERPNext sync ops (spec 025) | `consoleGetSyncOpsSummary` `GET /api/v1/catalog/erpnext-sync-ops/summary` | `erpnext-sync-ops/console-sync-ops.yaml` | owner, tenant_admin | None yet (RT-557, spec 016) | **Deferred** |
 
 `/unknown-items` and `/receivables` are routed on `main` but not in the production sidebar
@@ -182,7 +184,7 @@ console `main` @ `d6e666d`:
 - summing pages in the browser would be a derived, incomplete total, which the truth rules
   forbid.
 
-So the KPI panel is a Backend-Core dependency (BC-009-1). The figures it shows are decided
+So the KPI panel was a Backend-Core dependency (BC-009-1, satisfied by RT-649 / RT-739 and consumed by P-6, RT-820). The figures it shows are decided
 (OD-009-1, §10).
 
 ### 5.5 Why the sync-ops tile is deferred
@@ -274,9 +276,14 @@ indicator → inline notice), never a zero and never a toast.
   "at least N".
 - **AC-10 Audit link (P-5 deferred, OD-009-3).** Owner/tenant_admin see a link to `/audit`; no
   activity list in v1, and the Overview makes no `listAuditEvents` call.
-- **AC-11 No sales panel.** No sales or KPI element renders until BC-009-1 exists. When it
-  does, P-6 shows only the OD-009-1 figures (today's received-sale count and gross total per
-  currency, per store in scope, as text), in a later issue.
+- **AC-11 P-6 shows only the OD-009-1 figures.** Today's received-sale count and gross total
+  per currency, per store in scope, as text (RT-820). Each store is at its own
+  `currentBusinessDate`, read from one UTC -1..+1 day window (RT-751 D4). A scope total shows
+  only when the page holds every store of the scope and they all share one date. A store whose
+  date is missing from `days[]` shows unknown, never zero. Each store row links to
+  `/sales?store=…&from=…&to=…` for that store and date; a total has no link. Names come from
+  the stores read; an unresolved name is the machine ref in `<bdi>`. One page of stores plus a
+  link to Sales, no page walk (RT-751 D7). No other sales or KPI element renders.
 - **AC-12 Scope change.** Changing tenant or store re-reads every panel; no row from the old
   scope remains visible.
 - **AC-13 Design rules.** Light and dark themes, Arabic and English, forced-colors, keyboard
@@ -290,7 +297,7 @@ The coordinator creates these issues if approved. Each is contract-first in Back
 
 | ID | One-line description | Unblocks |
 | --- | --- | --- |
-| **BC-009-1** | A console-facing (`cookieAuth`), store-scoped sales summary read for a business-date range in the store timezone, with an explicit as-of time and completeness statement (sales still queued on terminals are excluded), money as exact decimals per currency. | P-6. Coordinate with RT-556 (spec 012), which proposes a console sales list/detail read (`consoleListSales`, `consoleGetSale`). The summary is a separate aggregate: the Overview must not sum list pages. |
+| **BC-009-1** | A console-facing (`cookieAuth`), store-scoped sales summary read for a business-date range in the store timezone, with an explicit as-of time and completeness statement (sales still queued on terminals are excluded), money as exact decimals per currency. | P-6. Coordinate with RT-556 (spec 012), which proposes a console sales list/detail read (`consoleListSales`, `consoleGetSale`). The summary is a separate aggregate: the Overview must not sum list pages. **Satisfied** by `consoleGetSalesSummary` (RT-649 / RT-739); consumed by P-6 (RT-820). |
 | **BC-009-2** *(optional)* | A scoped attention-count read returning exact counts of pending unknown items, unapproved shift-close variances and flagged receivables for the caller's scope. | Exact counts in P-2…P-4 instead of "at least N". |
 | **BC-009-3** *(docs)* | State the `listAuditEvents` order (newest first by `occurred_at`, then `id`) in `audit.openapi.yaml`; the runtime already does this. | P-5 relying on contract, not runtime. |
 
@@ -305,13 +312,13 @@ None.
 | ID | Question | Decision | Why |
 | --- | --- | --- | --- |
 | **OD-009-2** | What counts as a shift-close attention item, given no policy threshold and no review state? | **Approved as recommended.** An unapproved close (`approval=not_approved`) with any non-zero variance (`min_abs_variance=0.0001`), closed in the last 7 days (store business days with an active store; UTC dates otherwise). Revisit when the AD-CASH-001 D-7 policy ships (RT-384 / RT-387 / RT-389). | The contract has no policy threshold and no review or acknowledgement state. `0.0001` is the smallest amount `NonNegativeDecimalAmount` allows, so "any non-zero variance" needs no invented threshold and works in every currency. The 7-day window keeps old unapproved closes from staying on the Overview forever, since nothing on the contract clears them. |
-| **OD-009-3** | Ship P-5 recent activity in v1? | **Deferred.** v1 ships P-0…P-4. Owner and tenant_admin get a plain link to `/audit` (the existing «سجل التدقيق» / Audit label), with no list and no counts. The action-copy catalog is deferred with P-5; when P-5 returns it belongs in a shared audit namespace so `/audit` can adopt it. Depends on Backend-Core **RT-567** (`listAuditEvents`: exclude read-only actions or filter by category, contract-first). | Backend-Core audits reads, so every Overview load writes several read audits and "latest 10" would mostly echo the operator's own visit: noise, against this spec's attention-first rule. Dropping rows in the browser would misstate a 10-row page. Decided 2026-10-16 (RT-559). |
-| **OD-009-1** | Which sales figures matter commercially on the landing page? | **Approved as the starting point.** Today's (store business date) received-sale count and gross total per currency, per store in scope, as text. P-6 stays a non-goal until BC-009-1 exists. Average order value and trends come later, with no charts until UX-13. | The count and the gross total are what a summary read can state truthfully with an as-of time and a completeness statement. Totals stay per currency because the console never converts money. Charts wait for a ratified UX-13 data palette (design-system rule 8). |
+| **OD-009-3** | Ship P-5 recent activity in v1? | **Deferred.** v1 ships P-0…P-4 and P-6 (RT-820). Owner and tenant_admin get a plain link to `/audit` (the existing «سجل التدقيق» / Audit label), with no list and no counts. The action-copy catalog is deferred with P-5; when P-5 returns it belongs in a shared audit namespace so `/audit` can adopt it. Depends on Backend-Core **RT-567** (`listAuditEvents`: exclude read-only actions or filter by category, contract-first). | Backend-Core audits reads, so every Overview load writes several read audits and "latest 10" would mostly echo the operator's own visit: noise, against this spec's attention-first rule. Dropping rows in the browser would misstate a 10-row page. Decided 2026-10-16 (RT-559). |
+| **OD-009-1** | Which sales figures matter commercially on the landing page? | **Approved as the starting point.** Today's (store business date) received-sale count and gross total per currency, per store in scope, as text. P-6 shipped with RT-820 (BC-009-1 satisfied by RT-649 / RT-739). Average order value and trends come later, with no charts until UX-13. | The count and the gross total are what a summary read can state truthfully with an as-of time and a completeness statement. Totals stay per currency because the console never converts money. Charts wait for a ratified UX-13 data palette (design-system rule 8). |
 
 ### Decided in this spec
 
 - Audience is the tenant/store operator; platform health is RT-391.
-- v1 panels: P-0…P-4 (P-5 deferred by OD-009-3). P-6 waits for BC-009-1; P-7 is deferred to RT-557.
+- v1 panels: P-0…P-4 and P-6 (P-5 deferred by OD-009-3; P-6 ships with RT-820, OD-009-1); P-7 is deferred to RT-557.
 - Attention items lead; no KPI wall, no charts.
 - No client-derived health, no page-walking totals.
 

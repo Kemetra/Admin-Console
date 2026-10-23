@@ -20,6 +20,10 @@ const listUnknownItems = vi.fn();
 vi.mock("@/lib/unknown-items-queries", () => ({
   listUnknownItems: (...a: unknown[]) => listUnknownItems(...a),
 }));
+const consoleGetSalesSummary = vi.fn(() => Promise.resolve({ status: 404 }));
+vi.mock("@/lib/sales-summary-queries", () => ({
+  consoleGetSalesSummary: (...a: unknown[]) => consoleGetSalesSummary(...(a as [])),
+}));
 const listAuditEvents = vi.fn();
 vi.mock("@/lib/client", () => ({
   listAuditEvents: (...a: unknown[]) => listAuditEvents(...a),
@@ -559,10 +563,10 @@ describe("Overview panels (RT-559, spec 009)", () => {
     ]);
   });
 
-  test("AC-11: no sales or KPI element renders", async () => {
+  test("AC-11: P-6 is omitted when the summary read is refused", async () => {
     activeContext.mockReturnValue(ctx("owner"));
     renderOverview();
     await within(await findRow(UNKNOWN)).findByText("Items: 1");
-    expect(screen.queryByText(/sales/i)).toBeNull();
+    expect(screen.queryByRole("heading", { name: /received sales/i })).toBeNull();
   });
 });
