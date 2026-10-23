@@ -59,6 +59,16 @@
 /* Focus: the global outline (a11y.css). Its 2px offset keeps the ring on the
  * page ground, where it holds 3:1, instead of on the teal fill. */
 
+/* RT-829 (RT-785 D3): at the compact shell width the primary action of a page
+ * is a 44×44px touch target. One rule on the shared role, so every Tier 1 page
+ * (and a drawer's main action) follows it; desktop density stays 36px. */
+@media (max-width: 768px) {
+  .btn-primary {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
 .btn-secondary {
   --btn-bg: var(--color-surface);
   --btn-edge: var(--color-control-border);

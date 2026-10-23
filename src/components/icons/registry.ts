@@ -32,6 +32,8 @@ export const ICON_REGISTRY = {
   close: { asset: "dismiss", mirror: "never", regular: [16] },
   confirm: { asset: "checkmark", mirror: "never", regular: [16] },
   lock: { asset: "lock_closed", mirror: "never", regular: [24] },
+  // RT-829: the compact shell's menu button. Three horizontal bars never mirror.
+  menu: { asset: "navigation", mirror: "never", regular: [20] },
   signOut: { asset: "sign_out", mirror: "mirror", regular: [20] },
   // Direction: back follows reading direction.
   back: { asset: "arrow_left", mirror: "mirror", regular: [16] },
