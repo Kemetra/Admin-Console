@@ -94,33 +94,20 @@ describe("zero memberships at /", () => {
     expect(screen.queryByRole("heading", { name: /no assigned access/i })).toBeNull();
   });
 
-  test("platform admin without a session is sent to /platform", async () => {
-    mount({ user: admin, active_tenant: null, memberships: [], support_session: null });
-    expect(await platformHome()).toBeDefined();
-    expect(screen.getByTestId("where").textContent).toBe("/platform/tenants");
-  });
-
-  test("platform admin with a session but no active tenant is sent to /platform", async () => {
-    mount({ user: admin, active_tenant: null, memberships: [], support_session: session() });
-    expect(await platformHome()).toBeDefined();
-  });
-
-  test("platform admin whose active tenant is not the session's tenant is sent to /platform", async () => {
-    mount({
-      user: admin,
-      active_tenant: tenant,
-      memberships: [],
-      support_session: session({ tenant_id: "t9" }),
-    });
-    expect(await platformHome()).toBeDefined();
-    expect(screen.queryByRole("heading", { name: "Tenant surface" })).toBeNull();
-  });
-
-  test("platform admin with an active tenant but no session is sent to /platform", async () => {
-    mount({ user: admin, active_tenant: tenant, memberships: [], support_session: null });
-    expect(await platformHome()).toBeDefined();
-    expect(screen.queryByRole("heading", { name: "Tenant surface" })).toBeNull();
-  });
+  test.each([
+    ["no session, no active tenant", null, null],
+    ["a session but no active tenant", null, session()],
+    ["an active tenant but no session", tenant, null],
+    ["an active tenant that is not the session's tenant", tenant, session({ tenant_id: "t9" })],
+  ])(
+    "platform admin with %s is sent to /platform",
+    async (_case, active_tenant, support_session) => {
+      mount({ user: admin, active_tenant, memberships: [], support_session });
+      expect(await platformHome()).toBeDefined();
+      expect(screen.getByTestId("where").textContent).toBe("/platform/tenants");
+      expect(screen.queryByRole("heading", { name: "Tenant surface" })).toBeNull();
+    },
+  );
 
   test("non-admin with no memberships gets no-access", async () => {
     mount({ user: plain, active_tenant: null, memberships: [], support_session: null });
