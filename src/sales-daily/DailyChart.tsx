@@ -205,7 +205,7 @@ export function DailyChart({ model }: Readonly<{ model: ReportModel }>): React.J
   const t = useT();
   const direction = DIRECTION[useLocale()];
   const captionId = `daily-chart-caption-${useId()}`;
-  const patternId = `daily-chart-hatch-${useId().replace(/:/g, "")}`;
+  const patternId = `daily-chart-hatch-${useId().replaceAll(":", "")}`;
   const currencies = currenciesOf(model);
   const [chosen, setChosen] = useState<string | null>(null);
   const currency = chosen && currencies.includes(chosen) ? chosen : currencies[0];

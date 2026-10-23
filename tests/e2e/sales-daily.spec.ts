@@ -215,6 +215,29 @@ test("RT-823: the chart does not move under reduced motion, and has no animation
   expect(motion).toEqual({ moving: [], running: 0 });
 });
 
+test("RT-823: the partial day's bar paints the hatch pattern, not a solid fill (light and forced colors)", async ({
+  page,
+}) => {
+  await mockBase(page, CAIRO_STORE);
+  await mockSummary(page, STORE_READ);
+  await page.goto("/sales-daily?from=2026-10-16&to=2026-10-23");
+  const figure = page.getByRole("figure");
+  await expect(figure).toBeVisible();
+  const fills = async () =>
+    figure.evaluate((el) => ({
+      partial: getComputedStyle(el.querySelector(".daily-chart__bar--so-far") as Element).fill,
+      complete: getComputedStyle(
+        el.querySelector(".daily-chart__bar:not(.daily-chart__bar--so-far)") as Element,
+      ).fill,
+    }));
+  for (const forced of [false, true]) {
+    if (forced) await page.emulateMedia({ forcedColors: "active" });
+    const { partial, complete } = await fills();
+    expect(partial, `partial, forced=${forced}`).toMatch(/^url\(/);
+    expect(complete, `complete, forced=${forced}`).not.toMatch(/^url\(/);
+  }
+});
+
 for (const mode of ["light", "dark", "forced"] as const) {
   test(`RT-821: no axe violations, definitions closed and open (${mode})`, async ({ page }) => {
     await mockBase(page, CAIRO_STORE);

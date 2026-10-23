@@ -81,7 +81,7 @@ export function currenciesOf(model: ReportModel): string[] {
 
 /** The smallest 1, 2 or 5 times a power of ten that holds `value`; 1 for none. */
 export function niceMax(value: number): number {
-  if (!(value > 0)) return 1;
+  if (Number.isNaN(value) || value <= 0) return 1;
   const exponent = 10 ** Math.floor(Math.log10(value));
   const fraction = value / exponent;
   const step = [1, 2, 5, 10].find((s) => fraction <= s * (1 + 1e-9)) ?? 10;

@@ -44,11 +44,14 @@
 }
 
 .daily-chart__bar {
-  fill: var(--color-viz-cat-1);
   stroke: var(--color-viz-cat-1);
   stroke-width: 1.5;
 }
-/* The pattern fill is set by the fill attribute; the outline keeps the shape. */
+/* A rule beats the fill attribute, so the solid fill skips the partial bar and
+ * its pattern (fill attribute) shows; the outline keeps the shape. */
+.daily-chart__bar:not(.daily-chart__bar--so-far) {
+  fill: var(--color-viz-cat-1);
+}
 .daily-chart__hatch-ground {
   fill: var(--color-surface);
 }
@@ -95,7 +98,7 @@
   .daily-chart__hatch-line {
     stroke: CanvasText;
   }
-  .daily-chart__bar {
+  .daily-chart__bar:not(.daily-chart__bar--so-far) {
     fill: CanvasText;
   }
   .daily-chart__hatch-ground {
