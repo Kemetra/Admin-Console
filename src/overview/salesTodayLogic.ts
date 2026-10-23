@@ -81,13 +81,18 @@ export function salesDrillDown(storeRef: string, date: string): string {
   return `/sales?${search.toString()}`;
 }
 
+function isStoreSummary(store: unknown): boolean {
+  const s = store as Partial<StoreSummary> | null | undefined;
+  return Array.isArray(s?.days) && typeof s.currentBusinessDate === "string";
+}
+
+function hasScopeTotals(totals: Partial<SalesSummary["scopeTotals"]> | undefined): boolean {
+  return Array.isArray(totals?.days) && typeof totals.storeCount === "number";
+}
+
 /** A body the panel can render: a store list and scope totals; anything else is malformed. */
 export function asSalesSummary(data: unknown): SalesSummary | undefined {
   const body = data as Partial<SalesSummary> | null | undefined;
-  const ok =
-    Array.isArray(body?.stores) &&
-    body.stores.every((s) => Array.isArray(s?.days) && typeof s.currentBusinessDate === "string") &&
-    Array.isArray(body.scopeTotals?.days) &&
-    typeof body.scopeTotals?.storeCount === "number";
-  return ok ? (body as SalesSummary) : undefined;
+  const ok = Array.isArray(body?.stores) && body.stores.every(isStoreSummary);
+  return ok && hasScopeTotals(body.scopeTotals) ? (body as SalesSummary) : undefined;
 }
