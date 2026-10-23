@@ -13,6 +13,7 @@ import { common } from "./en/common";
 import { devices } from "./en/devices";
 import { erp } from "./en/erp";
 import { inventory } from "./en/inventory";
+import { metrics } from "./en/metrics";
 import { money } from "./en/money";
 import { operators } from "./en/operators";
 import { overview } from "./en/overview";
@@ -47,6 +48,7 @@ export const EN_MODULES = {
   inventory,
   aiPlan,
   catalog,
+  metrics,
 };
 
 export const en: MessagesOf<typeof ar> = {
@@ -70,4 +72,5 @@ export const en: MessagesOf<typeof ar> = {
   ...inventory,
   ...aiPlan,
   ...catalog,
+  ...metrics,
 };

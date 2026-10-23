@@ -1,0 +1,115 @@
+/* RT-819 shared KPI claim: a "Precision Ledger" (DESIGN.md §7), not a card
+ * wall. Label / value / definition rows on hairline separators, numbers
+ * tabular, logical properties only (RTL-first). No state colour (RT-751 D8):
+ * states are words. No motion of any kind: figures render at their final
+ * value, so reduced motion needs no override here (the shared spinner already
+ * stops under it). */
+
+.metric-claims {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.metric-claims__list {
+  margin: 0;
+  border-block-start: 1px solid var(--color-border);
+}
+
+.metric-claim {
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(0, 6fr) minmax(0, 3fr);
+  gap: var(--space-4);
+  align-items: baseline;
+  padding-block: var(--space-3);
+  border-block-end: 1px solid var(--color-border);
+}
+
+.metric-claim__label {
+  color: var(--color-text);
+  font-weight: var(--weight-medium);
+}
+
+.metric-claim__value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.metric-claim__count {
+  font-weight: var(--weight-strong);
+}
+
+.metric-claim__amounts,
+.metric-claim__parts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.metric-claim__word {
+  font-weight: var(--weight-strong);
+}
+
+.metric-claim__quiet {
+  color: var(--color-text-muted);
+  font-size: var(--text-control);
+}
+
+.metric-claim__error {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.metric-claim__machine {
+  font-family: var(--font-mono);
+  font-size: var(--text-machine);
+}
+
+.metric-claim__about {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-control);
+}
+
+.metric-claim__about summary {
+  color: var(--color-primary-emphasis);
+  cursor: pointer;
+}
+
+.metric-claim__about p {
+  margin: var(--space-2) 0 0;
+}
+
+.metric-claims__context {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-control);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 720px) {
+  .metric-claim {
+    grid-template-columns: 1fr;
+    gap: var(--space-1);
+  }
+}
+
+@media (forced-colors: active) {
+  .metric-claims__list,
+  .metric-claim {
+    border-color: CanvasText;
+  }
+  .metric-claim__about summary {
+    color: LinkText;
+  }
+}
