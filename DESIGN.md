@@ -161,8 +161,8 @@ focus, copy, status and border/icon feedback stay intact.
   `design/claude-design-system/colors_and_type.css`). Design-system rule 8 sets how charts use
   it.
   - **Categorical** `--color-viz-cat-1`…`--color-viz-cat-8`: indigo, olive, magenta, orange,
-    cyan, crimson, violet, green. Assign in this order and never cycle; a ninth series folds into
-    "Other". Adjacent slots stay apart under protanopia and deuteranopia (OKLab ΔE ≥ 13.9) and
+    cyan, crimson, violet, green. Assign in this order and never cycle. With more than eight series,
+    the first seven keep slots 1–7 and the rest fold into one "Other" series in slot 8. Adjacent slots stay apart under protanopia and deuteranopia (OKLab ΔE ≥ 13.9) and
     for full colour vision (ΔE ≥ 21.5). For scatter plots and small multiples, where any two
     marks can sit side by side, use at most the first three slots. Every slot sits at least
     ΔE 10.5 from every status and intent colour. The nearest are olive, orange, cyan and

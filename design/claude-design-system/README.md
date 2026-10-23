@@ -25,7 +25,8 @@ Read these before designing any Retail Tower Admin screen from this system.
    - Terminology follows `foundations-content.html`: «المؤسسة», «المتجر», «الصنف».
 2. **Tokens only.**
    - Every colour comes from `colors_and_type.css`.
-   - No new hues, no purple/indigo, no gradients, no glass, no glow.
+   - No new hues, no purple/indigo, no gradients, no glass, no glow. The only exception is
+     the ratified `--color-viz-*` chart palette (rule 8), which includes indigo and violet.
    - Most pixels stay neutral. Teal means intent: the primary action, selection and focus.
 3. **Status is text first.**
    - UNKNOWN outcome (payment, posting, any consequence whose result is unconfirmed) is
@@ -80,7 +81,9 @@ Read these before designing any Retail Tower Admin screen from this system.
      - Allowed on the ratified `--color-viz-*` tokens only: bar, line and sparkline charts,
        threshold lines and deploy-marker charts. Never a status colour as a series colour.
        Each chart also shows the same numbers in a table, and:
-       - assigns categorical slots in order and never cycles them; a ninth series folds into "Other";
+       - assigns categorical slots in order and never cycles them. With more than eight
+         series, the first seven keep slots 1–7 and the rest fold into one "Other" series
+         in slot 8;
        - uses at most the first three slots in scatter plots and small multiples;
        - labels series directly, because in forced colours every series draws in one system colour.
      - Not charts: pipeline connectors and dependency maps.
