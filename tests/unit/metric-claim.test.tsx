@@ -7,6 +7,7 @@ import { type ClaimContext, type ClaimState, MetricClaims } from "@/components/M
 import { setLocale } from "@/i18n/locale";
 import type { SalesSummary } from "@/lib/sales-summary-queries";
 import type { MetricId } from "@/metrics/metricRegistry";
+import { KPIS, ZERO_KPIS as ZERO } from "./metric-claim-fixtures";
 
 /**
  * RT-819 (VIZ-1) shared KPI claim. Every state of one figure: loading, hidden
@@ -17,41 +18,6 @@ import type { MetricId } from "@/metrics/metricRegistry";
  */
 
 type Kpis = SalesSummary["scopeTotals"]["rangeTotals"];
-
-const ZERO: Kpis = {
-  receivedSales: { count: 0, byCurrency: [] },
-  voids: { count: 0, byCurrency: [] },
-  returns: { count: 0, byCurrency: [] },
-  legacyRefunds: { count: 0, byCurrency: [] },
-  syncStatus: { captured: 0, synced: 0, failedRetryable: 0, failedNeedsRepair: 0 },
-  erpPosting: { posted: 0, pending: 0, failed: 0, unknown: 0 },
-  shiftCloses: {
-    count: 0,
-    normal: 0,
-    forced: 0,
-    withVariance: 0,
-    approvalMissing: { yes: 0, no: 0, unknown: 0 },
-  },
-};
-
-const KPIS: Kpis = {
-  ...ZERO,
-  receivedSales: {
-    count: 14,
-    byCurrency: [
-      { currencyCode: "EGP", count: 12, total: "1250.5000" },
-      { currencyCode: "USD", count: 2, total: "40.0000" },
-    ],
-  },
-  erpPosting: { posted: 9, pending: 2, failed: 1, unknown: 2 },
-  shiftCloses: {
-    count: 3,
-    normal: 2,
-    forced: 1,
-    withVariance: 1,
-    approvalMissing: { yes: 1, no: 1, unknown: 1 },
-  },
-};
 
 const STORE_CONTEXT: ClaimContext = {
   scope: { kind: "store", storeName: "Heliopolis", timeZone: "Africa/Cairo" },
