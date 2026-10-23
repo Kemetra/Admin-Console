@@ -83,7 +83,8 @@ function renderPage(entry = "/erp-connection"): void {
 }
 
 function panel(name: RegExp): HTMLElement {
-  return screen.getByRole("region", { name });
+  // RT-826: the table inside is a same-named scroll region; the panel is the outer (first) one.
+  return screen.getAllByRole("region", { name })[0] as HTMLElement;
 }
 
 async function connectionRow(name: string): Promise<HTMLElement> {

@@ -210,6 +210,14 @@
   grid-area: content;
   padding: var(--space-7) var(--space-6);
   overflow: auto;
+  /* RT-826: a grid item defaults to min-width:auto and would grow to its widest
+   * child; let it shrink so wide tables scroll in their own region. */
+  min-inline-size: 0;
+}
+@media (max-width: 600px) {
+  .content {
+    padding-inline: var(--space-4);
+  }
 }
 .content__title {
   margin: 0 0 var(--space-2);
@@ -275,6 +283,8 @@
 @media (max-width: 768px) {
   .shell {
     --shell-scope-h: 48px;
+    /* RT-826: minmax(0, 1fr), not 1fr (= minmax(auto, 1fr)): the column must
+     * not grow to the widest child, or wide tables widen the whole pane. */
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
       "topbar"
