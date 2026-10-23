@@ -178,7 +178,7 @@ export function PlatformTenants(): React.JSX.Element {
   const directory = useTenantDirectory();
   const [query, setQuery] = useState("");
   const [starting, setStarting] = useState<StartTenant | null>(null);
-  const { toTenant, failed: switchFailed } = useTenantSwitch(() => setStarting(null));
+  const { toTenant, failure: switchFailure } = useTenantSwitch(() => setStarting(null));
 
   return (
     <section aria-labelledby="platform-tenants-title" className="platform-directory">
@@ -200,9 +200,7 @@ export function PlatformTenants(): React.JSX.Element {
         />
       </div>
 
-      {switchFailed && !starting ? (
-        <Banner variant="danger" message={t("platform.tenants.error.switch")} />
-      ) : null}
+      {switchFailure && !starting ? <Banner variant="danger" message={t(switchFailure)} /> : null}
 
       <DirectoryBody
         query={query}
@@ -222,7 +220,7 @@ export function PlatformTenants(): React.JSX.Element {
             directory.refetch();
           }}
           onSwitch={(id) => void toTenant(id)}
-          switchFailed={switchFailed}
+          switchFailure={switchFailure}
         />
       ) : null}
     </section>

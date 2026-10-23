@@ -114,6 +114,18 @@ function serve(ctx: unknown): void {
   getActiveContext.mockResolvedValue({ status: 200, data: ctx });
 }
 
+/** A switch the server accepts: the re-read context has that tenant active. */
+function switchesTo(tenantId: string, name: string): void {
+  switchActiveTenant.mockImplementation(async () => {
+    serve({
+      ...noSession([{ tenant_id: tenantId, tenant_name: name, role_code: "owner" }]),
+      active_tenant: { id: tenantId, name },
+      active_role_code: "owner",
+    });
+    return { status: 200, data: {} };
+  });
+}
+
 const heading = () => screen.findByRole("heading", { level: 1, name: "Organizations" });
 const table = () => screen.findByRole("table", { name: "Organizations list" });
 const dialog = () => screen.findByRole("dialog");
@@ -214,7 +226,7 @@ describe("directory states", () => {
 describe("row actions are completable (UX Addendum A3)", () => {
   test("a tenant the caller is a member of offers the normal switch, not a support session", async () => {
     serve(noSession([{ tenant_id: NILE, tenant_name: "Nile Pharma", role_code: "owner" }]));
-    switchActiveTenant.mockResolvedValue({ status: 200, data: {} });
+    switchesTo(NILE, "Nile Pharma");
     mount();
     await table();
     expect(screen.queryByRole("button", { name: "Start support session: Nile Pharma" })).toBeNull();
@@ -223,6 +235,20 @@ describe("row actions are completable (UX Addendum A3)", () => {
     await waitFor(() => expect(switchActiveTenant).toHaveBeenCalledWith(NILE));
     await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/"));
     expect(openSupportSession).not.toHaveBeenCalled();
+  });
+
+  test("a refused switch (non-2xx, context unchanged) is said and keeps the operator here", async () => {
+    serve(noSession([{ tenant_id: NILE, tenant_name: "Nile Pharma", role_code: "owner" }]));
+    switchActiveTenant.mockResolvedValue(res(403, "forbidden"));
+    mount();
+    await table();
+    fireEvent.click(screen.getByRole("button", { name: "Open organization: Nile Pharma" }));
+    expect(
+      await screen.findByText(
+        "The organization wasn't opened: the server refused the switch, and nothing changed.",
+      ),
+    ).toBeDefined();
+    expect(screen.getByTestId("where").textContent).toBe("/platform/tenants");
   });
 
   test("a switch that never got an answer is said, keeps the operator here, and allows one switch at a time", async () => {
@@ -417,7 +443,7 @@ describe("start drawer: outcomes", () => {
   test("409 already_member: names the cause and offers the normal switch, which works", async () => {
     serve(noSession());
     openSupportSession.mockResolvedValue(res(409, "already_member"));
-    switchActiveTenant.mockResolvedValue({ status: 200, data: {} });
+    switchesTo(DELTA, "Delta Markets");
     mount();
     const drawer = await openDrawer();
     fill(drawer, "incident");

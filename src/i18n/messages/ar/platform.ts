@@ -78,6 +78,8 @@ export const platform = {
     "تعذّر تحميل المؤسسات لأن الطلبات كثيرة جدًا. أعد المحاولة بعد انتهاء العدّ.",
   "platform.tenants.retry": "إعادة المحاولة",
   "platform.tenants.error.switch": "تعذّر فتح المؤسسة لأن الطلب لم يصل. حاول مرة أخرى.",
+  "platform.tenants.error.switchRefused":
+    "لم تُفتح المؤسسة: رفض الخادم التبديل إليها، ولم يتغير شيء.",
 
   "platform.start.title": "جلسة دعم: {name}",
   "platform.start.required": "(إلزامي)",

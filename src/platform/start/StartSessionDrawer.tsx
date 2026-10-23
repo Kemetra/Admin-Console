@@ -38,8 +38,8 @@ export interface StartSessionDrawerProps {
   onNotAvailable: () => void;
   /** 409 `already_member`: the normal tenant switch. */
   onSwitch: (tenantId: string) => void;
-  /** The last switch got no answer: said in the member view. */
-  switchFailed?: boolean;
+  /** Why the last switch did not land (refused, or no answer): said in the member view. */
+  switchFailure?: MessageKey | null;
 }
 
 function NotAvailable({
@@ -62,7 +62,10 @@ function NotAvailable({
   );
 }
 
-function Member({ onSwitch, failed }: Readonly<{ onSwitch: () => void; failed: boolean }>) {
+function Member({
+  onSwitch,
+  failure,
+}: Readonly<{ onSwitch: () => void; failure: MessageKey | null }>) {
   const t = useT();
   return (
     <div className="start-session__state">
@@ -71,7 +74,7 @@ function Member({ onSwitch, failed }: Readonly<{ onSwitch: () => void; failed: b
         title={t("platform.start.member.title")}
         message={t("platform.start.member.body")}
       />
-      {failed ? <Banner variant="danger" message={t("platform.tenants.error.switch")} /> : null}
+      {failure ? <Banner variant="danger" message={t(failure)} /> : null}
       <GatedButton className="btn-primary" onClick={onSwitch}>
         {t("platform.start.member.switch")}
       </GatedButton>
@@ -222,7 +225,7 @@ function DrawerView({
     return (
       <Member
         onSwitch={() => props.onSwitch(props.tenant.id)}
-        failed={props.switchFailed ?? false}
+        failure={props.switchFailure ?? null}
       />
     );
   }
