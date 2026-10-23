@@ -22,9 +22,16 @@ import { type QueryClient, QueryClientContext } from "@tanstack/react-query";
 import { useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { SupportSessionState } from "./supportSessionLogic";
 
-/** Drops every cached read except the active context: no tenant data outlives the session. */
+/**
+ * The reads that are not tenant data: the active context, and the platform-scope
+ * tenant directory (RT-782, key `["platform", ...]`), which a session's end must
+ * not empty under the operator's feet.
+ */
+const NOT_TENANT_DATA = new Set<unknown>([queryKeys.activeContext[0], "platform"]);
+
+/** Drops every cached tenant read: no tenant data outlives the session. */
 export function dropTenantData(qc: QueryClient | undefined): void {
-  qc?.removeQueries({ predicate: (q) => q.queryKey[0] !== queryKeys.activeContext[0] });
+  qc?.removeQueries({ predicate: (q) => !NOT_TENANT_DATA.has(q.queryKey[0]) });
 }
 
 /** A stable function that always calls the latest `fn`; the ref is updated after commit, not in render. */

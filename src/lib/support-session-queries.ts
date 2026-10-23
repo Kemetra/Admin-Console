@@ -1,11 +1,21 @@
 /**
- * RT-781 (RT-777 S2): the two support-session lifecycle operations of
- * `platform-support-sessions.openapi.yaml` that the session bar calls. Typed
+ * RT-781 (RT-777 S2): the support-session operations of
+ * `platform-support-sessions.openapi.yaml` that the Console calls. Typed
  * wrappers over the generated client in the usual `{ status, data, error }`
- * shape. `openSupportSession` (S3) and `getCurrentSupportSession` (the bar
- * reads `getActiveContext.support_session` instead) have no wrapper here.
+ * shape: renew and end for the session bar, open for the start drawer (RT-782,
+ * S3). `getCurrentSupportSession` has no wrapper: the bar reads
+ * `getActiveContext.support_session` instead.
  */
 import { apiClient } from "@/generated/client";
+import type { components } from "@/generated/schema";
+
+/** POST /api/v1/platform/support-sessions. The body is built by `buildOpenRequest` only. */
+export async function openSupportSession(body: components["schemas"]["OpenSupportSessionRequest"]) {
+  const { data, error, response } = await apiClient.POST("/api/v1/platform/support-sessions", {
+    body,
+  });
+  return { status: response.status, data, error };
+}
 
 /** POST /api/v1/platform/support-sessions/current/renew */
 export async function renewSupportSession() {

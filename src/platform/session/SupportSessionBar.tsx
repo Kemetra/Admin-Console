@@ -14,13 +14,18 @@
  */
 import { GatedButton } from "@/components/GatedButton";
 import { type MessageKey, type T, formatDateTime, formatDuration, useT } from "@/i18n";
+import { Link, useLocation } from "react-router";
 import { remainingMinutes } from "./supportSessionLogic";
-import type { SupportSessionController } from "./useSupportSession";
+import { PLATFORM_HOME, type SupportSessionController } from "./useSupportSession";
 import "./support-session.css";
 
 const NOTICE_ID = "support-session-notice";
 
-function Notice({ state, title, body }: Readonly<{ state: string; title: string; body: string }>) {
+function Notice({
+  state,
+  title,
+  body,
+}: Readonly<{ state: string; title: string; body: React.ReactNode }>) {
   return (
     <div
       id={NOTICE_ID}
@@ -32,7 +37,20 @@ function Notice({ state, title, body }: Readonly<{ state: string; title: string;
   );
 }
 
-function noticeFor(t: T, controller: SupportSessionController) {
+/**
+ * RT-782 (comment 13591): where to open a new session. On the directory itself
+ * the notice points at the list on the page; elsewhere it links there by the
+ * page's real name. Opening a new session replaces this one (contract
+ * `end_reason: replaced`), so ending it first is not required.
+ */
+function expiredBody(t: T, onDirectory: boolean): React.ReactNode {
+  if (onDirectory) return t("platform.session.notice.expired.bodyHere");
+  return t.rich("platform.session.notice.expired.body", {
+    directory: <Link to={PLATFORM_HOME}>{t("platform.session.notice.expired.directory")}</Link>,
+  });
+}
+
+function noticeFor(t: T, controller: SupportSessionController, onDirectory: boolean) {
   const { session, state, remainingMs } = controller;
   if (state === "expiring") {
     const under = remainingMs < 60_000;
@@ -56,7 +74,7 @@ function noticeFor(t: T, controller: SupportSessionController) {
   if (state === "expired") {
     return {
       title: t("platform.session.notice.expired.title"),
-      body: t("platform.session.notice.expired.body"),
+      body: expiredBody(t, onDirectory),
     };
   }
   return null;
@@ -110,11 +128,14 @@ function RenewButton({ controller }: Readonly<{ controller: SupportSessionContro
 
 function Identity({ controller }: Readonly<{ controller: SupportSessionController }>) {
   const t = useT();
-  const { session, tenantName } = controller;
+  const { session, tenantName, state } = controller;
+  // RT-782 (comment 13591): an expired session is not one the operator works in.
+  const tenantKey =
+    state === "expired" ? "platform.session.tenantExpired" : "platform.session.tenant";
   return (
     <>
       <span className="support-session-bar__badge">{t("platform.session.badge")}</span>
-      {tenantName ? <span>{t("platform.session.tenant", { name: tenantName })}</span> : null}
+      {tenantName ? <span>{t(tenantKey, { name: tenantName })}</span> : null}
       <span>
         {t("platform.session.purpose", {
           purpose: t(`platform.session.purpose.${session.purpose}` as MessageKey),
@@ -156,7 +177,8 @@ export function SupportSessionBar({
   controller,
 }: Readonly<{ controller: SupportSessionController }>): React.JSX.Element {
   const t = useT();
-  const notice = noticeFor(t, controller);
+  const onDirectory = useLocation().pathname === PLATFORM_HOME;
+  const notice = noticeFor(t, controller, onDirectory);
 
   return (
     <section

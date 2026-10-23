@@ -47,7 +47,9 @@ test("platform admin with no membership and no tenant reaches /platform/tenants"
   const calls = await mockContext(page, 200, { user: admin, active_tenant: null, memberships: [] });
   await page.goto("/platform");
   await expect(page).toHaveURL(/\/platform\/tenants$/);
-  await expect(page.getByRole("heading", { name: t("platform.tenants.emptyTitle") })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 1, name: t("platform.tenants.title") }),
+  ).toBeVisible();
   await expect(page.locator(".tower-lockup__tag")).toHaveText(t("platform.label"));
   await expect(page.getByRole("navigation", { name: t("platform.nav.label") })).toBeVisible();
   // No tenant scope bar, picker or generic no-access; never a tenant switch.
@@ -66,7 +68,9 @@ test("platform shell passes axe in dark", async ({ page, t }) => {
   });
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-  await expect(page.getByRole("heading", { name: t("platform.tenants.emptyTitle") })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 1, name: t("platform.tenants.title") }),
+  ).toBeVisible();
   await expectNoAxeViolations(page, "platform shell dark");
 });
 
@@ -83,7 +87,9 @@ test("platform admin with a membership is not forced through the tenant picker",
     ],
   });
   await page.goto("/platform/tenants");
-  await expect(page.getByRole("heading", { name: t("platform.tenants.emptyTitle") })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 1, name: t("platform.tenants.title") }),
+  ).toBeVisible();
   await expect(page.getByRole("heading", { name: t("shell.gate.title") })).toHaveCount(0);
 });
 
@@ -94,7 +100,9 @@ test("a non-admin gets the non-disclosing state, light and dark, axe clean", asy
   await mockContext(page, 200, tenantContext(member));
   await page.goto("/platform/tenants");
   await expect(page.getByRole("heading", { name: t("platform.noAccess.title") })).toBeVisible();
-  await expect(page.getByText(t("platform.tenants.emptyTitle"))).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { level: 1, name: t("platform.tenants.title") }),
+  ).toHaveCount(0);
   await expectNoAxeViolations(page, "platform not available");
   await page.evaluate(() => {
     localStorage.setItem("rt.theme.v1:user:u2", "dark");
