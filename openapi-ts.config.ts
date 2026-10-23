@@ -56,6 +56,7 @@ export const PIN_FILE_PATH = "contracts/backend-core/PIN" as const;
  *   - devices.openapi.yaml (consoleListDevices, consoleGetDevice; the
  *     lifecycle writes are wrapped from RT-372) — RT-371
  *   - console-sales.openapi.yaml (consoleListSales, consoleGetSale) — RT-587
+ *   - console-sales-summary.openapi.yaml (consoleGetSalesSummary) — RT-818
  *     (spec 012 sales search and sale detail)
  *
  * The pin is UNCHANGED across slices; new slices add their contract source and
@@ -294,6 +295,13 @@ export const OPENAPI_SOURCE_SPECS: readonly OpenApiSourceSpec[] = [
   // spec 012): `consoleListSales`, `consoleGetSale`. Read-only consumption;
   // no YAML authored here.
   { name: "ConsoleSales", path: "packages/contracts/openapi/console-sales.openapi.yaml" },
+  // Console sales summary (RT-649 contract #859 / RT-739 runtime #864; RT-818,
+  // RT-751 slice 1): `consoleGetSalesSummary`. Read-only consumption; no YAML
+  // authored here.
+  {
+    name: "ConsoleSalesSummary",
+    path: "packages/contracts/openapi/console-sales-summary.openapi.yaml",
+  },
   // Shift variance policy (RT-384 contract #778 / RT-387 runtime #797; RT-389):
   // the tenant default and store override reads, revision lists and publishes.
   // The POS device read in the same document is not wrapped here.

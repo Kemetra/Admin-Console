@@ -20,6 +20,7 @@
 // - packages/contracts/openapi/erpnext-sync-ops/console-sync-ops.yaml
 // - packages/contracts/openapi/devices.openapi.yaml
 // - packages/contracts/openapi/console-sales.openapi.yaml
+// - packages/contracts/openapi/console-sales-summary.openapi.yaml
 // - packages/contracts/openapi/cash-variance-policy.openapi.yaml
 // - packages/contracts/openapi/console-telemetry.openapi.yaml
 // - packages/contracts/openapi/catalog/erpnext-item-map.yaml
@@ -7566,6 +7567,273 @@ export namespace ConsoleSalesSchema {
     }
 }
 
+export namespace ConsoleSalesSummarySchema {
+    export interface paths {
+        "/api/v1/sales-summary": {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            /**
+             * Deterministic received-sales KPIs per store, business date and currency.
+             * @description The KPIs of one store (`store_id`) or of every store in the caller's scope, for each business date of an inclusive range of at most 31 business days, with each store's range totals and the scope's totals. Read only; computed by the server over the facts it had received by `asOf` (see the API description for every rule). A `store_id` outside the caller's scope is the non-disclosing 404.
+             *     Audit: one `console_sales.summary_read` event per 200, with the scope mode, `store_id`, `from`, `to`, the store count and whether a cursor was used; no figure.
+             */
+            get: operations["consoleGetSalesSummary"];
+            put?: never;
+            post?: never;
+            delete?: never;
+            options?: never;
+            head?: never;
+            patch?: never;
+            trace?: never;
+        };
+    }
+    export type webhooks = Record<string, never>;
+    export interface components {
+        schemas: {
+            /** @description Exact-decimal non-negative sum as a string (never a float) at the stored scale of four fractional digits, for example `"150.0000"`. */
+            DecimalTotal: string;
+            /** @description ISO-4217 alphabetic currency code. */
+            CurrencyCode: string;
+            /**
+             * Format: date
+             * @description A store business date, `YYYY-MM-DD` in the store's timezone.
+             */
+            BusinessDate: string;
+            /** @description An exact count over received facts. Zero is a real zero, never an unknown. */
+            Count: number;
+            CurrencyTotal: {
+                currencyCode: components["schemas"]["CurrencyCode"];
+                /** @description The facts in this currency (at least one, or the currency is absent). */
+                count: number;
+                total: components["schemas"]["DecimalTotal"];
+            };
+            /** @description A counted money fact. `count` is the sum of `byCurrency[].count`; `byCurrency` is ordered by `currencyCode` and empty when `count` is 0. Totals are never added across currencies. */
+            MoneyFacts: {
+                count: components["schemas"]["Count"];
+                byCurrency: components["schemas"]["CurrencyTotal"][];
+            };
+            /** @description The received sales of the bucket by their spec 032 `syncStatus` at `asOf` (`captured`, `synced`, `failed-retryable`, `failed-needs-repair`); the four add up to `receivedSales.count`. Backend-Core sale processing only: `synced` is NOT "posted to ERPNext". */
+            SyncStatusCounts: {
+                captured: components["schemas"]["Count"];
+                synced: components["schemas"]["Count"];
+                failedRetryable: components["schemas"]["Count"];
+                failedNeedsRepair: components["schemas"]["Count"];
+            };
+            /** @description The received sales of the bucket by their projected `erpPostingState` at `asOf` (the `console-sales` mapping: `posted`; `pending` and `failed_transient` → `pending`; `permanently_rejected` → `failed`; no posting row → `unknown`). The four add up to `receivedSales.count`. `unknown` NEVER means "not posted". Operational state only, never a tax or fiscal claim (OD-534-5). */
+            ErpPostingCounts: {
+                posted: components["schemas"]["Count"];
+                pending: components["schemas"]["Count"];
+                failed: components["schemas"]["Count"];
+                unknown: components["schemas"]["Count"];
+            };
+            /** @description Closes by their recorded `approvalMissing` tri-state (`shift-closes.openapi.yaml`, RT-384 / RT-387). `unknown` (the shift froze no policy) is never "no exception". The three add up to `shiftCloses.count`. */
+            ApprovalMissingCounts: {
+                yes: components["schemas"]["Count"];
+                no: components["schemas"]["Count"];
+                unknown: components["schemas"]["Count"];
+            };
+            /** @description Recorded shift closes bucketed by the store-local date of their `closedAt` (POS clock) in the store's current timezone. `normal + forced = count`. `withVariance` counts closes whose recorded `variance` is not zero. No cash amount is summed here. */
+            ShiftCloseOutcomes: {
+                count: components["schemas"]["Count"];
+                normal: components["schemas"]["Count"];
+                forced: components["schemas"]["Count"];
+                withVariance: components["schemas"]["Count"];
+                approvalMissing: components["schemas"]["ApprovalMissingCounts"];
+            };
+            /** @description The KPIs of one bucket (see the API description for every rule). */
+            SalesKpis: {
+                receivedSales: components["schemas"]["MoneyFacts"];
+                voids: components["schemas"]["MoneyFacts"];
+                returns: components["schemas"]["MoneyFacts"];
+                legacyRefunds: components["schemas"]["MoneyFacts"];
+                syncStatus: components["schemas"]["SyncStatusCounts"];
+                erpPosting: components["schemas"]["ErpPostingCounts"];
+                shiftCloses: components["schemas"]["ShiftCloseOutcomes"];
+            };
+            BusinessDateKpis: {
+                businessDate: components["schemas"]["BusinessDate"];
+                kpis: components["schemas"]["SalesKpis"];
+            };
+            StoreSalesSummary: {
+                /** Format: uuid */
+                storeRef: string;
+                /** @description The store's current IANA timezone (`stores.timezone`, `UTC` until configured): the zone that bucketed legacy refunds and shift closes, and the zone of `currentBusinessDate`. */
+                storeTimezone: string;
+                currentBusinessDate: components["schemas"]["BusinessDate"];
+                /** @description One entry per business date from `from` to `to`, ascending, zero-filled. */
+                days: components["schemas"]["BusinessDateKpis"][];
+                rangeTotals: components["schemas"]["SalesKpis"];
+            };
+            /** @description Server totals over EVERY store of the scope (not only the stores of this page). A date's figures add each store's figures for that store-local business date. */
+            ScopeSalesSummary: {
+                storeCount: components["schemas"]["Count"];
+                /** @description One entry per business date from `from` to `to`, ascending, zero-filled (also when `storeCount` is 0). */
+                days: components["schemas"]["BusinessDateKpis"][];
+                rangeTotals: components["schemas"]["SalesKpis"];
+            };
+            ConsoleSalesSummary: {
+                /**
+                 * @description `store` with `store_id`; `all_in_scope` without it.
+                 * @enum {string}
+                 */
+                scope: "store" | "all_in_scope";
+                /**
+                 * Format: uuid
+                 * @description The `store_id` value (lower case) for `scope: store`; null otherwise.
+                 */
+                storeRef: string | null;
+                from: components["schemas"]["BusinessDate"];
+                to: components["schemas"]["BusinessDate"];
+                /**
+                 * Format: date-time
+                 * @description Server time after the read's snapshot: every figure covers the facts received and committed by then, and no fact still queued on a terminal.
+                 */
+                asOf: string;
+                /**
+                 * @description Always `received_only`: the figures exclude everything still queued on a terminal, so they are never presented as complete.
+                 * @constant
+                 */
+                completeness: "received_only";
+                /** @description This page of stores, ordered by `storeRef` ascending. */
+                stores: components["schemas"]["StoreSalesSummary"][];
+                /** @description Cursor for the next page of stores; null on the last page (always null for `scope: store`). */
+                nextCursor: string | null;
+                scopeTotals: components["schemas"]["ScopeSalesSummary"];
+            };
+            /** @description Canonical error envelope. Out-of-scope and cross-tenant refusals are non-disclosing (§II, §XII): they never name the cause. */
+            Error: {
+                error: {
+                    /** @description Stable machine-readable error code. */
+                    code: string;
+                    /** @description Human-readable summary. No sensitive data, no cause enumeration. */
+                    message: string;
+                    /**
+                     * Format: uuid
+                     * @description Server-side correlation id; the cause is recorded server-side.
+                     */
+                    request_id?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description validation_error (400): a malformed query value, an unknown query key, a query key given more than once, a missing `from` or `to`, a date that is not a calendar date (`2026-02-30`), `to` before `from`, a range wider than 31 business days, a `page_size` outside 1..50, or a cursor the server did not issue for this operation, tenant, `store_id`, range and page size. Checked after the guards and before any database read. */
+            ValidationFailure: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Unauthenticated (401): a missing or invalid session cookie, or a non-cookie credential without a valid session cookie. Non-disclosing. Owned by 028 (G10). */
+            Unauthorized: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description not_found (404), non-disclosing: identical for a role outside `owner` / `tenant_admin` / `store_manager` and a `store_id` outside the caller's scope, of another tenant or absent. */
+            NotFound: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description system_failure (500): unexpected server error; the cause is recorded server-side under `request_id`. */
+            SystemFailure: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 429 `rate_limited` (RT-574): the caller's per-user budget for this class of operation is spent. The body is the canonical error envelope with a non-disclosing message (no budget, class or window); its `request_id` equals the `X-Request-Id` response header. Honour `Retry-After`. A 429 is not a 401: it never means the session ended. The console limit is server-configured and may not be enforced, so a client must handle a 429 but must not expect one. */
+            TooManyRequests: {
+                headers: {
+                    "Retry-After": components["headers"]["ConsoleRetryAfter"];
+                    /** @description Always `no-store` on a 429. */
+                    "Cache-Control": "no-store";
+                    /** @description The request id, equal to `error.request_id` in the body: the inbound `X-Request-Id` when it is a well-formed UUID, otherwise a server-minted one. */
+                    "X-Request-Id": string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+        parameters: {
+            /** @description Optional. The one store to summarise (`scope: store`). Validated against the caller's store scope: a store outside it, or of another tenant, is the non-disclosing 404. Case insensitive: the one lower-cased value is scope-checked, cursor-bound and queried. Omitted: every store in the caller's scope (`scope: all_in_scope`). A malformed or repeated value is 400 `validation_error`. */
+            StoreIdQuery: string;
+            /** @description First business date of the range, inclusive, in each store's timezone. */
+            BusinessDateFrom: string;
+            /** @description Last business date of the range, inclusive. `to >= from` and `to - from <= 30` (31 business days), else 400 `validation_error`. Never truncated. */
+            BusinessDateTo: string;
+            /** @description Opaque cursor from a prior response's `nextCursor`, bound to this operation, the tenant, `store_id` (or its absence), `from`, `to` and `page_size`. It carries only the last returned `storeRef`; the caller's store scope is re-read on every request and is never carried by the cursor, so a hand-built cursor can only skip stores the caller may already read. A value the server did not issue, cannot decode, or that is reused with another store, range or page size is 400 `validation_error`. Omit it for the first page. */
+            Cursor: string;
+            /** @description Maximum stores per response. The server returns exactly this many while more remain. */
+            PageSize: number;
+        };
+        requestBodies: never;
+        headers: {
+            /** @description `no-store` on every 200: the body carries the tenant's commercial figures, so no shared or browser cache keeps them. */
+            CacheControlNoStore: "no-store";
+            /** @description Whole seconds the caller should wait before retrying, sent on every console 429 (RT-574 D5). Its own bound, 1 to 3600. */
+            ConsoleRetryAfter: number;
+        };
+        pathItems: never;
+    }
+    export type $defs = Record<string, never>;
+    export interface operations {
+        consoleGetSalesSummary: {
+            parameters: {
+                query: {
+                    /** @description Optional. The one store to summarise (`scope: store`). Validated against the caller's store scope: a store outside it, or of another tenant, is the non-disclosing 404. Case insensitive: the one lower-cased value is scope-checked, cursor-bound and queried. Omitted: every store in the caller's scope (`scope: all_in_scope`). A malformed or repeated value is 400 `validation_error`. */
+                    store_id?: components["parameters"]["StoreIdQuery"];
+                    /** @description First business date of the range, inclusive, in each store's timezone. */
+                    from: components["parameters"]["BusinessDateFrom"];
+                    /** @description Last business date of the range, inclusive. `to >= from` and `to - from <= 30` (31 business days), else 400 `validation_error`. Never truncated. */
+                    to: components["parameters"]["BusinessDateTo"];
+                    /** @description Opaque cursor from a prior response's `nextCursor`, bound to this operation, the tenant, `store_id` (or its absence), `from`, `to` and `page_size`. It carries only the last returned `storeRef`; the caller's store scope is re-read on every request and is never carried by the cursor, so a hand-built cursor can only skip stores the caller may already read. A value the server did not issue, cannot decode, or that is reused with another store, range or page size is 400 `validation_error`. Omit it for the first page. */
+                    cursor?: components["parameters"]["Cursor"];
+                    /** @description Maximum stores per response. The server returns exactly this many while more remain. */
+                    page_size?: components["parameters"]["PageSize"];
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The summary of the requested scope and range. */
+                200: {
+                    headers: {
+                        "Cache-Control": components["headers"]["CacheControlNoStore"];
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ConsoleSalesSummary"];
+                    };
+                };
+                400: components["responses"]["ValidationFailure"];
+                401: components["responses"]["Unauthorized"];
+                404: components["responses"]["NotFound"];
+                429: components["responses"]["TooManyRequests"];
+                500: components["responses"]["SystemFailure"];
+            };
+        };
+    }
+}
+
 export namespace CashVariancePolicySchema {
     export interface paths {
         "/api/pos/v1/store/cash-variance-policy": {
@@ -13428,6 +13696,6 @@ export namespace PlatformSupportSessionsSchema {
     }
 }
 
-export type paths = AuthSchema.paths & ContextSchema.paths & TenantsSchema.paths & StoresSchema.paths & MembershipsSchema.paths & AuditSchema.paths & UnknownItemsSchema.paths & SettlementSchema.paths & ErpnextReconciliationSchema.paths & ShiftClosesSchema.paths & ConnectorAdminSchema.paths & ConnectorHealthSchema.paths & SyncOpsSchema.paths & DevicesSchema.paths & ConsoleSalesSchema.paths & CashVariancePolicySchema.paths & ConsoleTelemetrySchema.paths & ErpnextItemMapSchema.paths & ErpnextWarehouseMapSchema.paths & ProductReconciliationSchema.paths & TrackingProfileSchema.paths & SaleSyncOpsSchema.paths & InventorySchema.paths & ConsoleCatalogSchema.paths & AiEntitlementsSchema.paths & PlatformSupportSessionsSchema.paths;
-export type components = AuthSchema.components & ContextSchema.components & TenantsSchema.components & StoresSchema.components & MembershipsSchema.components & AuditSchema.components & UnknownItemsSchema.components & SettlementSchema.components & ErpnextReconciliationSchema.components & ShiftClosesSchema.components & ConnectorAdminSchema.components & ConnectorHealthSchema.components & SyncOpsSchema.components & DevicesSchema.components & ConsoleSalesSchema.components & CashVariancePolicySchema.components & ConsoleTelemetrySchema.components & ErpnextItemMapSchema.components & ErpnextWarehouseMapSchema.components & ProductReconciliationSchema.components & TrackingProfileSchema.components & SaleSyncOpsSchema.components & InventorySchema.components & ConsoleCatalogSchema.components & AiEntitlementsSchema.components & PlatformSupportSessionsSchema.components;
-export type operations = AuthSchema.operations & ContextSchema.operations & TenantsSchema.operations & StoresSchema.operations & MembershipsSchema.operations & AuditSchema.operations & UnknownItemsSchema.operations & SettlementSchema.operations & ErpnextReconciliationSchema.operations & ShiftClosesSchema.operations & ConnectorAdminSchema.operations & ConnectorHealthSchema.operations & SyncOpsSchema.operations & DevicesSchema.operations & ConsoleSalesSchema.operations & CashVariancePolicySchema.operations & ConsoleTelemetrySchema.operations & ErpnextItemMapSchema.operations & ErpnextWarehouseMapSchema.operations & ProductReconciliationSchema.operations & TrackingProfileSchema.operations & SaleSyncOpsSchema.operations & InventorySchema.operations & ConsoleCatalogSchema.operations & AiEntitlementsSchema.operations & PlatformSupportSessionsSchema.operations;
+export type paths = AuthSchema.paths & ContextSchema.paths & TenantsSchema.paths & StoresSchema.paths & MembershipsSchema.paths & AuditSchema.paths & UnknownItemsSchema.paths & SettlementSchema.paths & ErpnextReconciliationSchema.paths & ShiftClosesSchema.paths & ConnectorAdminSchema.paths & ConnectorHealthSchema.paths & SyncOpsSchema.paths & DevicesSchema.paths & ConsoleSalesSchema.paths & ConsoleSalesSummarySchema.paths & CashVariancePolicySchema.paths & ConsoleTelemetrySchema.paths & ErpnextItemMapSchema.paths & ErpnextWarehouseMapSchema.paths & ProductReconciliationSchema.paths & TrackingProfileSchema.paths & SaleSyncOpsSchema.paths & InventorySchema.paths & ConsoleCatalogSchema.paths & AiEntitlementsSchema.paths & PlatformSupportSessionsSchema.paths;
+export type components = AuthSchema.components & ContextSchema.components & TenantsSchema.components & StoresSchema.components & MembershipsSchema.components & AuditSchema.components & UnknownItemsSchema.components & SettlementSchema.components & ErpnextReconciliationSchema.components & ShiftClosesSchema.components & ConnectorAdminSchema.components & ConnectorHealthSchema.components & SyncOpsSchema.components & DevicesSchema.components & ConsoleSalesSchema.components & ConsoleSalesSummarySchema.components & CashVariancePolicySchema.components & ConsoleTelemetrySchema.components & ErpnextItemMapSchema.components & ErpnextWarehouseMapSchema.components & ProductReconciliationSchema.components & TrackingProfileSchema.components & SaleSyncOpsSchema.components & InventorySchema.components & ConsoleCatalogSchema.components & AiEntitlementsSchema.components & PlatformSupportSessionsSchema.components;
+export type operations = AuthSchema.operations & ContextSchema.operations & TenantsSchema.operations & StoresSchema.operations & MembershipsSchema.operations & AuditSchema.operations & UnknownItemsSchema.operations & SettlementSchema.operations & ErpnextReconciliationSchema.operations & ShiftClosesSchema.operations & ConnectorAdminSchema.operations & ConnectorHealthSchema.operations & SyncOpsSchema.operations & DevicesSchema.operations & ConsoleSalesSchema.operations & ConsoleSalesSummarySchema.operations & CashVariancePolicySchema.operations & ConsoleTelemetrySchema.operations & ErpnextItemMapSchema.operations & ErpnextWarehouseMapSchema.operations & ProductReconciliationSchema.operations & TrackingProfileSchema.operations & SaleSyncOpsSchema.operations & InventorySchema.operations & ConsoleCatalogSchema.operations & AiEntitlementsSchema.operations & PlatformSupportSessionsSchema.operations;
