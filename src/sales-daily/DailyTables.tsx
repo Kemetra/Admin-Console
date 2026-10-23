@@ -229,6 +229,54 @@ function Zones({ zones }: Readonly<{ zones: readonly string[] }>): React.JSX.Ele
 
 const SEP = " · ";
 
+/** One part of the context line, after a separator. */
+function Part({ children }: Readonly<{ children: React.ReactNode }>): React.JSX.Element {
+  return (
+    <>
+      {SEP}
+      <span>{children}</span>
+    </>
+  );
+}
+
+function ScopePart({
+  model,
+  storeName,
+}: Readonly<{ model: ReportModel; storeName: string }>): React.JSX.Element {
+  const t = useT();
+  // A scope's plural copy already names the calendar; one store gets it on its own.
+  if (model.scope === "all_in_scope") {
+    return <span>{t("metrics.context.allInScope", { count: model.storeCount })}</span>;
+  }
+  return (
+    <>
+      <span>{t.rich("metrics.context.store", { store: <bdi>{storeName}</bdi> })}</span>
+      <Part>{t("salesDaily.context.calendar")}</Part>
+    </>
+  );
+}
+
+function ZonesPart({
+  model,
+  readStores,
+}: Readonly<{ model: ReportModel; readStores: number }>): React.JSX.Element | null {
+  const t = useT();
+  const zones = model.zones;
+  if (zones.length === 0) return null;
+  const partial = model.zonesComplete
+    ? null
+    : ` (${t("salesDaily.context.zonesPartial", { count: readStores })})`;
+  return (
+    <Part>
+      {t.rich(zones.length === 1 ? "metrics.context.zone" : "metrics.context.zones", {
+        zone: <Zones zones={zones} />,
+        zones: <Zones zones={zones} />,
+      })}
+      {partial}
+    </Part>
+  );
+}
+
 /** Scope, calendar, range, zones, `asOf` and completeness: what every figure below covers. */
 function ReportContext({
   model,
@@ -237,57 +285,25 @@ function ReportContext({
   id,
 }: Readonly<{ model: ReportModel; storeName: string; readStores: number; id: string }>) {
   const t = useT();
-  const single = model.scope === "store";
-  const zones = model.zones;
+  // One store: its zone (RT-751 D5); a scope: UTC, labelled.
+  const asOfZone = model.scope === "store" ? model.zones[0] : undefined;
   return (
     <p id={id} className="daily-report__context" data-testid="sales-daily-context">
-      <span>
-        {single
-          ? t.rich("metrics.context.store", { store: <bdi>{storeName}</bdi> })
-          : t("metrics.context.allInScope", { count: model.storeCount })}
-      </span>
-      {single ? (
-        <>
-          {SEP}
-          <span>{t("salesDaily.context.calendar")}</span>
-        </>
-      ) : null}
-      {SEP}
-      <span>
+      <ScopePart model={model} storeName={storeName} />
+      <Part>
         {t.rich("metrics.context.range", {
           from: <BusinessDate value={model.rows[0]?.date ?? ""} />,
           to: <BusinessDate value={model.rows.at(-1)?.date ?? ""} />,
         })}
-      </span>
-      {zones.length > 0 ? (
-        <>
-          {SEP}
-          <span>
-            {t.rich(zones.length === 1 ? "metrics.context.zone" : "metrics.context.zones", {
-              zone: <Zones zones={zones} />,
-              zones: <Zones zones={zones} />,
-            })}
-            {model.zonesComplete
-              ? null
-              : ` (${t("salesDaily.context.zonesPartial", { count: readStores })})`}
-          </span>
-        </>
-      ) : null}
-      {SEP}
-      <span>
+      </Part>
+      <ZonesPart model={model} readStores={readStores} />
+      <Part>
         {t.rich("metrics.context.asOf", {
-          // One store: its zone (RT-751 D5); a scope: UTC, labelled.
-          asOf: <DateTime value={model.asOf} timeZone={single ? zones[0] : undefined} />,
+          asOf: <DateTime value={model.asOf} timeZone={asOfZone} />,
         })}
-      </span>
-      {SEP}
-      <span>{t("metrics.context.completeness")}</span>
-      {model.partial ? (
-        <>
-          {SEP}
-          <span>{t("salesDaily.context.soFar")}</span>
-        </>
-      ) : null}
+      </Part>
+      <Part>{t("metrics.context.completeness")}</Part>
+      {model.partial ? <Part>{t("salesDaily.context.soFar")}</Part> : null}
     </p>
   );
 }

@@ -53,7 +53,7 @@ export function datesInRange({ from, to }: DailyRange): string[] {
  */
 export function defaultRange(zones: readonly string[], now: Date = new Date()): DailyRange {
   const todays = (zones.length > 0 ? zones : ["UTC"]).map((zone) => todayIn(zone, now));
-  const to = todays.reduce((latest, day) => (day > latest ? day : latest));
+  const to = todays.reduce((latest, day) => (day > latest ? day : latest), todays[0]);
   return { from: addDays(to, -DEFAULT_COMPLETED_DAYS), to };
 }
 
@@ -129,11 +129,11 @@ interface Bounds {
 }
 
 function minOf(days: readonly string[]): string | undefined {
-  return days.length > 0 ? days.reduce((a, b) => (b < a ? b : a)) : undefined;
+  return days.length > 0 ? days.reduce((a, b) => (b < a ? b : a), days[0]) : undefined;
 }
 
 function maxOf(days: readonly string[]): string | undefined {
-  return days.length > 0 ? days.reduce((a, b) => (b > a ? b : a)) : undefined;
+  return days.length > 0 ? days.reduce((a, b) => (b > a ? b : a), days[0]) : undefined;
 }
 
 function boundsOf(summary: SalesSummary, utcToday: string): Bounds {

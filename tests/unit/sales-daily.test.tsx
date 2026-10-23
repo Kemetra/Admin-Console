@@ -192,7 +192,7 @@ describe("SalesDaily (RT-821, VIZ-3)", () => {
       expect(within(missing).getAllByText("Unknown").length).toBeGreaterThan(0);
       expect(within(missing).queryByText("0")).toBeNull();
       const zero = rowOf(table, "2026-10-18");
-      expect(within(zero).getAllByText("0").length).toBe(4);
+      expect(within(zero).getAllByText("0")).toHaveLength(4);
       expect(within(zero).queryByText("Unknown")).toBeNull();
     });
 

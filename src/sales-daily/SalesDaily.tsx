@@ -74,10 +74,15 @@ function Loading(): React.JSX.Element {
   );
 }
 
+/** A 400 is shown at the To field, not in the body. */
+function isFieldError(error: SalesSummaryErrorRender): boolean {
+  return error.kind === "range" || error.kind === "field";
+}
+
 function Failure({ daily }: Readonly<{ daily: SalesDailyState }>): React.JSX.Element | null {
   const t = useT();
   const error = daily.error;
-  if (!error || error.kind === "range" || error.kind === "field") return null;
+  if (!error || isFieldError(error)) return null;
   if (error.kind === "not-found") return <Unavailable />;
   const retry = (
     <GatedButton type="button" className="btn-secondary" onClick={daily.retry}>

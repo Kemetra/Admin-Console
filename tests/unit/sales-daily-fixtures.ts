@@ -64,6 +64,8 @@ export const RANGE_TOTALS: SalesKpis = {
   erpPosting: { posted: 70, pending: 3, failed: 1, unknown: 3 },
 };
 
+const DEFAULT_RANGE = { from: "2026-10-16", to: "2026-10-23" };
+
 interface StoreSpec {
   ref: string;
   timeZone: string;
@@ -73,7 +75,7 @@ interface StoreSpec {
 
 export function storeSummary(
   spec: StoreSpec,
-  range = { from: "2026-10-16", to: "2026-10-23" },
+  range = DEFAULT_RANGE,
   days: Record<string, SalesKpis> = {},
 ): SalesSummary {
   const storeDays = spec.days ?? zeroDays(range.from, range.to, days);

@@ -25,6 +25,12 @@ class SummaryFetchError extends Error {
 
 const UNEXPECTED: SalesSummaryErrorRender = { kind: "generic", messageKey: "errors.generic" };
 
+/** The typed render of a failed read; anything unexpected is the generic error. */
+function renderOf(failure: unknown): SalesSummaryErrorRender | undefined {
+  if (!failure) return undefined;
+  return failure instanceof SummaryFetchError ? failure.render : UNEXPECTED;
+}
+
 export const salesDailyQueryKey = (scope: SaleScope, query: SalesSummaryQuery | null) =>
   ["sales-summary", "daily", scope.tenantId, scope.activeStoreId, query] as const;
 
@@ -53,11 +59,10 @@ export function useSalesDaily(scope: SaleScope, query: SalesSummaryQuery | null)
     },
     retry: false,
   });
-  const failure = result.error;
   return {
     summary: result.data,
     isLoading: enabled && result.isLoading,
-    error: failure instanceof SummaryFetchError ? failure.render : failure ? UNEXPECTED : undefined,
+    error: renderOf(result.error),
     retry: () => void result.refetch(),
   };
 }
