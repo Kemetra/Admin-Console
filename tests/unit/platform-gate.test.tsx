@@ -147,8 +147,8 @@ describe("tenant routes are unchanged (regression)", () => {
     expect(await screen.findByRole("heading", { name: /select your context/i })).toBeDefined();
   });
 
-  test("zero memberships still gets no-access at /, even for a platform admin", async () => {
-    renderAt("/", 200, { user: admin, active_tenant: null, memberships: [] });
+  test("zero memberships still gets no-access at / for a non-admin (RT-844)", async () => {
+    renderAt("/", 200, { user: plain, active_tenant: null, memberships: [] });
     expect(await screen.findByRole("heading", { name: /no assigned access/i })).toBeDefined();
   });
 });
