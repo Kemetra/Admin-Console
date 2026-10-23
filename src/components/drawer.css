@@ -63,6 +63,28 @@
 [dir="rtl"] .drawer {
   --dir-sign: -1;
 }
+/* RT-825: the start variant opens from the inline start (the navigation
+ * drawer). Its rule edge faces the page, and it slides from the other side. */
+.drawer-scrim--start {
+  justify-content: flex-start;
+}
+.drawer--start {
+  /* Narrower than an editing drawer: a strip of scrim stays visible to tap. */
+  width: min(320px, calc(100vw - 48px));
+  border-inline-start: 0;
+  border-inline-end: 1px solid var(--color-border);
+  --dir-sign: -1;
+}
+[dir="rtl"] .drawer--start {
+  --dir-sign: 1;
+}
+/* Its close button is a 44px touch target: the start drawer is the compact
+ * shell's (RT-785 D3). */
+.drawer--start .drawer__head .btn-ghost {
+  min-width: 44px;
+  min-height: 44px;
+  justify-content: center;
+}
 @keyframes drawer-in {
   from {
     transform: translateX(calc(16px * var(--dir-sign)));

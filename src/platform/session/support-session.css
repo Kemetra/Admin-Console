@@ -21,6 +21,7 @@
 }
 
 .support-session-bar__main {
+  overflow-wrap: anywhere;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -96,5 +97,13 @@
   }
   .support-session-bar__actions {
     margin-inline-start: 0;
+  }
+}
+
+/* RT-825 (RT-777 §3, the 390px frame): the actions wrap below the status line
+ * and nothing in the bar may widen the layout. */
+@media (max-width: 600px) {
+  .support-session-bar__actions {
+    flex-basis: 100%;
   }
 }

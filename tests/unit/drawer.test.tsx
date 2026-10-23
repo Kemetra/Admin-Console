@@ -166,3 +166,23 @@ describe("Drawer exit", () => {
     expect(onClose).toHaveBeenCalledTimes(2);
   });
 });
+
+describe("Drawer side (RT-825)", () => {
+  test("opens at the inline end by default", () => {
+    const { container } = renderDrawer(vi.fn());
+    expect(container.querySelector(".drawer-scrim--start")).toBeNull();
+    expect(screen.getByRole("dialog").classList.contains("drawer--start")).toBe(false);
+  });
+
+  test("a start drawer opens at the inline start and carries its id", () => {
+    const { container } = render(
+      <Drawer title="Menu" onClose={vi.fn()} side="start" id="shell-menu">
+        <button type="button">Inside</button>
+      </Drawer>,
+    );
+    expect(container.querySelector(".drawer-scrim--start")).not.toBeNull();
+    const dialog = screen.getByRole("dialog", { name: "Menu" });
+    expect(dialog.classList.contains("drawer--start")).toBe(true);
+    expect(dialog.id).toBe("shell-menu");
+  });
+});

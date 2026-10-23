@@ -15,6 +15,10 @@
  * code) ignores Escape, the scrim and the close button. The `onClose` in force at
  * that moment runs when the exit ends; a parent that keeps the drawer mounted gets
  * it back usable. Under reduced motion the token is 0ms, so `onClose` runs at once.
+ *
+ * RT-825: `side="start"` opens the panel from the inline start instead (right in
+ * Arabic, left in English): the compact shell's navigation drawer, on the same
+ * side as the desktop sidebar it stands in for.
  */
 import { Icon } from "@/components/icons/Icon";
 import { useT } from "@/i18n";
@@ -26,6 +30,10 @@ export interface DrawerProps {
   onClose: () => void;
   /** False while closing would lose work (a request in flight). Default true. */
   dismissible?: boolean;
+  /** The edge the panel opens from. Default "end". */
+  side?: "start" | "end";
+  /** The dialog's id, for an opener's `aria-controls`. */
+  id?: string;
   children: React.ReactNode;
 }
 
@@ -44,6 +52,8 @@ export function Drawer({
   title,
   onClose,
   dismissible = true,
+  side = "end",
+  id,
   children,
 }: Readonly<DrawerProps>): React.JSX.Element {
   const t = useT();
@@ -121,15 +131,20 @@ export function Drawer({
     }
   }
 
+  const start = side === "start";
+  const scrimClass = `drawer-scrim${start ? " drawer-scrim--start" : ""}${closing ? " drawer-scrim--closing" : ""}`;
+  const panelClass = `drawer${start ? " drawer--start" : ""}${closing ? " drawer--closing" : ""}`;
+
   return (
-    <div ref={scrimRef} className={closing ? "drawer-scrim drawer-scrim--closing" : "drawer-scrim"}>
+    <div ref={scrimRef} className={scrimClass}>
       {/* Native <dialog open>, positioned by the scrim rather than the top layer
           (the side-drawer needs custom backdrop/placement). Focus is moved in and
           trapped (onKeyDown), so aria-modal is honored. */}
       <dialog
         ref={panelRef}
+        id={id}
         open
-        className={closing ? "drawer drawer--closing" : "drawer"}
+        className={panelClass}
         // While the exit plays nothing inside may act: a Save clicked or keyed
         // during those 150ms would land on a panel that is already leaving.
         inert={closing}

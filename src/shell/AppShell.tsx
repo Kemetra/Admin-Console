@@ -41,6 +41,7 @@ import { canReadUnknownItems } from "@/unknown-items/unknownItemAccess";
 import { Fragment } from "react";
 import { NavLink } from "react-router";
 import { ScopeHeader } from "./ScopeHeader";
+import { ShellMenuButton, ShellMenuDrawer, useShellMenu, useShellMenuId } from "./ShellMenu";
 import "./app-shell.css";
 
 /** Nav glyphs all sit on the md (20) grid (RT-263 doc 25 §2 rule 7). */
@@ -163,6 +164,62 @@ const ROLE_NAV: {
   },
 ];
 
+type RoleNavEntry = (typeof ROLE_NAV)[number];
+
+const entryClass = ({ isActive }: { isActive: boolean }): string =>
+  isActive ? "nav-entry nav-entry--active" : "nav-entry nav-entry--link";
+
+/**
+ * The tenant shell's destinations, rendered once for the sidebar and once for
+ * the compact-shell drawer (RT-825), so both list exactly the same entries.
+ * `onNavigate` lets the drawer close on any choice, the current page included.
+ */
+function TenantNavEntries({
+  inSession,
+  roleNav,
+  onNavigate,
+}: Readonly<{
+  inSession: boolean;
+  roleNav: readonly RoleNavEntry[];
+  onNavigate?: () => void;
+}>): React.JSX.Element {
+  const t = useT();
+  if (inSession) {
+    return (
+      <NavLink to="/platform/tenants" className="nav-entry nav-entry--link" onClick={onNavigate}>
+        <Icon name="tenant" className="nav-entry__icon" />
+        <span className="nav-entry__label">{t("platform.nav.tenants")}</span>
+      </NavLink>
+    );
+  }
+  return (
+    <>
+      <NavLink to="/" end className={entryClass} onClick={onNavigate}>
+        <Icon name="dashboard" className="nav-entry__icon" />
+        <span className="nav-entry__label">{t("shell.nav.overview")}</span>
+      </NavLink>
+      <div className="nav-section">{t("shell.nav.section.management")}</div>
+      {LIVE_NAV.map((item) => (
+        <NavLink key={item.to} to={item.to} className={entryClass} onClick={onNavigate}>
+          <Icon name={item.icon} className="nav-entry__icon" />
+          <span className="nav-entry__label">{t(item.label)}</span>
+        </NavLink>
+      ))}
+      {roleNav.map((entry, index) => (
+        <Fragment key={entry.to}>
+          {roleNav[index - 1]?.section === entry.section ? null : (
+            <div className="nav-section">{t(entry.section)}</div>
+          )}
+          <NavLink to={entry.to} className={entryClass} onClick={onNavigate}>
+            <Icon name={entry.icon} className="nav-entry__icon" />
+            <span className="nav-entry__label">{t(entry.label)}</span>
+          </NavLink>
+        </Fragment>
+      ))}
+    </>
+  );
+}
+
 export interface AppShellProps {
   onSignOut: () => void | Promise<void>;
   children?: React.ReactNode;
@@ -178,6 +235,8 @@ export function AppShell({ onSignOut, children }: Readonly<AppShellProps>): Reac
   const user = context?.user;
   const roleCode = context?.active_role_code;
   const roleNav = ROLE_NAV.filter((entry) => entry.canRead(roleCode));
+  const menu = useShellMenu();
+  const menuId = useShellMenuId();
   const initials = (user?.display_name ?? user?.email ?? "?")
     .split(/[\s@.]+/)
     .slice(0, 2)
@@ -187,6 +246,7 @@ export function AppShell({ onSignOut, children }: Readonly<AppShellProps>): Reac
   return (
     <div className={inSession ? "shell shell--session" : "shell"}>
       <header className="topbar">
+        <ShellMenuButton menu={menu} drawerId={menuId} />
         <span className="tower-lockup">
           <TowerMark className="tower-mark" />
           <span className="tower-lockup__word">Retail Tower OS</span>
@@ -194,8 +254,11 @@ export function AppShell({ onSignOut, children }: Readonly<AppShellProps>): Reac
         </span>
 
         <div className="topbar__spacer" />
-        <LocaleSwitch userId={user?.id} />
-        <ThemeToggle userId={user?.id} />
+        {/* RT-825: at the compact width these move into the menu drawer. */}
+        <div className="topbar__prefs">
+          <LocaleSwitch userId={user?.id} />
+          <ThemeToggle userId={user?.id} />
+        </div>
         {user ? (
           <span className="topbar__user">
             <span className="topbar__avatar-wrap">
@@ -220,60 +283,25 @@ export function AppShell({ onSignOut, children }: Readonly<AppShellProps>): Reac
       {inSession ? null : <ScopeHeader />}
 
       <nav className="sidebar" aria-label={t("shell.nav.label")}>
-        {inSession ? (
-          <NavLink to="/platform/tenants" className="nav-entry nav-entry--link">
-            <Icon name="tenant" className="nav-entry__icon" />
-            <span className="nav-entry__label">{t("platform.nav.tenants")}</span>
-          </NavLink>
-        ) : (
-          <>
-            <NavLink
-              to="/"
-              end
-              className={({ isActive }) =>
-                isActive ? "nav-entry nav-entry--active" : "nav-entry nav-entry--link"
-              }
-            >
-              <Icon name="dashboard" className="nav-entry__icon" />
-              <span className="nav-entry__label">{t("shell.nav.overview")}</span>
-            </NavLink>
-            <div className="nav-section">{t("shell.nav.section.management")}</div>
-            {LIVE_NAV.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  isActive ? "nav-entry nav-entry--active" : "nav-entry nav-entry--link"
-                }
-              >
-                <Icon name={item.icon} className="nav-entry__icon" />
-                <span className="nav-entry__label">{t(item.label)}</span>
-              </NavLink>
-            ))}
-            {roleNav.map((entry, index) => (
-              <Fragment key={entry.to}>
-                {roleNav[index - 1]?.section === entry.section ? null : (
-                  <div className="nav-section">{t(entry.section)}</div>
-                )}
-                <NavLink
-                  to={entry.to}
-                  className={({ isActive }) =>
-                    isActive ? "nav-entry nav-entry--active" : "nav-entry nav-entry--link"
-                  }
-                >
-                  <Icon name={entry.icon} className="nav-entry__icon" />
-                  <span className="nav-entry__label">{t(entry.label)}</span>
-                </NavLink>
-              </Fragment>
-            ))}
-          </>
-        )}
+        <TenantNavEntries inSession={inSession} roleNav={roleNav} />
         <div className="topbar__spacer" />
         <button type="button" className="nav-entry nav-signout" onClick={() => void onSignOut()}>
           <Icon name="signOut" className="nav-entry__icon" />
           <span className="nav-entry__label">{t("shell.signOut")}</span>
         </button>
       </nav>
+
+      <ShellMenuDrawer
+        menu={menu}
+        drawerId={menuId}
+        user={user}
+        roleLabel={roleCode ? t(roleKey(roleCode)) : undefined}
+        navLabel={t("shell.nav.label")}
+        onSignOut={onSignOut}
+        renderNav={(onNavigate) => (
+          <TenantNavEntries inSession={inSession} roleNav={roleNav} onNavigate={onNavigate} />
+        )}
+      />
 
       {/* data-dirty-scope: forms edited in here count as unsaved work (RT-268). */}
       <main className="content" data-dirty-scope>

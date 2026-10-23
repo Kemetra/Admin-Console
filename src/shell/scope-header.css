@@ -90,3 +90,44 @@
   color: var(--color-text-muted);
   font-size: var(--text-control);
 }
+
+/* RT-825 (RT-785 D3): at the compact width the scope button and the menu items
+ * are 44px touch targets (the bar is 48px, set on .shell), long names truncate
+ * on the one-row button, and the menu stays inside the viewport. */
+@media (max-width: 768px) {
+  .scope {
+    min-width: 0;
+    padding: 0 var(--space-4);
+  }
+  .scope__btn {
+    min-height: 44px;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .scope__crumb,
+  .scope__current {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .scope__crumb {
+    flex-shrink: 2;
+  }
+  .scope__sep,
+  .scope__caret {
+    flex-shrink: 0;
+  }
+  .scope-menu {
+    top: calc(100% + var(--space-1));
+    inset-inline-start: var(--space-4);
+    min-width: min(280px, calc(100vw - 2 * var(--space-4)));
+    max-inline-size: calc(100vw - 2 * var(--space-4));
+    max-block-size: calc(100dvh - 160px);
+    overflow: auto;
+  }
+  .scope-menu__item {
+    min-height: 44px;
+    overflow-wrap: anywhere;
+  }
+}

@@ -284,8 +284,14 @@ focus, copy, status and border/icon feedback stay intact.
   boundary. Use **logical properties by default** (`margin-inline-start`, `inset-inline-end`,
   `border-inline-start`, `text-align: start`). Isolate machine data (amounts, SKUs, emails,
   request IDs) with `dir="ltr"` or `<bdi>`. Visual order and Tab order tell the same story.
-- **Targets:** the Admin Console may be denser than the POS 44px floor while staying above the
-  accessibility floor. The current controls use 36px.
+- **Targets:** above 768px the Admin Console may be denser than the POS 44px floor while staying
+  above the accessibility floor. The current controls use 36px.
+  - **Compact shell (≤768px, RT-785 D3, RT-825):** the menu button, the navigation drawer's
+    entries, its language, theme, sign-out and close controls, the scope button and the
+    scope-menu items, and the primary action of a Tier 1 page are at least 44×44px.
+  - Dense secondary controls keep the WCAG 2.2 AA floor of 24px: table sort headers (36px
+    effective hit area), inline links inside table cells and badges.
+  - Desktop density does not change.
 - **Evidence follows the touched surface:** static checks, component tests, a keyboard-only
   walk, axe where applicable, forced-colors captures and reduced-motion validation.
 
