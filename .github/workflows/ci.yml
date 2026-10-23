@@ -62,6 +62,31 @@ jobs:
       - name: Build
         run: pnpm build
 
+      # RT-831: monorepo parity evidence (RT-711 item 3). vite.config.ts bakes
+      # GITHUB_SHA into the bundle (RT-633), so stamped builds differ between
+      # this repo and the Shadow monorepo. Hash an extra build with GITHUB_SHA
+      # unset; the shipped dist/ above is unchanged. The digest is in the log
+      # and step summary, which outlive the 1-day artifact.
+      - name: Parity manifest (unstamped dist, RT-711)
+        run: |
+          out="$RUNNER_TEMP/dist-parity"
+          env -u GITHUB_SHA pnpm exec vite build --outDir "$out" --emptyOutDir
+          (cd "$out" && find . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum) > "$RUNNER_TEMP/dist-parity.sha256"
+          cat "$RUNNER_TEMP/dist-parity.sha256"
+          digest=$(sha256sum "$RUNNER_TEMP/dist-parity.sha256" | cut -d' ' -f1)
+          echo "dist-parity manifest digest: $digest"
+          echo "dist-parity manifest digest: \`$digest\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload parity manifest
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: admin-dist-parity-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/dist-parity.sha256
+            ${{ runner.temp }}/dist-parity
+          retention-days: 1
+          if-no-files-found: error
+
       - name: Lint
         run: pnpm lint
 
