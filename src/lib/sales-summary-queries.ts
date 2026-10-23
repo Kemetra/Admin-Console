@@ -84,10 +84,8 @@ export function salesSummaryRangeProblem(
 
 // --- Typed error mapping ------------------------------------------------------
 
-/** Backend error envelope: { error: { code, message, request_id } } (schema Error). */
-interface BackendError {
-  error?: { code?: string; message?: string; request_id?: string };
-}
+/** Backend error envelope: { error: { code, message, request_id } } (generated schema Error). */
+type BackendError = Schemas["Error"];
 
 export interface SalesSummaryErrorContext {
   status: number;
@@ -115,22 +113,22 @@ const COPY = {
   generic: "errors.generic",
 } as const satisfies Record<string, MessageKey>;
 
+function mapBadRequest(
+  query: SalesSummaryQuery | undefined,
+  requestId?: string,
+): SalesSummaryErrorRender {
+  const problem = query ? salesSummaryRangeProblem(query) : null;
+  return problem ? { kind: "range", problem, requestId } : { kind: "field", requestId };
+}
+
 export function mapSalesSummaryError(input: SalesSummaryErrorContext): SalesSummaryErrorRender {
   const requestId = input.error?.error?.request_id;
-  switch (input.status) {
-    case 400: {
-      const problem = input.query ? salesSummaryRangeProblem(input.query) : null;
-      return problem ? { kind: "range", problem, requestId } : { kind: "field", requestId };
-    }
-    case 404:
-      return { kind: "not-found" };
-    case 429:
-      return { kind: "rate-limited" };
-    default:
-      if (input.status >= 500) {
-        return { kind: "server", messageKey: COPY.serverError, requestId, retryable: true };
-      }
-      // 401 (the auth interceptor owns the session) and anything undocumented.
-      return { kind: "generic", messageKey: COPY.generic, requestId };
+  if (input.status === 400) return mapBadRequest(input.query, requestId);
+  if (input.status === 404) return { kind: "not-found" };
+  if (input.status === 429) return { kind: "rate-limited" };
+  if (input.status >= 500) {
+    return { kind: "server", messageKey: COPY.serverError, requestId, retryable: true };
   }
+  // 401 (the auth interceptor owns the session) and anything undocumented.
+  return { kind: "generic", messageKey: COPY.generic, requestId };
 }
