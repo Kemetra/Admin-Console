@@ -1,3 +1,4 @@
+import type { Locator } from "@playwright/test";
 import { expectNoAxeViolations } from "./axe";
 import { type Page, expect, test } from "./fixtures";
 
@@ -103,6 +104,31 @@ async function expectNoSidewaysScroll(page: Page, width: number, label: string):
   );
 }
 
+/** Fully inside [0, width] on the inline axis. */
+async function expectInsideViewport(locator: Locator, width: number): Promise<void> {
+  const box = await locator.boundingBox();
+  if (!box) throw new Error("no box");
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(width);
+}
+
+/** Flush with the inline-start edge: the right in Arabic, the left in English. */
+async function expectAtInlineStart(page: Page, locator: Locator, width: number): Promise<void> {
+  await expectInsideViewport(locator, width);
+  const box = await locator.boundingBox();
+  const rtl = (await page.locator("html").getAttribute("dir")) === "rtl";
+  const edge = rtl ? (box?.x ?? 0) + (box?.width ?? 0) : (box?.x ?? -1);
+  expect(Math.round(edge)).toBe(rtl ? width : 0);
+}
+
+/** Tab never leaves the dialog (30 presses outnumber its controls). */
+async function expectTabTrapped(page: Page, dialog: Locator): Promise<void> {
+  for (let i = 0; i < 30; i++) {
+    await page.keyboard.press("Tab");
+    expect(await dialog.evaluate((d) => d.contains(document.activeElement))).toBe(true);
+  }
+}
+
 /** Border-box size of a locator, rounded to whole CSS px. */
 async function boxOf(page: Page, selector: string) {
   const box = await page.locator(selector).first().boundingBox();
@@ -165,23 +191,10 @@ for (const width of [360, 390, 412, 640, 768]) {
       await expect(dialog).toBeVisible();
       await settled(page);
       await expect(button).toHaveAttribute("aria-expanded", "true");
-      // Inside the viewport, from the inline-start edge.
-      const panel = await dialog.boundingBox();
-      expect(panel?.x).toBeGreaterThanOrEqual(0);
-      expect((panel?.x ?? 0) + (panel?.width ?? 0)).toBeLessThanOrEqual(width);
-      const rtl = (await page.locator("html").getAttribute("dir")) === "rtl";
-      if (rtl) expect(Math.round((panel?.x ?? 0) + (panel?.width ?? 0))).toBe(width);
-      else expect(Math.round(panel?.x ?? -1)).toBe(0);
-      // The name and role block is fully inside the viewport.
-      const who = await dialog.getByText(LONG_NAME).boundingBox();
-      expect(who?.x).toBeGreaterThanOrEqual(0);
-      expect((who?.x ?? 0) + (who?.width ?? 0)).toBeLessThanOrEqual(width);
-
-      // Tab never leaves the dialog (30 presses outnumber its controls).
-      for (let i = 0; i < 30; i++) {
-        await page.keyboard.press("Tab");
-        expect(await dialog.evaluate((d) => d.contains(document.activeElement))).toBe(true);
-      }
+      // Inside the viewport, from the inline-start edge; the name block too.
+      await expectAtInlineStart(page, dialog, width);
+      await expectInsideViewport(dialog.getByText(LONG_NAME), width);
+      await expectTabTrapped(page, dialog);
       await page.keyboard.press("Escape");
       await expect(dialog).toBeHidden();
       await expect(button).toBeFocused();
