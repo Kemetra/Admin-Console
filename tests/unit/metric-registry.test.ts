@@ -62,7 +62,7 @@ describe("RT-819 metric registry", () => {
 
   test.each(METRIC_IDS)("%s: its cited field resolves on the contract shape", (id) => {
     const def = metricDefinition(id);
-    expect(def.source.field).toBe(`kpis.${id}`);
+    expect(def.source.field).toBe(`SalesKpis.${id}`);
     expect(selectMetric(id, KPIS)).toBe(KPIS[id]);
   });
 

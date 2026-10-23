@@ -40,7 +40,7 @@ export interface MetricDefinition {
   id: MetricId;
   labelKey: MessageKey;
   definitionKey: MessageKey;
-  source: { operationId: typeof SALES_SUMMARY_SOURCE.operationId; field: `kpis.${MetricId}` };
+  source: { operationId: typeof SALES_SUMMARY_SOURCE.operationId; field: `SalesKpis.${MetricId}` };
   /** Every figure is per store-local business day; scope days add each store's own date. */
   grain: "store-business-day";
   zoneRule: ZoneRule;
@@ -69,7 +69,7 @@ function define(
     id,
     labelKey: `metrics.${id}.label` as const,
     definitionKey: `metrics.${id}.definition` as const,
-    source: { operationId: SALES_SUMMARY_SOURCE.operationId, field: `kpis.${id}` },
+    source: { operationId: SALES_SUMMARY_SOURCE.operationId, field: `SalesKpis.${id}` },
     grain: "store-business-day",
     zoneRule,
     zoneRuleKey: ZONE_RULE_KEY[zoneRule],

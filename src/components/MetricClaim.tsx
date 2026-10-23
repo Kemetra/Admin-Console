@@ -178,7 +178,11 @@ function ClaimValue({
             {state.requestId ? (
               <span className="metric-claim__quiet">
                 {t.rich("metrics.claim.reference", {
-                  id: <bdi className="metric-claim__machine">{state.requestId}</bdi>,
+                  id: (
+                    <bdi dir="ltr" className="metric-claim__machine">
+                      {state.requestId}
+                    </bdi>
+                  ),
                 })}
               </span>
             ) : null}
@@ -269,7 +273,8 @@ function ContextLine({
   const t = useT();
   const { scope, period, asOf } = context;
   const single = scope.kind === "store";
-  const zones = single ? [scope.timeZone] : scope.timeZones;
+  // Several stores often share one zone: name each zone once, first seen first.
+  const zones = single ? [scope.timeZone] : [...new Set(scope.timeZones)];
   return (
     <p id={id} className="metric-claims__context" data-testid="metric-claims-context">
       <span>

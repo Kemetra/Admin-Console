@@ -272,3 +272,47 @@ describe("RT-819 MetricClaim locale and motion", () => {
     expect(container.innerHTML).not.toMatch(/success|warning|danger|badge/);
   });
 });
+
+describe("RT-819 MetricClaim review follow-ups", () => {
+  test("sync status: the contract's four states in order, 'synced' as its own word", () => {
+    const data: Kpis = {
+      ...KPIS,
+      syncStatus: { captured: 1, synced: 10, failedRetryable: 2, failedNeedsRepair: 1 },
+    };
+    one("syncStatus", { status: "ready", data });
+    const parts = within(value("Sale sync status"))
+      .getAllByRole("listitem")
+      .map((li) => li.textContent);
+    expect(parts).toEqual([
+      "Captured: 1",
+      "Synced: 10",
+      "Failed, retrying: 2",
+      "Failed, needs repair: 1",
+    ]);
+  });
+
+  test("stores sharing one zone: the zone is named once, singular", () => {
+    one(
+      "receivedSales",
+      { status: "ready", data: KPIS },
+      {
+        ...SCOPE_CONTEXT,
+        scope: {
+          kind: "all_in_scope",
+          storeCount: 3,
+          timeZones: ["Africa/Cairo", "Africa/Cairo", "Africa/Cairo"],
+        },
+      },
+    );
+    const ctx = screen.getByTestId("metric-claims-context");
+    expect(ctx.textContent).toContain("Time zone: Africa/Cairo");
+    expect(ctx.textContent?.match(/Africa\/Cairo/g)).toHaveLength(1);
+  });
+
+  test("the request reference is isolated LTR", () => {
+    one("receivedSales", { status: "error", requestId: "req-42", retry: () => undefined });
+    const bdi = screen.getByText("req-42");
+    expect(bdi.tagName).toBe("BDI");
+    expect(bdi.getAttribute("dir")).toBe("ltr");
+  });
+});

@@ -26,12 +26,12 @@ export const metrics: MessagesOf<typeof ar> = {
     "A zero here is a real zero over what was received. A figure that could not be determined shows as Unknown.",
   "metrics.syncStatus.label": "Sale sync status",
   "metrics.syncStatus.definition":
-    "The day's received sales by their processing state on the server now (as of the read). Synced does not mean posted to ERPNext.",
+    "The period's received sales by their processing state on the server now (as of the read). Synced does not mean posted to ERPNext.",
   "metrics.syncStatus.unknown":
     "The four states add up to the received sales count. This is the state now, not a backlog over days.",
   "metrics.erpPosting.label": "ERP posting state",
   "metrics.erpPosting.definition":
-    "The day's received sales by their ERPNext posting state now (as of the read). An operational state only, never a tax claim.",
+    "The period's received sales by their ERPNext posting state now (as of the read). An operational state only, never a tax claim.",
   "metrics.erpPosting.unknown":
     "Unknown means the sale has no posting record yet. Unknown never means not posted.",
   "metrics.shiftCloses.label": "Shift closes",
