@@ -2,7 +2,7 @@
 # (src/generated/schema.d.ts, RT-677). Rewritten by `pnpm generate:client --repin <ref>`.
 # Do not hand-edit: the generator checks every file below against its git blob SHA.
 repo: Kemetra/Backend-Core
-commit: 24196757a490f0d188927c11da23c809d285799e
+commit: c1d6215f4ee88449d6c2f181fdec508b8bede547
 source: packages/contracts/openapi
 file: ai-entitlements.openapi.yaml 7d0e973b16f47350a6dfb8f2a7ba610704621ba5
 file: audit.openapi.yaml bc821ee22f732a7f293b2002c4d96a2adbf5faaf
@@ -30,4 +30,4 @@ file: sale-sync-ops/sale-sync-ops.yaml 83a995ff987c769dc2416034fbb3ee57b5e6d8eb
 file: settlement/settlement.yaml 5a6e568f0e087652c4d5d5d2d75c386d6e6f37bc
 file: shift-closes.openapi.yaml 4fe610244c7146936f635e8266d6f245149201d7
 file: stores.openapi.yaml dc4c4664f7757dd100ba63c1d841b14172bdb38d
-file: tenants.openapi.yaml d8bfacb51c5b55454250c0e8b0546f049403b5a6
+file: tenants.openapi.yaml ab1abfc9ce8835f22fd47fb180d1d1a18ad08649

@@ -3,7 +3,7 @@
  * Do not make direct changes to the file.
  */
 
-// Source: Data-Pulse-2 @ 24196757a490f0d188927c11da23c809d285799e
+// Source: Data-Pulse-2 @ c1d6215f4ee88449d6c2f181fdec508b8bede547
 // Sources:
 // - packages/contracts/openapi/auth.openapi.yaml
 // - packages/contracts/openapi/context.openapi.yaml
@@ -854,6 +854,8 @@ export namespace TenantsSchema {
                 id?: string;
                 slug?: string;
                 name?: string;
+                /** @enum {string} */
+                status: "active" | "suspended" | "pending";
             };
             Tenant: components["schemas"]["TenantSummary"] & {
                 /** @enum {string} */
